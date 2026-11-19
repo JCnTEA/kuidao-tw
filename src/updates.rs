@@ -465,8 +465,10 @@ fn version(value: &str) -> Option<[u64; 3]> {
     let mut numbers = [0; 3];
     for number in &mut numbers {
         let part = parts.next()?;
-        if part.is_empty() || !part.bytes().all(|c| c.is_ascii_digit()) { return None; }
-        *number = part.parse().ok()?;
+        // 允許 `0.6.66-tw` 這類帶台灣版後綴的標籤：只取前面的數字段
+        let digits: String = part.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if digits.is_empty() { return None; }
+        *number = digits.parse().ok()?;
     }
     parts.next().is_none().then_some(numbers)
 }
