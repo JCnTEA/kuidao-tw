@@ -273,7 +273,7 @@ def download(repo: str) -> tuple[pathlib.Path, str]:
 
 
 KEEP_PATHS = [
-    "app.manifest", "app.rc", "build.rs", "NOTICE", "README-TW.md",
+    "app.manifest", "app.rc", "build.rs", "NOTICE",
     "授權產生器.py", "tools", ".github", "docs/TW-TERMS.md",
     "vendor", "assets/kuidao.ico", "assets/kuidao_logo.ico", "assets/kuidao_dev.ico",
     "assets/kuidao_banner.png", "assets/kuidao-logo.png", "assets/kuidao_mascot.webp",
@@ -282,7 +282,49 @@ KEEP_PATHS = [
 ]
 
 
+# 台灣改動保留：上游只更新「台灣沒動過」的原始檔，其餘一律以台灣版為準
+SRC_DIR = "src"
+INCOMING_DIR = ".upstream-incoming"
+
+
+def snapshot_src() -> pathlib.Path:
+    snap = pathlib.Path(tempfile.mkdtemp(prefix="snap-"))
+    src = ROOT / SRC_DIR
+    if src.exists():
+        shutil.copytree(src, snap / SRC_DIR)
+    return snap
+
+
+def restore_tw_changes(snap: pathlib.Path) -> int:
+    """上游覆蓋後還原台灣改過／新增的檔案，並把上游新內容另存供比對。"""
+    if not snap.exists():
+        return 0
+    kept = 0
+    for f in (snap / SRC_DIR).rglob("*"):
+        if not f.is_file():
+            continue
+        rel = f.relative_to(snap)
+        dst = ROOT / rel
+        old = f.read_bytes()
+        if dst.exists():
+            # 行尾 CRLF/LF 不同不算改動
+            if f.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n") == \
+               dst.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n"):
+                continue
+            incoming = ROOT / INCOMING_DIR / rel
+            incoming.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dst, incoming)
+            print(f"   [保留台灣版] {rel}（上游新內容見 {INCOMING_DIR}/{rel}）")
+        else:
+            print(f"   [保留台灣新增] {rel}")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(f, dst)
+        kept += 1
+    return kept
+
+
 def sync(src_root: pathlib.Path, version: str) -> int:
+    snap = snapshot_src()
     keep_dir = pathlib.Path(tempfile.mkdtemp(prefix="keep-"))
     for rel in KEEP_PATHS:
         p = ROOT / rel
@@ -435,7 +477,12 @@ def sync(src_root: pathlib.Path, version: str) -> int:
     man_p = ROOT / "app.manifest"
     if man_p.exists():
         man = man_p.read_text(encoding="utf-8")
-        man = re.sub(r'version="[\d.]+"', f'version="{version}.0"', man, count=1)
+        man = re.sub(
+            r'(<assemblyIdentity[^>]*version=")([\d.]+)(")',
+            lambda m: m.group(1) + f"{version}.0" + m.group(3),
+            man,
+            count=1,
+        )
         man_p.write_text(man, encoding="utf-8")
 
     # 安裝器版本
@@ -445,6 +492,11 @@ def sync(src_root: pathlib.Path, version: str) -> int:
         t = re.sub(r'VIProductVersion "[^"]*"', f'VIProductVersion "{version}.0"', t)
         t = re.sub(r'!define VERSION "[^"]*"', f'!define VERSION "{version}"', t)
         nsi.write_text(t, encoding="utf-8")
+
+    # 繁中化與修補都跑完，才與舊版比對：台灣手動改過的檔案以台灣版為準
+    kept = restore_tw_changes(snap)
+    if kept:
+        print(f"→ 保留台灣改動 {kept} 支（上游同檔更新未自動合併）")
 
     VERSION_FILE.write_text(version + "\n", encoding="utf-8")
     print(f"\n✔ 同步完成：上游 {version} → 鬼島（修復 {hits} 項）")
