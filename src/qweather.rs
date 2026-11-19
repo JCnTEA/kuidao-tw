@@ -106,7 +106,7 @@ impl Client {
     pub fn search(&self,query:&str,adm:&str)->Result<Search,Error> {
         let v=self.request("/geo/v2/city/lookup",&[("location",query),("adm",adm),("number","20"),("lang","zh"),("range","cn")])?;
         let locations=v["location"].as_array().into_iter().flatten().filter_map(|v|{
-            let location=Location{position:Position{label:v["name"].as_str()?.into(),lat:v["lat"].as_str()?.parse().ok()?,lon:v["lon"].as_str()?.parse().ok()?,region:["adm1","adm2"].iter().filter_map(|k|v[*k].as_str()).collect::<Vec<_>>().join(" · ")},timezone:v["tz"].as_str()?.into()};
+            let location=Location{position:Position{label:v["name"].as_str()?.into(),lat:v["lat"].as_str()?.parse().ok()?,lon:v["lon"].as_str()?.parse().ok()?,region:place_region(v)},timezone:v["tz"].as_str()?.into()};
             location.valid().then_some(location)
         }).collect();
         let credits=["sources","license"].iter().flat_map(|k|v["refer"][*k].as_array().into_iter().flatten()).filter_map(Value::as_str).map(str::to_string).collect();
@@ -336,4 +336,20 @@ fn parse_daily(v:&Value,l:&Location)->Result<(Vec<Day>,Option<SunTimes>),Error>{
         days.push(Day{label:if date==now{"今天".into()}else{["週一","週二","週三","週四","週五","週六","週日"][date.weekday().num_days_from_monday()as usize].into()},date:date.to_string(),high:temperature(&day["temperatureMax"]).ok_or(Error::Response)?,low:temperature(&day["temperatureMin"]).ok_or(Error::Response)?,code:icon_code(day["daytime"]["condition"]["code"].as_str().unwrap_or("999")),rain:(probability*100.0).round()as u32});
     }
     if days.is_empty(){return Err(Error::Response);}days.truncate(7);Ok((days,sun))
+}
+
+/// 地點層級字串。台灣不帶「省」：一律「台灣 · 某某市（· 某某區）」。
+fn place_region(v:&Value)->String {
+    let adm1=v["adm1"].as_str().unwrap_or("").trim();
+    let adm2=v["adm2"].as_str().unwrap_or("").trim();
+    let adm3=v["adm3"].as_str().unwrap_or("").trim();
+    let is_tw=adm1.contains("臺灣")||adm1.contains("台灣");
+    if is_tw {
+        let mut parts:Vec<&str>=vec!["台灣"];
+        if !adm2.is_empty()&&!adm2.contains("台灣")&&!adm2.contains("臺灣") {parts.push(adm2);}
+        if adm3.is_empty()||adm3==adm2||adm3.contains("台灣")||adm3.contains("臺灣") {} else {parts.push(adm3);}
+        parts.join(" · ")
+    } else {
+        ["adm1","adm2"].iter().filter_map(|k|v[*k].as_str()).collect::<Vec<_>>().join(" · ")
+    }
 }
