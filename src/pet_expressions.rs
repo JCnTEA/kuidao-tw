@@ -62,7 +62,7 @@ pub(crate) struct Expressions {
     hovered:bool,
     next:[usize;4],
     /// 正在播放的表情序列图；换表情或换皮肤时原地替换内容，播完释放。
-    sheet:Option<(Expression,Option<Palette>,TextureHandle)>,
+    sheet:Option<(Expression,Option<Palette>,crate::mascot::Mascot,TextureHandle)>,
 }
 
 impl Default for Expressions {
@@ -109,15 +109,16 @@ impl Expressions {
     }
     pub fn draw(&mut self,c:&Card,cx:f32,palette:Option<Palette>)->bool {
         let Some((expression,time))=self.clip else{return false;};
-        if self.sheet.as_ref().is_none_or(|(previous,previous_palette,_)|(*previous,*previous_palette)!=(expression,palette)) {
+        let species = crate::mascot::current();
+        if self.sheet.as_ref().is_none_or(|(previous,previous_palette,previous_species,_)| (*previous,*previous_palette,*previous_species)!=(expression,palette,species)) {
             let decoded=image::load_from_memory(expression.sheet()).expect("內建表情序列圖").into_rgba8();
             let mut image=egui::ColorImage::from_rgba_unmultiplied([decoded.width() as usize,decoded.height() as usize],decoded.as_raw());
             drop(decoded);
             if let Some(palette)=palette {for pixel in &mut image.pixels {if pixel.a()>0 {*pixel=crate::skin_paint::map_color(*pixel,&palette);}}}
-            if let Some((previous,previous_palette,texture))=&mut self.sheet {*previous=expression;*previous_palette=palette;texture.set(image,egui::TextureOptions::LINEAR);}
+            if let Some((previous,previous_palette,previous_species,texture))=&mut self.sheet {*previous=expression;*previous_palette=palette;*previous_species=species;texture.set(image,egui::TextureOptions::LINEAR);}
             else {
                 let texture=c.ui.ctx().load_texture("daozai-expressions",image,egui::TextureOptions::LINEAR);
-                crate::skin_paint::mark_colored(texture.id());self.sheet=Some((expression,palette,texture));
+                crate::skin_paint::mark_colored(texture.id());self.sheet=Some((expression,palette,species,texture));
             }
         }
         let frame=if crate::bar_layout::animations_enabled(){expression.frame(time)}else{7};
