@@ -1,0 +1,39 @@
+name: Build Windows (Taiwan)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Package (portable zip)
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          $out = "Kuidao-v$v-windows-x64-tw"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item "target\x86_64-pc-windows-msvc\release\daozai.exe" $out
+          Copy-Item "assets" $out -Recurse
+          Copy-Item "README-TW.md" $out
+          Compress-Archive -Path "$out\*" -DestinationPath "$out.zip" -Force
+          echo "ASSET=$out.zip" >> $env:GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daozai-tw-windows-x64
+          path: ${{ env.ASSET }}

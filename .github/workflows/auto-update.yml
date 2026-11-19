@@ -1,0 +1,92 @@
+name: 上游自動同步與發布
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # 每 6 小時檢查一次上游
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.chk.outputs.changed }}
+      version: ${{ steps.chk.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安裝 OpenCC
+        run: pip install opencc-python-reimplemented
+
+      - name: 拉上游並台灣化
+        id: chk
+        run: |
+          set +e
+          python tools/sync_upstream.py
+          rc=$?
+          set -e
+          ver=$(cat .upstream-version 2>/dev/null || echo none)
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          if [ "$rc" = "0" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: 提交變更
+        if: steps.chk.outputs.changed == 'true'
+        run: |
+          git config user.name "鬼島 自動同步"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -m "sync: 上游 v${{ steps.chk.outputs.version }}"
+          git push
+
+  build:
+    needs: sync
+    if: needs.sync.outputs.changed == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: 編譯
+        run: cargo build --release
+
+      - name: 打包
+        shell: pwsh
+        run: |
+          $ver = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          $name = "Kuidao-v$ver-tw-windows-x64.zip"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "target\release\kuidao.exe" dist
+          if (Test-Path README-TW.md) { Copy-Item README-TW.md dist }
+          if (Test-Path NOTICE)       { Copy-Item NOTICE dist }
+          if (Test-Path LICENSE)      { Copy-Item LICENSE dist }
+          Compress-Archive -Path "dist\*" -DestinationPath $name -Force
+          echo "ASSET=$name" >> $env:GITHUB_ENV
+          echo "VER=$ver"    >> $env:GITHUB_ENV
+
+      - name: 發布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VER }}-tw
+          name: 鬼島 Kuidao v${{ env.VER }}（台灣版）
+          body: |
+            由上游 Renly1994/xiaotang-daozai v${{ env.VER }}（MIT）自動同步、繁中化與台灣用語調整後編譯。
+            - 介面：台灣繁體（設定／檔案／資料夾／網路／螢幕）
+            - 免安裝：解壓即用
+            - 無程式碼簽章，首次執行如遇 SmartScreen 請選「仍要執行」
+          files: ${{ env.ASSET }}
+          fail_on_unmatched_files: true
