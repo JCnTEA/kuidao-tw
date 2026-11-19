@@ -36,6 +36,18 @@ h1{font-size:clamp(34px,6vw,58px);font-weight:900;letter-spacing:.18em;color:#df
 .item p{font-size:12.5px;color:var(--sub)}
 .note{margin-top:14px;border:1px dashed rgba(63,224,240,.25);border-radius:12px;padding:14px 16px;background:rgba(63,224,240,.04);font-size:12.5px;color:var(--sub)}
 .note b{color:var(--cy);font-weight:500}
+
+.cat{display:inline-block;font-size:10px;letter-spacing:.12em;padding:1px 8px;border-radius:999px;margin-bottom:7px;border:1px solid}
+.cat.add{color:#57e39b;border-color:rgba(87,227,155,.45);background:rgba(87,227,155,.08)}
+.cat.upd{color:#3fe0f0;border-color:rgba(63,224,240,.45);background:rgba(63,224,240,.08)}
+.cat.fix{color:#f5c451;border-color:rgba(245,196,81,.45);background:rgba(245,196,81,.08)}
+.cat.del{color:#ff8181;border-color:rgba(255,129,129,.45);background:rgba(255,129,129,.08)}
+.cat.chg{color:#b491ff;border-color:rgba(180,145,255,.45);background:rgba(180,145,255,.08)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+.filters button{cursor:pointer;font:inherit;font-size:12px;letter-spacing:.08em;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(63,224,240,.04);color:var(--sub);transition:.18s}
+.filters button:hover{border-color:rgba(63,224,240,.45);color:var(--txt)}
+.filters button.on{background:rgba(63,224,240,.14);border-color:rgba(63,224,240,.6);color:#dffaff;box-shadow:0 0 14px -4px rgba(63,224,240,.6)}
+.item[hidden]{display:none}
 footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;margin-top:60px;line-height:2}
 </style>
 </head>
@@ -75,28 +87,38 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
 
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>異動紀錄</h2><span class="line"></span></div>
+    <div class="filters" id="filters">
+      <button data-f="all" class="on">全部</button>
+      <button data-f="add">新增</button>
+      <button data-f="upd">更新</button>
+      <button data-f="fix">修正</button>
+      <button data-f="del">移除</button>
+      <button data-f="chg">異動</button>
+    </div>
     <div class="tl">
-      <div class="item"><time>最新</time><h3>更新檢查修好</h3><p>版本標籤多了台灣版後綴，原本的版本解析只吃純數字，導致檢查更新時報「更新資訊格式異常」。解析改為取數字段後，同版號顯示已是最新，有新版本才提示下載。</p></div>
-      <div class="item"><time>最新</time><h3>同步只更新沒動過的部分</h3><p>同步時比對台灣版現況：沒改過的原始檔照收上游新版，改過的一律保留，上游同檔新內容另存供比對；並修好清單檔被版本號覆寫導致程式無法啟動的問題，官網介紹同步改為台灣慣用來源。</p></div>
-      <div class="item"><time>最新</time><h3>自動更新機制上線</h3><p>後台每 6 小時檢查上游原始檔案，只覆蓋上游初始範圍，繁中化後自動編譯並發布版本；程式啟動時向本倉庫查詢最新版，確認後才下載替換，台灣版自身改動同樣走這條出包流程。官網同步補上更新說明。</p></div>
-      <div class="item"><time>最新</time><h3>說明文件全面繁中化</h3><p>README、使用說明、參與開發與安全性原則改寫為繁體中文；移除上游作者、贊助與大陸渠道資訊，僅依 MIT 要求保留一行致原作者致謝。</p></div>
-      <div class="item"><time>最新</time><h3>更名為鬼島 桌面靈動島</h3><p>軟體顯示名統一為「鬼島 桌面靈動島（Kuidao）」，版本資源、關於頁、安裝器與官網同步更新；安裝檔改用英文檔名 GuiDao-DynamicIsland-Setup，避免郵件與防毒誤判。</p></div>
-      <div class="item"><time>最新</time><h3>官網移除生成標記與豆包字樣</h3><p>官網不再出在任何 AI 生成標記，額度功能描述也撤掉豆包一詞；站內圖片本身無浮水印像素（邊緣全透明），顯示端若有角標屬平台疊加、不在檔案內。</p></div>
-      <div class="item"><time>最新</time><h3>吉祥物可換形象</h3><p>設定「外觀」新增吉祥物形象選單，預設島虎（石虎）；柴犬已補齊十二組表情動畫並可切換，貓、哈士奇、黃金獵犬待動畫完成後再開放。</p></div>
-      <div class="item"><time>最新</time><h3>官網只留正式版</h3><p>下載頁移除開發板卡片，改為單一安裝檔入口，並標明系統級安裝與程式清單可移除；首屏按鈕文案同步調整。</p></div>
-      <div class="item"><time>最新</time><h3>音樂來源預設收起大陸播放器</h3><p>網易雲、酷狗、汽水、酷我、波點、QQ 音樂不再自動上島；程式、歌詞與控制邏輯完整保留，改一個開關即可恢復。Spotify、Apple Music 與瀏覽器照常。</p></div>
-      <div class="item"><time>最新</time><h3>天氣可選到行政區</h3><p>修正查詢後綴只認簡體的問題，輸入「士林區」「內湖區」「北投區」都查得到，可把區加入城市清單；都會區各區天氣常與市中心不同，建議直接選到區一級。</p></div>
-      <div class="item"><time>最新</time><h3>圖示與安裝方式調整</h3><p>設定視窗與介面內的品牌圖示改用鬼島自己的標誌，不再沿用原作者圖案；安裝器改為系統級安裝，裝進 Program Files、註冊於 Windows 程式清單，移除時一併清除登錄與捷徑。</p></div>
-      <div class="item"><time>最新</time><h3>信箱清單在地化</h3><p>新增信箱的服務選單改列台灣可連線的服務：Yahoo 奇摩、iCloud、Gmail、Outlook／Hotmail 與自訂 IMAP；QQ、163、126、騰訊企業郵退出選單（舊帳號仍可解析）。同步程式已同步套用。</p></div>
-      <div class="item"><time>最新</time><h3>移除贊助區塊</h3><p>台灣版在設定「關於」頁不再顯示「支援作者」卡片與收款碼，改由常數關閉入口；同步程式會自動套用此設定，上游改版後也不會復原。</p></div>
-      <div class="item"><time>最新</time><h3>官網與島虎上線</h3><p>新增下載官網（單檔自包含，含功能介紹、雙版本下載、系統需求與常見問題）；品牌吉祥物定為台灣石虎「島虎」，官網與文宣共用同一素材。</p></div>
-      <div class="item"><time>最新</time><h3>補入上游開發歷程</h3><p>依原始碼倉庫的提交紀錄，把原始作者從首次開源到目前的演進，按安裝鏈、音樂、額度、通訊、天氣、外觀、效能、設定與穩定性九個方向整理進本站。</p></div>
-      <div class="item"><time>工具</time><h3>解除封鎖工具納入倉庫</h3><p>倉庫根目錄新增「解除封鎖.bat」，一鍵清除下載標記（Zone.Identifier），解決 SmartScreen 攔截；隨原始碼一起版控。</p></div>
-      <div class="item"><time>自動化</time><h3>上游同步程式與雲端流水線</h3><p>同步腳本：拉上游原始碼、轉換字串、修復比對鍵（歌詞來源、飛書標題、驗證碼詞表、天氣省會表）、品牌改名、版本對齊，並輸出未命中清單；雲端工作流程定時執行，變更即提交、編譯、發佈。</p></div>
-      <div class="item"><time>介面</time><h3>三套圖示與開發板角標</h3><p>方形卡片版、透明標誌版、開發板角標版，各自封裝多尺寸 ICO；正式版與開發板分別內嵌，檔案哈希不同可辨。</p></div>
-      <div class="item"><time>權限</time><h3>管理員清單與系統診斷修復</h3><p>嵌入 requireAdministrator 清單；修復流程偵測系統組建、DirectX、WebView2、正黑體、執行庫，並執行映像健檢、系統檔掃描、DNS 清除、圖示快取重建、資源管理器重啟。</p></div>
-      <div class="item"><time>品牌</time><h3>更名鬼島</h3><p>顯示名、視窗標題、安裝器、版本資源、執行檔名全面替換；保留上游授權全文與衍生聲明。</p></div>
-      <div class="item"><time>在地化</time><h3>繁體化與台灣用語</h3><p>全專案字串轉換，介面用語改為設定、檔案、資料夾、網路、螢幕、滑鼠、桌布；微軟正黑體優先、十二小時制。</p></div>
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>異動紀錄改為分類標籤</h3><p>更新總覽改成跟勤務日誌一樣的分類寫法：每筆異動標上「新增／更新／修正／移除／異動」，上方可按標籤篩選，只看某一類做了什麼；仍不標版本號。</p></div>
+
+      <div class="item" data-cat="fix"><time>最新</time><span class="cat fix">修正</span><h3>更新檢查修好</h3><p>版本標籤多了台灣版後綴，原本的版本解析只吃純數字，導致檢查更新時報「更新資訊格式異常」。解析改為取數字段後，同版號顯示已是最新，有新版本才提示下載。</p></div>
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>同步只更新沒動過的部分</h3><p>同步時比對台灣版現況：沒改過的原始檔照收上游新版，改過的一律保留，上游同檔新內容另存供比對；並修好清單檔被版本號覆寫導致程式無法啟動的問題，官網介紹同步改為台灣慣用來源。</p></div>
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>自動更新機制上線</h3><p>後台每 6 小時檢查上游原始檔案，只覆蓋上游初始範圍，繁中化後自動編譯並發布版本；程式啟動時向本倉庫查詢最新版，確認後才下載替換，台灣版自身改動同樣走這條出包流程。官網同步補上更新說明。</p></div>
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>說明文件全面繁中化</h3><p>README、使用說明、參與開發與安全性原則改寫為繁體中文；移除上游作者、贊助與大陸渠道資訊，僅依 MIT 要求保留一行致原作者致謝。</p></div>
+      <div class="item" data-cat="chg"><time>最新</time><span class="cat chg">異動</span><h3>更名為鬼島 桌面靈動島</h3><p>軟體顯示名統一為「鬼島 桌面靈動島（Kuidao）」，版本資源、關於頁、安裝器與官網同步更新；安裝檔改用英文檔名 GuiDao-DynamicIsland-Setup，避免郵件與防毒誤判。</p></div>
+      <div class="item" data-cat="del"><time>最新</time><span class="cat del">移除</span><h3>官網移除生成標記與豆包字樣</h3><p>官網不再出在任何 AI 生成標記，額度功能描述也撤掉豆包一詞；站內圖片本身無浮水印像素（邊緣全透明），顯示端若有角標屬平台疊加、不在檔案內。</p></div>
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>吉祥物可換形象</h3><p>設定「外觀」新增吉祥物形象選單，預設島虎（石虎）；柴犬已補齊十二組表情動畫並可切換，貓、哈士奇、黃金獵犬待動畫完成後再開放。</p></div>
+      <div class="item" data-cat="del"><time>最新</time><span class="cat del">移除</span><h3>官網只留正式版</h3><p>下載頁移除開發板卡片，改為單一安裝檔入口，並標明系統級安裝與程式清單可移除；首屏按鈕文案同步調整。</p></div>
+      <div class="item" data-cat="chg"><time>最新</time><span class="cat chg">異動</span><h3>音樂來源預設收起大陸播放器</h3><p>網易雲、酷狗、汽水、酷我、波點、QQ 音樂不再自動上島；程式、歌詞與控制邏輯完整保留，改一個開關即可恢復。Spotify、Apple Music 與瀏覽器照常。</p></div>
+      <div class="item" data-cat="fix"><time>最新</time><span class="cat fix">修正</span><h3>天氣可選到行政區</h3><p>修正查詢後綴只認簡體的問題，輸入「士林區」「內湖區」「北投區」都查得到，可把區加入城市清單；都會區各區天氣常與市中心不同，建議直接選到區一級。</p></div>
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>圖示與安裝方式調整</h3><p>設定視窗與介面內的品牌圖示改用鬼島自己的標誌，不再沿用原作者圖案；安裝器改為系統級安裝，裝進 Program Files、註冊於 Windows 程式清單，移除時一併清除登錄與捷徑。</p></div>
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>信箱清單在地化</h3><p>新增信箱的服務選單改列台灣可連線的服務：Yahoo 奇摩、iCloud、Gmail、Outlook／Hotmail 與自訂 IMAP；QQ、163、126、騰訊企業郵退出選單（舊帳號仍可解析）。同步程式已同步套用。</p></div>
+      <div class="item" data-cat="del"><time>最新</time><span class="cat del">移除</span><h3>移除贊助區塊</h3><p>台灣版在設定「關於」頁不再顯示「支援作者」卡片與收款碼，改由常數關閉入口；同步程式會自動套用此設定，上游改版後也不會復原。</p></div>
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>官網與島虎上線</h3><p>新增下載官網（單檔自包含，含功能介紹、雙版本下載、系統需求與常見問題）；品牌吉祥物定為台灣石虎「島虎」，官網與文宣共用同一素材。</p></div>
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>補入上游開發歷程</h3><p>依原始碼倉庫的提交紀錄，把原始作者從首次開源到目前的演進，按安裝鏈、音樂、額度、通訊、天氣、外觀、效能、設定與穩定性九個方向整理進本站。</p></div>
+      <div class="item" data-cat="add"><time>工具</time><span class="cat add">新增</span><h3>解除封鎖工具納入倉庫</h3><p>倉庫根目錄新增「解除封鎖.bat」，一鍵清除下載標記（Zone.Identifier），解決 SmartScreen 攔截；隨原始碼一起版控。</p></div>
+      <div class="item" data-cat="add"><time>自動化</time><span class="cat add">新增</span><h3>上游同步程式與雲端流水線</h3><p>同步腳本：拉上游原始碼、轉換字串、修復比對鍵（歌詞來源、飛書標題、驗證碼詞表、天氣省會表）、品牌改名、版本對齊，並輸出未命中清單；雲端工作流程定時執行，變更即提交、編譯、發佈。</p></div>
+      <div class="item" data-cat="add"><time>介面</time><span class="cat add">新增</span><h3>三套圖示與開發板角標</h3><p>方形卡片版、透明標誌版、開發板角標版，各自封裝多尺寸 ICO；正式版與開發板分別內嵌，檔案哈希不同可辨。</p></div>
+      <div class="item" data-cat="upd"><time>權限</time><span class="cat upd">更新</span><h3>管理員清單與系統診斷修復</h3><p>嵌入 requireAdministrator 清單；修復流程偵測系統組建、DirectX、WebView2、正黑體、執行庫，並執行映像健檢、系統檔掃描、DNS 清除、圖示快取重建、資源管理器重啟。</p></div>
+      <div class="item" data-cat="chg"><time>品牌</time><span class="cat chg">異動</span><h3>更名鬼島</h3><p>顯示名、視窗標題、安裝器、版本資源、執行檔名全面替換；保留上游授權全文與衍生聲明。</p></div>
+      <div class="item" data-cat="upd"><time>在地化</time><span class="cat upd">更新</span><h3>繁體化與台灣用語</h3><p>全專案字串轉換，介面用語改為設定、檔案、資料夾、網路、螢幕、滑鼠、桌布；微軟正黑體優先、十二小時制。</p></div>
     </div>
     <div class="note"><b>說明</b>：本頁即時記錄所有功能與介面異動，不標示版本號；每次調整後同步更新此頁。</div>
   </section>
@@ -106,5 +128,20 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
     本頁僅供內部更新紀錄使用
   </footer>
 </div>
+
+<script>
+(function(){
+  var box=document.getElementById('filters');
+  if(!box)return;
+  box.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    var f=b.dataset.f;
+    [].forEach.call(box.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});
+    [].forEach.call(document.querySelectorAll('.item'),function(it){
+      it.hidden = (f!=='all' && it.dataset.cat!==f);
+    });
+  });
+})();
+</script>
 </body>
 </html>
