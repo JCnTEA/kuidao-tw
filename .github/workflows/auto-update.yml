@@ -62,7 +62,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: 編譯
-        run: cargo build --release
+        run: cargo build --release --bin kuidao
 
       - name: 打包
         shell: pwsh
@@ -71,7 +71,7 @@ jobs:
           $name = "Kuidao-v$ver-tw-windows-x64.zip"
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "target\release\kuidao.exe" dist
-          if (Test-Path README-TW.md) { Copy-Item README-TW.md dist }
+          if (Test-Path README.md) { Copy-Item README.md dist }
           if (Test-Path NOTICE)       { Copy-Item NOTICE dist }
           if (Test-Path LICENSE)      { Copy-Item LICENSE dist }
           Compress-Archive -Path "dist\*" -DestinationPath $name -Force
@@ -82,9 +82,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VER }}-tw
-          name: 鬼島 Kuidao v${{ env.VER }}（台灣版）
+          name: 鬼島 桌面靈動島 v${{ env.VER }}（台灣版）
           body: |
-            由上游 Renly1994/xiaotang-daozai v${{ env.VER }}（MIT）自動同步、繁中化與台灣用語調整後編譯。
+            由上游開源專案（MIT）v${{ env.VER }} 自動同步，經繁體中文與台灣用語調整後編譯。
             - 介面：台灣繁體（設定／檔案／資料夾／網路／螢幕）
             - 免安裝：解壓即用
             - 無程式碼簽章，首次執行如遇 SmartScreen 請選「仍要執行」
