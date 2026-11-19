@@ -167,6 +167,26 @@ impl Position {
         !self.label.trim().is_empty() && self.lat.is_finite() && self.lon.is_finite()
             && (-90.0..=90.0).contains(&self.lat) && (-180.0..=180.0).contains(&self.lon)
     }
+    /// 讀取舊存檔時把地點層級整理乾淨：台灣一律「台灣 · 某某市（· 某某區）」，不帶「省」。
+    pub fn tidy(&mut self) {
+        self.region = tidy_region(&self.region);
+    }
+}
+
+/// 地點層級字串整理：台灣不帶「省」，開頭固定「台灣」，重複的層級只留一次。
+pub fn tidy_region(region: &str) -> String {
+    let parts: Vec<&str> = region.split(" · ").map(str::trim).filter(|s| !s.is_empty()).collect();
+    let taiwan = parts.iter().any(|s| s.contains("台灣") || s.contains("臺灣"));
+    let mut out: Vec<String> = Vec::new();
+    if taiwan { out.push("台灣".to_string()); }
+    for part in parts {
+        if part.contains('省') || part.contains("台灣") || part.contains("臺灣") {
+            continue;
+        }
+        let owned = part.to_string();
+        if !out.contains(&owned) { out.push(owned); }
+    }
+    out.join(" · ")
 }
 
 fn json(response: ureq::Response) -> Result<Value, String> {
@@ -332,10 +352,23 @@ fn city_candidates(value: &Value) -> Vec<(Position, u64)> {
     value["results"].as_array().into_iter().flatten().filter_map(|item|{
         if skip_feature(item["feature_code"].as_str().unwrap_or_default()) {return None;}
         let label=item["name"].as_str()?.trim().to_string();
+        let country=item["country"].as_str().unwrap_or_default();
+        let taiwan=country.contains("台灣")||country.contains("臺灣")||country.eq_ignore_ascii_case("taiwan");
         let mut areas=Vec::new();
-        for key in ["admin2","admin1","country"] {
-            if let Some(area)=item[key].as_str().filter(|s|!s.is_empty() && *s!=label) {
-                if !areas.contains(&area) {areas.push(area);}
+        if taiwan {
+            areas.push("台灣".to_string());
+            for key in ["admin2","admin1"] {
+                if let Some(area)=item[key].as_str().filter(|s|!s.is_empty() && *s!=label && !s.contains('省') && !s.contains("台灣") && !s.contains("臺灣")) {
+                    let owned=area.to_string();
+                    if !areas.contains(&owned) {areas.push(owned);}
+                }
+            }
+        } else {
+            for key in ["admin2","admin1","country"] {
+                if let Some(area)=item[key].as_str().filter(|s|!s.is_empty() && *s!=label) {
+                    let owned=area.to_string();
+                    if !areas.contains(&owned) {areas.push(owned);}
+                }
             }
         }
         let position=Position{lat:item["latitude"].as_f64()?,lon:item["longitude"].as_f64()?,label,region:areas.join(" · ")};

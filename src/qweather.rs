@@ -25,7 +25,7 @@ pub(crate) struct Search {pub locations:Vec<Location>,pub credits:Vec<String>}
 #[derive(Clone,Default,Serialize,Deserialize)]
 pub(crate) struct Config {pub provider:Provider,pub host:String,#[serde(default)]pub credential:String,pub location:Option<Location>,pub saved:Vec<Location>}
 impl Config {
-    pub fn load()->Self {std::fs::read(crate::model::config_dir().join("weather-provider.json")).ok().and_then(|b|serde_json::from_slice::<Self>(&b).ok()).map(|mut c|{c.saved.retain(Location::valid);c.saved.truncate(crate::weather::MAX_CITIES);if !c.location.as_ref().is_some_and(Location::valid){c.location=None;}c}).unwrap_or_default()}
+    pub fn load()->Self {std::fs::read(crate::model::config_dir().join("weather-provider.json")).ok().and_then(|b|serde_json::from_slice::<Self>(&b).ok()).map(|mut c|{c.saved.retain(Location::valid);c.saved.truncate(crate::weather::MAX_CITIES);for l in &mut c.saved {l.position.tidy();}if let Some(l)=c.location.as_mut(){l.position.tidy();}if !c.location.as_ref().is_some_and(Location::valid){c.location=None;}c}).unwrap_or_default()}
     pub fn save(&self)->Result<(),Error> {let dir=crate::model::config_dir();std::fs::create_dir_all(&dir).map_err(|_|Error::Storage)?;crate::model::atomic_write(&dir.join("weather-provider.json"),&serde_json::to_vec(self).map_err(|_|Error::Storage)?).map_err(|_|Error::Storage)}
 }
 
