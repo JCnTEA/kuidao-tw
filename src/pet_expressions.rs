@@ -37,7 +37,16 @@ impl Expression {
             include_bytes!("../assets/pet-species/shiba/08-shy-peek.png"),include_bytes!("../assets/pet-species/shiba/09-scan.png"),
             include_bytes!("../assets/pet-species/shiba/10-peek.png"),include_bytes!("../assets/pet-species/shiba/11-search.png"),
         ];
-        if crate::mascot::current().animated()==crate::mascot::Mascot::Shiba { SHIBA[self as usize] } else { SHEETS[self as usize] }
+        const CAT_SHEET:&[u8]=include_bytes!("../assets/pet-species/cat/sheet.png");
+        const HUSKY_SHEET:&[u8]=include_bytes!("../assets/pet-species/husky/sheet.png");
+        const GOLDEN_SHEET:&[u8]=include_bytes!("../assets/pet-species/golden/sheet.png");
+        match crate::mascot::current() {
+            crate::mascot::Mascot::Shiba => SHIBA[self as usize],
+            crate::mascot::Mascot::Cat => CAT_SHEET,
+            crate::mascot::Mascot::Husky => HUSKY_SHEET,
+            crate::mascot::Mascot::Golden => GOLDEN_SHEET,
+            crate::mascot::Mascot::Tiger => SHEETS[self as usize],
+        }
     }
     fn frame(self,time:f32)->usize {
         let mut end=0.0;
