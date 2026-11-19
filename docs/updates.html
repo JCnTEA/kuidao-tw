@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>鬼島 · 更新總覽</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap">
+<style>
+:root{--bg:#060b12;--card:#0c1a26;--line:#183245;--cy:#3fe0f0;--cy2:#1ea7c4;--txt:#e6f7fb;--sub:#7fa3b5;--dim:#4f7186}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(1200px 600px at 50% -10%,#0d2433 0%,#060b12 60%) fixed;color:var(--txt);font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;line-height:1.7}
+.wrap{max-width:960px;margin:0 auto;padding:56px 24px 100px}
+header{text-align:center;margin-bottom:56px}
+h1{font-size:clamp(34px,6vw,58px);font-weight:900;letter-spacing:.18em;color:#dffaff;text-shadow:0 0 18px rgba(63,224,240,.55),0 0 46px rgba(63,224,240,.25)}
+.en{display:block;margin-top:10px;font-size:12px;letter-spacing:.42em;color:var(--sub);font-weight:500}
+.tagline{margin-top:22px;color:var(--sub);font-size:14px}
+.tagline b{color:var(--cy);font-weight:500}
+.section{margin-bottom:44px}
+.sec-title{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.sec-title h2{font-size:17px;font-weight:700;letter-spacing:.12em}
+.bar{width:3px;height:18px;background:linear-gradient(180deg,var(--cy),var(--cy2));border-radius:2px;box-shadow:0 0 12px rgba(63,224,240,.6)}
+.line{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px}
+.card{background:linear-gradient(160deg,var(--card) 0%,#0a1622 100%);border:1px solid var(--line);border-radius:14px;padding:18px;transition:.25s;position:relative;overflow:hidden}
+.card:hover{border-color:rgba(63,224,240,.42);transform:translateY(-2px);box-shadow:0 10px 30px -12px rgba(0,0,0,.7)}
+.card::after{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(63,224,240,.5),transparent)}
+.card h3{font-size:14px;font-weight:700;margin-bottom:8px;color:#d7f6fb}
+.card p{font-size:12.5px;color:var(--sub);line-height:1.75}
+.badge{display:inline-block;font-size:10px;letter-spacing:.12em;padding:2px 8px;border-radius:999px;border:1px solid rgba(63,224,240,.32);color:var(--cy);margin-bottom:10px;background:rgba(63,224,240,.07)}
+.tl{position:relative;padding-left:26px}
+.tl::before{content:"";position:absolute;left:7px;top:4px;bottom:4px;width:1px;background:linear-gradient(180deg,var(--cy),var(--line) 60%,transparent)}
+.item{position:relative;margin-bottom:26px}
+.item::before{content:"";position:absolute;left:-24px;top:6px;width:9px;height:9px;border-radius:50%;background:var(--cy);box-shadow:0 0 12px rgba(63,224,240,.9)}
+.item time{font-size:11px;letter-spacing:.14em;color:var(--dim);display:block;margin-bottom:4px}
+.item h3{font-size:14px;font-weight:600;color:#d9f6fb;margin-bottom:6px}
+.item p{font-size:12.5px;color:var(--sub)}
+.note{margin-top:14px;border:1px dashed rgba(63,224,240,.25);border-radius:12px;padding:14px 16px;background:rgba(63,224,240,.04);font-size:12.5px;color:var(--sub)}
+.note b{color:var(--cy);font-weight:500}
+footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;margin-top:60px;line-height:2}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>鬼島</h1>
+    <span class="en">GUIDAO · TAIWAN DIGITAL PLATFORM</span>
+    <p class="tagline">Windows 桌面靈動島 · <b>台灣繁體版</b>　｜　衍生自上游開源專案（MIT）</p>
+  </header>
+
+  <section class="section">
+    <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
+    <div class="grid">
+      <div class="card"><span class="badge">核心</span><h3>可執行成品</h3><p>正式版與開發板兩支 exe，圖示各自內嵌，管理員權限啟動，介面全繁體台灣用語。</p></div>
+      <div class="card"><span class="badge">授權</span><h3>僅限本人</h3><p>機器碼綁定，離線授權碼驗證；未啟用不進入主程式，換機需重新取得授權。</p></div>
+      <div class="card"><span class="badge">自動化</span><h3>上游同步</h3><p>定時檢查上游原始碼，自動繁中化、台灣用語調整、品牌改名、版本對齊後編譯發布。</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-title"><span class="bar"></span><h2>上游開發歷程</h2><span class="line"></span></div>
+    <p style="font-size:12.5px;color:var(--sub);margin:-6px 0 18px">原始作者自首次開源一路推進的過程，依功能域歸納，不列版本號。</p>
+    <div class="grid">
+      <div class="card"><span class="badge">開源起步</span><h3>安裝、更新與發布鏈</h3><p>首次開源並附使用指南；建立安裝包與免安裝包、應用內更新、開機自啟、捷徑目標路徑與舊版覆蓋升級流程，同步修掉 CI 抓取安裝程式與更新快取替換的問題。</p></div>
+      <div class="card"><span class="badge">音樂</span><h3>播放控制與歌詞</h3><p>接上系統媒體資訊：播放／暫停、切歌、獨立音量、進度跳轉；陸續適配網易雲、酷狗、波點、酷我、Apple Music、汽水，處理大歌單補齊時長、歌詞按歌曲身份切換、合唱曲目與少數民族語歌詞排版。</p></div>
+      <div class="card"><span class="badge">AI 額度</span><h3>多來源額度面板</h3><p>從豆包起步，陸續接入 Kimi、Claude、Gemini、Grok、DeepSeek、GLM、ZCode、Kiro 與中轉站餘額；加入額度環、常駐欄數字、按需啟停背景執行緒與錯誤提示。</p></div>
+      <div class="card"><span class="badge">通訊</span><h3>訊息上島</h3><p>微信、QQ 提醒先行，接著接入飛書、釘釘、企業微信，統一任務欄提醒與帳號歸屬判定，修掉白屏、隱藏圖示辨識、退出清理與延遲通知歸錯人。</p></div>
+      <div class="card"><span class="badge">天氣</span><h3>實況與預報</h3><p>當地實況、四日到七日預報、日出日落、多城市切換、日照軌跡視圖；新增和風天氣來源與憑據保護，常駐欄時鐘旁顯示溫度。</p></div>
+      <div class="card"><span class="badge">外觀</span><h3>形態與動效</h3><p>皮膚、停靠形態、橫線模式、極簡劉海、側邊常駐；拖曳加入拿起、跟手、吸附與落位動效，頂欄避讓、OLED 像素偏移、系統不支援模糊時改用半透明底。</p></div>
+      <div class="card"><span class="badge">效能</span><h3>渲染與資源</h3><p>相容渲染改為 Direct3D 12 優先、失敗退 Vulkan、再退 OpenGL；分層視窗消除邊緣鋸齒，核顯降低記憶體占用，閒置不再被截圖流程帶到滿幀，CPU 約降四成。</p></div>
+      <div class="card"><span class="badge">設定</span><h3>設定頁重組</h3><p>側欄一項一頁、功能卡片統一、長表單收進彈窗；頁面開關改為模組總開關，記住視窗位置與大小。</p></div>
+      <div class="card"><span class="badge">穩定</span><h3>全屏與相容修補</h3><p>全屏判定改看客戶區是否蓋滿整屏，修掉遊戲與建模軟體裡反覆彈出；另處理郵件驗證碼（含繁中與純字母）、日曆自簽憑證、代理下請求失敗、更新檢查限流等問題。</p></div>
+    </div>
+    <div class="note"><b>時間軸</b>：開源（11/3）→ 音樂與額度（11/5）→ 通知與天候（11/10）→ 渲染與設定改版（11/18）。期間累計 174 筆提交，以功能修補與相容性調整為主。</div>
+  </section>
+
+  <section class="section">
+    <div class="sec-title"><span class="bar"></span><h2>異動紀錄</h2><span class="line"></span></div>
+    <div class="tl">
+      <div class="item"><time>最新</time><h3>說明文件全面繁中化</h3><p>README、使用說明、參與開發與安全性原則改寫為繁體中文；移除上游作者、贊助與大陸渠道資訊，僅依 MIT 要求保留一行致原作者致謝。</p></div>
+      <div class="item"><time>最新</time><h3>更名為鬼島 桌面靈動島</h3><p>軟體顯示名統一為「鬼島 桌面靈動島（Kuidao）」，版本資源、關於頁、安裝器與官網同步更新；安裝檔改用英文檔名 GuiDao-DynamicIsland-Setup，避免郵件與防毒誤判。</p></div>
+      <div class="item"><time>最新</time><h3>官網移除生成標記與豆包字樣</h3><p>官網不再出在任何 AI 生成標記，額度功能描述也撤掉豆包一詞；站內圖片本身無浮水印像素（邊緣全透明），顯示端若有角標屬平台疊加、不在檔案內。</p></div>
+      <div class="item"><time>最新</time><h3>吉祥物可換形象</h3><p>設定「外觀」新增吉祥物形象選單，預設島虎（石虎）；柴犬已補齊十二組表情動畫並可切換，貓、哈士奇、黃金獵犬待動畫完成後再開放。</p></div>
+      <div class="item"><time>最新</time><h3>官網只留正式版</h3><p>下載頁移除開發板卡片，改為單一安裝檔入口，並標明系統級安裝與程式清單可移除；首屏按鈕文案同步調整。</p></div>
+      <div class="item"><time>最新</time><h3>音樂來源預設收起大陸播放器</h3><p>網易雲、酷狗、汽水、酷我、波點、QQ 音樂不再自動上島；程式、歌詞與控制邏輯完整保留，改一個開關即可恢復。Spotify、Apple Music 與瀏覽器照常。</p></div>
+      <div class="item"><time>最新</time><h3>天氣可選到行政區</h3><p>修正查詢後綴只認簡體的問題，輸入「士林區」「內湖區」「北投區」都查得到，可把區加入城市清單；都會區各區天氣常與市中心不同，建議直接選到區一級。</p></div>
+      <div class="item"><time>最新</time><h3>圖示與安裝方式調整</h3><p>設定視窗與介面內的品牌圖示改用鬼島自己的標誌，不再沿用原作者圖案；安裝器改為系統級安裝，裝進 Program Files、註冊於 Windows 程式清單，移除時一併清除登錄與捷徑。</p></div>
+      <div class="item"><time>最新</time><h3>信箱清單在地化</h3><p>新增信箱的服務選單改列台灣可連線的服務：Yahoo 奇摩、iCloud、Gmail、Outlook／Hotmail 與自訂 IMAP；QQ、163、126、騰訊企業郵退出選單（舊帳號仍可解析）。同步程式已同步套用。</p></div>
+      <div class="item"><time>最新</time><h3>移除贊助區塊</h3><p>台灣版在設定「關於」頁不再顯示「支援作者」卡片與收款碼，改由常數關閉入口；同步程式會自動套用此設定，上游改版後也不會復原。</p></div>
+      <div class="item"><time>最新</time><h3>官網與島虎上線</h3><p>新增下載官網（單檔自包含，含功能介紹、雙版本下載、系統需求與常見問題）；品牌吉祥物定為台灣石虎「島虎」，官網與文宣共用同一素材。</p></div>
+      <div class="item"><time>最新</time><h3>補入上游開發歷程</h3><p>依原始碼倉庫的提交紀錄，把原始作者從首次開源到目前的演進，按安裝鏈、音樂、額度、通訊、天氣、外觀、效能、設定與穩定性九個方向整理進本站。</p></div>
+      <div class="item"><time>工具</time><h3>解除封鎖工具納入倉庫</h3><p>倉庫根目錄新增「解除封鎖.bat」，一鍵清除下載標記（Zone.Identifier），解決 SmartScreen 攔截；隨原始碼一起版控。</p></div>
+      <div class="item"><time>自動化</time><h3>上游同步程式與雲端流水線</h3><p>同步腳本：拉上游原始碼、轉換字串、修復比對鍵（歌詞來源、飛書標題、驗證碼詞表、天氣省會表）、品牌改名、版本對齊，並輸出未命中清單；雲端工作流程定時執行，變更即提交、編譯、發佈。</p></div>
+      <div class="item"><time>介面</time><h3>三套圖示與開發板角標</h3><p>方形卡片版、透明標誌版、開發板角標版，各自封裝多尺寸 ICO；正式版與開發板分別內嵌，檔案哈希不同可辨。</p></div>
+      <div class="item"><time>權限</time><h3>管理員清單與系統診斷修復</h3><p>嵌入 requireAdministrator 清單；修復流程偵測系統組建、DirectX、WebView2、正黑體、執行庫，並執行映像健檢、系統檔掃描、DNS 清除、圖示快取重建、資源管理器重啟。</p></div>
+      <div class="item"><time>品牌</time><h3>更名鬼島</h3><p>顯示名、視窗標題、安裝器、版本資源、執行檔名全面替換；保留上游授權全文與衍生聲明。</p></div>
+      <div class="item"><time>在地化</time><h3>繁體化與台灣用語</h3><p>全專案字串轉換，介面用語改為設定、檔案、資料夾、網路、螢幕、滑鼠、桌布；微軟正黑體優先、十二小時制。</p></div>
+    </div>
+    <div class="note"><b>說明</b>：本頁即時記錄所有功能與介面異動，不標示版本號；每次調整後同步更新此頁。</div>
+  </section>
+
+  <footer>
+    鬼島 · 台灣版　｜　衍生自上游開源專案，依 MIT 授權保留原作者聲明<br>
+    本頁僅供內部更新紀錄使用
+  </footer>
+</div>
+</body>
+</html>
