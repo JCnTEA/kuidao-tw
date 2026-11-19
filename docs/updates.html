@@ -76,6 +76,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>異動紀錄</h2><span class="line"></span></div>
     <div class="tl">
+      <div class="item"><time>最新</time><h3>更新檢查修好</h3><p>版本標籤多了台灣版後綴，原本的版本解析只吃純數字，導致檢查更新時報「更新資訊格式異常」。解析改為取數字段後，同版號顯示已是最新，有新版本才提示下載。</p></div>
       <div class="item"><time>最新</time><h3>同步只更新沒動過的部分</h3><p>同步時比對台灣版現況：沒改過的原始檔照收上游新版，改過的一律保留，上游同檔新內容另存供比對；並修好清單檔被版本號覆寫導致程式無法啟動的問題，官網介紹同步改為台灣慣用來源。</p></div>
       <div class="item"><time>最新</time><h3>自動更新機制上線</h3><p>後台每 6 小時檢查上游原始檔案，只覆蓋上游初始範圍，繁中化後自動編譯並發布版本；程式啟動時向本倉庫查詢最新版，確認後才下載替換，台灣版自身改動同樣走這條出包流程。官網同步補上更新說明。</p></div>
       <div class="item"><time>最新</time><h3>說明文件全面繁中化</h3><p>README、使用說明、參與開發與安全性原則改寫為繁體中文；移除上游作者、贊助與大陸渠道資訊，僅依 MIT 要求保留一行致原作者致謝。</p></div>

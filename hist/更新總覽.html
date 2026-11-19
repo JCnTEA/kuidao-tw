@@ -50,6 +50,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
+      <div class="card"><span class="badge">更新</span><h3>更新檢查修好</h3><p>版本標籤帶台灣版後綴時，舊版解析會判定格式異常；改為只取數字段後可正常比對，有新版本才會提示下載。</p></div>
       <div class="card"><span class="badge">同步</span><h3>上游只更新沒動過的部分</h3><p>同步時比對台灣版現況：沒改過的原始檔照收上游新版，改過的（吉祥物、設定頁、更新來源等）一律保留，上游同檔新內容另存供比對；同時修好清單檔被版本號覆寫導致無法啟動的問題。</p></div>
       <div class="card"><span class="badge">更新</span><h3>自動更新已上線</h3><p>後台每 6 小時檢查上游初始檔案，繁中化後自動編譯並發布；程式啟動向本倉庫查最新版，確認後才下載替換。台灣版自身改動同樣走此流程出包，官網同步補上說明。</p></div>
       <div class="card"><span class="badge">核心</span><h3>可執行成品</h3><p>正式版與開發板兩支 exe，圖示各自內嵌，管理員權限啟動，介面全繁體台灣用語。</p></div>
