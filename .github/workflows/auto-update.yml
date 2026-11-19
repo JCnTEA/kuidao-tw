@@ -50,7 +50,7 @@ jobs:
 
   build:
     needs: sync
-    if: needs.sync.outputs.changed == 'true'
+    if: needs.sync.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,6 +71,7 @@ jobs:
           $name = "Kuidao-v$ver-tw-windows-x64.zip"
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "target\release\kuidao.exe" dist
+          if (Test-Path assets) { Copy-Item assets dist -Recurse -Force }
           if (Test-Path README.md) { Copy-Item README.md dist }
           if (Test-Path NOTICE)       { Copy-Item NOTICE dist }
           if (Test-Path LICENSE)      { Copy-Item LICENSE dist }
