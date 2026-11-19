@@ -82,19 +82,9 @@ Windows 桌面靈動島，把通知、音樂、日程、天氣與信箱放到手
 - 資料來自 **Open-Meteo**（免費、免金鑰），每 15 分鐘更新，也可手動重新整理。
 - 結果快取在本機，斷網時顯示上次資料並標出更新時間。
 
-## 下載安裝
+## 取得軟體
 
-前往 **[最新版本](https://github.com/JCnTEA/kuidao-tw/releases/latest)**：
-
-| 下載檔案 | 使用方式 |
-| --- | --- |
-| `GuiDao-DynamicIsland-Setup-v版本-x64.exe` | **建議**。雙擊安裝，可選安裝位置、桌面捷徑與開機自啟 |
-| `GuiDao-DynamicIsland-Portable-v版本-x64.zip` | 免安裝。完整解壓後執行 `kuidao.exe` |
-| `SHA256SUMS.txt` | 下載校驗，可用 PowerShell `Get-FileHash -Algorithm SHA256` 比對 |
-
-**系統需求**：Windows 10／11 x64。預設 OpenGL，初始化失敗時改試 Direct3D 12。
-
-**更新**：設定 → 關於 → 檢查更新，支援應用內下載與重啟更新；升級保留設定與資料。
+下載統一由 **官方網站** 提供，目前尚未開放，開放後會在本倉庫首頁與官網公告。原始碼可自行編譯，方式見下一節。
 
 ## 授權與私人使用
 
