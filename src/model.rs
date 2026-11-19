@@ -109,18 +109,21 @@ pub enum Skin {
     GlassLight,
     GlassDark,
     Fluid,
+    Duty,
+    DutyStamp,
+    DutyNight,
 }
 
 impl Skin {
-    pub const ALL: [Skin; 5] = [Skin::Classic, Skin::Cream, Skin::GlassLight, Skin::GlassDark, Skin::Fluid];
+    pub const ALL: [Skin; 8] = [Skin::Classic, Skin::Cream, Skin::GlassLight, Skin::GlassDark, Skin::Fluid, Skin::Duty, Skin::DutyStamp, Skin::DutyNight];
     pub fn key(self) -> &'static str {
-        match self { Self::Classic => "classic", Self::Fluid => "fluid", Self::Cream => "cream", Self::GlassLight => "glass_light", Self::GlassDark => "glass" }
+        match self { Self::Classic => "classic", Self::Fluid => "fluid", Self::Cream => "cream", Self::GlassLight => "glass_light", Self::GlassDark => "glass", Self::Duty => "duty", Self::DutyStamp => "duty_stamp", Self::DutyNight => "duty_night" }
     }
     pub fn parse(value: &str) -> Self {
-        match value { "fluid" => Self::Fluid, "cream" => Self::Cream, "glass_light" => Self::GlassLight, "glass" | "glass_dark" => Self::GlassDark, _ => Self::Classic }
+        match value { "fluid" => Self::Fluid, "cream" => Self::Cream, "glass_light" => Self::GlassLight, "glass" | "glass_dark" => Self::GlassDark, "duty" => Self::Duty, "duty_stamp" => Self::DutyStamp, "duty_night" => Self::DutyNight, _ => Self::Classic }
     }
     pub fn label(self) -> &'static str {
-        match self { Self::Classic => "經典", Self::Fluid => "懸浮雲", Self::Cream => "奶油", Self::GlassLight => "毛玻璃·淺", Self::GlassDark => "毛玻璃·深" }
+        match self { Self::Classic => "經典", Self::Fluid => "懸浮雲", Self::Cream => "奶油", Self::GlassLight => "毛玻璃·淺", Self::GlassDark => "毛玻璃·深", Self::Duty => "勤務誌·紙藍", Self::DutyStamp => "勤務誌·印章", Self::DutyNight => "勤務誌·夜" }
     }
     pub fn description(self) -> &'static str {
         match self {
@@ -129,9 +132,14 @@ impl Skin {
             Self::Cream => "暖白底色配深棕文字和橙色強調，柔和明亮。",
             Self::GlassLight => "淺色磨砂玻璃，透出身後桌面的顏色，文字為深色；按背景明暗自動調整，保證清晰。",
             Self::GlassDark => "深色磨砂玻璃，透出身後桌面的顏色，文字為白色；按背景明暗自動調整，保證清晰。",
+            Self::Duty => "照勤務日誌的紙感配色：近白紙底、墨藍文字、深藍強調，像一頁公文。",
+            Self::DutyStamp => "紙底配印章紅強調，重點標記像蓋了紅章，適合喜歡紙本記錄的感覺。",
+            Self::DutyNight => "深墨藍底配紙白文字，夜班或昏暗環境下不刺眼。",
         }
     }
     pub fn is_glass(self) -> bool { matches!(self, Self::GlassLight | Self::GlassDark) }
+    /// 純色底（非玻璃、非動態）主題，底色直接取調色盤的紙色。
+    pub fn is_solid(self) -> bool { matches!(self, Self::Cream | Self::Duty | Self::DutyStamp | Self::DutyNight) }
 }
 
 /// 岛体形状：贴着屏幕顶边的刘海，或悬浮在顶边下方的胶囊。
