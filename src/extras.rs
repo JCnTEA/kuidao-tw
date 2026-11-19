@@ -1700,7 +1700,7 @@ impl App {
                                 });
                                 if mascot!=self.settings.mascot {self.settings.mascot=mascot;crate::mascot::set(mascot);}
                             });
-                            settings_hint(ui,"目前柴犬與島虎有完整表情動畫；貓、哈士奇、黃金獵犬完成動畫前先以島虎呈現。");
+                            settings_hint(ui,"五種形象都能直接切換；柴犬與島虎有完整表情動畫，其餘先以定格表情呈現。");
                             settings_advanced(ui,"settings-appearance-advanced",|ui|{
                                 setting_row(ui,"OLED 畫素偏移","防止 OLED 螢幕燒屏：收起靜止時讓島體緩慢移動幾個畫素，不改動你儲存的位置",&mut self.settings.oled_shift);
                             });
