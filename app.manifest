@@ -1,4 +1,4 @@
-<?xml version="0.6.66.0" encoding="UTF-8" standalone="yes"?>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <assemblyIdentity type="win32" name="Kuidao.Desktop" version="0.6.66.0" processorArchitecture="*"/>
   <description>鬼島 台灣版 桌面靈動島</description>
