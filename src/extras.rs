@@ -1886,33 +1886,20 @@ impl App {
                         let mut open_connect=false;
                         settings_card(ui,|ui|{
                             ui.add_enabled_ui(master,|ui|{
-                                setting_row(ui,"微信","根據工作列閃動提醒，不讀取聯絡人或聊天正文",&mut self.settings.wechat_notifications);
-                                if self.settings.wechat_notifications {
-                                    sub(ui,"系統匣一鍵喚起","微信縮在系統匣時，點提醒直接喚起微信",&mut self.settings.wechat_tray_open);
-                                }
-                                if master && !self.messenger_status(crate::app::Messenger::Wechat).is_empty(){settings_hint(ui,&self.messenger_status(crate::app::Messenger::Wechat));}
-                                ui.separator();
-                                setting_row(ui,"企業微信","",&mut self.settings.wecom_notifications);
-                                setting_row(ui,"飛書","",&mut self.settings.feishu_notifications);
-                                setting_row(ui,"釘釘","",&mut self.settings.dingtalk_notifications);
-                                settings_hint(ui,"企業微信、飛書、釘釘需在客戶端開啟工作列閃動；點選提醒開啟對應視窗。");
-                                for client in crate::messenger::Messenger::OFFICE {
-                                    if client.enabled(&self.settings) && !self.messenger_status(client).is_empty(){settings_hint(ui,&self.messenger_status(client));}
-                                }
-                                ui.separator();
                                 ui.horizontal(|ui|{
                                     ui.vertical(|ui|{
                                         ui.spacing_mut().item_spacing.y=2.0;
-                                        ui.label(egui::RichText::new("QQ 與其他應用程式").size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
+                                        ui.label(egui::RichText::new("LINE、Instagram 與其他應用程式").size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
                                         ui.label(egui::RichText::new(&self.listener_status).size(11.5).color(settings_color(ctx,Color32::from_gray(175),Color32::from_gray(90))));
                                     });
                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
                                         if self.settings.read_notifications {
-                                            if ui.button(if self.settings.qq_only{"斷開 QQ 通知"}else{"斷開系統通知"}).clicked(){self.pending.push(Cmd::DisconnectNotifications);}
+                                            if ui.button("斷開通知").clicked(){self.pending.push(Cmd::DisconnectNotifications);}
                                         } else if ui.button("連線…").clicked(){open_connect=true;}
                                     });
                                 });
-                                sub(ui,"顯示通知正文","僅 QQ 與 Windows 通知；可能包含私密訊息，螢幕共享時建議關閉",&mut self.settings.notification_preview);
+                                settings_hint(ui,"LINE、Instagram、Facebook、Threads 等應用程式的訊息，透過 Windows 通知集中到島上。");
+                                sub(ui,"顯示通知正文","僅系統通知內容；可能包含私密訊息，螢幕共享時建議關閉",&mut self.settings.notification_preview);
                                 // 收到过通知的应用可能有几十个：默认收起，展开后用可点选的标签排成几行，不再一应用一行。
                                 let before_apps=self.notification_apps.items.clone();
                                 let total=self.notification_apps.items.len();
@@ -1939,11 +1926,8 @@ impl App {
                             let mut close=false;
                             let modal=egui::Modal::new(connect_id.with("modal")).frame(settings_modal_frame(ctx)).backdrop_color(Color32::from_black_alpha(110)).show(ctx,|ui|{
                                 ui.set_width(360.0);
-                                settings_apply_style(ui);if settings_modal_title(ui,"連線 QQ 與其他應用程式"){close=true;}
-                                if ui.add_sized([ui.available_width(),30.0],egui::Button::new("只連線 QQ")).clicked(){self.pending.push(Cmd::RequestQqNotifications);close=true;}
-                                settings_hint(ui,"QQ 需開啟系統通知；新通知在島上顯示約 4.5 秒，預設隱藏正文。");
-                                ui.add_space(6.0);
-                                if ui.add_sized([ui.available_width(),30.0],egui::Button::new("連線所有應用程式通知")).clicked(){self.pending.push(Cmd::RequestNotifications);close=true;}
+                                settings_apply_style(ui);if settings_modal_title(ui,"連線系統通知"){close=true;}
+                                if ui.add_sized([ui.available_width(),30.0],egui::Button::new("連線系統通知")).clicked(){self.pending.push(Cmd::RequestNotifications);close=true;}
                                 settings_hint(ui,"只接收 Windows 通知中心可見的內容；應用程式會在收到通知後出現在列表裡。");
                                 ui.add_space(8.0);
                                 if ui.button("取消").clicked(){close=true;}
@@ -2155,7 +2139,7 @@ impl App {
                                 }
                                 ui.separator();
                         }else{
-                            ui.label(egui::RichText::new("還沒有連線行事曆。新增飛書、釘釘等行事曆，或匯入 .ics 檔案。").size(12.0).color(settings_color(ctx,Color32::from_gray(195),Color32::from_gray(60))));
+                            ui.label(egui::RichText::new("還沒有連線行事曆。新增行事曆帳號，或匯入 .ics 檔案。").size(12.0).color(settings_color(ctx,Color32::from_gray(195),Color32::from_gray(60))));
                         }
                         ui.horizontal(|ui|{
                             if ui.button(if self.calendar.config.is_some(){"更換行事曆"}else{"＋ 新增行事曆"}).clicked(){open_add=true;}

@@ -373,11 +373,8 @@ impl Settings {
                     for enabled in &mut s.visible_pages[v.len()..]{*enabled=v.bytes().any(|b|b==b'1');}
                 }
                 "read_notifications" => s.read_notifications=v=="1",
-                "wechat_notifications" => s.wechat_notifications=v=="1",
-                "wecom_notifications" => s.wecom_notifications=v=="1",
-                "feishu_notifications" => s.feishu_notifications=v=="1",
-                "dingtalk_notifications" => s.dingtalk_notifications=v=="1",
-                "wechat_tray_open" => s.wechat_tray_open=v=="1",
+                // 台灣版：微信／企業微信／飛書／釘釘 一律不啟用，舊設定檔即使寫了 1 也忽略
+                "wechat_notifications" | "wecom_notifications" | "feishu_notifications" | "dingtalk_notifications" | "wechat_tray_open" => {},
                 "qq_only" => s.qq_only=v=="1",
                 "notification_preview" => s.notification_preview=v=="1",
                 "system_hud" => s.system_hud = v != "0",
