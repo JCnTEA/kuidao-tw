@@ -359,6 +359,22 @@ def sync(src_root: pathlib.Path, version: str) -> int:
     # 台灣版：信箱服務清單在地化
     apply_tw_mail_providers()
 
+    # 台灣版產品名稱：對外顯示一律用「鬼島 桌面靈動島」
+    for rel, pairs in {
+        "app.rc": [('VALUE "FileDescription", "鬼島 台灣版"', 'VALUE "FileDescription", "鬼島 桌面靈動島（台灣版）"'),
+                   ('VALUE "ProductName", "鬼島 Kuidao（台灣版）"', 'VALUE "ProductName", "鬼島 桌面靈動島（台灣版）"')],
+        "src/extras.rs": [('settings_label(ui,"鬼島 Kuidao")', 'settings_label(ui,"鬼島 桌面靈動島")')],
+    }.items():
+        p2 = ROOT / rel
+        if not p2.exists():
+            continue
+        t = p2.read_text(encoding="utf-8")
+        for old, new in pairs:
+            if old in t:
+                t = t.replace(old, new, 1)
+        p2.write_text(t, encoding="utf-8")
+    print("   [修復] 對外名稱（鬼島 桌面靈動島）")
+
     # 台灣版：行政區後綴補繁體，讓「士林區」「內湖區」查得到
     wp2 = ROOT / "src/weather.rs"
     if wp2.exists():

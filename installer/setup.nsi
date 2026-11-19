@@ -10,7 +10,7 @@ Unicode true
   !define APP_ID "Kuidao"
 !endif
 !ifndef APP_NAME
-  !define APP_NAME "鬼島"
+  !define APP_NAME "鬼島 桌面靈動島"
 !endif
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
 Name "${APP_NAME}"
@@ -45,7 +45,7 @@ Page custom InstallPage InstallPageLeave
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "TradChinese"
-BrandingText "鬼島 · Kuidao"
+BrandingText "鬼島 · 桌面靈動島 · Kuidao"
 SetFont "Microsoft YaHei UI" 9
 
 Function .onInit
@@ -279,7 +279,7 @@ Section "安裝"
   CreateShortcut "$SMPROGRAMS\${APP_NAME}設定.lnk" "$INSTDIR\kuidao.exe" "--settings"
   ; 鬼島打不開、卡死時的備用入口；能開啟時用「設定 → 關於 → 收集診斷」。
   CreateShortcut "$SMPROGRAMS\收集${APP_NAME}診斷.lnk" "$INSTDIR\kuidao.exe" "--collect-diagnostics" "$INSTDIR\kuidao.exe" 0
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayName" "${APP_NAME} Kuidao"
+  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayName" "${APP_NAME}（Kuidao）"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "Publisher" "鬼島"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "URLInfoAbout" "https://github.com/"

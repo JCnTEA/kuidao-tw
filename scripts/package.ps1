@@ -50,7 +50,7 @@ try {
     $stagingDirectory = Join-Path $outputDirectory $packageName
     if (Test-Path -LiteralPath $stagingDirectory) { throw 'Package directory already exists' }
     New-Item -ItemType Directory -Path $stagingDirectory -Force | Out-Null
-    Copy-Item -LiteralPath $binary.FullName -Destination (Join-Path $stagingDirectory 'daozai.exe')
+    Copy-Item -LiteralPath $binary.FullName -Destination (Join-Path $stagingDirectory 'kuidao.exe')
     # ZIP 保留给免安装使用和应用内更新；普通用户只需下载安装 EXE。
     @('LICENSE','THIRD_PARTY_NOTICES.txt') | ForEach-Object {
         Copy-Item -LiteralPath (Join-Path $projectRoot $_) -Destination $stagingDirectory -Recurse
@@ -58,7 +58,8 @@ try {
     # 免安装包没有开始菜单：附带一个只调用 daozai.exe --collect-diagnostics 的 cmd，岛仔打不开时双击收集。
     # 诊断脚本本身内嵌在程序里，不再单独附带，也就不会出现新程序配旧脚本。
     Copy-Item -LiteralPath (Join-Path $projectRoot 'installer\收集岛仔诊断.cmd') -Destination $stagingDirectory
-    $setup = Join-Path $outputDirectory "Daozai-Setup-v$version-x64.exe"
+    # 台灣版：安裝檔固定用英文檔名，避免郵件與防毒對中文名誤判。
+    $setup = Join-Path $outputDirectory "GuiDao-DynamicIsland-Setup-v$version-x64.exe"
     & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DPROJECT_DIR=$projectRoot" "/DSOURCE_EXE=$($binary.FullName)" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
     $archive = Join-Path $outputDirectory "$packageName.zip"

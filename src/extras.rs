@@ -2283,7 +2283,7 @@ impl App {
                         }
                     }
                     _=>{
-                        settings_label(ui,"鬼島 Kuidao");
+                        settings_label(ui,"鬼島 桌面靈動島");
                         settings_card(ui,|ui|{
                             ui.horizontal(|ui|{
                                 ui.label(egui::RichText::new(format!("版本 {}",env!("CARGO_PKG_VERSION"))).size(13.0));
