@@ -123,7 +123,7 @@ impl Expressions {
         }
         let frame=if crate::bar_layout::animations_enabled(){expression.frame(time)}else{7};
         let uv=Rect::from_min_max(egui::pos2(0.0,frame as f32/16.0),egui::pos2(1.0,(frame+1) as f32/16.0));
-        c.painter.image(self.sheet.as_ref().unwrap().2.id(),c.rect(cx-24.0,0.0,48.0,30.0),uv,Color32::WHITE);
+        c.painter.image(self.sheet.as_ref().unwrap().3.id(),c.rect(cx-24.0,0.0,48.0,30.0),uv,Color32::WHITE);
         true
     }
 }
@@ -208,20 +208,20 @@ mod tests {
                 let card=Card::new(ui,egui::Pos2::ZERO,ui.max_rect());assert!(expressions.draw(&card,24.0,palette));
             });
         });
-        let output=frame(&mut expressions,None);let id=expressions.sheet.as_ref().unwrap().2.id();
+        let output=frame(&mut expressions,None);let id=expressions.sheet.as_ref().unwrap().3.id();
         let delta=&output.textures_delta.set.iter().find(|(texture,_)|*texture==id).unwrap().1;
         let egui::ImageData::Color(image)=&delta.image else{panic!("表情應為彩色紋理")};
         assert_eq!(image.size,[144,1440],"只上傳正在播放的表情，不上傳整張圖集");
         let white=image.pixels.iter().position(|p|p.a()>250&&p.r()>240&&p.g()>240&&p.b()>240).unwrap();
         assert!(!frame(&mut expressions,None).textures_delta.set.iter().any(|(texture,_)|*texture==id),"同一表情、同一主題不能重複解碼或上傳");
         for palette in [crate::skin_paint::CREAM,crate::skin_paint::GLASS_LIGHT] {
-            let output=frame(&mut expressions,Some(palette));assert_eq!(expressions.sheet.as_ref().unwrap().2.id(),id);
+            let output=frame(&mut expressions,Some(palette));assert_eq!(expressions.sheet.as_ref().unwrap().3.id(),id);
             let delta=&output.textures_delta.set.iter().find(|(texture,_)|*texture==id).unwrap().1;
             let egui::ImageData::Color(image)=&delta.image else{unreachable!()};
             assert!(image.pixels[white].r()<70&&image.pixels[white].g()<70&&image.pixels[white].b()<70,"淺色主題上的眼睛應為深色");
         }
         expressions.play(Expression::Search);
-        let output=frame(&mut expressions,None);assert_eq!(expressions.sheet.as_ref().unwrap().2.id(),id,"換表情原地替換，不新建紋理");
+        let output=frame(&mut expressions,None);assert_eq!(expressions.sheet.as_ref().unwrap().3.id(),id,"換表情原地替換，不新建紋理");
         assert!(output.textures_delta.set.iter().any(|(texture,_)|*texture==id));
         for _ in 0..100 {expressions.step(PetState::Awake,0.1,true);if expressions.current().is_none(){break;}}
         assert!(expressions.current().is_none() && expressions.sheet.is_none(),"播完釋放紋理，不常駐視訊記憶體");
