@@ -135,6 +135,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package.ps1
 
 ## 授權條款與致謝
 
-本專案程式碼採用 [MIT License](LICENSE)。上游專案為 [Renly1994/xiaotang-daozai](https://github.com/Renly1994/xiaotang-daozai)（同為 MIT），其著作權與授權聲明依 MIT 要求保留於 [LICENSE](LICENSE) 與 [第三方聲明](THIRD_PARTY_NOTICES.txt)；本專案僅維護台灣在地化與品牌層。
+本專案程式碼採用 [MIT License](LICENSE)。依 MIT 要求，上游著作權聲明保留於 [LICENSE](LICENSE) 與 [第三方聲明](THIRD_PARTY_NOTICES.txt)，不得移除；本專案僅維護繁體中文、在地服務與品牌層。
 
 感謝 egui／eframe、Rust 社群，以及提供參考與素材的開源專案。
