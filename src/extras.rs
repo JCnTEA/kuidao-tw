@@ -395,12 +395,13 @@ impl App {
         if !self.settings.read_notifications || id.is_empty() || !crate::messenger::NotificationFilter::for_settings(&self.settings).allows(&id){return;}
         if crate::messenger::suppresses_toast(&app,&id,crate::messenger::toast_suppression(&self.settings)){return;}
         let social_source=crate::social::detect(&app,&id);
+        let notification_id=id.clone();
         let client=crate::app::Messenger::from_notification_id(&id).filter(|client|client.adapter().capture==crate::messenger::Capture::SystemToast);
         let id=client.map(|client|client.adapter().notification_id.to_string()).unwrap_or(id);
         // 鬼島自己发出的系统提醒会被通知中心回传；已在历史里的同一内容不再入队，避免重复显示。
         if crate::messenger::Messenger::from_notification_id(&id).is_none() && self.history.iter().any(|a|format!("{} · {}",a.title,a.body)==body){return;}
         if !self.notification_apps.observe(&id,&app) || !self.settings.notifications{return;}
-        if let Some(social)=social_source{self.social.bump(social);self.social.persist();}
+        if let Some(social)=social_source{self.social.bump(social,&notification_id);self.social.persist();}
         let unread=client.map(|client|unread.filter(|u|u.source==client && u.pid!=0).unwrap_or(crate::app::Unread::of(client)));
         if let Some(unread)=unread{self.mark_messenger(unread.source,unread.pid,unread.window);}
         self.notification_bell_at=self.t;

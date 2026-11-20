@@ -724,6 +724,9 @@ impl eframe::App for Shell {
                         if open_path(std::path::Path::new(&url)).is_err(){self.app.say("無法開啟預設瀏覽器，請檢查 Windows 預設應用程式設定");}
                     }
                 },
+                Cmd::OpenSocial(source,target)=>{
+                    if let Err(error)=source.open(target.as_deref()){self.app.say(error);}
+                },
                 Cmd::CalendarImport=>{
                     #[cfg(windows)] match daozai::system::pick_files_for("選擇要匯入的行事曆檔案（.ics）",true){
                         Ok(files)=>if !files.is_empty(){

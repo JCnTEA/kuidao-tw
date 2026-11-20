@@ -17,6 +17,22 @@ impl Social {
         Self::Line=>"https://line.me/",
         Self::Instagram=>"https://www.instagram.com/",
     }}
+    /// 通知來源的 Windows AppID；有它才能開原生程式，而不是把 LINE 丟到瀏覽器。
+    fn app_target(self,id:Option<&str>)->Option<&str>{
+        id.map(str::trim).filter(|id|!id.is_empty()&&*id!=self.key())
+    }
+    /// 優先喚起發出通知的桌面程式；LINE 另外還原被收進系統匣的主視窗。
+    /// 沒有可用 AppID 或系統拒絕時，才退回官網。
+    pub fn open(self,id:Option<&str>)->Result<(),String>{
+        #[cfg(windows)]
+        if let Some(id)=self.app_target(id){
+            if open_app_id(id).is_ok(){
+                if self==Self::Line{focus_line_window();}
+                return Ok(());
+            }
+        }
+        open_url(self.url())
+    }
     /// 以 (x,y) 為中心畫 20×20 的圓角標誌。
     pub fn paint(self,c:&Card,x:f32,y:f32){
         let rect=c.rect(x-10.0,y-10.0,20.0,20.0);
@@ -34,6 +50,76 @@ impl Social {
     fn index(self)->usize{match self{Self::Threads=>0,Self::Messenger=>1,Self::Facebook=>2,Self::Line=>3,Self::Instagram=>4}}
 }
 
+#[cfg(windows)]
+fn open_app_id(id:&str)->Result<(),String>{
+    use windows::{core::{w,PCWSTR},Win32::UI::{Shell::ShellExecuteW,WindowsAndMessaging::SW_SHOWNORMAL}};
+    let target=format!("shell:AppsFolder\\{id}");
+    let wide=target.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
+    let result=unsafe{ShellExecuteW(None,w!("open"),PCWSTR(wide.as_ptr()),PCWSTR::null(),PCWSTR::null(),SW_SHOWNORMAL)};
+    if result.0 as isize<=32{return Err(format!("無法開啟通知來源 {id}"));}
+    Ok(())
+}
+#[cfg(not(windows))]
+fn open_app_id(_id:&str)->Result<(),String>{Err("社群原生程式暫僅支援 Windows".into())}
+
+#[cfg(windows)]
+fn open_url(url:&str)->Result<(),String>{
+    use windows::{core::{w,PCWSTR},Win32::UI::{Shell::ShellExecuteW,WindowsAndMessaging::SW_SHOWNORMAL}};
+    let wide=url.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
+    let result=unsafe{ShellExecuteW(None,w!("open"),PCWSTR(wide.as_ptr()),PCWSTR::null(),PCWSTR::null(),SW_SHOWNORMAL)};
+    if result.0 as isize<=32{return Err("無法開啟預設瀏覽器，請檢查 Windows 預設應用程式設定".into());}
+    Ok(())
+}
+#[cfg(not(windows))]
+fn open_url(_url:&str)->Result<(),String>{Err("社群網址暫僅支援 Windows".into())}
+
+/// LINE 最小化或收進系統匣時，Shell 的 AppID 喚起不一定會還原主視窗，
+/// 這裡只做「還原既有主視窗並切到前景」，不模擬滑鼠鍵盤，也不碰聊天內容。
+#[cfg(windows)]
+fn focus_line_window(){
+    use windows::{
+        Win32::{
+            Foundation::{BOOL,HWND,LPARAM,RECT},
+            System::Diagnostics::ToolHelp::{CreateToolhelp32Snapshot,Process32FirstW,Process32NextW,PROCESSENTRY32W,TH32CS_SNAPPROCESS},
+            UI::WindowsAndMessaging::*,
+        },
+    };
+    unsafe{
+        let Ok(snapshot)=CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0) else{return};
+        let mut entry=PROCESSENTRY32W{dwSize:std::mem::size_of::<PROCESSENTRY32W>() as u32,..Default::default()};
+        let mut pid=None;
+        let mut more=Process32FirstW(snapshot,&mut entry).is_ok();
+        while more{
+            let len=entry.szExeFile.iter().position(|c|*c==0).unwrap_or(entry.szExeFile.len());
+            if String::from_utf16_lossy(&entry.szExeFile[..len]).eq_ignore_ascii_case("LINE.exe"){pid=Some(entry.th32ProcessID);break;}
+            more=Process32NextW(snapshot,&mut entry).is_ok();
+        }
+        let _=windows::Win32::Foundation::CloseHandle(snapshot);
+        let Some(pid)=pid else{return};
+        struct Find{pid:u32,best:Option<(i64,HWND)>}
+        unsafe extern "system" fn visit(hwnd:HWND,data:LPARAM)->BOOL{
+            let find=&mut *(data.0 as *mut Find);
+            let mut owner=0;GetWindowThreadProcessId(hwnd,Some(&mut owner));
+            let mut class=[0u16;64];let len=GetClassNameW(hwnd,&mut class);
+            let class=String::from_utf16_lossy(&class[..len.max(0)as usize]);
+            if owner==find.pid && class=="AllInOneWindow" && GetWindow(hwnd,GW_OWNER).is_err(){
+                let mut rect=RECT::default();let _=GetWindowRect(hwnd,&mut rect);
+                let area=i64::from(rect.right-rect.left)*i64::from(rect.bottom-rect.top);
+                if area>0 && find.best.is_none_or(|(old,_)|area>old){find.best=Some((area,hwnd));}
+            }
+            true.into()
+        }
+        let mut find=Find{pid,best:None};
+        let _=EnumWindows(Some(visit),LPARAM((&mut find as *mut Find)as isize));
+        if let Some((_,window))=find.best{
+            let _=ShowWindowAsync(window,if IsIconic(window).as_bool(){SW_RESTORE}else{SW_SHOW});
+            let _=SetForegroundWindow(window);
+        }
+    }
+}
+#[cfg(not(windows))]
+fn focus_line_window(){}
+
 /// 由通知的應用程式名稱與 AUMID 判斷來源；Messenger 先於 Facebook，避免誤判。
 pub fn detect(app:&str,id:&str)->Option<Social>{
     let text=format!("{} {}",app,id).to_lowercase();
@@ -48,8 +134,11 @@ pub fn detect(app:&str,id:&str)->Option<Social>{
 }
 
 /// 每個來源的未讀則數；點開應用程式或到通知中心查看後歸零。
-#[derive(Clone,Debug,Default)]
-pub struct Badges{counts:[u16;5]}
+#[derive(Clone,Debug)]
+pub struct Badges{counts:[u16;5],ids:[Option<String>;5]}
+impl Default for Badges{
+    fn default()->Self{Self{counts:[0;5],ids:std::array::from_fn(|_|None)}}
+}
 impl Badges{
     pub fn load()->Self{
         let path=crate::model::config_dir().join("social-badges.json");
@@ -59,30 +148,53 @@ impl Badges{
         for item in list{
             let Some(key)=item.get("app").and_then(|v|v.as_str()) else{continue};
             let Some(count)=item.get("count").and_then(|v|v.as_u64()) else{continue};
-            if let Some(social)=Social::ALL.into_iter().find(|s|s.key()==key){badges.counts[social.index()]=count.min(9999) as u16;}
+            if let Some(social)=Social::ALL.into_iter().find(|s|s.key()==key){
+                badges.counts[social.index()]=count.min(9999) as u16;
+                badges.ids[social.index()]=item.get("id").and_then(|v|v.as_str()).map(str::trim)
+                    .filter(|id|!id.is_empty()&&*id!=key).map(|id|id.to_string());
+            }
         }
         badges
     }
     fn save(&self){
         let list:Vec<_>=Social::ALL.into_iter().filter(|s|self.counts[s.index()]>0)
-            .map(|s|serde_json::json!({"app":s.key(),"count":self.counts[s.index()]})).collect();
+            .map(|s|{let mut item=serde_json::json!({"app":s.key(),"count":self.counts[s.index()]});
+                if let Some(id)=&self.ids[s.index()]{item["id"]=serde_json::Value::String(id.clone());}
+                item
+            }).collect();
         let path=crate::model::config_dir().join("social-badges.json");
         if let Some(parent)=path.parent(){let _=std::fs::create_dir_all(parent);}
         if let Ok(data)=serde_json::to_vec(&list){let _=crate::model::atomic_write(&path,&data);}
     }
-    pub fn bump(&mut self,social:Social){
+    pub fn bump(&mut self,social:Social,id:&str){
         let slot=&mut self.counts[social.index()];
         *slot=slot.saturating_add(1).min(9999);
+        if let Some(id)=social.app_target(Some(id)){self.ids[social.index()]=Some(id.to_owned());}
     }
     pub fn clear(&mut self,social:Social){
         self.counts[social.index()]=0;
+        self.ids[social.index()]=None;
     }
     pub fn persist(&self){self.save();}
     pub fn count(&self,social:Social)->u16{self.counts[social.index()]}
+    /// 先記住實際發出通知的 AppID；舊資料沒有 id 時，從已觀察到的通知來源清單補上。
+    pub fn target(&self,social:Social)->Option<String>{
+        self.ids[social.index()].clone().or_else(||known_app(social))
+    }
     pub fn active(&self)->Vec<(Social,u16)>{
         Social::ALL.into_iter().filter_map(|s|{let n=self.count(s);(n>0).then_some((s,n))}).collect()
     }
     pub fn total(&self)->u32{self.active().iter().map(|(_,n)|*n as u32).sum()}
+}
+
+fn known_app(social:Social)->Option<String>{
+    let raw=std::fs::read(crate::model::config_dir().join("notification-apps.json")).ok()?;
+    let list=serde_json::from_slice::<Vec<serde_json::Value>>(&raw).ok()?;
+    list.into_iter().find_map(|item|{
+        let id=item.get("id")?.as_str()?.trim().to_owned();
+        let name=item.get("name").and_then(|v|v.as_str()).unwrap_or("");
+        detect(name,&id).filter(|source|*source==social).map(|_|id)
+    })
 }
 
 /// 右上角數字徽章；`count` 為 0 時畫小紅點。
@@ -111,11 +223,19 @@ mod tests{
     #[test]
     fn counts_survive_a_round_trip_and_clear(){
         let mut badges=Badges::default();
-        badges.bump(Social::Threads);badges.bump(Social::Threads);badges.bump(Social::Line);
+        badges.bump(Social::Threads,"com.burbn.threads");badges.bump(Social::Threads,"com.burbn.threads");badges.bump(Social::Line,"NAVER.WIN32_LINEwin8_8ptj331gd3tyt!LINE");
         assert_eq!(badges.count(Social::Threads),2);
         assert_eq!(badges.total(),3);
+        assert_eq!(badges.ids[Social::Line.index()].as_deref(),Some("NAVER.WIN32_LINEwin8_8ptj331gd3tyt!LINE"));
         badges.clear(Social::Threads);
         assert_eq!(badges.count(Social::Threads),0);
         assert_eq!(badges.total(),1);
+    }
+    #[test]
+    fn launch_uses_the_notifying_desktop_app_and_ignores_placeholder_keys(){
+        let id="NAVER.WIN32_LINEwin8_8ptj331gd3tyt!LINE";
+        assert_eq!(Social::Line.app_target(Some(id)),Some(id));
+        assert_eq!(Social::Line.app_target(Some("line")),None);
+        assert_eq!(Social::Line.app_target(None),None);
     }
 }
