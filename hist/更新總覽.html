@@ -65,7 +65,8 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <div class="card"><span class="badge">歌詞</span><h3>繁化與自動翻譯</h3><p>歌詞沿用自動搜尋（本機歌詞 → 網易雲 → QQ 音樂 → LRCLIB）；中文歌詞在顯示時一律轉成繁體、採台灣寫法（內建繁簡對照表，不改動原始歌詞檔）。設定新增「自動翻譯歌詞」：非中文歌詞（英、日、韓等）依原意翻成繁體中文並直接顯示譯文，中文歌不翻；譯文快取在本機，同一首歌不重複送翻，離線或失敗時照常顯示原文。</p></div>
       <div class="card"><span class="badge">官網</span><h3>官網改為內測版</h3><p>島體示意預設只露出一半，點一下或再點一下切換展開與收起；取得方式與授權一併改為「內測中，暫不開放」的官方說法；頁面不再出現任何指向原始碼倉庫的網址，改以專案識別碼代替，避免被從連結回推倉庫位置。</p></div>
       <div class="card"><span class="badge">更新</span><h3>更新檢查修好</h3><p>版本標籤帶台灣版後綴時，舊版解析會判定格式異常；改為只取數字段後可正常比對，有新版本才會提示下載。</p></div>
-            <div class="card"><span class="badge">鍵盤</span><h3>數字鍵盤開關指示</h3><p>島上系統鍵盤列新增 Num Lock 狀態：按 NUM 鍵切換時，HUD 立即顯示數字鍵盤圖示，開啟為綠、關閉為灰，並在右側文字標出已開啟或已關閉。</p></div>
+                  <div class="card"><span class="badge">更新</span><h3>更新改成全自動取得資源包</h3><p>啟動後先向來源確認版本，發現新版就直接在程式內取得最新資源包，抓完自動替換並重新啟動；不再需要使用者按「下載並安裝」，也不再導向備援或瀏覽器下載頁。</p></div>
+<div class="card"><span class="badge">鍵盤</span><h3>數字鍵盤開關指示</h3><p>島上系統鍵盤列新增 Num Lock 狀態：按 NUM 鍵切換時，HUD 立即顯示數字鍵盤圖示，開啟為綠、關閉為灰，並在右側文字標出已開啟或已關閉。</p></div>
       <div class="card"><span class="badge">外觀</span><h3>漸層主題文字提亮</h3><p>漸層底色原本沿用灰階字，對比不足、字看起來過暗；改用漸層時島上文字統一切到高亮白，通知、未讀、詳情、信件與歌詞列一起套用。</p></div>
       <div class="card"><span class="badge">通知</span><h3>鈴鐺常駐未讀數字</h3><p>有新信件時鈴鐺不再自動收起，右上角紅底白字直接顯示未讀封數；進入信箱頁後計數歸零，之後再進新信才重新累加。</p></div>
       <div class="card"><span class="badge">社群</span><h3>五個訊息來源的未讀則數</h3><p>Threads、Messenger、Facebook、LINE、Instagram 的通知會分別累計，圖示右上顯示目前有幾則，超過 99 顯示 99+；點圖示可清零並開啟對應服務。</p></div><div class="card"><span class="badge">同步</span><h3>上游只更新沒動過的部分</h3><p>同步時比對台灣版現況：沒改過的原始檔照收上游新版，改過的（吉祥物、設定頁、更新來源等）一律保留，上游同檔新內容另存供比對；同時修好清單檔被版本號覆寫導致無法啟動的問題。</p></div>

@@ -5,7 +5,6 @@ use std::{io::{Read, Write}, path::PathBuf, sync::{mpsc::{self, Receiver}, Arc, 
 const REPOSITORY: &str = "https://github.com/JCnTEA/kuidao-tw";
 const API: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases/latest";
 const RELEASES: &str = "https://github.com/JCnTEA/kuidao-tw/releases/latest";
-const BACKUP_DOWNLOAD: &str = "https://github.com/JCnTEA/kuidao-tw/releases/latest";
 const STARTUP_DELAY: Duration = Duration::from_secs(5);
 const CHECK_INTERVAL: Duration = Duration::from_secs(2 * 3600);
 const RETRY_INTERVAL: Duration = Duration::from_secs(3600);
@@ -101,7 +100,16 @@ impl State {
                     self.focus_requested = self.dialog_open;
                     if self.dialog_open { if let Ok(Some(release)) = &result { self.notified_version = Some(release.version.clone()); } }
                     self.remember_check(delay);
+                    let automatic_package = match &result {
+                        Ok(Some(release)) if self.dialog_open && release.package.is_some() => Some(release.clone()),
+                        _ => None,
+                    };
                     self.result = Some(result); self.rx = None;
+                    if let Some(release) = automatic_package {
+                        if !cfg!(test) && automatic {
+                            self.start_download(ctx, release);
+                        }
+                    }
                 }
                 Event::Progress(value) => self.progress = value,
                 Event::Failed(message) => { self.message = message; self.rx = None; self.cancel = None; }
@@ -158,6 +166,19 @@ impl State {
     fn dismiss(&mut self) {
         if let Some(cancel) = &self.cancel { cancel.store(true, Ordering::Relaxed); }
         self.dialog_open = false;
+    }
+
+    fn start_download(&mut self, ctx: &egui::Context, release: Release) {
+        if self.rx.is_some() { return; }
+        let (tx, rx) = mpsc::channel(); self.rx = Some(rx);
+        let cancel = Arc::new(AtomicBool::new(false)); self.cancel = Some(cancel.clone());
+        self.progress = 0.0;
+        self.message = "正在取得最新資源包…".into();
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let event = match download(&release, &tx, &cancel) { Ok(work) => Event::Ready(work), Err(error) => Event::Failed(error) };
+            let _ = tx.send(event); ctx.request_repaint();
+        });
     }
 
     pub(crate) fn dialog_ui(&mut self, ctx: &egui::Context) {
@@ -244,40 +265,25 @@ impl State {
                                     });
                             });
                         ui.add_space(4.0);
-                        ui.label(egui::RichText::new(if self.message.is_empty(){"更新後自動重啟，設定和記錄會保留。"}else{&self.message}).color(theme::DIM).size(11.5));
+                        ui.label(egui::RichText::new(if self.message.is_empty(){"更新完成後會自動重新啟動，設定和記錄會保留。"}else{&self.message}).color(theme::DIM).size(11.5));
                         if self.cancel.is_some() {
                             ui.add(egui::ProgressBar::new(self.progress).fill(theme::BLUE).desired_height(8.0));
                             ui.horizontal(|ui| {
-                                ui.label(egui::RichText::new(if self.progress==0.0{"正在連線下載伺服器…".into()}else if self.progress<1.0{format!("正在下載更新 · {:.0}%",self.progress*100.0)}else{"正在校驗安裝包…".into()}).color(theme::GRAY));
-                                if ui.button("取消下載").clicked() { self.cancel.as_ref().unwrap().store(true,Ordering::Relaxed); }
+                                ui.label(egui::RichText::new(if self.progress==0.0{"正在取得最新資源包…".into()}else if self.progress<1.0{format!("正在取得更新資源包 · {:.0}%",self.progress*100.0)}else{"正在校驗資源包…".into()}).color(theme::GRAY));
+                                if ui.button("取消").clicked() { self.cancel.as_ref().unwrap().store(true,Ordering::Relaxed); }
                             });
                         } else {
                             ui.add_space(4.0);
                             ui.horizontal(|ui| {
                                 if ui.add_enabled(!installing,egui::Button::new("稍後").fill(theme::BTN).min_size(egui::vec2(110.0,40.0))).clicked() { self.dismiss(); }
-                                let install = egui::Button::new(egui::RichText::new(if installing{"正在準備重啟…"}else{"下載並安裝"}).color(theme::WHITE))
+                                let install = egui::Button::new(egui::RichText::new(if installing{"正在準備重啟…"}else{"立即更新"}).color(theme::WHITE))
                                     .fill(theme::BLUE).min_size(egui::vec2(ui.available_width(),40.0));
                                 if ui.add_enabled(release.package.is_some() && self.rx.is_none(),install).clicked() {
-                                    let (tx,rx)=mpsc::channel(); self.rx=Some(rx);
-                                    let cancel=Arc::new(AtomicBool::new(false)); self.cancel=Some(cancel.clone());
-                                    self.progress=0.0; self.message.clear();
-                                    let ctx=ui.ctx().clone(); let release=release.clone();
-                                    std::thread::spawn(move || {
-                                        let event=match download(&release,&tx,&cancel){Ok(work)=>Event::Ready(work),Err(error)=>Event::Failed(error)};
-                                        let _=tx.send(event); ctx.request_repaint();
-                                    });
+                                    self.start_download(ui.ctx(), release.clone());
                                 }
                             });
                         }
-                        ui.add_space(2.0);
-                        ui.horizontal(|ui| {
-                            ui.hyperlink_to(egui::RichText::new("備援下載").size(11.5).color(theme::BLUE),BACKUP_DOWNLOAD);
-                            ui.label(egui::RichText::new("·").color(theme::DIM));
-                            ui.hyperlink_to(egui::RichText::new("瀏覽器下載").size(11.5).color(theme::GRAY),&release.page);
-                            ui.label(egui::RichText::new("·").color(theme::DIM));
-                            ui.hyperlink_to(egui::RichText::new("檢視釋出說明").size(11.5).color(theme::GRAY),&release.page);
-                        });
-                        if release.package.is_none() { ui.label(egui::RichText::new("此版本請透過瀏覽器下載。").size(11.5).color(theme::DIM)); }
+                        if release.package.is_none() { ui.label(egui::RichText::new("此版本沒有可用的資源包。").size(11.5).color(theme::DIM)); }
                     });
                     if self.rx.is_some() { ctx.request_repaint_after(Duration::from_millis(100)); }
                 });
