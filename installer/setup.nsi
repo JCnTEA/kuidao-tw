@@ -20,7 +20,7 @@ InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
 ManifestDPIAware true
 SetCompressor /SOLID lzma
-VIProductVersion "0.6.66.0" ; 台灣版：數字版本固定為上游 0.6.66
+VIProductVersion "0.6.67.0"
 VIAddVersionKey /LANG=1028 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=1028 "FileDescription" "${APP_NAME}安裝程式"
 VIAddVersionKey /LANG=1028 "FileVersion" "${APP_VERSION}"
@@ -330,3 +330,4 @@ Section "Uninstall"
   ; 只移除空的安裝目錄，使用者資料和使用者自行放入的檔案都保留。
   RMDir "$INSTDIR"
 SectionEnd
+
