@@ -112,7 +112,7 @@ pub fn is_chinese_lyrics(lyrics:&Lyrics)->bool{
             if crate::zh::is_han(c){han+=1;} else if c.is_ascii_alphabetic(){latin+=1;}
         }
     }
-    han>=8 && han*5>=(han+latin)*4
+    han>=4 && han*10>=(han+latin)*7
 }
 
 fn parse_time(tag: &str) -> Option<f32> {
