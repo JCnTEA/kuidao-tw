@@ -37,14 +37,35 @@ impl Expression {
             include_bytes!("../assets/pet-species/shiba/08-shy-peek.png"),include_bytes!("../assets/pet-species/shiba/09-scan.png"),
             include_bytes!("../assets/pet-species/shiba/10-peek.png"),include_bytes!("../assets/pet-species/shiba/11-search.png"),
         ];
-        const CAT_SHEET:&[u8]=include_bytes!("../assets/pet-species/cat/sheet.png");
-        const HUSKY_SHEET:&[u8]=include_bytes!("../assets/pet-species/husky/sheet.png");
-        const GOLDEN_SHEET:&[u8]=include_bytes!("../assets/pet-species/golden/sheet.png");
+        const HUSKY:[&[u8];12]=[
+            include_bytes!("../assets/pet-species/husky/00-wink.png"),include_bytes!("../assets/pet-species/husky/01-smug.png"),
+            include_bytes!("../assets/pet-species/husky/02-blush.png"),include_bytes!("../assets/pet-species/husky/03-delighted.png"),
+            include_bytes!("../assets/pet-species/husky/04-side-glance.png"),include_bytes!("../assets/pet-species/husky/05-praised.png"),
+            include_bytes!("../assets/pet-species/husky/06-heart.png"),include_bytes!("../assets/pet-species/husky/07-giggle.png"),
+            include_bytes!("../assets/pet-species/husky/08-shy-peek.png"),include_bytes!("../assets/pet-species/husky/09-scan.png"),
+            include_bytes!("../assets/pet-species/husky/10-peek.png"),include_bytes!("../assets/pet-species/husky/11-search.png"),
+        ];
+        const GOLDEN:[&[u8];12]=[
+            include_bytes!("../assets/pet-species/golden/00-wink.png"),include_bytes!("../assets/pet-species/golden/01-smug.png"),
+            include_bytes!("../assets/pet-species/golden/02-blush.png"),include_bytes!("../assets/pet-species/golden/03-delighted.png"),
+            include_bytes!("../assets/pet-species/golden/04-side-glance.png"),include_bytes!("../assets/pet-species/golden/05-praised.png"),
+            include_bytes!("../assets/pet-species/golden/06-heart.png"),include_bytes!("../assets/pet-species/golden/07-giggle.png"),
+            include_bytes!("../assets/pet-species/golden/08-shy-peek.png"),include_bytes!("../assets/pet-species/golden/09-scan.png"),
+            include_bytes!("../assets/pet-species/golden/10-peek.png"),include_bytes!("../assets/pet-species/golden/11-search.png"),
+        ];
+        const CAT:[&[u8];12]=[
+            include_bytes!("../assets/pet-species/cat/00-wink.png"),include_bytes!("../assets/pet-species/cat/01-smug.png"),
+            include_bytes!("../assets/pet-species/cat/02-blush.png"),include_bytes!("../assets/pet-species/cat/03-delighted.png"),
+            include_bytes!("../assets/pet-species/cat/04-side-glance.png"),include_bytes!("../assets/pet-species/cat/05-praised.png"),
+            include_bytes!("../assets/pet-species/cat/06-heart.png"),include_bytes!("../assets/pet-species/cat/07-giggle.png"),
+            include_bytes!("../assets/pet-species/cat/08-shy-peek.png"),include_bytes!("../assets/pet-species/cat/09-scan.png"),
+            include_bytes!("../assets/pet-species/cat/10-peek.png"),include_bytes!("../assets/pet-species/cat/11-search.png"),
+        ];
         match crate::mascot::current() {
             crate::mascot::Mascot::Shiba => SHIBA[self as usize],
-            crate::mascot::Mascot::Cat => CAT_SHEET,
-            crate::mascot::Mascot::Husky => HUSKY_SHEET,
-            crate::mascot::Mascot::Golden => GOLDEN_SHEET,
+            crate::mascot::Mascot::Cat => CAT[self as usize],
+            crate::mascot::Mascot::Husky => HUSKY[self as usize],
+            crate::mascot::Mascot::Golden => GOLDEN[self as usize],
             crate::mascot::Mascot::Tiger => SHEETS[self as usize],
         }
     }
