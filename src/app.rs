@@ -529,7 +529,7 @@ fn song_change(previous:&LyricSong,media:&NowPlaying)->SongChange {
 /// 等待旧请求结束后再发起的在线查询（同一时间只保留一个网络线程）。
 pub(crate) struct LyricsJob {
     source:String,title:String,artist:String,duration:f64,song_id:Option<u64>,
-    cached:Option<lyrics::Lyrics>,native_only:bool,manual:bool,
+    cached:Option<lyrics::Lyrics>,native_only:bool,manual:bool,translate:bool,
 }
 
 #[derive(Default)]
@@ -551,6 +551,8 @@ pub(crate) struct LyricsState {
     /// 用户点了「重试」：下一次查询跳过近期「没有歌词」的记录。
     pub manual_retry: bool,
     pub lyrics: Option<lyrics::Lyrics>,
+    /// 顯示用字：中文歌已轉繁體，非中文歌開啟翻譯時是譯文；長度與 lyrics.lines 對齊。
+    pub zh_lines: Vec<String>,
     pub rx: Option<std::sync::mpsc::Receiver<Result<(lyrics::Lyrics,bool), lyrics::FetchError>>>,
     pub native_rx: Option<std::sync::mpsc::Receiver<Option<lyrics::Lyrics>>>,
 }
@@ -1720,7 +1722,9 @@ impl App {
         if !lyric_key_matches(&self.ly.key,&self.media) {return None;}
         let lyrics=self.ly.lyrics.as_ref().filter(|lyrics|lyrics.synced)?;
         let index=lyrics.index_at(self.lyric_position())?;
-        let text=lyrics.lines.get(index)?.text.trim();
+        // 顯示字：中文歌是繁體版本，非中文歌開啟翻譯時是譯文，沒有就用原文。
+        let text=self.ly.zh_lines.get(index).map(|text|text.trim()).filter(|text|!text.is_empty())
+            .unwrap_or_else(||lyrics.lines.get(index).map_or("",|line|line.text.trim()));
         (!text.is_empty()).then_some((index,text))
     }
 
@@ -3382,6 +3386,7 @@ impl App {
             while let Ok(result)=rx.try_recv(){if result.is_some(){found=result;}}
             if let Some(lyrics)=found {
                 self.ly.lyrics=Some(lyrics);self.ly.loading=false;self.ly.error=None;
+                self.refresh_lyric_display();
                 // 本机歌词已到：排队中的在线查询不再需要，进行中的结果也丢弃。
                 self.ly.retry_at=None;self.ly.rx=None;self.ly.native_rx=None;self.ly.pending=None;
             }
@@ -3395,6 +3400,7 @@ impl App {
                         self.ly.retry_at=None;
                         if (waiting_native || lyrics::is_soda(&self.media.source) && !l.synced) && self.ly.attempts<NATIVE_RETRIES {self.ly.retry_at=Some(self.t+5.0);}
                         self.ly.lyrics = Some(l);
+                        self.refresh_lyric_display();
                     },
                     Err(error) => {
                         let native=lyrics::is_soda(&self.media.source) || self.media.source.to_ascii_lowercase().contains("kugou") && error==lyrics::FetchError::NotFound;
@@ -3417,6 +3423,7 @@ impl App {
         let cached=if retry && kugou {self.ly.lyrics.take()}else{None};
         let attempts=if retry {self.ly.attempts.saturating_add(1)}else{0};
         let manual=self.ly.manual_retry;
+        let translate=self.settings.lyrics_translate;
         let shown=cached.clone().or(keep);
         self.ly = LyricsState { key, loading: shown.is_none() && !native_only, lyrics:shown,
             error:native_only.then_some(lyrics::FetchError::NotFound), song_id:np.song_id, attempts,
@@ -3442,6 +3449,8 @@ impl App {
                     };
                     // 找到歌词时等界面取走再结束（换歌或关闭歌词后通道断开会立即返回），不因通道暂满丢掉结果。
                     if found.is_some() {
+                        // 本機歌詞同樣在背景執行緒翻譯，介面取走時就有譯文可用。
+                        if translate {if let Some(lyrics)=found.as_ref(){crate::lyrics_zh::ensure(&title,&artist,dur,lyrics);}}
                         if tx.send(found).is_ok(){lyrics::log_native(&source,&title,&artist,"命中",started.elapsed());}
                         break;
                     }
@@ -3454,7 +3463,33 @@ impl App {
             // 快速切歌时本机轮询线程已满：不留空通道，之后的定时重试会再次启动。
             if native.is_none(){self.ly.native_rx=None;}
         }
-        self.ly.pending=Some(LyricsJob{source,title,artist,duration:dur,song_id,cached,native_only,manual});
+        self.ly.pending=Some(LyricsJob{source,title,artist,duration:dur,song_id,cached,native_only,manual,translate});
+        self.refresh_lyric_display();
+    }
+
+    /// 設定開關切換後的重算：已有譯文或中文歌直接換字，否則重新跑一次取詞（背景執行緒會順便翻譯）。
+    pub(crate) fn refresh_translation(&mut self) {
+        if !self.settings.lyrics_translate {self.refresh_lyric_display();return;}
+        let Some(count)=self.ly.lyrics.as_ref().map(|lyrics|lyrics.lines.len()) else {self.refresh_lyric_display();return;};
+        let (chinese,cached)=if let Some(lyrics)=self.ly.lyrics.as_ref(){
+            (lyrics::is_chinese_lyrics(lyrics),crate::lyrics_zh::cached(&self.media.title,&self.media.artist,self.media.duration,lyrics.lines.len()).is_some())
+        }else{(false,false)};
+        if chinese||cached||count==0 {
+            self.refresh_lyric_display();
+        }else{
+            let key=self.ly.key.clone();
+            let keep=self.ly.lyrics.take();
+            self.start_lyrics(key,keep,true);
+        }
+    }
+
+    /// 依歌曲語言與設定，重算要顯示的字（繁體化或譯文）；歌詞或設定變動後呼叫。
+    pub(crate) fn refresh_lyric_display(&mut self) {
+        let (track,artist,duration)=(self.media.title.clone(),self.media.artist.clone(),self.media.duration);
+        let translate=self.settings.lyrics_translate;
+        self.ly.zh_lines=self.ly.lyrics.as_ref()
+            .map(|lyrics|crate::lyrics_zh::display_lines(lyrics,translate,&track,&artist,duration))
+            .unwrap_or_default();
     }
 
     /// 旧请求结束后再发起排队的在线查询：歌曲信息抖动或快速切歌时不会叠加网络线程，
@@ -3466,10 +3501,12 @@ impl App {
         let (tx, rx) = std::sync::mpsc::channel();
         self.ly.rx = Some(rx);
         self.ly_worker=lease.spawn(move || {
-            let LyricsJob{source,title,artist,duration,song_id,cached,native_only,manual}=job;
-            let result=if native_only {
+            let LyricsJob{source,title,artist,duration,song_id,cached,native_only,manual,translate}=job;
+            let mut result=if native_only {
                 lyrics::kugou_cache::read(&title,&artist,duration).map(|lyrics|(lyrics,false)).ok_or(lyrics::FetchError::NotFound)
             }else{lyrics::fetch_for_display_with(&source, &title, &artist, duration, song_id, cached, manual)};
+            // 翻譯在背景執行緒完成並寫入快取；取詞結果送給介面前就已經可用。
+            if translate {if let Ok((lyrics,_))=result.as_mut(){crate::lyrics_zh::ensure(&title,&artist,duration,lyrics);}}
             let _ = tx.send(result);
         });
         if self.ly_worker.is_none(){self.ly.rx=None;self.ly.loading=false;self.ly.key.clear();}
@@ -3478,6 +3515,7 @@ impl App {
     /// 外部直接提供歌词（录制演示用）。
     pub fn set_lyrics(&mut self, title: &str, artist: &str, duration: f64, l: lyrics::Lyrics) {
         self.ly = LyricsState { key: format!("{title}|{artist}|{duration:.0}"), lyrics: Some(l), ..Default::default() };
+        self.refresh_lyric_display();
     }
 
     pub fn on_drop(&mut self, files: Vec<PathBuf>) {
@@ -3563,4 +3601,5 @@ impl App {
         }
     }
 }
+
 

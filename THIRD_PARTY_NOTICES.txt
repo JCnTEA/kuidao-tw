@@ -365,6 +365,12 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 
+OpenCC 字典（繁簡轉換對照表）
+assets/zh/STCharacters.txt、assets/zh/TWVariants.txt 取自 Open Chinese Convert (OpenCC)。
+授權: Apache-2.0
+來源: https://github.com/BYVoid/OpenCC
+用途: 把簡體歌詞在顯示時轉成繁體（台灣寫法），原始歌詞檔不改動。
+
 === Rust dependencies ===
 以下为锁定依赖的许可与版权文本；包括跨平台开发依赖。
 
@@ -61673,3 +61679,4 @@ THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+

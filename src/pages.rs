@@ -243,8 +243,9 @@ impl App {
                 let ink=if active {theme::WHITE}else{theme::GRAY};
                 let row=col.faded((1.0-distance.abs()*0.35).clamp(0.0,1.0));
                 let font=row.font(if active {12.0}else{10.0},if active {W::Semibold}else{W::Regular});
-                // 维语等从右往左的歌词：先按阅读顺序分行再逐行转换（#200）。
-                let text=crate::rtl_text::display_wrapped(&line.text,132.0*c.s,|s|row.painter.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x).into_owned();
+                // 维语等从右到左的歌词：先按阅读顺序分行再逐行转换（#200）。
+                let shown=self.ly.zh_lines.get(index).filter(|text|!text.trim().is_empty()).map_or(line.text.as_str(),|text|text.as_str());
+                let text=crate::rtl_text::display_wrapped(shown,132.0*c.s,|s|row.painter.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x).into_owned();
                 let mut job=egui::text::LayoutJob::simple(text,font,ink,132.0*c.s);
                 job.wrap.max_rows=if active {3}else{1};
                 job.wrap.break_anywhere=true;

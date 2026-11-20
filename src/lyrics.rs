@@ -103,6 +103,18 @@ impl Lyrics {
     }
 }
 
+/// 這首歌是不是中文歌：用漢字占比判斷，出現假名或韓文就不算（日韓原文交給翻譯處理）。
+pub fn is_chinese_lyrics(lyrics:&Lyrics)->bool{
+    let (mut han,mut latin)=(0usize,0usize);
+    for line in &lyrics.lines {
+        for c in line.text.chars() {
+            if crate::zh::has_kana_or_hangul(c){return false;}
+            if crate::zh::is_han(c){han+=1;} else if c.is_ascii_alphabetic(){latin+=1;}
+        }
+    }
+    han>=8 && han*5>=(han+latin)*4
+}
+
 fn parse_time(tag: &str) -> Option<f32> {
     // mm:ss.xx 或 mm:ss:xx
     let mut parts = tag.split(':');
@@ -365,7 +377,7 @@ fn fetch_online_detail(track:&str,artist:&str,duration_secs:f64,skip:Skip)->(Res
     (result,failed)
 }
 
-fn cache_path(track:&str,artist:&str,duration:f64)->std::path::PathBuf {
+pub(crate) fn cache_path(track:&str,artist:&str,duration:f64)->std::path::PathBuf {
     let key=format!("{}|{}|{duration:.0}",normalized(track),normalized(artist));
     let hash=key.bytes().fold(14695981039346656037u64,|h,b|(h^b as u64).wrapping_mul(1099511628211));
     crate::model::config_dir().join("lyrics").join(format!("{hash:016x}.lrc"))
