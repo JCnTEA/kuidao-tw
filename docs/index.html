@@ -79,7 +79,7 @@ section{padding:54px 0}
 .shot .bar{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:10px;position:relative;z-index:1}
 .shot .bar b{font-size:13px;font-weight:700;color:#daf6fb;letter-spacing:.02em}
 .shot .bar span{font-size:10.5px;letter-spacing:.16em;color:var(--cy);opacity:.85}
-.shot img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid rgba(63,224,240,.14);background:#050a0f;position:relative;z-index:1}
+.shot img{display:block;width:100%;max-width:640px;height:auto;margin:0 auto;border-radius:0;border:0;background:transparent;position:relative;z-index:1}
 .shot .cap{margin-top:9px;font-size:11.5px;color:var(--dim);position:relative;z-index:1}
 @media(max-width:640px){.shot{padding:14px 14px 12px}.shot .bar b{font-size:12px}}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
@@ -209,7 +209,7 @@ footer a:hover{color:var(--cy)}
     <div class="shots">
       <div class="shot">
         <div class="bar"><b>音樂上島</b><span>MUSIC</span></div>
-        <img src="images/showcase/music.gif" alt="鬼島播放音樂時顯示專輯封面、吉祥物、歌詞與播放控制" loading="lazy">
+        <img src="images/showcase/music.webp" alt="鬼島播放音樂時顯示專輯封面、吉祥物、歌詞與播放控制" loading="lazy">
         <div class="cap">專輯封面、吉祥物、歌詞與播放狀態同一條排開，抬眼就能跟上目前播到哪裡。</div>
       </div>
       <div class="shot">
@@ -218,9 +218,9 @@ footer a:hover{color:var(--cy)}
         <div class="cap">漸層底色上時間、天氣與常駐資訊照樣清楚，不會被深色或灰字吃掉。</div>
       </div>
       <div class="shot">
-        <div class="bar"><b>多項狀態並存</b><span>STATES</span></div>
-        <img src="images/showcase/states.gif" alt="鬼島同時顯示電量、播放、時鐘、天氣、AI 額度與計時" loading="lazy">
-        <div class="cap">電量、播放、時鐘、天氣、AI 額度與計時可以同時掛著，依優先順序自動讓位。</div>
+        <div class="bar"><b>訊息</b><span>MESSAGES</span></div>
+        <img src="images/showcase/message.png" alt="Threads、Messenger、Facebook、LINE 與 Instagram 五個訊息圖示" loading="lazy">
+        <div class="cap">THREADS、MESSENGER、FACEBOOK、LINE、INSTAGRAM 集中上島，圖示右上顯示未讀則數，一眼知道還有多少訊息。</div>
       </div>
     </div>
   </section>
