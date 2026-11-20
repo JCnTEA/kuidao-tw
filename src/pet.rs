@@ -328,7 +328,9 @@ impl Pet {
         let state = self.state;
         let has_pack = self.mascot_pack.active_for(crate::mascot::current().key());
         let time = self.mascot_animation_time(t);
-        if has_pack && self.mascot_pack.draw(c.ui.ctx(), c, cx, state, time, palette) {
+        if has_pack {
+            // 有動畫包的形象完全交給影格播放，不再退回原版的矢量表情與位移。
+            self.mascot_pack.draw(c.ui.ctx(), c, cx, state, time, palette);
             self.draw_state_marks(c, cx, t);
             return;
         }

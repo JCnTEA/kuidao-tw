@@ -114,8 +114,8 @@ impl MascotPack {
             ((time.max(0.0) * f64::from(fps)) as usize).min(frames.len() - 1)
         };
         let texture = self.texture(ctx, &key, &frames, index, palette);
-        let (dx, dy, w, h) = state_motion(state, time);
-        let rect = c.rect(cx - 24.0 + dx, dy, w, h);
+        // 位置固定在槽位內；動作只來自逐格動物影格，不再整張圖上下左右位移。
+        let rect = c.rect(cx - 24.0, 0.0, 48.0, 30.0);
         c.painter.image(texture.id(), rect, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), Color32::WHITE);
         true
     }
@@ -156,23 +156,7 @@ fn state_key(state: PetState) -> &'static str {
     }
 }
 
-/// 每個狀態有自己的動作曲線，不再套用原始表情序列的位移。
-fn state_motion(state: PetState, time: f64) -> (f32, f32, f32, f32) {
-    let t = time as f32;
-    let idle = (t * 1.5).sin();
-    match state {
-        PetState::Awake => (0.0, -0.3 + idle * 0.2, 48.0, 30.0),
-        PetState::Curious => ((t * 2.2).sin() * 1.2, -0.4 + idle * 0.3, 48.0, 30.0),
-        PetState::Waking => (0.0, 2.6 * (1.0 - (t * 3.0).min(1.0)), 48.0, 30.0),
-        PetState::Happy => (0.0, -(t * 7.5).sin().abs() * 2.0 * (-t * 0.65).exp(), 48.0, 30.0),
-        PetState::Satisfied => (0.0, (t * 8.0).sin() * 1.2 * (-t * 0.8).exp(), 48.0, 30.0),
-        PetState::Music => ((t * 1.4).sin() * 1.3, -0.5 + (t * 1.4).sin() * 0.25, 48.0, 30.0),
-        PetState::Worried => ((t * 9.0).sin() * 0.35, 0.0, 48.0, 30.0),
-        PetState::Focused => (0.0, -0.6, 48.0, 30.0),
-        PetState::Dozing => (0.0, 1.4 + idle * 0.2, 48.0, 30.0),
-        PetState::Sleeping => (0.0, 2.0 + (t * 1.2).sin() * 0.3, 48.0, 30.0),
-    }
-}
+/// 每個狀態只換動畫影格；影格內的動物自己動，畫面不再整體位移。
 
 pub fn external_dir(key: &str) -> PathBuf {
     std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."))
@@ -285,6 +269,20 @@ mod tests {
         for key in ["shiba", "cat", "husky", "golden"] {
             assert!(builtin_tiger(key).is_none(), "其他形象目前走原本流程");
         }
+    }
+
+    #[test]
+    fn tiger_idle_keeps_the_body_still_and_only_the_tail_moves() {
+        let pack = builtin_tiger("tiger").unwrap();
+        let (frames, _, _) = &pack.animations["awake"];
+        let image = |index: usize| image::load_from_memory(frames[index].bytes).unwrap().into_rgba8();
+        let crop = |index: usize, x: u32, y: u32, w: u32, h: u32| image::imageops::crop_imm(&image(index), x, y, w, h).to_image();
+        let first = image(0);
+        for (x, y, w, h, label) in [(36u32, 8u32, 74u32, 38u32, "頭"), (70u32, 42u32, 42u32, 46u32, "身體")] {
+            assert_eq!(crop(0, x, y, w, h).as_raw(), crop(4, x, y, w, h).as_raw(), "{label}不能跟著整張圖位移");
+        }
+        assert_ne!(crop(0, 25, 45, 47, 43).as_raw(), crop(4, 25, 45, 47, 43).as_raw(), "尾巴必須自己擺動");
+        assert_eq!(first.dimensions(), (144, 90));
     }
 
     #[test]
