@@ -3957,9 +3957,9 @@ fn tiger_mascot_draws_its_own_pack_instead_of_the_original_expression_atlas(){
     h.app.settings.pet=true;h.app.settings.mascot=crate::mascot::Mascot::Tiger;
     crate::mascot::set(crate::mascot::Mascot::Tiger);h.app.pet.reload_mascot_pack();
     for _ in 0..60{h.frame(vec![]);}
-    let pack=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|meta.name.starts_with("mascot-pack-tiger").then_some(*id))
-        .expect("石虎要載入自己的動畫包影格");
-    assert!(h.shapes.iter().any(|s|shape_uses_texture(&s.shape,pack)),"石虎動畫包應畫在島上");
+    let packs:Vec<_>=h.ctx.tex_manager().read().allocated().filter_map(|(id,meta)|meta.name.starts_with("mascot-pack-tiger").then_some(*id)).collect();
+    assert!(!packs.is_empty(),"石虎要載入自己的動畫包影格");
+    assert!(h.shapes.iter().any(|s|packs.iter().any(|pack|shape_uses_texture(&s.shape,*pack))),"石虎動畫包應畫在島上");
     let atlas=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|(meta.name=="daozai-expressions").then_some(*id));
     assert!(atlas.map_or(true,|atlas|!h.shapes.iter().any(|s|shape_uses_texture(&s.shape,atlas))),"石虎不能再畫原始表情圖集");
 }
