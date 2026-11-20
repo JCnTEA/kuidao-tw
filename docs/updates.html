@@ -96,6 +96,8 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <button data-f="chg">異動</button>
     </div>
     <div class="tl">
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">調整</span><h3>吉祥物在島內也看得清、動作看得出來</h3><p>島上顯示框只有 48×30，原本細線縮下去幾乎消失，看起來只剩兩道白弧擋在漸層上。現在改為先縮到顯示框再加粗線條，動物本體放到接近滿版高度，並加大上下彈跳、呼吸縮放與左右擺頭，五隻形象同步重出圖集；縮到劉海大小也能認出是動物，待機時看得到在呼吸擺動，掃視與探看也不再像原地發呆。</p></div>
+
       <div class="item" data-cat="chg"><time>最新</time><span class="cat chg">調整</span><h3>免安裝版可在程式內直接線上更新</h3><p>更新腳本改成台灣版的路徑與檔名（暫存目錄、程式名、解除安裝機碼都對齊鬼島），並補上吉祥物圖集等 assets 一起換新，不再只換 exe。做法：設定頁按「檢查更新」，程式會抓發佈包、比對大小與 SHA-256、關閉自己後換檔並自動重開；免安裝版也能直接套用，不必再手動重新封裝。</p></div>
 
       <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">調整</span><h3>吉祥物掃視動作幅度加大</h3><p>線條版吉祥物的左右掃視三格（09 掃視、10 探看、11 尋找）原本縮到島內後只位移約 7 像素，看起來像原地發呆；現在把每幀的左右擺幅加大到 10 像素以上，五隻形象同步更新，縮到劉海大小也看得出在左右張望。</p></div>
@@ -104,7 +106,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
 
       <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>吉祥物整套改成線條畫風</h3><p>五隻形象全部換成純白線條描繪的全身動作：石虎、柴犬、貓、哈士奇、黃金獵犬各自有自己的動作序列，犬類為待機、招手、被摸、跳躍、走路、吃東西、找電線杆、睡覺，貓科另有洗臉、伸懶腰、打哈欠、磨爪；切換形象就換整套動作，淺色主題會自動轉成深線。</p></div>
 
-      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>外觀新增勤務誌配色</h3><p>島體主題多了三種參考勤務日誌的配色：勤務誌·紙藍（近白紙底＋墨藍字＋深藍強調）、勤務誌·印章（紙底＋印章紅強調）、勤務誌·夜（深墨藍底＋紙白字），可在「外觀 → 主題」直接切換。</p></div>
+      <div class="item" data-cat="del"><time>最新</time><span class="cat del">移除</span><h3>收掉勤務誌三款配色</h3><p>「外觀 → 主題」不再列出勤務誌·紙藍、勤務誌·印章、勤務誌·夜三款；原本停在這些配色的設定會自動回到經典，島體外觀只剩經典、奶油、毛玻璃·淺、毛玻璃·深、懸浮雲與七款懸浮漸層。</p></div>
 
       <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>地點層級改為「台灣 · 市 · 區」</h3><p>天氣地點不再出現「臺灣省／台灣省」，一律以「台灣 · 某某市 · 某某區」顯示，搜尋與顯示同步。</p></div>
       <div class="item" data-cat="fix"><time>最新</time><span class="cat fix">修正</span><h3>吉祥物播各自的序列圖</h3><p>切換貓、哈士奇、黃金獵犬時改用各自的圖集，不再一律播放石虎的表情；連帶修掉因此造成的建置失敗。</p></div>
@@ -158,3 +160,4 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
 </script>
 </body>
 </html>
+

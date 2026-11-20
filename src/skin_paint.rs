@@ -33,12 +33,6 @@ pub const CREAM: Palette = Palette { paper: [255, 243, 228], ink: [46, 32, 22], 
 pub const GLASS_LIGHT: Palette = Palette { paper: [255, 255, 255], ink: [22, 22, 26], accent: Some([10, 112, 230]), dark_alpha: 0.8, lift: 1.0, darken: 0.78, chip: 0.6 };
 /// 毛玻璃·深：保持黑底白字，只把灰色文字提亮、卡片底调透，适配更通透的深色玻璃。
 pub const GLASS_DARK: Palette = Palette { paper: [0, 0, 0], ink: [255, 255, 255], accent: None, dark_alpha: 0.5, lift: 0.6, darken: 1.0, chip: 1.0 };
-/// 勤務誌·紙藍（參考勤務日誌）：近白紙底、墨藍文字、深藍強調。
-pub const DUTY: Palette = Palette { paper: [252, 253, 254], ink: [22, 34, 46], accent: Some([27, 76, 134]), dark_alpha: 1.0, lift: 1.0, darken: 0.78, chip: 1.0 };
-/// 勤務誌·印章：灰白紙底、墨藍文字、印章紅強調。
-pub const DUTY_STAMP: Palette = Palette { paper: [238, 242, 246], ink: [22, 34, 46], accent: Some([166, 56, 42]), dark_alpha: 1.0, lift: 1.0, darken: 0.78, chip: 1.0 };
-/// 勤務誌·夜：深墨藍底、紙白文字、亮藍強調。
-pub const DUTY_NIGHT: Palette = Palette { paper: [22, 34, 46], ink: [238, 242, 246], accent: Some([86, 150, 220]), dark_alpha: 1.0, lift: 1.0, darken: 1.0, chip: 1.0 };
 
 /// 懸浮漸層：由上而下的色停（sRGB 0..255），t=0 取第一段、t=1 取最後一段。
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -469,3 +463,4 @@ mod tests {
         assert_eq!(mesh.vertices[0].color, Color32::WHITE);
     }
 }
+
