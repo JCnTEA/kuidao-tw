@@ -1675,6 +1675,16 @@ impl App {
                             let grads:Vec<(Skin,&str)>=Skin::ALL.iter().filter(|s|crate::skin_paint::gradient(**s).is_some()).map(|s|(*s,s.label())).collect();
                             settings_control_row_right(ui,"懸浮漸層",|ui|{settings_segmented(ui,&mut self.settings.skin,&grads,64.0);});
                             settings_hint(ui,self.settings.skin.description());
+                            if self.settings.skin.is_gradient() {
+                                settings_control_row(ui,"漸層亮度",56.0,|ui|{
+                                    ui.horizontal_wrapped(|ui|{
+                                        ui.spacing_mut().slider_width=(ui.available_width()-150.0).clamp(64.0,180.0);
+                                        ui.add(egui::Slider::new(&mut self.settings.gradient_brightness,crate::skin_paint::GRADIENT_BRIGHTNESS_MIN..=crate::skin_paint::GRADIENT_BRIGHTNESS_MAX).step_by(5.0).suffix("%"));
+                                        if ui.add_enabled(self.settings.gradient_brightness!=crate::skin_paint::GRADIENT_BRIGHTNESS_DEFAULT,egui::Button::new("恢復預設")).clicked(){self.settings.gradient_brightness=crate::skin_paint::GRADIENT_BRIGHTNESS_DEFAULT;}
+                                    }).response
+                                });
+                                settings_hint(ui,"60% 最暗、100% 原始；只調整漸層底色，文字與圖示不變。預設 80%。");
+                            }
                             if self.settings.skin.is_glass() {
                                 let mut blur=self.settings.glass_blur;
                                 setting_row(ui,"背景模糊","需開啟系統“透明效果”；關閉後改為煙燻半透明",&mut blur);

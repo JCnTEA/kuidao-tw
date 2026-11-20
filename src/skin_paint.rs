@@ -40,7 +40,22 @@ pub struct Gradient {
     pub stops: [[u8; 3]; 3],
 }
 
+pub const GRADIENT_BRIGHTNESS_MIN: u32 = 60;
+pub const GRADIENT_BRIGHTNESS_MAX: u32 = 100;
+pub const GRADIENT_BRIGHTNESS_DEFAULT: u32 = 80;
+
 impl Gradient {
+    /// 依亮度百分比把色停往黑色收；100% 保持原色，60% 最暗。文字與圖示不受影響。
+    pub fn dimmed(self, percent: u32) -> Self {
+        let scale = percent.clamp(GRADIENT_BRIGHTNESS_MIN, GRADIENT_BRIGHTNESS_MAX) as f32 / 100.0;
+        let mut stops = self.stops;
+        for stop in &mut stops {
+            for channel in stop {
+                *channel = (*channel as f32 * scale).round().clamp(0.0, 255.0) as u8;
+            }
+        }
+        Self { stops }
+    }
     /// 取 t 位置的顏色（三段線性內插，t 夾在 0..1）。
     pub fn at(&self, t: f32) -> Color32 {
         let seg = (self.stops.len() - 1) as f32;
@@ -85,6 +100,11 @@ pub fn gradient(skin: crate::model::Skin) -> Option<Gradient> {
         Skin::GradMeadow => GRAD_MEADOW,
         _ => return None,
     })
+}
+
+/// 某個懸浮漸層套用使用者亮度後的色停；非漸層皮膚回 None。
+pub fn gradient_with_brightness(skin: crate::model::Skin, percent: u32) -> Option<Gradient> {
+    gradient(skin).map(|gradient| gradient.dimmed(percent))
 }
 
 /// 单色图标纹理（白色图形 + 透明度，如 AI 厂商标识）：和文字一样参与换色。
@@ -394,6 +414,21 @@ mod tests {
         assert!(chip[0] > 180 && chip[2] > chip[0], "深色選中底塊變為淺淡藍：{chip:?}");
         let ink = [22.0 / 255.0, 22.0 / 255.0, 26.0 / 255.0];
         assert!(crate::glass::contrast(f(chip), ink) >= 7.0);
+    }
+
+    #[test]
+    fn gradient_brightness_dims_the_stops_without_touching_the_hue() {
+        let original = GRAD_PINK;
+        assert_eq!(original.dimmed(100), original, "100% 保持原始色停");
+        let dim = original.dimmed(60);
+        for (before, after) in original.stops.iter().zip(dim.stops.iter()) {
+            for channel in 0..3 {
+                assert!(after[channel] <= before[channel], "只會變暗：{before:?} -> {after:?}");
+            }
+        }
+        assert!(dim.mid().r() < original.mid().r(), "中段色也一起變暗");
+        assert_eq!(gradient_with_brightness(crate::model::Skin::GradPink, 80), Some(original.dimmed(80)));
+        assert!(gradient_with_brightness(crate::model::Skin::Classic, 80).is_none());
     }
 
     #[test]

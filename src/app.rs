@@ -2540,7 +2540,7 @@ impl App {
         match self.settings.skin {
             model::Skin::GlassDark=>{let (r,g,b)=glass::GROUND_DARK;Color32::from_rgba_unmultiplied(r,g,b,215)}
             model::Skin::GlassLight=>{let [r,g,b]=glass::LIGHT_GROUND.map(|v|(v*255.0).round() as u8);Color32::from_rgba_unmultiplied(r,g,b,225)}
-            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient(self.settings.skin).map_or(Color32::BLACK,|g|g.mid()),
+            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient_with_brightness(self.settings.skin,self.settings.gradient_brightness).map_or(Color32::BLACK,|g|g.mid()),
             _=>self.glass_fill(),
         }
     }
@@ -2552,7 +2552,7 @@ impl App {
             model::Skin::GlassDark=>{let (r,g,b)=glass::GROUND_DARK;Color32::from_rgba_unmultiplied(r,g,b,alpha)}
             model::Skin::GlassLight=>{let [r,g,b]=glass::LIGHT_GROUND.map(|v|(v*255.0).round() as u8);Color32::from_rgba_unmultiplied(r,g,b,alpha)}
             model::Skin::Cream=>{let [r,g,b]=crate::skin_paint::CREAM.paper;Color32::from_rgb(r,g,b)}
-            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient(self.settings.skin).map_or(Color32::BLACK,|g|g.mid()),
+            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient_with_brightness(self.settings.skin,self.settings.gradient_brightness).map_or(Color32::BLACK,|g|g.mid()),
             model::Skin::Classic=>Color32::BLACK,
             model::Skin::Fluid=>self.fluid.compose(0.5,0.5,1.0,1.0,0.0),
         }
@@ -2589,7 +2589,7 @@ impl App {
             return;
         }
         // 懸浮漸層皮膚：固定色停沿島體縱向鋪滿，內容維持深色主題的白字白圖示。
-        if let Some(grad)=crate::skin_paint::gradient(skin) {
+        if let Some(grad)=crate::skin_paint::gradient_with_brightness(skin,self.settings.gradient_brightness) {
             let pill=self.settings.island_shape==model::IslandShape::Pill;
             let (map,frame)=shape::EdgeMap::of(rect,if pill {model::Dock::Top}else{self.dock()});
             let mut rows=shape::sections(frame,flare,flare_h,radius);
@@ -3005,9 +3005,13 @@ impl App {
         if a_head > 0.0 {
             paint::clock(&base.faded(a_head),cpos.0,cpos.1-0.5,&clock,size::CLOCK);
         }
-        // 日期随内容淡入，从药丸方向轻轻滑出
+        // 日期随内容淡入，从药丸方向轻轻滑出。漸層皮膚底色較亮，日期改用近白字避免灰字被吃掉。
         if reveal > 0.0 {
-            base.faded(reveal).text(hd + (1.0 - reveal) * 10.0, 22.5, &env.date, size::DATE, W::Regular, Color32::from_rgb(210, 210, 214), H::Left);
+            let date_color=if self.settings.skin.is_gradient(){Color32::from_rgb(246,246,248)}else{Color32::from_rgb(210,210,214)};
+            if self.settings.skin.is_gradient() {
+                base.faded(reveal).text(hd + (1.0 - reveal) * 10.0, 23.2, &env.date, size::DATE, W::Regular, Color32::from_black_alpha(80), H::Left);
+            }
+            base.faded(reveal).text(hd + (1.0 - reveal) * 10.0, 22.5, &env.date, size::DATE, W::Regular, date_color, H::Left);
         }
         if self.open && reveal>0.95 && p>0.98 && !self.is_editing() && !self.drag_hot {
             if let Some(screen)=env.screen {

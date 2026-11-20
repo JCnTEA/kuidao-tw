@@ -147,6 +147,8 @@ impl Skin {
         }
     }
     pub fn is_glass(self) -> bool { matches!(self, Self::GlassLight | Self::GlassDark) }
+    /// 懸浮漸層系列：底色由色停鋪滿，文字固定白色。
+    pub fn is_gradient(self) -> bool { matches!(self, Self::GradAurora | Self::GradAbyss | Self::GradNeon | Self::GradSunset | Self::GradPink | Self::GradViolet | Self::GradMeadow) }
     /// 純色底（非玻璃、非動態）主題，底色直接取調色盤的紙色。
     pub fn is_solid(self) -> bool { matches!(self, Self::Cream) }
 }
@@ -220,6 +222,8 @@ pub struct Settings {
     pub skin: Skin,
     pub island_shape: IslandShape,
     pub glass_blur: bool,
+    /// 懸浮漸層的亮度百分比（60–100）；只影響漸層色停，不改文字與圖示。
+    pub gradient_brightness: u32,
     pub island_size: u32,
     pub island_offset: i32,
     /// OLED 像素偏移：岛体收起静止时沿停靠边缓慢移动几个像素，减轻 OLED 静态显示留下的痕迹。
@@ -310,7 +314,7 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { display_id: String::new(), skin: Skin::Classic, island_shape: IslandShape::Notch, glass_blur: true, island_size: 100, island_offset: 0, oled_shift: false, dock: Dock::Top, settings_theme: Default::default(), pet: true, minimal: false, browser_minimal: false, avoid_browsers: true, avoid_apps: Vec::new(), visible_pages: [true; 9], page_order: [0,1,2,3,4,5,6,7,8], show_clock: true, show_battery: true, show_weather: true, clock_12h: false, clock_period: 0, clock_seconds: false, resident_order: Vec::new(), system_hud: true, bluetooth_notifications: true, read_notifications:false, wechat_notifications:false, wecom_notifications:false, feishu_notifications:false, dingtalk_notifications:false, wechat_tray_open:false, qq_only:false, notification_preview:false, notifications: true, system_notify: true, sound: false, lyrics_enabled:true, mascot:crate::mascot::Mascot::default(), island_lyrics:false, lyric_delay_ms:-350, lyrics_translate:false, hide_fullscreen: true, avoid_top_bar: true, top_bar_on_top: false, focus_minutes: 25, rest_minutes: 5, water_minutes: 45, serving_ml: 250, water_start: 9, water_end: 22, sit_remind: true, sit_minutes: 60, lunch_rest: true, lunch_start: 720, lunch_end: 810, mail_enabled: true, mail_sync_operations:false, mail_code: true, mail_code_hide_seconds:60, mail_interval: 120, mail_ics: 15, ignored_mail_events: Vec::new(), calendar_prompt: true, calendar_auto_sync: true, clipboard_history: true, weather_city: String::new(), weather_position: None, weather_saved: Vec::new(), render_compat: false, render_compat_reason: String::new() }
+        Self { display_id: String::new(), skin: Skin::Classic, island_shape: IslandShape::Notch, glass_blur: true, gradient_brightness: 80, island_size: 100, island_offset: 0, oled_shift: false, dock: Dock::Top, settings_theme: Default::default(), pet: true, minimal: false, browser_minimal: false, avoid_browsers: true, avoid_apps: Vec::new(), visible_pages: [true; 9], page_order: [0,1,2,3,4,5,6,7,8], show_clock: true, show_battery: true, show_weather: true, clock_12h: false, clock_period: 0, clock_seconds: false, resident_order: Vec::new(), system_hud: true, bluetooth_notifications: true, read_notifications:false, wechat_notifications:false, wecom_notifications:false, feishu_notifications:false, dingtalk_notifications:false, wechat_tray_open:false, qq_only:false, notification_preview:false, notifications: true, system_notify: true, sound: false, lyrics_enabled:true, mascot:crate::mascot::Mascot::default(), island_lyrics:false, lyric_delay_ms:-350, lyrics_translate:false, hide_fullscreen: true, avoid_top_bar: true, top_bar_on_top: false, focus_minutes: 25, rest_minutes: 5, water_minutes: 45, serving_ml: 250, water_start: 9, water_end: 22, sit_remind: true, sit_minutes: 60, lunch_rest: true, lunch_start: 720, lunch_end: 810, mail_enabled: true, mail_sync_operations:false, mail_code: true, mail_code_hide_seconds:60, mail_interval: 120, mail_ics: 15, ignored_mail_events: Vec::new(), calendar_prompt: true, calendar_auto_sync: true, clipboard_history: true, weather_city: String::new(), weather_position: None, weather_saved: Vec::new(), render_compat: false, render_compat_reason: String::new() }
     }
 }
 
@@ -355,6 +359,7 @@ impl Settings {
                 "island_shape" => s.island_shape = IslandShape::parse(&v),
                 "dock" => s.dock = Dock::parse(&v),
                 "glass_blur" => s.glass_blur = v != "0",
+                "gradient_brightness" => s.gradient_brightness = v.parse::<u32>().unwrap_or(80).clamp(60,100),
                 "island_size" => s.island_size = island_size_value(v.parse::<u32>().unwrap_or(100)),
                 "island_offset" => s.island_offset = v.parse::<i32>().unwrap_or(0).clamp(-ISLAND_OFFSET_MAX, ISLAND_OFFSET_MAX),
                 "oled_shift" => s.oled_shift = v != "0",
@@ -456,6 +461,7 @@ impl Settings {
                 ("island_shape".into(),self.island_shape.key().into()),
                 ("dock".into(),self.dock.key().into()),
                 ("glass_blur".into(),(self.glass_blur as u8).to_string()),
+                ("gradient_brightness".into(),self.gradient_brightness.clamp(60,100).to_string()),
                 ("island_size".into(),island_size_value(self.island_size).to_string()),
                 ("island_offset".into(),self.island_offset.clamp(-ISLAND_OFFSET_MAX,ISLAND_OFFSET_MAX).to_string()),
                 ("oled_shift".into(),(self.oled_shift as u8).to_string()),
