@@ -3942,6 +3942,15 @@ fn mascot_expression_gallery(){
     eprintln!("表情預覽：{}",dest.display());
 }
 
+fn shape_uses_texture(shape:&egui::Shape,id:egui::TextureId)->bool{
+    match shape {
+        egui::Shape::Rect(r)=>r.brush.as_ref().is_some_and(|b|b.fill_texture_id==id),
+        egui::Shape::Mesh(mesh)=>mesh.texture_id==id,
+        egui::Shape::Vec(shapes)=>shapes.iter().any(|shape|shape_uses_texture(shape,id)),
+        _=>false,
+    }
+}
+
 #[test]
 fn tiger_mascot_draws_its_own_pack_instead_of_the_original_expression_atlas(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
@@ -3950,9 +3959,9 @@ fn tiger_mascot_draws_its_own_pack_instead_of_the_original_expression_atlas(){
     for _ in 0..60{h.frame(vec![]);}
     let pack=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|meta.name.starts_with("mascot-pack-tiger").then_some(*id))
         .expect("石虎要載入自己的動畫包影格");
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Rect(r) if r.brush.as_ref().is_some_and(|b|b.fill_texture_id==pack))),"石虎動畫包應畫在島上");
+    assert!(h.shapes.iter().any(|s|shape_uses_texture(&s.shape,pack)),"石虎動畫包應畫在島上");
     let atlas=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|(meta.name=="daozai-expressions").then_some(*id));
-    assert!(atlas.map_or(true,|atlas|!h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Mesh(mesh) if mesh.texture_id==atlas))),"石虎不能再畫原始表情圖集");
+    assert!(atlas.map_or(true,|atlas|!h.shapes.iter().any(|s|shape_uses_texture(&s.shape,atlas))),"石虎不能再畫原始表情圖集");
 }
 
 #[test]
