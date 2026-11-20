@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>鬼島 桌面靈動島 · 台灣版官網</title>
-<meta name="description" content="鬼島 桌面靈動島台灣版：把通知、天氣、行事曆、音樂與 AI 額度收進螢幕上緣的一顆島。Windows 10／11 64 位元，全繁體台灣用語，衍生自 MIT 授權的開源專案。">
+<meta name="description" content="鬼島 桌面靈動島台灣版：把通知、天氣、行事曆、音樂與 AI 額度收進螢幕上緣的一顆島。Windows 10／11 64 位元，全繁體台灣用語。目前內測中，暫不開放對外下載。">
 <meta property="og:title" content="鬼島 桌面靈動島 · 台灣版">
-<meta property="og:description" content="螢幕上緣的一小條，換成整天的儀表板。Windows 桌面靈動島，繁體台灣版。">
+<meta property="og:description" content="螢幕上緣的一小條，換成整天的儀表板。Windows 桌面靈動島，繁體台灣版。目前內測中。">
 <meta property="og:type" content="website">
+<meta name="robots" content="index,follow">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap">
 <style>
 :root{--bg:#050a10;--card:#0b1622;--line:#17303f;--cy:#3fe0f0;--txt:#e8f8fc;--sub:#84a7b8;--dim:#4b6b7d}
@@ -19,6 +20,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(900px 
 nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0;border-bottom:1px solid rgba(23,48,63,.7)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.22em;font-size:17px;color:#dffaff;text-shadow:0 0 16px rgba(63,224,240,.5)}
 .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--cy);box-shadow:0 0 12px var(--cy)}
+.brand .beta{font-size:9.5px;letter-spacing:.16em;color:var(--cy);border:1px solid rgba(63,224,240,.3);border-radius:999px;padding:2px 8px;text-shadow:none;font-weight:500}
 .nav-links{display:flex;gap:24px;font-size:13px}
 .nav-links a{color:var(--sub);text-decoration:none;transition:.2s}
 .nav-links a:hover{color:var(--cy)}
@@ -35,19 +37,32 @@ h1{font-size:clamp(44px,8.4vw,84px);font-weight:900;letter-spacing:.16em;margin:
 .btn-main:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px rgba(63,224,240,.8)}
 .btn-ghost{border-color:rgba(63,224,240,.3);color:var(--cy);background:rgba(63,224,240,.05)}
 .btn-ghost:hover{background:rgba(63,224,240,.12)}
+.btn-off{border-color:rgba(132,167,184,.28);color:var(--sub);background:rgba(132,167,184,.06);cursor:not-allowed}
 .facts{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:30px;color:var(--dim);font-size:12px}
 .facts span::before{content:"·";margin-right:8px;color:var(--cy)}
 .facts span:first-child::before{content:"";margin:0}
 
-/* 島體示意：純 CSS，不依賴任何圖片 */
-.stage{margin:42px auto 0;max-width:860px;padding:46px 22px 34px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(160deg,#0b1926 0%,#060d15 78%);position:relative;overflow:hidden}
-.stage::after{content:"";position:absolute;inset:auto -20% -60% -20%;height:260px;background:radial-gradient(ellipse at 50% 100%,rgba(63,224,240,.16),transparent 70%)}
-.screen{position:relative;height:30px;border-radius:999px;background:#04080c;border:1px solid rgba(63,224,240,.18);display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:11.5px;color:#bfe9f3;box-shadow:0 12px 40px -18px rgba(63,224,240,.6);max-width:600px;margin:0 auto}
-.screen i{display:flex;align-items:center;gap:7px;font-style:normal}
+/* 島體示意：收起只顯示一半，點一下展開 */
+.stage{margin:42px auto 0;max-width:860px;padding:40px 22px 30px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(160deg,#0b1926 0%,#060d15 78%);position:relative;overflow:hidden}
+.stage::after{content:"";position:absolute;inset:auto -20% -60% -20%;height:260px;background:radial-gradient(ellipse at 50% 100%,rgba(63,224,240,.16),transparent 70%);pointer-events:none}
+.island-wrap{display:flex;justify-content:center;position:relative;z-index:1}
+.screen{font:inherit;appearance:none;border:1px solid rgba(63,224,240,.22);background:#04080c;color:#bfe9f3;border-radius:999px;display:flex;align-items:center;justify-content:flex-start;gap:18px;padding:0 18px;height:32px;font-size:11.5px;cursor:pointer;overflow:hidden;white-space:nowrap;box-shadow:0 12px 40px -18px rgba(63,224,240,.6);transition:width .42s cubic-bezier(.2,.8,.2,1),box-shadow .25s,border-color .25s}
+.screen:hover{border-color:rgba(63,224,240,.5);box-shadow:0 14px 46px -16px rgba(63,224,240,.75)}
+.screen:focus-visible{outline:2px solid rgba(63,224,240,.6);outline-offset:3px}
+.screen[aria-expanded="false"]{width:56%}
+.screen[aria-expanded="true"]{width:100%}
+.screen i{display:flex;align-items:center;gap:7px;font-style:normal;transition:opacity .28s}
 .screen .wave{display:flex;gap:2px;align-items:flex-end;height:11px}
 .screen .wave b{display:block;width:2px;background:var(--cy);border-radius:2px;opacity:.85}
-.screen .ring{width:15px;height:15px;border-radius:50%;border:1px solid rgba(63,224,240,.55);display:grid;place-items:center;font-size:8px;color:var(--cy)}
-.stage .cap{position:relative;z-index:1;text-align:center;margin-top:22px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)}
+.screen .ring{width:16px;height:16px;border-radius:50%;border:1px solid rgba(63,224,240,.55);display:grid;place-items:center;font-size:8px;color:var(--cy)}
+.screen .rest{display:flex;align-items:center;gap:18px}
+.screen .hint{margin-left:auto;font-size:10.5px;letter-spacing:.08em;color:rgba(63,224,240,.72);display:flex;align-items:center;gap:6px}
+.screen .hint::after{content:"›";font-size:13px;transform:rotate(0deg)}
+.screen[aria-expanded="true"] .hint::after{transform:rotate(180deg)}
+.screen[aria-expanded="false"] .rest{display:none}
+.screen[aria-expanded="false"] .hint-txt-open{display:none}
+.screen[aria-expanded="true"] .hint-txt-closed{display:none}
+.stage .cap{position:relative;z-index:1;text-align:center;margin-top:20px;font-size:11.5px;letter-spacing:.1em;color:var(--dim)}
 
 section{padding:54px 0}
 .sec-h{display:flex;align-items:baseline;gap:14px;margin-bottom:26px}
@@ -79,17 +94,14 @@ section{padding:54px 0}
 .oss .honor{font-size:11px;letter-spacing:.22em;color:var(--cy);margin-bottom:14px}
 .oss h3{font-size:19px;font-weight:700;margin-bottom:12px;color:#dffaff}
 .oss p{font-size:13px;color:var(--sub);margin-bottom:14px}
-.oss .links{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
-.oss .links a{font-size:12.5px;color:var(--cy);text-decoration:none;border:1px solid rgba(63,224,240,.28);border-radius:10px;padding:9px 16px;background:rgba(63,224,240,.05);transition:.2s}
-.oss .links a:hover{background:rgba(63,224,240,.12)}
 .oss .note{margin-top:16px;font-size:12px;color:var(--dim);border-left:2px solid rgba(63,224,240,.4);padding-left:14px}
+.oss .code{display:inline-block;margin-top:14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.14em;color:var(--cy);border:1px dashed rgba(63,224,240,.35);border-radius:8px;padding:6px 12px;background:rgba(63,224,240,.05)}
 
-.dl-card{background:linear-gradient(165deg,#0c1a27 0%,#08121c 100%);border:1px solid rgba(63,224,240,.45);border-radius:18px;padding:28px;max-width:560px;margin:0 auto;box-shadow:0 20px 60px -34px rgba(63,224,240,.5);text-align:center}
-.dl-card h3{font-size:17px;font-weight:700;margin-bottom:8px}
-.dl-card p{font-size:12.5px;color:var(--sub);margin-bottom:20px}
-.dl-card .btn{width:100%;justify-content:center;margin-bottom:12px}
-.dl-card .alt{font-size:12px;color:var(--dim)}
-.dl-card .alt a{color:var(--sub)}
+.dl-card{background:linear-gradient(165deg,#0c1a27 0%,#08121c 100%);border:1px solid rgba(132,167,184,.3);border-radius:18px;padding:30px;max-width:580px;margin:0 auto;position:relative;text-align:center;overflow:hidden}
+.dl-card .tag{position:absolute;top:20px;right:20px;font-size:10px;letter-spacing:.14em;color:var(--cy);border:1px solid rgba(63,224,240,.32);border-radius:999px;padding:2px 10px;background:rgba(63,224,240,.08)}
+.dl-card h3{font-size:18px;font-weight:700;margin-bottom:10px;color:#e2faff}
+.dl-card p{font-size:12.5px;color:var(--sub);margin-bottom:20px;line-height:1.9}
+.dl-card .btn-off{width:100%;justify-content:center}
 .dl-meta{display:flex;gap:18px;justify-content:center;font-size:11px;color:var(--dim);margin-top:16px;flex-wrap:wrap}
 .req{margin-top:20px;font-size:12px;color:var(--dim);text-align:center;line-height:1.9}
 
@@ -110,12 +122,13 @@ footer a:hover{color:var(--cy)}
   .nav-links{display:none}
   .hero{padding:50px 0 34px}
   .stage{padding:26px 12px 22px;margin-top:32px}
-  .screen{height:auto;flex-wrap:wrap;justify-content:center;gap:7px 16px;padding:10px 14px;border-radius:18px;font-size:10.5px;max-width:100%;line-height:1.5}
+  .screen{height:auto;flex-wrap:wrap;justify-content:center;gap:7px 14px;padding:10px 14px;border-radius:18px;font-size:10.5px;line-height:1.5}
   .screen .wave{height:9px}
+  .screen .hint{margin:0;justify-content:center}
   .lead{font-size:14px;padding:0 2px}
   .facts{gap:10px 16px;font-size:11px}
   .facts span::before{margin-right:6px}
-  .stage .cap{font-size:11px;letter-spacing:.06em}
+  .stage .cap{font-size:11px;letter-spacing:.04em}
 }
 </style>
 </head>
@@ -123,13 +136,13 @@ footer a:hover{color:var(--cy)}
 <div class="wrap">
 
   <nav>
-    <div class="brand"><span class="dot"></span>鬼島</div>
+    <div class="brand"><span class="dot"></span>鬼島<span class="beta">內測中</span></div>
     <div class="nav-links">
       <a href="#what">這是什麼</a>
       <a href="#features">功能</a>
       <a href="#taiwan">台灣版</a>
-      <a href="#oss">開源授權</a>
-      <a href="#download">下載</a>
+      <a href="#oss">授權</a>
+      <a href="#access">取得方式</a>
     </div>
   </nav>
 
@@ -137,24 +150,29 @@ footer a:hover{color:var(--cy)}
     <span class="eyebrow">WINDOWS 桌面靈動島 · 繁體台灣版</span>
     <h1>鬼島</h1>
     <div class="sub-en">GUIDAO · DESKTOP ISLAND</div>
-    <p class="lead">螢幕上緣那一小條，換成<b>整天的儀表板</b>：通知、天氣、行事曆、音樂、AI 額度，<b>抬眼就看得到</b>，不用為了看一句話切走整個視窗。<br>全繁體、台灣用語，解壓就能跑。</p>
+    <p class="lead">螢幕上緣那一小條，換成<b>整天的儀表板</b>：通知、天氣、行事曆、音樂、AI 額度，<b>抬眼就看得到</b>，不用為了看一句話切走整個視窗。<br>全繁體、台灣用語，目前進入內部測試。</p>
     <div class="cta">
-      <a class="btn btn-main" href="#download">下載免安裝版</a>
-      <a class="btn btn-ghost" href="#features">先看功能</a>
+      <a class="btn btn-main" href="#features">先看功能</a>
+      <a class="btn btn-ghost" href="#access">內測說明</a>
     </div>
     <div class="facts">
       <span>免安裝、不寫登錄檔</span><span>繁體台灣用語</span><span>資料留在本機</span><span>Windows 10／11 64 位元</span>
     </div>
 
     <div class="stage">
-      <div class="screen">
-        <i>09:41</i>
-        <i>台北 22°　多雲</i>
-        <i><span class="wave"><b style="height:4px"></b><b style="height:8px"></b><b style="height:11px"></b><b style="height:7px"></b><b style="height:3px"></b></span> 正在播放</i>
-        <i><span class="ring">82</span></i>
-        <i>3 則通知</i>
+      <div class="island-wrap">
+        <button class="screen" id="island" type="button" aria-expanded="false" aria-label="島體示意，點一下展開或收起">
+          <i>09:41</i>
+          <i>台北 22°　多雲</i>
+          <div class="rest">
+            <i><span class="wave"><b style="height:4px"></b><b style="height:8px"></b><b style="height:11px"></b><b style="height:7px"></b><b style="height:3px"></b></span> 正在播放</i>
+            <i><span class="ring">82</span></i>
+            <i>3 則通知</i>
+          </div>
+          <span class="hint"><span class="hint-txt-closed">點一下展開</span><span class="hint-txt-open">再點一下收起</span></span>
+        </button>
       </div>
-      <div class="cap">島體示意：常駐時是一條細線，滑過或點一下才展開內容</div>
+      <div class="cap">島體示意：收起時只露出一半，點一下才展開完整內容</div>
     </div>
   </header>
 
@@ -166,12 +184,12 @@ footer a:hover{color:var(--cy)}
         <p>兩種形態可選：貼齊上緣的劉海，或離邊一點的膠囊。垂直、左右兩側也能停靠，拖曳時有拿起、跟手與吸附落位的動效。</p>
       </div>
       <div>
-        <h3>看什麼由你決定</h3>
-        <p>通知、天氣、行事曆、音樂、AI 額度、系統狀態都是獨立模組，可個別開關；不需要的就關掉，島上只留你在意的東西。</p>
+        <h3>平常只露一半</h3>
+        <p>收起狀態只留時間與天氣這類最基本的資訊，寬度大約一半；點一下或滑過才展開完整內容，看完再收回去。</p>
       </div>
       <div>
         <h3>不佔你的桌面</h3>
-        <p>平常只是一條細線或一小塊劉海，滑鼠移開就自動收合；需要時才展開，不會擋住工作區，也不會跳出來搶焦點。</p>
+        <p>不只島體本身，展開的內容也會跟著形態收合，不會突然蓋住視窗；需要時才展開，也不會跳出來搶焦點。</p>
       </div>
     </div>
   </section>
@@ -209,58 +227,57 @@ footer a:hover{color:var(--cy)}
   </section>
 
   <section id="oss">
-    <div class="sec-h"><h2>開源與授權</h2><span class="en">OPEN SOURCE</span><span class="rule"></span></div>
+    <div class="sec-h"><h2>授權</h2><span class="en">LICENSE</span><span class="rule"></span></div>
     <div class="oss">
       <div class="honor">UPSTREAM · MIT LICENSE</div>
       <h3>站在原作者的開源專案上</h3>
       <p>鬼島台灣版衍生自 <b>Renly1994／xiaotang-daozai</b>（Windows 桌面靈動島），原專案以 MIT 授權釋出。島體形態、模組架構與大部分功能的原作功勞都在上游，台灣版只做在地化與打包這一層。</p>
-      <p>依 MIT 授權，本專案保留原作者的版權聲明與授權條文，<code>LICENSE</code> 隨程式一起附上；台灣版的改動同樣以 MIT 釋出，任何人都可以自行編譯、修改或再散布。</p>
-      <div class="links">
-        <a href="https://github.com/Renly1994/xiaotang-daozai" target="_blank" rel="noopener">上游原專案</a>
-        <a href="https://github.com/JCnTEA/kuidao-tw" target="_blank" rel="noopener">本版原始碼</a>
-        <a href="https://github.com/JCnTEA/kuidao-tw/blob/main/LICENSE" target="_blank" rel="noopener">授權條文</a>
-      </div>
-      <div class="note">如果你要的是最原始的功能與 upstream 支援，建議直接使用上游專案；台灣版的差異只在語言、地名、外觀與打包。</div>
+      <p>依 MIT 授權，本專案保留原作者的版權聲明與授權條文，<code>LICENSE</code> 隨程式一起附上。</p>
+      <p>內測期間不對外提供下載、原始碼位址與授權發放；正式開放時會在本頁公告，並依同一授權釋出。</p>
+      <div class="code">專案識別：GD-7C2F-9A41</div>
+      <div class="note">如果你要的是最原始的功能與上游支援，建議直接使用上游專案；台灣版的差異只在語言、地名、外觀與打包。</div>
     </div>
   </section>
 
-  <section id="download">
-    <div class="sec-h"><h2>下載</h2><span class="en">DOWNLOAD</span><span class="rule"></span></div>
+  <section id="access">
+    <div class="sec-h"><h2>取得方式</h2><span class="en">ACCESS</span><span class="rule"></span></div>
     <div class="dl-card">
-      <h3>鬼島 免安裝版</h3>
-      <p>Windows x64 壓縮包，解壓後直接執行，不裝服務、不寫登錄檔。</p>
-      <a class="btn btn-main" data-dl href="https://github.com/JCnTEA/kuidao-tw/releases/latest">前往下載</a>
-      <div class="alt">也可以從 <a href="https://github.com/JCnTEA/kuidao-tw" target="_blank" rel="noopener">原始碼倉庫</a> 自行編譯</div>
+      <span class="tag">內測中</span>
+      <h3>目前為內部測試階段</h3>
+      <p>對外下載與授權暫時不開放。內測名額由維護者邀請發放，測試期間版本與功能仍會調整；正式開放時會在本頁公告，不另外通知。</p>
+      <a class="btn btn-off" aria-disabled="true" href="#access">暫不開放</a>
       <div class="dl-meta"><span>Windows 10／11</span><span>64 位元</span><span>免安裝</span><span>MIT 授權</span></div>
     </div>
-    <p class="req">第一次執行若出現「不明的發行者」，是沒有程式碼簽章憑證的正常提示：按「更多資訊」→「仍要執行」即可。<br>程式不需要連外也能用；需要天氣、額度、信箱等模組時，才由你填入自己的服務設定。</p>
+    <p class="req">正式開放後會提供免安裝壓縮包與檔案雜湊值；內測期間請勿轉傳測試檔案。<br>程式不需要連外也能用；天氣、額度、信箱等模組，只在你填入自己的服務設定後才會連線。</p>
   </section>
 
   <section id="faq">
     <div class="sec-h"><h2>常見問題</h2><span class="en">FAQ</span><span class="rule"></span></div>
     <div class="faq">
+      <details><summary>什麼時候開放？</summary><p>目前是內部測試，沒有對外時程；確定開放時會直接改本頁，屆時才提供下載與授權方式。</p></details>
       <details><summary>跟原版差在哪裡？</summary><p>功能面沿用上游開源專案，差異在語言與在地化：全繁體台灣用語、地名與時間格式、外觀與品牌識別、免安裝打包。程式架構與模組邏輯沒有重寫。</p></details>
       <details><summary>需要管理員權限嗎？</summary><p>免安裝版解壓即用，一般權限就能跑；只有要讀取需要更高權限的系統資訊時，才會請你提權。</p></details>
       <details><summary>會不會把資料傳出去？</summary><p>設定、憑證與紀錄都存在你自己的電腦裡；天氣、額度、信箱這類模組是直接用你填的設定連到該服務，不經過本專案的中繼伺服器。</p></details>
-      <details><summary>可以自己改、自己編譯嗎？</summary><p>可以。原始碼以 MIT 釋出，編譯方式與目錄結構都放在倉庫裡；要改成自己的品牌或拿掉某些模組都行，只要保留授權聲明。</p></details>
       <details><summary>支援哪些服務？</summary><p>音樂走系統媒體控制，多數播放器都能接；訊息以 LINE、Instagram、Threads、Facebook 與系統通知為主；AI 額度與信箱則依你設定的服務而定。</p></details>
     </div>
   </section>
 
   <footer>
-    鬼島 · 台灣版　｜　衍生自上游開源專案，依 MIT 授權保留原作者聲明<br>
-    <a href="#features">功能</a><a href="#taiwan">台灣版</a><a href="#oss">開源授權</a><a href="#download">下載</a><br>
+    鬼島 · 台灣版　｜　內測中，暫不開放對外下載　｜　衍生自上游開源專案，依 MIT 授權保留原作者聲明<br>
+    <a href="#features">功能</a><a href="#taiwan">台灣版</a><a href="#oss">授權</a><a href="#access">取得方式</a><br>
     本站為個人專案頁面，非商業販售
   </footer>
 </div>
 <script>
-  // 下載一律指向本倉庫的發佈頁，換倉庫時只改這一行
-  var REPO = "https://github.com/JCnTEA/kuidao-tw";
-  document.querySelectorAll('[data-dl]').forEach(function (a) {
-    a.href = REPO.replace(/\/$/, "") + "/releases/latest";
-    a.target = "_blank";
-    a.rel = "noopener";
-  });
+  // 島體示意：預設收起（只露出一半），點一下展開、再點一下收起
+  (function () {
+    var island = document.getElementById('island');
+    if (!island) return;
+    island.addEventListener('click', function () {
+      var open = island.getAttribute('aria-expanded') === 'true';
+      island.setAttribute('aria-expanded', open ? 'false' : 'true');
+    });
+  })();
 </script>
 </body>
 </html>

@@ -62,11 +62,12 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
+      <div class="card"><span class="badge">官網</span><h3>官網改為內測版</h3><p>島體示意預設只露出一半，點一下或再點一下切換展開與收起；取得方式與授權一併改為「內測中，暫不開放」的官方說法；頁面不再出現任何指向原始碼倉庫的網址，改以專案識別碼代替，避免被從連結回推倉庫位置。</p></div>
       <div class="card"><span class="badge">更新</span><h3>更新檢查修好</h3><p>版本標籤帶台灣版後綴時，舊版解析會判定格式異常；改為只取數字段後可正常比對，有新版本才會提示下載。</p></div>
       <div class="card"><span class="badge">同步</span><h3>上游只更新沒動過的部分</h3><p>同步時比對台灣版現況：沒改過的原始檔照收上游新版，改過的（吉祥物、設定頁、更新來源等）一律保留，上游同檔新內容另存供比對；同時修好清單檔被版本號覆寫導致無法啟動的問題。</p></div>
       <div class="card"><span class="badge">更新</span><h3>自動更新已上線</h3><p>後台每 6 小時檢查上游初始檔案，繁中化後自動編譯並發布；程式啟動向本倉庫查最新版，確認後才下載替換。台灣版自身改動同樣走此流程出包，官網同步補上說明。</p></div>
       <div class="card"><span class="badge">核心</span><h3>可執行成品</h3><p>正式版與開發板兩支 exe，圖示各自內嵌，管理員權限啟動，介面全繁體台灣用語。</p></div>
-      <div class="card"><span class="badge">授權</span><h3>僅限本人</h3><p>機器碼綁定，離線授權碼驗證；未啟用不進入主程式，換機需重新取得授權。</p></div>
+      <div class="card"><span class="badge">授權</span><h3>內測中，暫不開放</h3><p>目前為內部測試階段，對外不下載、不發放授權；測試名額由維護者邀請，正式開放時另行公告，屆時才提供授權方式與檔案雜湊。</p></div>
       <div class="card"><span class="badge">自動化</span><h3>上游同步</h3><p>定時檢查上游原始碼，自動繁中化、台灣用語調整、品牌改名、版本對齊後編譯發布。</p></div>
     </div>
   </section>
