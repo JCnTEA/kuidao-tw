@@ -80,14 +80,14 @@ impl Badges{
     pub fn persist(&self){self.save();}
     pub fn count(&self,social:Social)->u16{self.counts[social.index()]}
     pub fn active(&self)->Vec<(Social,u16)>{
-        Social::ALL.into_iter().filter_map(|s|{let n=self.count(&s);(n>0).then_some((s,n))}).collect()
+        Social::ALL.into_iter().filter_map(|s|{let n=self.count(s);(n>0).then_some((s,n))}).collect()
     }
     pub fn total(&self)->u32{self.active().iter().map(|(_,n)|*n as u32).sum()}
 }
 
 /// 右上角數字徽章；`count` 為 0 時畫小紅點。
 pub fn badge(c:&Card,x:f32,y:f32,count:u16,radius:f32,font:f32){
-    use crate::paint::W;
+    use crate::theme::W;
     let red=egui::Color32::from_rgb(255,59,48);
     if count==0{c.circle(x,y,radius*0.45,red);return;}
     c.circle(x,y,radius,red);

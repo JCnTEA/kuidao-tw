@@ -240,8 +240,8 @@ impl App {
                 let distance=index as f32-position;
                 if distance.abs()>2.2 {continue;}
                 let active=current==Some(index);
-                let ink=row.ink(if active {theme::WHITE}else{theme::GRAY});
                 let row=col.faded((1.0-distance.abs()*0.35).clamp(0.0,1.0));
+                let ink=row.ink(if active {theme::WHITE}else{theme::GRAY});
                 let font=row.font(if active {12.0}else{10.0},if active {W::Semibold}else{W::Regular});
                 // 维语等从右到左的歌词：先按阅读顺序分行再逐行转换（#200）。
                 let shown=self.ly.zh_lines.get(index).filter(|text|!text.trim().is_empty()).map_or(line.text.as_str(),|text|text.as_str());
