@@ -15,6 +15,7 @@ pub mod anim;
 pub mod oled_shift;
 pub mod app;
 pub mod messenger;
+pub mod social;
 pub mod mascot;
 pub mod child_process;
 mod settings_window;

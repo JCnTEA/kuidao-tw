@@ -240,7 +240,7 @@ impl App {
                 let distance=index as f32-position;
                 if distance.abs()>2.2 {continue;}
                 let active=current==Some(index);
-                let ink=if active {theme::WHITE}else{theme::GRAY};
+                let ink=row.ink(if active {theme::WHITE}else{theme::GRAY});
                 let row=col.faded((1.0-distance.abs()*0.35).clamp(0.0,1.0));
                 let font=row.font(if active {12.0}else{10.0},if active {W::Semibold}else{W::Regular});
                 // 维语等从右到左的歌词：先按阅读顺序分行再逐行转换（#200）。
@@ -256,8 +256,9 @@ impl App {
             if !lyrics.synced {col.text(246.0,39.0,"文字歌詞",8.0,W::Regular,theme::GRAY,H::Left);}
         } else {
             let status=if self.ly.loading {"正在查詢歌詞…"}else if let Some(error)=&self.ly.error {error.label()}else{"暫無歌詞"};
-            let galley=col.painter.layout(status.into(),col.font(10.0,W::Regular),theme::GRAY,130.0*c.s);
-            col.painter.galley(col.pos(246.0,61.0-galley.size().y/(2.0*c.s)),galley,theme::GRAY);
+            let ink=col.ink(theme::GRAY);
+            let galley=col.painter.layout(status.into(),col.font(10.0,W::Regular),ink,130.0*c.s);
+            col.painter.galley(col.pos(246.0,61.0-galley.size().y/(2.0*c.s)),galley,ink);
             if self.ly.error.is_some() {
                 col.text(246.0,87.0,"點選重試",9.0,W::Regular,theme::GRAY,H::Left);
                 if c.hit(243.0,28.0,136.0,74.0,"lyrics-retry").on_hover_text("重新查詢當前歌曲的歌詞").clicked(){self.ly.key.clear();self.ly.manual_retry=true;}
@@ -1157,7 +1158,7 @@ impl App {
             for raw in rows{
                 let item=self.display_mail(&raw);let hidden=self.mail_code_hidden(&raw);let seen=self.mail_seen(&raw,folder);
                 let(rect,_)=ui.allocate_exact_size(egui::vec2(row_w*c.s,row_h*c.s),egui::Sense::hover());
-                let mut row=Card::new(ui,rect.min,ui.clip_rect());row.s=c.s;row.live=c.live;
+                let mut row=Card::new(ui,rect.min,ui.clip_rect());row.s=c.s;row.live=c.live;row.boost=c.boost;
                 let hit=row.hit(0.0,0.0,row_w,row_h-1.0,("mail-row",item.uid,item.account.as_str()));
                 let hovered=ui.ctx().pointer_hover_pos().is_some_and(|p|rect.contains(p)&&ui.clip_rect().contains(p));
                 let ready=self.mail_ready(&item.account,folder);let actions=trash||hovered&&ready;

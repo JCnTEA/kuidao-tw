@@ -27,6 +27,7 @@ pub struct Snapshot {
     pub volume: Option<(u32, bool)>,
     pub audio_endpoint: Option<String>,
     pub caps: bool,
+    pub num: bool,
     pub network: bool,
     pub network_kind: NetworkKind,
 }
@@ -91,7 +92,7 @@ impl Snapshot {
                 else if p.NetworkAdapter().ok().and_then(|a|a.IanaInterfaceType().ok())==Some(6){NetworkKind::Ethernet}
                 else{NetworkKind::Other}
             }).unwrap_or_default();
-            Self{volume,audio_endpoint,network,network_kind,caps:GetKeyState(0x14)&1!=0}
+            Self{volume,audio_endpoint,network,network_kind,caps:GetKeyState(0x14)&1!=0,num:GetKeyState(0x90)&1!=0}
         }
     }
     pub fn changes(&self, old: &Self) -> Vec<(String, String)> {
@@ -112,6 +113,12 @@ impl Snapshot {
             out.push((
                 "大寫鎖定".into(),
                 if self.caps { "已開啟" } else { "已關閉" }.into(),
+            ));
+        }
+        if self.num != old.num {
+            out.push((
+                "數字鍵盤".into(),
+                if self.num { "已開啟" } else { "已關閉" }.into(),
             ));
         }
         if self.network != old.network || self.network && self.network_kind != old.network_kind {
@@ -936,13 +943,13 @@ mod tests {
     }
     #[test]
     fn network_connection_uses_connected_wording() {
-        let old=Snapshot{volume:None,audio_endpoint:None,caps:false,network:false,network_kind:NetworkKind::Other};
+        let old=Snapshot{volume:None,audio_endpoint:None,caps:false,num:false,network:false,network_kind:NetworkKind::Other};
         let mut connected=old.clone();connected.network=true;
         assert_eq!(connected.changes(&old),vec![("網路連線".into(),"網路已連線".into())]);
     }
     #[test]
     fn network_switches_transport_and_keeps_the_disconnected_type() {
-        let wifi=Snapshot{volume:None,audio_endpoint:None,caps:false,network:true,network_kind:NetworkKind::Wifi};
+        let wifi=Snapshot{volume:None,audio_endpoint:None,caps:false,num:false,network:true,network_kind:NetworkKind::Wifi};
         let mut cable=wifi.clone();cable.network_kind=NetworkKind::Ethernet;
         assert_eq!(cable.changes(&wifi),vec![("網路連線".into(),"乙太網 · 網路已連線".into())]);
         let mut off=cable.clone();off.network=false;off.network_kind=NetworkKind::Other;
@@ -951,7 +958,7 @@ mod tests {
     }
     #[test]
     fn switching_audio_endpoints_is_not_a_volume_adjustment() {
-        let old=Snapshot{volume:Some((20,false)),audio_endpoint:Some("speakers".into()),caps:false,network:true,network_kind:NetworkKind::Other};
+        let old=Snapshot{volume:Some((20,false)),audio_endpoint:Some("speakers".into()),caps:false,num:false,network:true,network_kind:NetworkKind::Other};
         let mut new=old.clone();
         new.audio_endpoint=Some("headphones".into());new.volume=Some((80,false));new.caps=true;
         assert_eq!(new.changes(&old),vec![("大寫鎖定".into(),"已開啟".into())]);

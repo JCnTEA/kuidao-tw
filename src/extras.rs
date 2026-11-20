@@ -57,7 +57,7 @@ impl Alert {
             _=>None,
         }
     }
-    pub(crate) fn is_hud(&self)->bool {self.source==AlertSource::Internal && matches!(self.title.as_str(),"系統音量"|"大寫鎖定"|"鍵盤輸入語言"|"網路連線"|"電源已連線"|"已切換電池供電"|"藍牙裝置")}
+    pub(crate) fn is_hud(&self)->bool {self.source==AlertSource::Internal && matches!(self.title.as_str(),"系統音量"|"大寫鎖定"|"數字鍵盤"|"鍵盤輸入語言"|"網路連線"|"電源已連線"|"已切換電池供電"|"藍牙裝置")}
 }
 fn bluetooth_notice_content(body:&str)->(&str,&str,Option<u8>){
     if let Some(name)=body.strip_suffix(" · 已斷開") {return (name,"已斷開",None);}
@@ -110,6 +110,14 @@ fn notice_icon(c:&Card,x:f32,y:f32,a:&Alert) {
             c.poly(&[(x-8.0,y-1.0),(x,y-9.0),(x+8.0,y-1.0)],ink);
             c.fill(x-3.0,y-1.5,6.0,6.5,0.5,ink);
             c.fill(x-4.0,y+7.0,8.0,2.0,0.8,ink);
+        },
+        "數字鍵盤"=>{
+            let ink=if a.body=="已開啟"{theme::GREEN}else{theme::GRAY};
+            c.stroke(x-9.0,y-8.0,18.0,16.0,3.0,1.2,ink);
+            for row in 0..3{for col in 0..3{
+                c.fill(x-6.5+col as f32*5.0,y-5.5+row as f32*4.5,2.4,2.0,0.4,ink);
+            }}
+            c.fill(x-5.0,y+5.0,10.0,1.8,0.6,ink);
         },
         "鍵盤輸入語言"=>{
             c.stroke(x-10.0,y-8.5,20.0,17.0,4.0,1.2,theme::GRAY);
@@ -247,7 +255,7 @@ impl App {
         }
         let transient = matches!(
             title.as_str(),
-            "系統音量" | "大寫鎖定" | "鍵盤輸入語言" | "網路連線" | "電源已連線" | "已切換電池供電" | "藍牙裝置"
+            "系統音量" | "大寫鎖定" | "數字鍵盤" | "鍵盤輸入語言" | "網路連線" | "電源已連線" | "已切換電池供電" | "藍牙裝置"
         );
         let a = Alert {
             source: AlertSource::Internal,
@@ -386,11 +394,13 @@ impl App {
     pub fn receive_notification_from(&mut self,app:String,id:String,body:String,unread:Option<crate::app::Unread>){
         if !self.settings.read_notifications || id.is_empty() || !crate::messenger::NotificationFilter::for_settings(&self.settings).allows(&id){return;}
         if crate::messenger::suppresses_toast(&app,&id,crate::messenger::toast_suppression(&self.settings)){return;}
+        let social_source=crate::social::detect(&app,&id);
         let client=crate::app::Messenger::from_notification_id(&id).filter(|client|client.adapter().capture==crate::messenger::Capture::SystemToast);
         let id=client.map(|client|client.adapter().notification_id.to_string()).unwrap_or(id);
         // 鬼島自己发出的系统提醒会被通知中心回传；已在历史里的同一内容不再入队，避免重复显示。
         if crate::messenger::Messenger::from_notification_id(&id).is_none() && self.history.iter().any(|a|format!("{} · {}",a.title,a.body)==body){return;}
         if !self.notification_apps.observe(&id,&app) || !self.settings.notifications{return;}
+        if let Some(social)=social_source{self.social.bump(social);self.social.persist();}
         let unread=client.map(|client|unread.filter(|u|u.source==client && u.pid!=0).unwrap_or(crate::app::Unread::of(client)));
         if let Some(unread)=unread{self.mark_messenger(unread.source,unread.pid,unread.window);}
         self.notification_bell_at=self.t;
@@ -538,7 +548,7 @@ impl App {
                     else if a.title=="網路連線"{a.body.split_once(" · ").unwrap_or(("網路",a.body.as_str()))}
                     else{(a.title.as_str(),a.body.as_str())};
                 nc.centered_text(48.0,19.0,&nc.fit(title,11.0,W::Semibold,90.0),11.0,W::Semibold,theme::WHITE,H::Left);
-                nc.centered_text(HUD_W-16.0,19.0,&nc.fit(body,10.5,W::Regular,92.0),10.5,W::Regular,if a.title=="大寫鎖定"&&a.body=="已開啟"||a.title=="網路連線"&&a.body.contains("已連線"){theme::GREEN}else{theme::GRAY},H::Right);
+                nc.centered_text(HUD_W-16.0,19.0,&nc.fit(body,10.5,W::Regular,92.0),10.5,W::Regular,if a.title=="大寫鎖定"&&a.body=="已開啟"||a.title=="數字鍵盤"&&a.body=="已開啟"||a.title=="網路連線"&&a.body.contains("已連線"){theme::GREEN}else{theme::GRAY},H::Right);
             }
         } else {
             let is_sit=a.health()==Some(HealthReminder::Sit);let is_water=a.health()==Some(HealthReminder::Water);let is_focus=a.page==1;let is_power=a.title=="電量偏低";

@@ -836,6 +836,10 @@ pub struct App {
     pub listener_status: String,
     pub(crate) notification_bell_until: f64,
     pub(crate) notification_bell_at: f64,
+    /// 未讀郵件數；鈴鐺常駐並顯示數字，開啟郵件頁後歸零。
+    pub(crate) mail_unread: u16,
+    /// Threads／Messenger／Facebook／LINE／Instagram 的未讀則數。
+    pub(crate) social: crate::social::Badges,
     pub(crate) notice: Option<Alert>,
     pub(crate) hud_notice: Option<Alert>,
     hud_alpha: f32,
@@ -996,7 +1000,7 @@ impl App {
             music_artwork: None,
             forced_open_until:0.0, settings_open:false, settings_window:std::sync::Arc::new(std::sync::Mutex::new(crate::settings_window::State::load())), displays:Vec::new(), browser_at_top:false, browser_minimal_active:false, glass_tint:0.0, fluid:Default::default(), fluid_origin:Pos2::ZERO, fluid_art:None, fluid_title:String::new(), screen:None, settings_focus_requested:false, settings_tab:0, settings_category:0, messenger_statuses:Default::default(), notification_apps:model::NotificationApps::load(), subpage:None, task_dialog:None,
             listener_status: "尚未連線".into(),
-            notification_bell_until: 0.0, notification_bell_at: -10.0, notice: None, hud_notice: None, hud_alpha: 0.0, notice_width:Spring::new(0.0,CLOSE.0,CLOSE.1), notice_details:false, pending_messengers:Vec::new(), messenger_scroll:0.0, alerts: Default::default(), history: Default::default(), pending: vec![],
+            notification_bell_until: 0.0, notification_bell_at: -10.0, mail_unread: 0, social: crate::social::Badges::load(), notice: None, hud_notice: None, hud_alpha: 0.0, notice_width:Spring::new(0.0,CLOSE.0,CLOSE.1), notice_details:false, pending_messengers:Vec::new(), messenger_scroll:0.0, alerts: Default::default(), history: Default::default(), pending: vec![],
             todo_first: 0, todo_choosing: false, pet: Default::default(), last_drink: None,
             toast: None, toast_below: false,
             last_input: 0.0, system_idle: None,
@@ -1115,6 +1119,7 @@ impl App {
                     let body=format!("{} · {}",item.from,item.subject);
                     let body=item.code.as_ref().map(|code|crate::mail_privacy::mask(&body,code)).unwrap_or(body);
                     self.alert("新郵件",body,5,false);
+                    self.mail_unread=self.mail_unread.saturating_add(1).min(99);
                     self.notification_bell_at = self.t;
                     self.notification_bell_until = self.t + 6.0;
                 }
@@ -1530,6 +1535,7 @@ impl App {
             return;
         }
         self.notice=None;
+        if page==MAIL_PAGE {self.mail_unread=0;}
         self.go(page,1.0);
         self.open=true; self.forced_open_until=self.t+4.0;
         self.w.tune(OPEN_W.0,OPEN_W.1);self.h.tune(OPEN_H.0,OPEN_H.1);
@@ -1707,7 +1713,7 @@ impl App {
         else {crate::smtc::POLL_BACKGROUND}
     }
 
-    fn island_lyrics_active(&self)->bool {
+    pub(crate) fn island_lyrics_active(&self)->bool {
         if self.side() {return false;}
         self.settings.island_lyrics && self.settings.visible_pages[0] && self.media.is_music() && self.media.playing
             && !self.browser_minimal_active
@@ -1717,6 +1723,7 @@ impl App {
     /// 换句、分段和展开高亮共用时间调整；正数延后，负数提前。
     pub(crate) fn lyric_position(&self)->f32 {(self.media.position-self.settings.lyric_delay_ms as f64/1000.0)as f32}
 
+    fn bell_active(&self)->bool {self.mail_unread>0 || self.t<self.notification_bell_until}
     pub(crate) fn island_lyric(&self) -> Option<(usize,&str)> {
         if !self.island_lyrics_active(){return None;}
         if !lyric_key_matches(&self.ly.key,&self.media) {return None;}
@@ -1787,11 +1794,11 @@ impl App {
         }
         if self.side() {
             // 左右停靠：竖向胶囊（通知仍是贴边滑出的横向卡片，见上）。
-            return self.side_base_size(self.effective_minimal()&&self.t>=self.notification_bell_until);
+            return self.side_base_size(self.effective_minimal()&&!self.bell_active());
         }
         if self.island_lyrics_active() {
             (self.lyric_bar_width(),BAR_H)
-        } else if self.effective_minimal()&&self.t>=self.notification_bell_until {
+        } else if self.effective_minimal()&&!self.bell_active() {
             (BAR_W_MIN, BAR_H_MIN)
         } else {
             (self.resident.target.width.min(WIN_W-32.0), BAR_H)
@@ -1872,7 +1879,7 @@ impl App {
         self.notice_width.target=notice_target;
         if self.compact_notices(){self.notice_width.step(dt);}else{self.notice_width.snap(0.0);self.notice_details=false;}
         self.update_media(env,&ctx);
-        let bell=self.t<self.notification_bell_until&&!self.compact_notices();
+        let bell=self.bell_active()&&!self.compact_notices();
         self.resident_power=(env.battery,env.charging);
         let mut layout=Layout::new(self.settings.show_battery&&env.battery.is_some(),self.quota_bar_indices().len(),self.media.is_music()&&!bell,self.pomo.running,bell,self.pet_enabled(),self.weather_pill().is_some());
         layout.reorder(&self.settings.resident_order);
@@ -2021,7 +2028,7 @@ impl App {
         let notice_shape=notice_rect.map(|r|Rect::from_min_max(Pos2::new(r.left()-36.0,r.top()),r.max));
         let body=messenger_rect.filter(|_|outside_badge.is_none()).map_or(panel,|badge|panel.union(badge));
         let body=notice_shape.map_or(body,|notice|body.union(notice));
-        let minimal_strip = self.effective_minimal() && !self.island_lyrics_active() && self.notice.is_none() && self.t>=self.notification_bell_until;
+        let minimal_strip = self.effective_minimal() && !self.island_lyrics_active() && self.notice.is_none() && !self.bell_active();
         let minimal_pill = minimal_strip && pc < 0.02;
         let flare = if minimal_pill || pill { 0.0 } else { lerp(5.0, FLARE, pc) };
         let k = (w / PW).clamp(0.3, 1.1);
@@ -2071,7 +2078,8 @@ impl App {
         self.reveal = reveal;
         let origin = self.content_origin(win);
         let clip = panel.intersect(win);
-        let base = Card::new(ui, origin, clip);
+        let boost=crate::skin_paint::gradient(self.settings.skin).is_some();
+        let base = Card::new(ui, origin, clip).with_boost(boost);
         self.cursor_local = env.cursor.map(|p| base.to_local(p));
 
         let banner=!self.compact_notices()&&self.notice.is_some()&&!self.open;
@@ -2084,35 +2092,35 @@ impl App {
                 else {(self.hud_alpha*smoothstep(0.20,0.60,width_progress),1.0-smoothstep(0.05,0.25,width_progress))};
             if !minimal_pill||pc>0.0 {self.resident_header(&base.faded(header_opacity),panel,cx,pc,reveal,env);}
             if let Some(a)=self.hud_notice.clone(){
-                let overlay=Card::new(ui,panel.min+Vec2::new(self.pet_space(),0.0),panel.intersect(ui.max_rect())).faded(opacity);
+                let overlay=Card::new(ui,panel.min+Vec2::new(self.pet_space(),0.0),panel.intersect(ui.max_rect())).with_boost(boost).faded(opacity);
                 let overlay=if opacity<0.85||!banner{overlay.ghost()}else{overlay};
                 self.draw_notice(&overlay,panel,&a,&mut cmds);
             }
         }else if banner {
-            if let Some(a)=self.notice.clone(){self.draw_notice(&Card::new(ui,panel.min+Vec2::new(self.pet_space(),0.0),panel.intersect(ui.max_rect())),panel,&a,&mut cmds);}
+            if let Some(a)=self.notice.clone(){self.draw_notice(&Card::new(ui,panel.min+Vec2::new(self.pet_space(),0.0),panel.intersect(ui.max_rect())).with_boost(boost),panel,&a,&mut cmds);}
         }else if !minimal_pill || pc > 0.0 {
             self.resident_header(&base, panel, cx, if restoring_lyrics{0.0}else{pc}, reveal, env);
         }
         if let Some(rect)=notice_rect {
-            let c=Card::new(ui,rect.min,rect.intersect(ui.max_rect()));
+            let c=Card::new(ui,rect.min,rect.intersect(ui.max_rect())).with_boost(boost);
             if let Some(a)=self.hud_notice.clone() {
                 let opacity=self.hud_alpha*smoothstep(0.45,0.95,self.notice_width.pos/44.0);
                 let c=c.faded(opacity);let c=if self.notice.is_none()||opacity<0.85 {c.ghost()}else{c};
                 if a.source!=crate::extras::AlertSource::Internal {
                     paint::bell(&c.scaled(18.0,15.0,0.85),18.0,15.0,theme::WHITE,paint::bell_swing(self.t-a.at));
-                    c.circle(22.0,10.5,2.0,Color32::from_rgb(255,72,72));
+                    crate::social::badge(&c,22.0,10.5,self.mail_unread.max(1),6.0,8.0);
                 }else{crate::extras::notice_badge(&c,18.0,15.0,&a);}
                 let button=crate::quota_ui::bar_tooltip(c.hit(0.0,0.0,36.0,BAR_H,"notice-badge"),format!("{}\n{}",a.title,a.body));
                 if button.clicked(){if let Some(kind)=a.health(){self.confirm_health_reminder(kind);}else{self.notice_details=!self.notice_details;}}
-            }else if self.t<self.notification_bell_until {
+            }else if self.bell_active() {
                 paint::bell(&c.scaled(20.0,14.0,1.2),20.0,14.0,theme::WHITE,paint::bell_swing(self.t-self.notification_bell_at));
-                c.circle(24.0,9.5,2.0,Color32::from_rgb(255,72,72));
-                if c.hit(6.0,0.0,28.0,30.0,"bell-mail").clicked(){self.show_page(5);}
+                crate::social::badge(&c,24.0,9.5,self.mail_unread.max(1),6.0,8.0);
+                if c.hit(6.0,0.0,28.0,30.0,"bell-mail").clicked(){self.show_page(MAIL_PAGE);}
             }
         }
         if let Some(rect)=messenger_rect {
             let from=crate::skin_paint::shape_count(&ctx,layer);
-            let c=Card::new(ui,rect.min,rect.intersect(ui.max_rect()));
+            let c=Card::new(ui,rect.min,rect.intersect(ui.max_rect())).with_boost(boost);
             if outside_badge.is_some() {
                 let c=c.scaled(0.0,0.0,appear);
                 self.draw_unread_capsule(&ctx,&c,rect,env.cursor,&mut cmds);
@@ -2133,7 +2141,7 @@ impl App {
                 painter.rect_stroke(rect,radius,egui::Stroke::new(1.0_f32,self.glass_rim()),egui::StrokeKind::Inside);
             }
             keep_colors.push((from,crate::skin_paint::shape_count(&ctx,layer)));
-            self.draw_notice(&Card::new(ui,rect.min,rect.intersect(ui.max_rect())),rect,&self.hud_notice.clone().unwrap(),&mut cmds);
+            self.draw_notice(&Card::new(ui,rect.min,rect.intersect(ui.max_rect())).with_boost(boost),rect,&self.hud_notice.clone().unwrap(),&mut cmds);
             if ctx.input(|i|i.pointer.any_pressed()&&i.pointer.interact_pos().is_some_and(|p|!rect.contains(p)&&!notice_rect.is_some_and(|r|r.contains(p)))){self.notice_details=false;}
         }
         let pet_alpha=self.pet_a*(1.0-smoothstep(0.0,0.3,pc));
@@ -2336,7 +2344,7 @@ impl App {
     fn unread_slot(&self,height:f32)->f32 {
         if self.unread_count()>=3 {(height-4.0)/3.0} else {UNREAD_SLOT}
     }
-    fn unread_count(&self)->usize {self.pending_messengers.len()+self.health_badges().len()}
+    fn unread_count(&self)->usize {self.pending_messengers.len()+self.social.active().len()+self.health_badges().len()}
     /// 收起时叠放的来源图标，每个客户端各占一个。
     fn unread_sources(&self)->Vec<Messenger>{
         let mut sources=Vec::new();
@@ -2345,14 +2353,14 @@ impl App {
     }
     /// 收起时叠放区沿胶囊方向的长度。
     fn unread_stack_len(&self,horizontal:bool)->f32 {
-        let icons=(self.unread_sources().len()+self.health_badges().len()) as f32;
+        let icons=(self.unread_sources().len()+self.social.active().len()+self.health_badges().len()) as f32;
         32.0+unread_step(horizontal)*(icons-1.0)
     }
 
     fn messenger_badge_rect(&self,win:Rect,panel:Rect)->Option<Rect>{
         if self.unread_count()==0 || self.browser_minimal_active && !self.open {return None;}
         // 完整横幅已包含该来源图标。歌词模式和横幅收起后使用常驻入口。
-        if !self.open && !self.compact_notices() && self.pending_messengers.len()==1 && self.health_badges().is_empty()
+        if !self.open && !self.compact_notices() && self.pending_messengers.len()==1 && self.health_badges().is_empty() && self.social.total()==0
             && self.notice.as_ref().and_then(|a|a.messenger())==self.pending_messengers.first().map(|u|u.source){return None;}
         let bounds=self.screen.map_or(win,|screen|screen.intersect(win));
         let appear=self.messenger_appear();
@@ -2416,8 +2424,17 @@ impl App {
             let button=inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,self.unread_id(i)).on_hover_text(format!("檢視{name}"));
             if button.clicked(){cmds.push(Cmd::ViewMessenger(u));}
         }
-        for (i,kind) in self.health_badges().into_iter().enumerate() {
+        let socials=self.social.active();
+        for (i,(source,count)) in socials.iter().enumerate() {
             let cy=2.0+slot*((self.pending_messengers.len()+i) as f32+0.5)-self.messenger_scroll;
+            if cy< -slot || cy>height+slot {continue;}
+            source.paint(&inner,x,cy);
+            crate::social::badge(&inner,x+10.0,cy+7.5,*count,6.0,8.0);
+            let button=inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,("social",source.key())).on_hover_text(format!("{} · {} 則訊息，點選開啟",source.name(),count));
+            if button.clicked(){self.social.clear(*source);self.social.persist();cmds.push(Cmd::OpenUrl(source.url().into()));}
+        }
+        for (i,kind) in self.health_badges().into_iter().enumerate() {
+            let cy=2.0+slot*((self.pending_messengers.len()+socials.len()+i) as f32+0.5)-self.messenger_scroll;
             if cy< -slot || cy>height+slot {continue;}
             kind.icon(&inner,x,cy,0.8);
             inner.circle(x+10.0,cy-9.0,2.6,Color32::from_rgb(255,59,48));
@@ -2435,9 +2452,10 @@ impl App {
     /// 收起时的未读入口：每个来源一个图标加小红点（同一来源多个账号合成一个）。只有一条时点它直接跳转，多条时展开面板挑选。
     fn draw_unread_stack(&mut self,c:&Card,horizontal:bool,cmds:&mut Vec<Cmd>){
         let sources=self.unread_sources();
+        let socials=self.social.active();
         let health=self.health_badges();
         let count=self.pending_messengers.len();
-        let icons=sources.len()+health.len();
+        let icons=sources.len()+socials.len()+health.len();
         let step=unread_step(horizontal);
         let at=|k:usize|if horizontal {(16.0+step*k as f32,14.0)}else{(16.0,14.0+step*k as f32)};
         for k in 0..sources.len() {
@@ -2445,22 +2463,43 @@ impl App {
             let scale=sources[k].adapter().collapsed_icon_scale;
             crate::extras::messenger_icon(&c.scaled(x,y,scale),x,y,sources[k]);
         }
-        for (i,kind) in health.iter().enumerate(){let (x,y)=at(sources.len()+i);kind.icon(c,x,y,0.7);}
-        // 每个来源图标右上角一个小红点，不显示数字。
-        for k in 0..icons {let (x,y)=at(k);c.circle(x+8.0,y-7.0,2.6,Color32::from_rgb(255,59,48));}
+        for (i,(source,n)) in socials.iter().enumerate(){
+            let (x,y)=at(sources.len()+i);
+            source.paint(c,x,y);
+            crate::social::badge(c,x+8.0,y-7.0,*n,6.0,7.0);
+        }
+        for (i,kind) in health.iter().enumerate(){let (x,y)=at(sources.len()+socials.len()+i);kind.icon(c,x,y,0.7);}
+        // 原生聊天軟體與健康提醒仍是小紅點；社群圖示直接顯示則數。
+        for k in 0..sources.len() {let (x,y)=at(k);c.circle(x+8.0,y-7.0,2.6,Color32::from_rgb(255,59,48));}
+        for i in 0..health.len(){let k=sources.len()+socials.len()+i;let (x,y)=at(k);c.circle(x+8.0,y-7.0,2.6,Color32::from_rgb(255,59,48));}
         let length=self.unread_stack_len(horizontal);
-        let messenger_length=if health.is_empty(){length}else{sources.len() as f32*step+if horizontal{5.0}else{3.0}};
-        let (w,h)=if horizontal {(messenger_length,BAR_H)}else{(32.0,messenger_length)};
-        if count==1 {
+        let (w,h)=if horizontal {(length,BAR_H)}else{(32.0,length)};
+        if count==1 && socials.is_empty() && health.is_empty() {
             let u=self.pending_messengers[0];
             let button=c.hit(0.0,0.0,w,h,u.source.name()).on_hover_text(format!("檢視{}",u.source.name()));
             if button.clicked(){cmds.push(Cmd::ViewMessenger(u));}
+        }else if count==0 && socials.len()==1 && health.is_empty() {
+            let (source,n)=socials[0];
+            let button=c.hit(0.0,0.0,w,h,("social",source.key())).on_hover_text(format!("{} · {} 則訊息，點選開啟",source.name(),n));
+            if button.clicked(){self.social.clear(source);self.social.persist();cmds.push(Cmd::OpenUrl(source.url().into()));}
         }else if count>1 {
-            let button=c.hit(0.0,0.0,w,h,"messenger-stack").on_hover_text(format!("{count} 條未讀 · 展開挑選"));
+            let native_len=sources.len() as f32*step;
+            let (nw,nh)=if horizontal {(native_len,BAR_H)}else{(32.0,native_len)};
+            let button=c.hit(0.0,0.0,nw,nh,"messenger-stack").on_hover_text(format!("{} 個聊天來源 · 展開挑選",count));
             if button.clicked(){self.reveal_unread();}
         }
-        for (i,kind) in health.into_iter().enumerate() {
+        for (i,(source,n)) in socials.iter().enumerate().filter(|_|icons>1) {
             let k=sources.len()+i;
+            let (x,y)=at(k);
+            let start=if k==0{0.0}else{(if horizontal{x}else{y})-step/2.0};
+            let end=if k+1==icons{length}else{(if horizontal{x}else{y})+step/2.0};
+            let button=if horizontal{c.hit(start,0.0,end-start,BAR_H,("social",source.key()))}else{c.hit(0.0,start,32.0,end-start,("social",source.key()))};
+            if crate::quota_ui::bar_tooltip(button,format!("{} · {} 則訊息，點選開啟",source.name(),n)).clicked(){
+                self.social.clear(*source);self.social.persist();cmds.push(Cmd::OpenUrl(source.url().into()));
+            }
+        }
+        for (i,kind) in health.into_iter().enumerate() {
+            let k=sources.len()+socials.len()+i;
             let (x,y)=at(k);
             let start=if k==0{0.0}else{(if horizontal{x}else{y})-step/2.0};
             let end=if k+1==icons{length}else{(if horizontal{x}else{y})+step/2.0};
@@ -2948,7 +2987,7 @@ impl App {
         let pb=(local_cx+layout.x[bar::BATTERY].unwrap_or(0.0),15.0);
         let pcx=layout.x[bar::CLOCK].map_or(hc,|x|local_cx+x-paint::clock_width(base,&clock,size::PILL_CLOCK)/2.0);
 
-        if self.effective_minimal() && self.t>=self.notification_bell_until && p < 0.02 { return; }
+        if self.effective_minimal() && !self.bell_active() && p < 0.02 { return; }
         // 电池：位置/大小连续插值
         let bk = lerp(1.0, 0.8, m);
         let bpos = (lerp(pb.0, hb.0, m), lerp(pb.1, hb.1, m));
@@ -3008,11 +3047,11 @@ impl App {
                 .on_hover_cursor(egui::CursorIcon::PointingHand).clicked(){self.show_page(0);}
         }
         let compact_alpha=1.0-smoothstep(0.0,0.22,p);
-        if self.t<self.notification_bell_until&&!self.compact_notices()&&p<0.1 {
+        if self.bell_active()&&!self.compact_notices()&&p<0.1 {
             if let Some(x)=layout.x[bar::BELL]{
                 let x=local_cx+x;paint::bell(&base.scaled(x,14.0,1.2),x,14.0,theme::WHITE,paint::bell_swing(self.t-self.notification_bell_at));
-                base.circle(x+4.0,9.5,2.0,Color32::from_rgb(255,72,72));
-                if base.hit(x-14.0,3.0,28.0,25.0,"bell-mail").clicked(){self.show_page(5);}
+                crate::social::badge(&base,x+5.0,9.0,self.mail_unread.max(1),6.0,8.0);
+                if base.hit(x-14.0,3.0,28.0,25.0,"bell-mail").clicked(){self.show_page(MAIL_PAGE);}
             }
         }
         if compact_alpha>0.004 {
@@ -3030,7 +3069,7 @@ impl App {
     fn resident_header(&mut self, base: &Card, panel: Rect, cx: f32, p: f32, reveal: f32, env: &Env) {
         if !self.side() {self.shared_header(base,cx,p,reveal,env);return;}
         let bar_alpha=1.0-smoothstep(0.0,0.3,p);
-        let minimal=self.effective_minimal()&&self.t>=self.notification_bell_until;
+        let minimal=self.effective_minimal()&&!self.bell_active();
         if bar_alpha>0.004 && !minimal {
             let c=base.shifted(panel.min.x-base.origin.x,panel.min.y-base.origin.y).faded(bar_alpha);
             let c=if bar_alpha<0.8 {c.ghost()} else {c};

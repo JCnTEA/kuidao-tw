@@ -21,12 +21,22 @@ pub struct Card<'a> {
     pub origin: Pos2,
     pub s: f32,
     pub live: bool,
+    /// 漸層島體：灰階字太暗，統一提升到高亮白。
+    pub boost: bool,
 }
 
 impl<'a> Card<'a> {
     pub fn new(ui: &'a egui::Ui, origin: Pos2, clip: Rect) -> Self {
         let painter = ui.painter().with_clip_rect(clip);
-        Self { ui, painter, origin, s: 1.0, live: true }
+        Self { ui, painter, origin, s: 1.0, live: true, boost: false }
+    }
+    pub fn with_boost(mut self, boost: bool) -> Self {
+        self.boost = boost;
+        self
+    }
+    /// 漸層底上把灰階次要文字換成白色，其餘狀態色保留。
+    pub fn ink(&self, color: Color32) -> Color32 {
+        if self.boost && (color == crate::theme::GRAY || color == crate::theme::DIM) { crate::theme::WHITE } else { color }
     }
 
     pub fn pos(&self, x: f32, y: f32) -> Pos2 {
@@ -78,7 +88,7 @@ impl<'a> Card<'a> {
     /// 测量、绘制、截断、折行都经过这里：维语等从右往左的文字在这里做连写和方向转换（#200）。
     /// 截断（`fit`）按阅读顺序截、再转换，省略号自然落在从右往左阅读的末尾（最左边）。
     pub fn galley(&self, t: &str, size: f32, w: W, color: Color32) -> std::sync::Arc<egui::Galley> {
-        self.painter.layout_no_wrap(crate::rtl_text::display(t).into_owned(), self.font(size, w), color)
+        self.painter.layout_no_wrap(crate::rtl_text::display(t).into_owned(), self.font(size, w), self.ink(color))
     }
     pub fn text_w(&self, t: &str, size: f32, w: W) -> f32 {
         self.galley(t, size, w, Color32::WHITE).size().x / self.s
