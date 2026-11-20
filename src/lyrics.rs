@@ -41,7 +41,10 @@ pub(crate) fn romanized(track:&str,lyrics:&Lyrics)->bool {
     latin>=40 && native*20<native+latin
 }
 
-fn negative_path(path:&std::path::Path)->std::path::PathBuf {path.with_extension("none")}
+fn negative_path(path:&std::path::Path)->std::path::PathBuf {
+    // 匹配規則加入跨語言別名後，舊版寫下的「沒有歌詞」可能其實找得到；改用新副檔名讓它失效一次。
+    path.with_extension("none2")
+}
 thread_local!{static SKIP_NEGATIVE:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
 /// 用户手动点「重试」时，本线程的这次查询跳过「近期已确认没有歌词」的记录，真正重新联网。
 /// 查询结束（含提前返回）后自动恢复，不影响之后的自动查询。
@@ -536,6 +539,20 @@ fn credit_match(played:&(String,Vec<String>),track:&str,candidate:&(String,Vec<S
     played.1.len()==1 && split_feature(&clean_title(track)).1.is_empty() && candidate.1.contains(&played.1[0])
 }
 
+fn artist_alias_match(played:&(String,Vec<String>),candidate:&(String,Vec<String>))->bool {
+    if played.1.is_empty() || candidate.1.is_empty(){return false;}
+    // 播放器常只給主藝人的短名（Spotify 的「永彬」），資料庫則是完整藝名（「永彬Ryan.B」）。
+    // 只在名稱互為前綴且至少兩個字時視為同一藝人，避免單字母縮寫亂配。
+    played.1.iter().all(|name|name.chars().count()>=2 && candidate.1.iter().any(|other|
+        name==other || other.starts_with(name.as_str()) || name.starts_with(other.as_str())))
+}
+
+fn translated_title_pair(played:&str,candidate:&str)->bool {
+    let han=|text:&str|text.chars().any(crate::zh::is_han);
+    let latin=|text:&str|text.chars().any(|c|c.is_ascii_alphabetic());
+    han(played)!=han(candidate) && (han(played)&&latin(candidate) || latin(played)&&han(candidate))
+}
+
 fn netease_candidates(items:&[serde_json::Value],track:&str,artist:&str,duration:f64)->Vec<u64> {
     let title=normalized(track);
     let identity=song_identity(track,artist);
@@ -555,6 +572,25 @@ fn netease_candidates(items:&[serde_json::Value],track:&str,artist:&str,duration
         if duration>0.0 && difference>(duration*0.03).max(10.0){continue;}
         matches.push((id,!exact,difference));
     }
+    }
+    if matches.is_empty() && duration>0.0 {
+        // 部分華語歌在 Spotify 會用英文譯名（No Reason），網易雲仍是中文原名（沒有理由）。
+        // 只在「歌手可辨識、長度幾乎相同、且全場只有一個候選」時採用，避免亂套同歌手的其他歌。
+        let mut translated=Vec::new();
+        for item in items {
+            let Some(id)=item.get("id").and_then(|v|v.as_u64()) else{continue;};
+            let name=item.get("name").and_then(|v|v.as_str()).unwrap_or_default();
+            let artists=item.get("artists").or_else(||item.get("ar")).and_then(|v|v.as_array());
+            let Some(artists)=artists else{continue;};
+            let names=artists.iter().filter_map(|a|a.get("name")?.as_str()).collect::<Vec<_>>().join("、");
+            let candidate=song_identity(name,&names);
+            if normalized(name)==title || !translated_title_pair(&identity.0,&candidate.0) || !artist_alias_match(&identity,&candidate){continue;}
+            let candidate_duration=item.get("duration").or_else(||item.get("dt")).and_then(|v|v.as_f64()).unwrap_or_default()/1000.0;
+            if candidate_duration<=0.0 || (candidate_duration-duration).abs()>1.0 {continue;}
+            translated.push(id);
+        }
+        translated.sort_unstable();translated.dedup();
+        if translated.len()==1 {return translated;}
     }
     matches.sort_by(|a,b|a.1.cmp(&b.1).then(a.2.total_cmp(&b.2)));
     matches.into_iter().map(|(id,_,_)|id).take(3).collect()
@@ -1006,6 +1042,28 @@ mod tests {
             println!("{title} / {artist}: {} 條時間戳，30 秒行號 {first}，90 秒行號 {later}",lyrics.lines.len());
             assert!(later>first,"歌詞應隨播放進度前進");
         }
+    }
+
+    #[test]
+    fn netease_localized_title_uses_alias_artist_and_exact_duration() {
+        // Spotify：No Reason / 永彬；網易雲：沒有理由 / 永彬Ryan.B / 215.497 秒。
+        let items=serde_json::json!([
+            {"id":1,"name":"没有理由","artists":[{"name":"永彬Ryan.B"},{"name":"周延英（英子-effie）"}],"duration":215497},
+            {"id":2,"name":"放个大招给你看","artists":[{"name":"永彬Ryan.B"}],"duration":178720},
+            {"id":3,"name":"No Reason","artists":[{"name":"Other Artist"}],"duration":215497}
+        ]);
+        assert_eq!(netease_candidates(items.as_array().unwrap(),"No Reason","永彬",215.497),vec![1]);
+        // 同歌手同長度但有兩個不同譯名：無法判斷是哪一首，寧可不配。
+        let ambiguous=serde_json::json!([
+            {"id":4,"name":"沒有理由","artists":[{"name":"永彬Ryan.B"}],"duration":215497},
+            {"id":5,"name":"另一個理由","artists":[{"name":"永彬Ryan.B"}],"duration":215500}
+        ]);
+        assert!(netease_candidates(ambiguous.as_array().unwrap(),"No Reason","永彬",215.497).is_empty());
+        // 兩邊都是英文的不同歌名，不套用跨語言規則。
+        let english=serde_json::json!([
+            {"id":6,"name":"Another Song","artists":[{"name":"Artist"}],"duration":215497}
+        ]);
+        assert!(netease_candidates(english.as_array().unwrap(),"No Reason","Art",215.497).is_empty());
     }
 
     #[test]
