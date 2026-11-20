@@ -3712,9 +3712,17 @@ fn mascot_rest_and_focus_have_distinct_states(){
     h.app.pomo.running=true;assert_eq!(h.app.pet_state(),crate::extras::PetState::Focused);
 }
 
+fn use_legacy_mascot(h:&mut H){
+    // 這些測試檢查原始版的眼型、圖集與麥克風動態；石虎已改用獨立動畫包，
+    // 因此固定切到仍走原始流程的柴犬，另由 mascot_pack 測試驗證石虎。
+    h.app.settings.mascot=crate::mascot::Mascot::Shiba;
+    crate::mascot::set(crate::mascot::Mascot::Shiba);
+    h.app.pet.reload_mascot_pack();
+}
+
 #[test]
 fn mascot_stays_beside_the_clock_and_all_resident_components(){
-    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);
     h.app.settings.pet=false;h.power=(Some(80),true);h.quota_accounts(5);
     h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),playing:true,duration:120.0,..Default::default()};
     h.app.pomo.running=true;h.app.pomo.remaining=1200.0;
@@ -3728,7 +3736,7 @@ fn mascot_stays_beside_the_clock_and_all_resident_components(){
 
 #[test]
 fn mascot_and_album_share_the_single_line_lyric_island(){
-    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);
     h.app.settings.pet=true;h.app.settings.island_lyrics=true;
     h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),playing:true,position:7.0,duration:120.0,
         artwork:Some(std::sync::Arc::new(egui::ColorImage::new([32,32],egui::Color32::from_rgb(70,120,220)))),..Default::default()};
@@ -3745,7 +3753,7 @@ fn mascot_and_album_share_the_single_line_lyric_island(){
 
 #[test]
 fn singing_microphone_moves_relative_to_the_face_and_disappears_on_pause(){
-    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.app.settings.pet=true;
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);h.app.settings.pet=true;
     h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),playing:true,duration:120.0,..Default::default()};
     for _ in 0..120 {h.frame(vec![]);}
     let head=|shapes:&[egui::epaint::ClippedShape]|shapes.iter().find_map(|s|match &s.shape {
@@ -3771,7 +3779,7 @@ fn singing_microphone_moves_relative_to_the_face_and_disappears_on_pause(){
 #[test]
 fn music_mascot_puts_away_the_microphone_during_notices_and_their_fade_out(){
     use crate::extras::PetState;
-    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);
     h.app.settings.pet=true;h.app.settings.island_lyrics=true;
     h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),playing:true,position:7.0,duration:120.0,..Default::default()};
     h.app.set_lyrics("Track","Artist",120.0,crate::lyrics::parse_lrc("[00:05]晚風吹過了山崗\n[00:15]下一句"));
@@ -3795,7 +3803,7 @@ fn music_mascot_puts_away_the_microphone_during_notices_and_their_fade_out(){
 #[test]
 fn music_mascot_plays_new_expressions_and_resumes_after_interruptions(){
     use crate::extras::PetState;
-    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.app.settings.pet=true;
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);h.app.settings.pet=true;
     h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),playing:true,duration:300.0,..Default::default()};
     for _ in 0..1080 {h.frame(vec![]);}
     let expression=h.app.pet.expressions.current().expect("聽歌狀態也應顯示新表情");
@@ -3883,7 +3891,7 @@ fn mascot_system_idle_wakes_once_then_follows_pointer(){
 #[test]
 fn mascot_feedback_plays_beside_notice_and_respects_switches(){
     use crate::extras::PetState;
-    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);h.frame(vec![]);
     h.app.drink_water();h.app.alert("待辦到時間了","測試提醒",4,false);
     for _ in 0..60 {h.frame(vec![]);}assert_eq!(h.app.pet_state(),PetState::Satisfied);
     assert!(h.app.notice.is_some());
@@ -3935,9 +3943,22 @@ fn mascot_expression_gallery(){
 }
 
 #[test]
+fn tiger_mascot_draws_its_own_pack_instead_of_the_original_expression_atlas(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
+    h.app.settings.pet=true;h.app.settings.mascot=crate::mascot::Mascot::Tiger;
+    crate::mascot::set(crate::mascot::Mascot::Tiger);h.app.pet.reload_mascot_pack();
+    for _ in 0..60{h.frame(vec![]);}
+    let pack=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|meta.name.starts_with("mascot-pack-tiger").then_some(*id))
+        .expect("石虎要載入自己的動畫包影格");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Rect(r) if r.brush.as_ref().is_some_and(|b|b.fill_texture_id==pack))),"石虎動畫包應畫在島上");
+    let atlas=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|(meta.name=="daozai-expressions").then_some(*id));
+    assert!(atlas.map_or(true,|atlas|!h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Mesh(mesh) if mesh.texture_id==atlas))),"石虎不能再畫原始表情圖集");
+}
+
+#[test]
 fn mascot_atlas_respects_visibility_and_skin_switches(){
     use crate::pet_expressions::Expression;
-    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);
     h.app.settings.pet=true;h.app.settings.minimal=false;
     for _ in 0..90 {h.frame(vec![]);}
     for skin in [crate::model::Skin::Classic,crate::model::Skin::Cream,crate::model::Skin::GlassLight] {
