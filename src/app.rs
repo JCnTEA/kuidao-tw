@@ -3026,8 +3026,9 @@ impl App {
                     if response.hovered() && dwell<1.2 {base.ui.ctx().request_repaint();}
                     let ctx=base.ui.ctx();
                     let grip_in=ctx.animate_value_with_time(response.id.with("grip"),smoothstep(0.30,0.65,dwell),0.12);
-                    let fill_in=ctx.animate_value_with_time(response.id.with("grip-fill"),smoothstep(0.50,1.00,dwell),0.12);
-                    let (grip_in,fill_in)=(grip_in.max(press),fill_in.max(press));
+                    // 懸停只露出一條細把手，不在日期下方鋪白底；真正按住才浮起底色。
+                    let fill_in=press;
+                    let grip_in=grip_in.max(press);
                     if grip_in>0.003 {
                         let pad=6.0;
                         let (x,w)=(left-pad,right-left+pad*2.0);
