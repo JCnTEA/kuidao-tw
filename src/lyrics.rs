@@ -431,6 +431,31 @@ pub(crate) fn bare_title(title:&str)->String {
     }
 }
 
+/// Shazam 的搜尋索引本身走 Apple 目錄；用它把 Spotify 的譯名、縮短藝名還原成正式條目。
+/// 只在候選唯一且長度幾乎相同時採用，避免把同歌手的其他作品套進來。
+fn catalog_alias_from_items(items:&[serde_json::Value],track:&str,artist:&str,duration:f64)->Option<(String,String)> {
+    if duration<=0.0 {return None;}
+    let identity=song_identity(track,artist);
+    let mut found:Vec<(String,String)>=Vec::new();
+    for item in items {
+        let (Some(name),Some(singer))=(item.get("trackName").and_then(|v|v.as_str()),item.get("artistName").and_then(|v|v.as_str())) else{continue;};
+        let millis=item.get("trackTimeMillis").and_then(|v|v.as_f64()).unwrap_or_default();
+        if millis<=0.0 || (millis/1000.0-duration).abs()>1.5 {continue;}
+        let candidate=song_identity(name,singer);
+        if !translated_title_pair(&identity.0,&candidate.0) || !artist_alias_match(&identity,&candidate){continue;}
+        found.push((name.to_owned(),singer.to_owned()));
+    }
+    found.sort();found.dedup();
+    (found.len()==1).then(||found.remove(0))
+}
+
+fn catalog_alias(track:&str,artist:&str,duration:f64)->Option<(String,String)> {
+    if track.trim().is_empty() || artist.trim().is_empty(){return None;}
+    let url=format!("https://itunes.apple.com/search?term={}&entity=song&country=TW&limit=25",urlencode(&format!("{track} {artist}")));
+    let result=request_json(&url,"https://itunes.apple.com").ok()?;
+    catalog_alias_from_items(result.get("results")?.as_array()?,track,artist,duration)
+}
+
 /// 在线找词：先按播放器给的歌名、歌手找；落空时再按两种兜底各试一次——
 /// 歌手为空时从标题里拆出歌手（两种顺序），以及去掉节目 / 版本标注（只在有时长时，靠时长校验避免套错版本）。
 /// 有来源断网或限流时不再追加尝试，免得一首歌放大成多倍请求。
@@ -448,6 +473,15 @@ fn fetch_with_sources_detail(netease:Option<&str>,qq:Option<&str>,lrclib:Option<
         if failed || result.as_ref().is_ok_and(|lyrics|lyrics.synced) {return (result,failed);}
         // 纯文本先留着，继续找同步版本；都没有时用第一份纯文本。
         if best.as_ref().is_none_or(|kept|kept.is_err() && result.is_ok()) {best=Some(result);}
+    }
+    // 全部落空時再問一次 Shazam／Apple 目錄；測試不連外網。
+    if !cfg!(test) {
+        if let Some((title,singer))=catalog_alias(track,artist,duration) {
+            trace(||format!("Shazam／Apple 目錄:{title} - {singer}"));
+            let (result,failed)=fetch_with_sources_once(netease,qq,lrclib,&title,&singer,duration);
+            if failed || result.as_ref().is_ok_and(|lyrics|lyrics.synced) {return (result,failed);}
+            if best.as_ref().is_none_or(|kept|kept.is_err() && result.is_ok()) {best=Some(result);}
+        }
     }
     (best.unwrap_or(Err(FetchError::NotFound)),false)
 }
@@ -1064,6 +1098,22 @@ mod tests {
             {"id":6,"name":"Another Song","artists":[{"name":"Artist"}],"duration":215497}
         ]);
         assert!(netease_candidates(english.as_array().unwrap(),"No Reason","Art",215.497).is_empty());
+    }
+
+    #[test]
+    fn shazam_apple_catalog_resolves_the_same_aliases() {
+        let items=serde_json::json!([
+            {"trackName":"沒有理由","artistName":"永彬Ryan.B & 周延英","trackTimeMillis":215497},
+            {"trackName":"放个大招给你看","artistName":"永彬Ryan.B","trackTimeMillis":178720}
+        ]);
+        assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",215.497),Some(("沒有理由".into(),"永彬Ryan.B & 周延英".into())));
+        // 長度不同、或同長度有兩個譯名時不猜。
+        assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",200.0),None);
+        let ambiguous=serde_json::json!([
+            {"trackName":"沒有理由","artistName":"永彬Ryan.B","trackTimeMillis":215000},
+            {"trackName":"另一個理由","artistName":"永彬Ryan.B","trackTimeMillis":215500}
+        ]);
+        assert_eq!(catalog_alias_from_items(ambiguous.as_array().unwrap(),"No Reason","永彬",215.497),None);
     }
 
     #[test]
