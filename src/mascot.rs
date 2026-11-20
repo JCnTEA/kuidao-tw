@@ -26,11 +26,6 @@ impl Mascot {
     pub fn from_key(value: &str) -> Self {
         match value { "shiba"=>Self::Shiba, "cat"=>Self::Cat, "husky"=>Self::Husky, "golden"=>Self::Golden, _=>Self::Tiger }
     }
-
-    /// 目前已有動畫序列的形象；其餘先沿用石虎，等美術補齊再切換。
-    pub fn animated(self) -> Self {
-        if self == Self::Shiba { self } else { Self::Tiger }
-    }
 }
 
 static CURRENT: AtomicU8 = AtomicU8::new(0);

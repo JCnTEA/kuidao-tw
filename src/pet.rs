@@ -218,6 +218,7 @@ pub(crate) struct Pet {
     pub hovered: bool,
     pub worried: bool,
     pub expressions: crate::pet_expressions::Expressions,
+    pub mascot_pack: crate::mascot_pack::MascotPack,
     age: f32,
     music_age:f32,
     eyes: [Eye; 2],
@@ -228,12 +229,21 @@ pub(crate) struct Pet {
 impl Default for Pet {
     fn default() -> Self {
         Self { state: PetState::Awake, reaction: None, waking_until: 0.0, last_idle: 0.0,
-            hovered: false, worried: false, expressions:Default::default(), age: 0.0, music_age:0.0, eyes: [Eye::open(4.4); 2], gaze: [0.0; 2], y: 0.0 }
+            hovered: false, worried: false, expressions:Default::default(), age: 0.0, music_age:0.0, eyes: [Eye::open(4.4); 2], gaze: [0.0; 2], y: 0.0, mascot_pack:Default::default() }
     }
 }
 
 impl Pet {
     pub fn react(&mut self, state: PetState) { self.reaction = Some((state, self.expressions.react(state))); self.age = 0.0; }
+    pub fn reload_mascot_pack(&mut self) { self.mascot_pack.reload(); }
+    /// 目前形象若有自己的動畫包就由它播放，避免沿用原始版的表情序列。
+    fn mascot_animation_time(&self, t: f64) -> f64 {
+        match self.state {
+            PetState::Waking | PetState::Happy | PetState::Satisfied => self.age as f64,
+            PetState::Music => self.music_age as f64,
+            _ => t,
+        }
+    }
     /// 反馈只在实际可见时计时，避免用户还在面板里操作时就播完。
     pub fn advance(&mut self, dt: f32, visible: bool) {
         if visible {
@@ -315,6 +325,13 @@ impl Pet {
     }
 
     pub fn draw(&mut self, c: &Card, cx: f32, t: f64, palette:Option<crate::skin_paint::Palette>) {
+        let state = self.state;
+        let has_pack = self.mascot_pack.active_for(crate::mascot::current().key());
+        let time = self.mascot_animation_time(t);
+        if has_pack && self.mascot_pack.draw(c.ui.ctx(), c, cx, state, time, palette) {
+            self.draw_state_marks(c, cx, t);
+            return;
+        }
         if self.expressions.draw(c,cx,palette) {return;}
         for (i, eye) in self.eyes.iter().enumerate() {
             let x = cx + if i == 0 { -5.6 } else { 5.6 } + self.gaze[0];
@@ -350,6 +367,36 @@ impl Pet {
             PetState::Worried => {
                 c.fill(cx+17.0,8.0,1.6,4.2,0.8,theme::YELLOW);
                 c.circle(cx+17.8,14.5,0.9,theme::YELLOW);
+            },
+            _ => {},
+        }
+    }
+
+    fn draw_state_marks(&self, c: &Card, cx: f32, t: f64) {
+        match self.state {
+            PetState::Dozing | PetState::Sleeping => {
+                let bob = ((t as f32 * 1.4).sin() + 1.0) * 0.7;
+                c.text(cx+14.0, 13.0-bob, "z", 7.0, W::Bold, Color32::from_rgb(170,160,255), H::Left);
+                if self.state == PetState::Sleeping { c.text(cx+19.0, 9.0-bob, "z", 5.5, W::Bold, Color32::from_rgb(170,160,255), H::Left); }
+            },
+            PetState::Happy => {
+                let k = smoothstep(0.0, 0.2, self.age) * (1.0-smoothstep(1.5, 2.5, self.age));
+                let c = c.faded(k);
+                for (dx, y, r) in [(-18.0, 9.0, 2.1), (18.0, 8.0, 2.8)] {
+                    c.seg((cx+dx-r,y),(cx+dx+r,y),1.0,theme::GREEN);
+                    c.seg((cx+dx,y-r),(cx+dx,y+r),1.0,theme::GREEN);
+                }
+            },
+            PetState::Satisfied => crate::paint::droplet(c,cx+18.0,12.0,5.0,theme::CYAN),
+            PetState::Worried => {
+                c.fill(cx+17.0,8.0,1.6,4.2,0.8,theme::YELLOW);
+                c.circle(cx+17.8,14.5,0.9,theme::YELLOW);
+            },
+            PetState::Music => {
+                let y=8.5+(self.music_age*1.4).sin()*0.6;
+                c.seg((cx+16.0,y-3.0),(cx+16.0,y+3.0),1.1,theme::WHITE);
+                c.seg((cx+16.0,y-3.0),(cx+19.0,y-2.0),1.1,theme::WHITE);
+                c.circle(cx+14.8,y+3.0,1.5,theme::WHITE);
             },
             _ => {},
         }

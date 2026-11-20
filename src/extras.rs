@@ -1710,9 +1710,15 @@ impl App {
                                 egui::ComboBox::from_id_salt("tw-mascot-species").selected_text(mascot.label()).show_ui(ui,|ui|{
                                     for option in crate::mascot::Mascot::ALL {ui.selectable_value(&mut mascot,option,option.label());}
                                 });
-                                if mascot!=self.settings.mascot {self.settings.mascot=mascot;crate::mascot::set(mascot);}
+                                if mascot!=self.settings.mascot {self.settings.mascot=mascot;crate::mascot::set(mascot);self.pet.reload_mascot_pack();}
                             });
-                            settings_hint(ui,"五種形象都能直接切換；柴犬與島虎有完整表情動畫，其餘先以定格表情呈現。");
+                            settings_hint(ui,"五種形象都能直接切換；島虎使用自己的待機動畫包，不再沿用原始版表情序列。");
+                            ui.horizontal(|ui|{
+                                ui.label("吉祥物動畫包");
+                                if ui.button("開啟資料夾").clicked(){crate::mascot_pack::open_folder(self.settings.mascot.key());}
+                                if ui.button("重新載入").clicked(){self.pet.reload_mascot_pack();}
+                            });
+                            settings_hint(ui,"外掛包放在「Kuidao\\mascot-packs\\形象」；沒有外掛時使用內建動畫。");
                             settings_advanced(ui,"settings-appearance-advanced",|ui|{
                                 setting_row(ui,"OLED 畫素偏移","防止 OLED 螢幕燒屏：收起靜止時讓島體緩慢移動幾個畫素，不改動你儲存的位置",&mut self.settings.oled_shift);
                             });

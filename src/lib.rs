@@ -17,6 +17,7 @@ pub mod app;
 pub mod messenger;
 pub mod social;
 pub mod mascot;
+pub mod mascot_pack;
 pub mod child_process;
 mod settings_window;
 pub mod bt;
