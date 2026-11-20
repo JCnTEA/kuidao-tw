@@ -2487,7 +2487,7 @@ impl App {
 
     /// 当前皮肤的换色调色板（经典为 None）。
     pub(crate) fn skin_palette(&self)->Option<crate::skin_paint::Palette> {
-        match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Duty=>Some(crate::skin_paint::DUTY),model::Skin::DutyStamp=>Some(crate::skin_paint::DUTY_STAMP),model::Skin::DutyNight=>Some(crate::skin_paint::DUTY_NIGHT),model::Skin::Classic|model::Skin::Fluid=>None}
+        match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Duty=>Some(crate::skin_paint::DUTY),model::Skin::DutyStamp=>Some(crate::skin_paint::DUTY_STAMP),model::Skin::DutyNight=>Some(crate::skin_paint::DUTY_NIGHT),model::Skin::Classic|model::Skin::Fluid|model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>None}
     }
 
     /// 设置页预览用的岛体底色：没有真实模糊，毛玻璃按较实的玻璃表现。
@@ -2495,6 +2495,7 @@ impl App {
         match self.settings.skin {
             model::Skin::GlassDark=>{let (r,g,b)=glass::GROUND_DARK;Color32::from_rgba_unmultiplied(r,g,b,215)}
             model::Skin::GlassLight=>{let [r,g,b]=glass::LIGHT_GROUND.map(|v|(v*255.0).round() as u8);Color32::from_rgba_unmultiplied(r,g,b,225)}
+            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient(self.settings.skin).map_or(Color32::BLACK,|g|g.mid()),
             _=>self.glass_fill(),
         }
     }
@@ -2509,6 +2510,7 @@ impl App {
             model::Skin::Duty=>{let [r,g,b]=crate::skin_paint::DUTY.paper;Color32::from_rgb(r,g,b)}
             model::Skin::DutyStamp=>{let [r,g,b]=crate::skin_paint::DUTY_STAMP.paper;Color32::from_rgb(r,g,b)}
             model::Skin::DutyNight=>{let [r,g,b]=crate::skin_paint::DUTY_NIGHT.paper;Color32::from_rgb(r,g,b)}
+            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient(self.settings.skin).map_or(Color32::BLACK,|g|g.mid()),
             model::Skin::Classic=>Color32::BLACK,
             model::Skin::Fluid=>self.fluid.compose(0.5,0.5,1.0,1.0,0.0),
         }
@@ -2538,6 +2540,26 @@ impl App {
                 let p=map.apply(Pos2::new(x,y))-rect.min;
                 self.fluid.compose(p.x,p.y,rect.width(),rect.height(),expand)
             });
+            if self.dock().is_side() && !pill {
+                for vertex in &mut mesh.vertices {vertex.pos=map.apply(vertex.pos);}
+            }
+            painter.add(egui::Shape::mesh(mesh));
+            return;
+        }
+        // 懸浮漸層皮膚：固定色停沿島體縱向鋪滿，內容維持深色主題的白字白圖示。
+        if let Some(grad)=crate::skin_paint::gradient(skin) {
+            let pill=self.settings.island_shape==model::IslandShape::Pill;
+            let (map,frame)=shape::EdgeMap::of(rect,if pill {model::Dock::Top}else{self.dock()});
+            let mut rows=shape::sections(frame,flare,flare_h,radius);
+            if pill {
+                let mid=frame.center().y;
+                rows.retain(|row|row.0>mid && row.0>=frame.bottom()-radius);
+                let top=rows.iter().rev().map(|&(y,l,r)|(2.0*mid-y,l,r)).collect::<Vec<_>>();
+                rows.splice(0..0,top);
+            }
+            let height=frame.height().max(1.0);
+            let top=frame.top();
+            let mut mesh=shape::shade_mesh(frame,rows,feather,&|_x,y|grad.at((y-top)/height));
             if self.dock().is_side() && !pill {
                 for vertex in &mut mesh.vertices {vertex.pos=map.apply(vertex.pos);}
             }

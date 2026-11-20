@@ -1659,8 +1659,10 @@ impl App {
                         settings_label(ui,"島體外觀");
                         settings_card(ui,|ui|{
                             use crate::model::{self as model,Skin};
-                            let skins:Vec<(Skin,&str)>=Skin::ALL.iter().map(|s|(*s,s.label())).collect();
+                            let skins:Vec<(Skin,&str)>=Skin::ALL.iter().filter(|s|crate::skin_paint::gradient(**s).is_none()).map(|s|(*s,s.label())).collect();
                             settings_control_row_right(ui,"主題",|ui|{settings_segmented(ui,&mut self.settings.skin,&skins,64.0);});
+                            let grads:Vec<(Skin,&str)>=Skin::ALL.iter().filter(|s|crate::skin_paint::gradient(**s).is_some()).map(|s|(*s,s.label())).collect();
+                            settings_control_row_right(ui,"懸浮漸層",|ui|{settings_segmented(ui,&mut self.settings.skin,&grads,64.0);});
                             settings_hint(ui,self.settings.skin.description());
                             if self.settings.skin.is_glass() {
                                 let mut blur=self.settings.glass_blur;

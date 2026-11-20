@@ -33,7 +33,12 @@ impl crate::app::App {
         let origin=if pill{origin+Vec2::new(0.0,4.0)}else{origin};
         let body=Rect::from_min_size(origin,Vec2::new(layout.width*scale,30.0*scale));
         let fill=self.preview_fill();
-        if pill {ui.painter().rect_filled(body,15.0*scale,fill);}
+        let gradient=crate::skin_paint::gradient(self.settings.skin);
+        if let Some(grad)=gradient {
+            if pill {ui.painter().rect_filled(body,15.0*scale,grad.mid());}
+            else {crate::shape::fill_gradient(ui.painter(),body,8.0*scale,10.0*scale,12.0*scale,grad.at(0.0),grad.at(1.0),body.height(),1.0/ui.ctx().pixels_per_point());}
+        }
+        else if pill {ui.painter().rect_filled(body,15.0*scale,fill);}
         else {crate::shape::fill(ui.painter(),body,8.0*scale,10.0*scale,12.0*scale,fill,1.0/ui.ctx().pixels_per_point());}
         if self.settings.skin.is_glass() {
             let rim=egui::Stroke::new(1.0_f32,Color32::from_white_alpha(60));

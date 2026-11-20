@@ -109,21 +109,29 @@ pub enum Skin {
     GlassLight,
     GlassDark,
     Fluid,
+    /// 懸浮漸層系列：固定色停由上而下鋪滿島體。
+    GradAurora,
+    GradAbyss,
+    GradNeon,
+    GradSunset,
+    GradPink,
+    GradViolet,
+    GradMeadow,
     Duty,
     DutyStamp,
     DutyNight,
 }
 
 impl Skin {
-    pub const ALL: [Skin; 8] = [Skin::Classic, Skin::Cream, Skin::GlassLight, Skin::GlassDark, Skin::Fluid, Skin::Duty, Skin::DutyStamp, Skin::DutyNight];
+    pub const ALL: [Skin; 15] = [Skin::Classic, Skin::Cream, Skin::GlassLight, Skin::GlassDark, Skin::Fluid, Skin::GradAurora, Skin::GradAbyss, Skin::GradNeon, Skin::GradSunset, Skin::GradPink, Skin::GradViolet, Skin::GradMeadow, Skin::Duty, Skin::DutyStamp, Skin::DutyNight];
     pub fn key(self) -> &'static str {
-        match self { Self::Classic => "classic", Self::Fluid => "fluid", Self::Cream => "cream", Self::GlassLight => "glass_light", Self::GlassDark => "glass", Self::Duty => "duty", Self::DutyStamp => "duty_stamp", Self::DutyNight => "duty_night" }
+        match self { Self::Classic => "classic", Self::Fluid => "fluid", Self::Cream => "cream", Self::GlassLight => "glass_light", Self::GlassDark => "glass", Self::GradAurora => "grad_aurora", Self::GradAbyss => "grad_abyss", Self::GradNeon => "grad_neon", Self::GradSunset => "grad_sunset", Self::GradPink => "grad_pink", Self::GradViolet => "grad_violet", Self::GradMeadow => "grad_meadow", Self::Duty => "duty", Self::DutyStamp => "duty_stamp", Self::DutyNight => "duty_night" }
     }
     pub fn parse(value: &str) -> Self {
-        match value { "fluid" => Self::Fluid, "cream" => Self::Cream, "glass_light" => Self::GlassLight, "glass" | "glass_dark" => Self::GlassDark, "duty" => Self::Duty, "duty_stamp" => Self::DutyStamp, "duty_night" => Self::DutyNight, _ => Self::Classic }
+        match value { "fluid" => Self::Fluid, "cream" => Self::Cream, "glass_light" => Self::GlassLight, "glass" | "glass_dark" => Self::GlassDark, "grad_aurora" => Self::GradAurora, "grad_abyss" => Self::GradAbyss, "grad_neon" => Self::GradNeon, "grad_sunset" => Self::GradSunset, "grad_pink" => Self::GradPink, "grad_violet" => Self::GradViolet, "grad_meadow" => Self::GradMeadow, "duty" => Self::Duty, "duty_stamp" => Self::DutyStamp, "duty_night" => Self::DutyNight, _ => Self::Classic }
     }
     pub fn label(self) -> &'static str {
-        match self { Self::Classic => "經典", Self::Fluid => "懸浮雲", Self::Cream => "奶油", Self::GlassLight => "毛玻璃·淺", Self::GlassDark => "毛玻璃·深", Self::Duty => "勤務誌·紙藍", Self::DutyStamp => "勤務誌·印章", Self::DutyNight => "勤務誌·夜" }
+        match self { Self::Classic => "經典", Self::Fluid => "懸浮雲", Self::Cream => "奶油", Self::GlassLight => "毛玻璃·淺", Self::GlassDark => "毛玻璃·深", Self::GradAurora => "懸浮·紫霞", Self::GradAbyss => "懸浮·深海", Self::GradNeon => "懸浮·霓虹", Self::GradSunset => "懸浮·夕陽", Self::GradPink => "懸浮·糖粉", Self::GradViolet => "懸浮·藍紫", Self::GradMeadow => "懸浮·碧野", Self::Duty => "勤務誌·紙藍", Self::DutyStamp => "勤務誌·印章", Self::DutyNight => "勤務誌·夜" }
     }
     pub fn description(self) -> &'static str {
         match self {
@@ -133,6 +141,13 @@ impl Skin {
             Self::GlassLight => "淺色磨砂玻璃，透出身後桌面的顏色，文字為深色；按背景明暗自動調整，保證清晰。",
             Self::GlassDark => "深色磨砂玻璃，透出身後桌面的顏色，文字為白色；按背景明暗自動調整，保證清晰。",
             Self::Duty => "照勤務日誌的紙感配色：近白紙底、墨藍文字、深藍強調，像一頁公文。",
+            Self::GradAurora => "紫轉洋紅的縱向漸層，白字壓在深色中段，像限時動態的底色。",
+            Self::GradAbyss => "上淺藍下深藍的單色漸層，安靜沉穩，接近夜間海面。",
+            Self::GradNeon => "綠黃轉橙再轉紫的彩虹漸層，顏色最跳，適合當桌面上的視覺焦點。",
+            Self::GradSunset => "紅轉橘再轉金的暖色漸層，像傍晚的太陽餘暉。",
+            Self::GradPink => "紫轉粉再轉洋紅，柔和的糖霜感，白字依然清楚。",
+            Self::GradViolet => "藍轉紫再轉洋紅，冷色轉暖色的斜向感，界於霓虹與深海之間。",
+            Self::GradMeadow => "藍轉綠再轉黃，像晴天草原的遠景，清爽不刺眼。",
             Self::DutyStamp => "紙底配印章紅強調，重點標記像蓋了紅章，適合喜歡紙本記錄的感覺。",
             Self::DutyNight => "深墨藍底配紙白文字，夜班或昏暗環境下不刺眼。",
         }

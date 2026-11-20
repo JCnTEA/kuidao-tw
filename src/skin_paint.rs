@@ -40,6 +40,59 @@ pub const DUTY_STAMP: Palette = Palette { paper: [238, 242, 246], ink: [22, 34, 
 /// 勤務誌·夜：深墨藍底、紙白文字、亮藍強調。
 pub const DUTY_NIGHT: Palette = Palette { paper: [22, 34, 46], ink: [238, 242, 246], accent: Some([86, 150, 220]), dark_alpha: 1.0, lift: 1.0, darken: 1.0, chip: 1.0 };
 
+/// 懸浮漸層：由上而下的色停（sRGB 0..255），t=0 取第一段、t=1 取最後一段。
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Gradient {
+    pub stops: [[u8; 3]; 3],
+}
+
+impl Gradient {
+    /// 取 t 位置的顏色（三段線性內插，t 夾在 0..1）。
+    pub fn at(&self, t: f32) -> Color32 {
+        let seg = (self.stops.len() - 1) as f32;
+        let t = t.clamp(0.0, 1.0) * seg;
+        let i = (t as usize).min(self.stops.len() - 2);
+        let k = (t - i as f32).clamp(0.0, 1.0);
+        let (a, b) = (self.stops[i], self.stops[i + 1]);
+        let mix = |x: u8, y: u8| (x as f32 + (y as f32 - x as f32) * k).round().clamp(0.0, 255.0) as u8;
+        Color32::from_rgb(mix(a[0], b[0]), mix(a[1], b[1]), mix(a[2], b[2]))
+    }
+    /// 中段色：設定頁小預覽與膠囊形狀用單色表現時取它。
+    pub fn mid(&self) -> Color32 {
+        self.at(0.5)
+    }
+}
+
+/// 懸浮·紫霞：深紫 → 洋紅 → 桃紅。
+pub const GRAD_AURORA: Gradient = Gradient { stops: [[64, 12, 134], [178, 16, 148], [232, 22, 86]] };
+/// 懸浮·深海：淺藍 → 藍 → 深藍。
+pub const GRAD_ABYSS: Gradient = Gradient { stops: [[88, 138, 224], [38, 88, 190], [14, 52, 132]] };
+/// 懸浮·霓虹：綠黃 → 橙 → 紫。
+pub const GRAD_NEON: Gradient = Gradient { stops: [[126, 208, 112], [242, 148, 70], [168, 50, 168]] };
+/// 懸浮·夕陽：紅 → 橘 → 金黃。
+pub const GRAD_SUNSET: Gradient = Gradient { stops: [[222, 50, 88], [244, 128, 48], [250, 198, 58]] };
+/// 懸浮·糖粉：紫 → 粉 → 洋紅。
+pub const GRAD_PINK: Gradient = Gradient { stops: [[162, 62, 208], [230, 112, 200], [240, 44, 140]] };
+/// 懸浮·藍紫：藍 → 藍紫 → 洋紅。
+pub const GRAD_VIOLET: Gradient = Gradient { stops: [[70, 160, 222], [94, 74, 208], [204, 74, 152]] };
+/// 懸浮·碧野：藍 → 綠 → 黃。
+pub const GRAD_MEADOW: Gradient = Gradient { stops: [[64, 166, 226], [76, 196, 136], [212, 210, 74]] };
+
+/// 某個皮膚的懸浮漸層；不是漸層皮膚時回 None。
+pub fn gradient(skin: crate::model::Skin) -> Option<Gradient> {
+    use crate::model::Skin;
+    Some(match skin {
+        Skin::GradAurora => GRAD_AURORA,
+        Skin::GradAbyss => GRAD_ABYSS,
+        Skin::GradNeon => GRAD_NEON,
+        Skin::GradSunset => GRAD_SUNSET,
+        Skin::GradPink => GRAD_PINK,
+        Skin::GradViolet => GRAD_VIOLET,
+        Skin::GradMeadow => GRAD_MEADOW,
+        _ => return None,
+    })
+}
+
 /// 单色图标纹理（白色图形 + 透明度，如 AI 厂商标识）：和文字一样参与换色。
 /// 其余纹理（专辑封面、应用图标、文件预览）保持原样。
 fn monochrome() -> &'static std::sync::Mutex<std::collections::HashSet<egui::TextureId>> {
