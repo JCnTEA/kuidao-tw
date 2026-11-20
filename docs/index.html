@@ -73,6 +73,15 @@ section{padding:54px 0}
 .intro div{background:linear-gradient(165deg,#0c1925,#08121b);padding:24px}
 .intro h3{font-size:14px;margin-bottom:8px;color:#daf6fb;font-weight:700}
 .intro p{font-size:12.5px;color:var(--sub)}
+.shots{display:grid;gap:14px;margin-top:16px}
+.shot{border:1px solid var(--line);border-radius:18px;padding:18px 20px 15px;background:linear-gradient(165deg,#0c1925,#070f17);position:relative;overflow:hidden}
+.shot::after{content:"";position:absolute;inset:auto -10% -80% -10%;height:150px;background:radial-gradient(ellipse at 50% 100%,rgba(63,224,240,.10),transparent 70%);pointer-events:none}
+.shot .bar{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:10px;position:relative;z-index:1}
+.shot .bar b{font-size:13px;font-weight:700;color:#daf6fb;letter-spacing:.02em}
+.shot .bar span{font-size:10.5px;letter-spacing:.16em;color:var(--cy);opacity:.85}
+.shot img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid rgba(63,224,240,.14);background:#050a0f;position:relative;z-index:1}
+.shot .cap{margin-top:9px;font-size:11.5px;color:var(--dim);position:relative;z-index:1}
+@media(max-width:640px){.shot{padding:14px 14px 12px}.shot .bar b{font-size:12px}}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
 .feature{background:linear-gradient(165deg,#0c1925 0%,#08121b 100%);border:1px solid var(--line);border-radius:16px;padding:22px;transition:.25s}
 .feature:hover{border-color:rgba(63,224,240,.4);transform:translateY(-3px)}
@@ -139,6 +148,7 @@ footer a:hover{color:var(--cy)}
     <div class="brand"><span class="dot"></span>鬼島<span class="beta">內測中</span></div>
     <div class="nav-links">
       <a href="#what">這是什麼</a>
+      <a href="#look">實機</a>
       <a href="#features">功能</a>
       <a href="#taiwan">台灣版</a>
       <a href="#oss">授權</a>
@@ -190,6 +200,27 @@ footer a:hover{color:var(--cy)}
       <div>
         <h3>不佔你的桌面</h3>
         <p>不只島體本身，展開的內容也會跟著形態收合，不會突然蓋住視窗；需要時才展開，也不會跳出來搶焦點。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="look">
+    <div class="sec-h"><h2>實際樣子</h2><span class="en">ON SCREEN</span><span class="rule"></span></div>
+    <div class="shots">
+      <div class="shot">
+        <div class="bar"><b>音樂上島</b><span>MUSIC</span></div>
+        <img src="images/showcase/music.gif" alt="鬼島播放音樂時顯示專輯封面、吉祥物、歌詞與播放控制" loading="lazy">
+        <div class="cap">專輯封面、吉祥物、歌詞與播放狀態同一條排開，抬眼就能跟上目前播到哪裡。</div>
+      </div>
+      <div class="shot">
+        <div class="bar"><b>漸層主題</b><span>THEME</span></div>
+        <img src="images/showcase/gradient.png" alt="鬼島漸層主題顯示時間、天氣與常駐資訊" loading="lazy">
+        <div class="cap">漸層底色上時間、天氣與常駐資訊照樣清楚，不會被深色或灰字吃掉。</div>
+      </div>
+      <div class="shot">
+        <div class="bar"><b>多項狀態並存</b><span>STATES</span></div>
+        <img src="images/showcase/states.gif" alt="鬼島同時顯示電量、播放、時鐘、天氣、AI 額度與計時" loading="lazy">
+        <div class="cap">電量、播放、時鐘、天氣、AI 額度與計時可以同時掛著，依優先順序自動讓位。</div>
       </div>
     </div>
   </section>
@@ -264,7 +295,7 @@ footer a:hover{color:var(--cy)}
 
   <footer>
     鬼島 · 台灣版　｜　內測中，暫不開放對外下載　｜　衍生自上游開源專案，依 MIT 授權保留原作者聲明<br>
-    <a href="#features">功能</a><a href="#taiwan">台灣版</a><a href="#oss">授權</a><a href="#access">取得方式</a><br>
+    <a href="#look">實機</a><a href="#features">功能</a><a href="#taiwan">台灣版</a><a href="#oss">授權</a><a href="#access">取得方式</a><br>
     本站為個人專案頁面，非商業販售
   </footer>
 </div>
