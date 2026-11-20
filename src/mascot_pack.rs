@@ -191,10 +191,10 @@ pub fn open_folder(key: &str) {
         if let Some(pack) = builtin_tiger(key) {
             if let Some((frames, _, _)) = pack.animations.get("awake") {
                 for (index, frame) in frames.iter().enumerate() {
-                    if let Some(bytes) = frame.read() { let _ = std::fs::write(dir.join(format!("idle-{index:02d}.png")), bytes); }
+                    if let Some(bytes) = frame.read() { let _ = std::fs::write(dir.join(format!("idle-{index:02}.png")), bytes); }
                 }
             }
-            let names: Vec<_> = (0..16).map(|index| format!("idle-{index:02d}.png")).collect();
+            let names: Vec<_> = (0..16).map(|index| format!("idle-{index:02}.png")).collect();
             let manifest = serde_json::json!({
                 "name": "石虎・待機（外掛範例）",
                 "frame_size": [FRAME_W, FRAME_H],
