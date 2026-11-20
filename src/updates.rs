@@ -6,8 +6,8 @@ const REPOSITORY: &str = "https://github.com/JCnTEA/kuidao-tw";
 const API: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases/latest";
 const RELEASES: &str = "https://github.com/JCnTEA/kuidao-tw/releases/latest";
 const BACKUP_DOWNLOAD: &str = "https://github.com/JCnTEA/kuidao-tw/releases/latest";
-const STARTUP_DELAY: Duration = Duration::from_secs(10);
-const CHECK_INTERVAL: Duration = Duration::from_secs(24 * 3600);
+const STARTUP_DELAY: Duration = Duration::from_secs(5);
+const CHECK_INTERVAL: Duration = Duration::from_secs(2 * 3600);
 const RETRY_INTERVAL: Duration = Duration::from_secs(3600);
 const MANUAL_INTERVAL: Duration = Duration::from_secs(30);
 
@@ -41,10 +41,10 @@ impl Drop for State {
 impl State {
     pub(crate) fn load(path: PathBuf) -> Self {
         let mut state = State::default();
-        if let Some((next, version)) = std::fs::read(&path).ok()
+        if let Some((_, version)) = std::fs::read(&path).ok()
             .and_then(|bytes| serde_json::from_slice::<(i64, Option<String>)>(&bytes).ok()) {
-            let seconds = next.saturating_sub(chrono::Utc::now().timestamp()).clamp(0, CHECK_INTERVAL.as_secs() as i64);
-            state.next_check = Some(Instant::now() + STARTUP_DELAY.max(Duration::from_secs(seconds as u64)));
+            // 每次啟動都重新向來源確認一次，避免使用者開著舊結果等一整天。
+            state.next_check = Some(Instant::now() + STARTUP_DELAY);
             state.notified_version = version;
         }
         state.history_path = Some(path);
@@ -507,7 +507,7 @@ mod tests {
         let mut state = State::default();
         let start = Instant::now();
         assert!(!state.should_check(start));
-        let due = start + Duration::from_secs(10);
+        let due = start + STARTUP_DELAY;
         assert!(!state.should_check(due - Duration::from_millis(1)));
         assert!(state.should_check(due));
         let (_tx, rx) = mpsc::channel(); state.rx = Some(rx);
@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     fn automatic_check_reschedules_success_and_silent_failure() {
-        for (result, delay) in [(Ok(None), Duration::from_secs(24 * 3600)), (Err("網路失敗".into()), Duration::from_secs(3600))] {
+        for (result, delay) in [(Ok(None), CHECK_INTERVAL), (Err("網路失敗".into()), Duration::from_secs(3600))] {
             let mut state = State::default(); state.automatic_check = true;
             let (tx, rx) = mpsc::channel(); state.rx = Some(rx);
             tx.send(Event::Checked(result)).unwrap();
@@ -543,7 +543,7 @@ mod tests {
         for (automatic, version, expected) in [(true, "v0.6.65", true), (true, "v0.6.65", false),
             (true, "v0.6.66", true), (false, "v0.6.66", true)] {
             let mut state=State::load(path.clone());
-            if path.exists() { assert!(!state.should_check(Instant::now()+Duration::from_secs(3600))); }
+            if path.exists() { assert!(state.should_check(Instant::now()+STARTUP_DELAY), "每次啟動都要重新確認最新版"); }
             state.automatic_check = automatic;
             let (tx, rx) = mpsc::channel(); state.rx = Some(rx);
             tx.send(Event::Checked(Ok(Some(Release { version: version.into(), notes: String::new(), page: RELEASES.into(),
