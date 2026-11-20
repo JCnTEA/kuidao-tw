@@ -723,7 +723,7 @@ mod tests {
             });
             assert!(state.rx.is_none());
             assert!(!state.automatic_check);
-            let delay = if disconnected { Duration::from_secs(3600) } else { Duration::from_secs(24 * 3600) };
+            let delay = if disconnected { Duration::from_secs(3600) } else { CHECK_INTERVAL };
             let next = state.next_check.unwrap();
             assert!(next >= before + delay && next <= Instant::now() + delay);
             assert_eq!(!state.message.is_empty(), disconnected);
