@@ -1963,7 +1963,7 @@ impl App {
                                 ui.horizontal(|ui|{
                                     ui.vertical(|ui|{
                                         ui.spacing_mut().item_spacing.y=2.0;
-                                        ui.label(egui::RichText::new("LINE、Instagram 與其他應用程式").size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
+                                        ui.label(egui::RichText::new("LINE、Instagram、QQ 與其他應用程式").size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
                                         ui.label(egui::RichText::new(&self.listener_status).size(11.5).color(settings_color(ctx,Color32::from_gray(175),Color32::from_gray(90))));
                                     });
                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
@@ -1972,7 +1972,7 @@ impl App {
                                         } else if ui.button("連線…").clicked(){open_connect=true;}
                                     });
                                 });
-                                settings_hint(ui,"LINE、Instagram、Facebook、Threads 等應用程式的訊息，透過 Windows 通知集中到島上。");
+                                settings_hint(ui,"LINE、Instagram、Facebook、Threads、QQ 等應用程式的訊息，透過 Windows 通知集中到島上；QQ 有訊息時會用 QQ 圖示進入未讀。");
                                 // 社群圖示順序：直接拖動標籤，放得越左邊越先顯示。
                                 #[derive(Clone)]
                                 struct SocialDrag(String);
