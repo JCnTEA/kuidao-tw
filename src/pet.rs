@@ -324,19 +324,23 @@ impl Pet {
         self.y = approach(self.y, y, 14.0, dt);
     }
 
-    pub fn draw(&mut self, c: &Card, cx: f32, t: f64, palette:Option<crate::skin_paint::Palette>, ink: Color32) {
+    pub fn draw(&mut self, c: &Card, cx: f32, t: f64, palette:Option<crate::skin_paint::Palette>, ink: Color32, native_mascot: bool) {
         let state = self.state;
-        let has_pack = self.mascot_pack.active_for(crate::mascot::current().key());
+        let has_pack = self.mascot_pack.active_for(crate::mascot::current().key(), native_mascot);
         let time = self.mascot_animation_time(t);
         if has_pack {
             // 動畫包只接手它真的有定義的狀態；缺少該狀態就退回內建單線條，不會整套都播同一段待機。
-            if self.mascot_pack.draw(c.ui.ctx(), c, cx, state, time, palette) {
+            if self.mascot_pack.draw(c.ui.ctx(), c, cx, state, time, palette, ink) {
                 self.draw_state_marks(c, cx, t);
                 return;
             }
         }
         // 沒有外掛動畫包時一律畫自製的單線條向量吉祥物；
         // 身體固定在槽位內，只有尾巴、耳朵與眼睛會動。
+        if ink.r() > 200 {
+            // 白線遇到半透明或偏亮的毛玻璃時補一層極淡深色底，避免線條整個融進背景。
+            crate::mascot_art::draw(c, cx + 0.7, t, state, Color32::from_rgba_unmultiplied(8, 12, 18, 150));
+        }
         crate::mascot_art::draw(c, cx, t, state, ink);
         for (i, eye) in self.eyes.iter().enumerate() {
             let x = cx + if i == 0 { -3.2 } else { 3.2 } + self.gaze[0] * 0.5;

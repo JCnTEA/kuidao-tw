@@ -51,27 +51,33 @@ impl FrameBytes {
 struct LoadedPack {
     name: String,
     animations: HashMap<String, (Vec<FrameBytes>, f32, bool)>,
+    /// 內建的原作者石虎影格；外掛包為 false，保留使用者自己的顏色。
+    builtin: bool,
 }
 
 /// 單一形象的動畫播放器；只有目前選中的形象會載入紋理。
 pub(crate) struct MascotPack {
     key: Option<String>,
+    native: Option<bool>,
     pack: Option<LoadedPack>,
     palette: Option<Palette>,
+    ink: Option<Color32>,
     textures: HashMap<(String, usize), TextureHandle>,
     failed: bool,
 }
 
 impl Default for MascotPack {
     fn default() -> Self {
-        Self { key: None, pack: None, palette: None, textures: HashMap::new(), failed: false }
+        Self { key: None, native: None, pack: None, palette: None, ink: None, textures: HashMap::new(), failed: false }
     }
 }
 
 impl MascotPack {
     pub fn reload(&mut self) {
         self.key = None;
+        self.native = None;
         self.pack = None;
+        self.ink = None;
         self.textures.clear();
         self.failed = false;
     }
@@ -84,23 +90,25 @@ impl MascotPack {
         self.key.as_deref().is_some_and(|key| external_dir(key).join("pack.json").is_file())
     }
 
-    fn ensure(&mut self, key: &str) {
-        if self.key.as_deref() == Some(key) { return; }
+    fn ensure(&mut self, key: &str, native: bool) {
+        if self.key.as_deref() == Some(key) && self.native == Some(native) { return; }
         self.reload();
         self.key = Some(key.to_string());
-        self.pack = load_pack(key);
+        self.native = Some(native);
+        self.pack = load_pack(key, native);
         self.failed = self.pack.is_none();
     }
 
-    /// 是否由動畫包接手這個形象；沒有動畫包時回傳 false，沿用原本流程。
-    pub fn active_for(&mut self, key: &str) -> bool {
-        self.ensure(key);
+    /// 是否由動畫包接手這個形象；沒有動畫包時回傳 false，沿用內建單線條。
+    pub fn active_for(&mut self, key: &str, native: bool) -> bool {
+        self.ensure(key, native);
         self.pack.is_some()
     }
 
-    pub fn draw(&mut self, ctx: &egui::Context, c: &Card, cx: f32, state: PetState, time: f64, palette: Option<Palette>) -> bool {
+    pub fn draw(&mut self, ctx: &egui::Context, c: &Card, cx: f32, state: PetState, time: f64, palette: Option<Palette>, ink: Color32) -> bool {
         let Some(key) = self.key.clone() else { return false; };
         if self.palette != palette { self.textures.clear(); self.palette = palette; }
+        if self.ink != Some(ink) { self.textures.clear(); self.ink = Some(ink); }
         let Some(pack) = &self.pack else { return false; };
         let name = state_key(state);
         let Some((frames, fps, repeat)) = pack.animations.get(name) else { return false; };
@@ -108,19 +116,31 @@ impl MascotPack {
         let frames = frames.clone();
         let fps = *fps;
         let repeat = *repeat;
+        let builtin = pack.builtin;
         let index = if repeat {
             ((time.max(0.0) * f64::from(fps)) as usize) % frames.len()
         } else {
             ((time.max(0.0) * f64::from(fps)) as usize).min(frames.len() - 1)
         };
-        let texture = self.texture(ctx, &key, &frames, index, palette);
-        // 位置固定在槽位內；動作只來自逐格動物影格，不再整張圖上下左右位移。
-        let rect = c.rect(cx - 24.0, 0.0, 48.0, 30.0);
+        let texture = self.texture(ctx, &key, &frames, index, palette, ink, builtin);
+        // 原圖 144×90 保持比例縮進 48×30 槽位；原作者的點陣石虎不再被橫向拉寬。
+        let size = texture.size_vec2();
+        let mut height = 30.0;
+        let mut width = size.x / size.y.max(1.0) * height;
+        if width > 46.0 {
+            height *= 46.0 / width;
+            width = 46.0;
+        }
+        let rect = c.rect(cx - width / 2.0, (30.0 - height) / 2.0, width, height);
+        if ink.r() > 200 {
+            // 白線遇到半透明或偏亮的毛玻璃時加一層極淡深色底，保留原稿白線又不會整隻消失。
+            c.painter.image(texture.id(), rect.translate(egui::vec2(0.7, 0.7)), egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), Color32::from_rgba_unmultiplied(8, 12, 18, 150));
+        }
         c.painter.image(texture.id(), rect, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), Color32::WHITE);
         true
     }
 
-    fn texture(&mut self, ctx: &egui::Context, key: &str, frames: &[FrameBytes], index: usize, palette: Option<Palette>) -> &TextureHandle {
+    fn texture(&mut self, ctx: &egui::Context, key: &str, frames: &[FrameBytes], index: usize, palette: Option<Palette>, ink: Color32, builtin: bool) -> &TextureHandle {
         let slot = (key.to_string(), index);
         if !self.textures.contains_key(&slot) {
             let bytes = frames[index].read().unwrap_or_default();
@@ -128,7 +148,15 @@ impl MascotPack {
                 .map(|image| image.into_rgba8())
                 .map(|image| egui::ColorImage::from_rgba_unmultiplied([image.width() as usize, image.height() as usize], image.as_raw()))
                 .unwrap_or_else(|_| egui::ColorImage::new([FRAME_W, FRAME_H], Color32::TRANSPARENT));
-            if let Some(palette) = palette {
+            if builtin {
+                // 原作者線稿只有白色，依目前底色改成深墨或白線才不會在亮底消失。
+                for pixel in &mut image.pixels {
+                    let alpha = pixel.a();
+                    if alpha > 0 {
+                        *pixel = Color32::from_rgba_unmultiplied(ink.r(), ink.g(), ink.b(), alpha);
+                    }
+                }
+            } else if let Some(palette) = palette {
                 for pixel in &mut image.pixels {
                     if pixel.a() > 0 { *pixel = crate::skin_paint::map_color(*pixel, &palette); }
                 }
@@ -168,7 +196,7 @@ pub fn open_folder(key: &str) {
     let _ = std::fs::create_dir_all(&dir);
     let readme = dir.join("說明.txt");
     if !readme.exists() {
-        let _ = std::fs::write(&readme, "吉祥物動畫包\n\n把 pack.json 與你自己畫的影格 PNG 放在這個資料夾，重新載入後就會取代內建動畫。\n每格建議 144×90，透明背景。animations 可用的鍵：awake、curious、waking、happy、satisfied、music、worried、focused、dozing、sleeping。\n\n這裡不再自動放入範例影格：舊版放的那組 16 張圖幾乎完全相同，看久了會以為吉祥物不會動。內建石虎改用即時向量動畫，尾巴、耳朵與眨眼都會隨狀態改變。\n");
+        let _ = std::fs::write(&readme, "吉祥物動畫包\n\n把 pack.json 與你自己畫的影格 PNG 放在這個資料夾，重新載入後就會取代內建吉祥物。\n每格建議 144×90，透明背景。animations 可用的鍵：awake、curious、waking、happy、satisfied、music、worried、focused、dozing、sleeping。\n\n內建的經典、奶油、毛玻璃與懸浮雲主題會使用原作者石虎影格；懸浮漸層主題使用台灣版單線條島虎。這裡留空時就依主題自動選擇。\n");
     }
     #[cfg(windows)]
     { let _ = std::process::Command::new("explorer").arg(&dir).spawn(); }
@@ -176,15 +204,15 @@ pub fn open_folder(key: &str) {
     { let _ = &dir; }
 }
 
-fn load_pack(key: &str) -> Option<LoadedPack> {
+fn load_pack(key: &str, native: bool) -> Option<LoadedPack> {
     let dir = external_dir(key);
     let manifest = dir.join("pack.json");
     if manifest.is_file() {
         let text = std::fs::read_to_string(&manifest).ok()?;
         let parsed: Manifest = serde_json::from_str(&text).ok()?;
         // 舊版「開啟資料夾」會自動放一份只有 awake 的範例包；那不是使用者自製動畫，
-        // 直接忽略，讓石虎改用內建向量，才看得到各狀態的動作差異。
-        if parsed.name.contains("外掛範例") && parsed.animations.len() == 1 { return None; }
+        // 直接忽略，讓原始主題改用內建原作者影格，漸層主題改用向量。
+        if parsed.name.contains("外掛範例") && parsed.animations.len() == 1 { return native_tiger(key, native); }
         let mut animations = HashMap::new();
         for (name, animation) in parsed.animations {
             if animation.frames.is_empty() { continue; }
@@ -194,12 +222,15 @@ fn load_pack(key: &str) -> Option<LoadedPack> {
             }).collect();
             animations.insert(name, (frames, animation.fps.max(1.0), animation.repeat));
         }
-        return (!animations.is_empty()).then_some(LoadedPack { name: parsed.name, animations });
+        return (!animations.is_empty()).then_some(LoadedPack { name: parsed.name, animations, builtin: false });
     }
-    // 內建形象改用向量單線條，不再載入會糊掉的點陣影格；
-    // 只有使用者放在 `%APPDATA%\Kuidao\mascot-packs` 的外掛包才走逐格動畫。
-    let _ = key;
-    None
+    native_tiger(key, native)
+}
+
+/// 原始主題（經典、奶油、毛玻璃、懸浮雲）使用原作者石虎點陣影格；
+/// 懸浮漸層留給台灣版單線條島虎，兩者不互相影響。
+fn native_tiger(key: &str, native: bool) -> Option<LoadedPack> {
+    if native { builtin_tiger(key) } else { None }
 }
 
 /// 只允許動畫包資料夾內的相對路徑，避免 pack.json 讀到其他位置。
@@ -241,12 +272,19 @@ fn builtin_tiger(key: &str) -> Option<LoadedPack> {
     animations.insert("focused".to_string(), (frames(), 6.0, true));
     animations.insert("dozing".to_string(), (frames(), 5.0, true));
     animations.insert("sleeping".to_string(), (frames(), 4.0, true));
-    Some(LoadedPack { name: "石虎・待機（內建）".into(), animations })
+    Some(LoadedPack { name: "石虎・待機（內建）".into(), animations, builtin: true })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_themes_use_the_author_tiger_and_gradients_do_not() {
+        assert!(native_tiger("tiger", true).is_some(), "原始主題要使用原作者石虎");
+        assert!(native_tiger("tiger", false).is_none(), "漸層主題留給向量島虎");
+        assert!(native_tiger("shiba", true).is_none(), "其他形象仍走向量");
+    }
 
     #[test]
     fn tiger_has_its_own_pack_and_others_fall_back() {

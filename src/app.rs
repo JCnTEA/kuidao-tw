@@ -829,6 +829,8 @@ pub struct App {
     browser_minimal_active:bool,
     /// 毛玻璃着色量（平滑过渡，避免背景变化时闪烁）；0 表示尚未初始化。
     glass_tint:f32,
+    /// 毛玻璃目前取樣到的桌面底色，用來挑吉祥物線條的對比色。
+    backdrop:Option<[f32;3]>,
     pub(crate) fluid:crate::fluid::Fluid,
     pub(crate) fluid_origin:Pos2,
     fluid_art:Option<egui::TextureId>,
@@ -1014,7 +1016,7 @@ impl App {
             media_anchor: (String::new(), 0.0, 0.0, false),
             media: NowPlaying::default(),
             music_artwork: None,
-            forced_open_until:0.0, settings_open:false, settings_window:std::sync::Arc::new(std::sync::Mutex::new(crate::settings_window::State::load())), displays:Vec::new(), browser_at_top:false, browser_minimal_active:false, glass_tint:0.0, fluid:Default::default(), fluid_origin:Pos2::ZERO, fluid_art:None, fluid_title:String::new(), screen:None, settings_focus_requested:false, settings_tab:0, settings_category:0, messenger_statuses:Default::default(), notification_apps:model::NotificationApps::load(), subpage:None, task_dialog:None,
+            forced_open_until:0.0, settings_open:false, settings_window:std::sync::Arc::new(std::sync::Mutex::new(crate::settings_window::State::load())), displays:Vec::new(), browser_at_top:false, browser_minimal_active:false, glass_tint:0.0, backdrop:None, fluid:Default::default(), fluid_origin:Pos2::ZERO, fluid_art:None, fluid_title:String::new(), screen:None, settings_focus_requested:false, settings_tab:0, settings_category:0, messenger_statuses:Default::default(), notification_apps:model::NotificationApps::load(), subpage:None, task_dialog:None,
             listener_status: "尚未連線".into(),
             notification_bell_until: 0.0, notification_bell_at: -10.0, mail_unread: 0, mail_bell_at: -10.0, mail_bell_account: String::new(), social: crate::social::Badges::load(), notice: None, hud_notice: None, hud_alpha: 0.0, notice_width:Spring::new(0.0,CLOSE.0,CLOSE.1), notice_details:false, pending_messengers:Vec::new(), messenger_scroll:0.0, alerts: Default::default(), history: Default::default(), pending: vec![],
             todo_first: 0, todo_choosing: false, pet: Default::default(), last_drink: None,
@@ -1903,6 +1905,7 @@ impl App {
         self.system_idle=env.idle_seconds;
         self.dt = dt;
         if let Some(at_top)=env.browser_at_top {self.browser_at_top=at_top;}
+        self.backdrop=env.backdrop;
         self.screen=env.screen;
         if self.settings.skin.is_glass() {
             let target=if self.settings.skin==model::Skin::GlassLight {glass::light_tint(env.backdrop,env.glass_blur)}else{glass::glass_tint(env.backdrop,env.glass_blur)};
@@ -2215,7 +2218,7 @@ impl App {
             let y=(h.min(self.base_size().1)-BAR_H).max(0.0)/2.0;
             // 吉祥物跟随皮肤换色：浅色底上变成深色版本，保持清晰。
             let fit=if self.island_lyrics_active()||self.notice.is_some(){1.0}else{((WIN_W-32.0)/self.resident.target.width).min(1.0)};
-            self.pet.draw(&base.scaled(cx-origin.x,15.0,fit).shifted(0.0,y).faded(pet_alpha),cx-origin.x+self.resident.position(bar::PET),self.t,self.skin_palette(),self.mascot_ink());
+            self.pet.draw(&base.scaled(cx-origin.x,15.0,fit).shifted(0.0,y).faded(pet_alpha),cx-origin.x+self.resident.position(bar::PET),self.t,self.skin_palette(),self.mascot_ink(),self.uses_native_mascot());
         }
         let mut page_transition=false;
         if reveal > 0.004 && !banner && !restoring_lyrics {
@@ -2604,14 +2607,47 @@ impl App {
         match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Classic|model::Skin::Fluid|model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>None}
     }
 
-    /// 吉祥物線條色：跟著島體底色選深墨或白線，亮底不再把白線吃糊。
-    pub(crate) fn mascot_ink(&self)->Color32 {
-        if let Some(p)=self.skin_palette() {
-            return Color32::from_rgb(p.ink[0],p.ink[1],p.ink[2]);
+    /// 原始主題使用原作者石虎點陣圖；懸浮漸層才交給台灣版單線條島虎。
+    pub(crate) fn uses_native_mascot(&self)->bool {
+        !matches!(self.settings.skin,model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow)
+    }
+
+    /// 吉祥物實際會疊到的底色：毛玻璃把取樣到的桌面與玻璃層合成，
+    /// 不用調色盤硬套白字，透明玻璃後面偏亮時仍能自動換成深墨線。
+    fn mascot_fill(&self)->[f32;3] {
+        match self.settings.skin {
+            model::Skin::Classic=>[0.0,0.0,0.0],
+            model::Skin::Cream=>{
+                let [r,g,b]=crate::skin_paint::CREAM.paper;
+                [r as f32/255.0,g as f32/255.0,b as f32/255.0]
+            }
+            model::Skin::GlassDark=>self.backdrop.unwrap_or([0.6;3]),
+            model::Skin::GlassLight=>{
+                let ground=glass::LIGHT_GROUND;
+                let behind=self.backdrop.unwrap_or([0.6;3]);
+                let a=self.glass_tint.clamp(0.0,0.95);
+                [0,1,2].map(|i| behind[i]+(ground[i]-behind[i])*a)
+            }
+            model::Skin::Fluid=>{
+                let fill=self.fluid.compose(0.5,0.5,1.0,1.0,0.0).to_srgba_unmultiplied();
+                [fill[0] as f32/255.0,fill[1] as f32/255.0,fill[2] as f32/255.0]
+            }
+            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>{
+                let c=crate::skin_paint::gradient_with_brightness(self.settings.skin,self.settings.gradient_brightness).map_or(Color32::BLACK,|g|g.mid()).to_srgba_unmultiplied();
+                [c[0] as f32/255.0,c[1] as f32/255.0,c[2] as f32/255.0]
+            }
         }
-        let bg=self.preview_fill();
-        let channel=|v:u8|{let s=v as f32/255.0;if s<=0.04045{s/12.92}else{((s+0.055)/1.055).powf(2.4)}};
-        let lum=0.2126*channel(bg.r())+0.7152*channel(bg.g())+0.0722*channel(bg.b());
+    }
+
+    /// 吉祥物線條色：跟著實際島體底色選深墨或白線，亮底不再把白線吃糊。
+    pub(crate) fn mascot_ink(&self)->Color32 {
+        if self.settings.skin==model::Skin::Cream {
+            let [r,g,b]=crate::skin_paint::CREAM.ink;
+            return Color32::from_rgb(r,g,b);
+        }
+        let fill=self.mascot_fill();
+        let channel=|v:f32|if v<=0.04045{v/12.92}else{((v+0.055)/1.055).powf(2.4)};
+        let lum=0.2126*channel(fill[0])+0.7152*channel(fill[1])+0.0722*channel(fill[2]);
         if (lum+0.05)/0.05 >= 1.05/(lum+0.05) {
             Color32::from_rgb(16,24,34)
         } else {

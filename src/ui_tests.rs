@@ -1,5 +1,5 @@
 //! 无窗口交互测试：直接向 egui 注入输入事件，验证悬停展开、切页、按钮。
-use crate::app::{App, Env, Options, PH, PW, WIN_H, WIN_W};
+use crate::app::{App, Env, Options, PH, PW, CANVAS_W, WIN_H, WIN_W};
 #[path="messenger/ui_tests.rs"]
 mod enterprise_messenger;
 #[path="calendar/ui_compatibility_tests.rs"]
@@ -3975,28 +3975,53 @@ fn mascot_expression_gallery(){
     eprintln!("表情預覽：{}",dest.display());
 }
 
-fn shape_uses_texture(shape:&egui::Shape,id:egui::TextureId)->bool{
-    match shape {
-        egui::Shape::Rect(r)=>r.brush.as_ref().is_some_and(|b|b.fill_texture_id==id),
-        egui::Shape::Mesh(mesh)=>mesh.texture_id==id,
-        egui::Shape::Vec(shapes)=>shapes.iter().any(|shape|shape_uses_texture(shape,id)),
-        _=>false,
+#[test]
+#[test]
+#[ignore = "按需匯出吉祥物在原始主題與漸層主題的實際畫面"]
+fn export_mascot_theme_preview() {
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let dest=std::path::PathBuf::from(std::env::var_os("KUIDAO_MASCOT_PREVIEW").expect("需指定預覽目錄"));
+    std::fs::create_dir_all(&dest).unwrap();
+    for (name,skin,backdrop) in [
+        ("classic",crate::model::Skin::Classic,None),
+        ("cream",crate::model::Skin::Cream,None),
+        ("glass-dark",crate::model::Skin::GlassDark,Some([0.46,0.55,0.62])),
+        ("aurora",crate::model::Skin::GradAurora,None),
+    ] {
+        let mut h=H::new();
+        h.app.settings.pet=true;h.app.settings.minimal=false;
+        h.app.settings.mascot=crate::mascot::Mascot::Tiger;h.app.settings.skin=skin;
+        crate::mascot::set(crate::mascot::Mascot::Tiger);h.app.pet.reload_mascot_pack();
+        let mut raster=crate::preview_raster::Raster::new(WIN_W as usize,WIN_H as usize);
+        for frame in 0..45 {
+            let t=frame as f64/60.0;
+            let raw=egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(CANVAS_W,WIN_H))),time:Some(t),focused:true,..Default::default()};
+            let env=Env{t,clock:"09:41:00".into(),today:"2026-11-21".into(),date:"11月21日 週六".into(),backdrop,glass_blur:true,..Default::default()};
+            let output=h.ctx.run(raw,|ctx|{egui::CentralPanel::default().frame(egui::Frame::NONE).show(ctx,|ui|{let win=Rect::from_min_size(ui.max_rect().min,Vec2::new(WIN_W,WIN_H));h.app.frame(ui,win,&env);});});
+            raster.update_textures(&output.textures_delta);h.shapes=output.shapes;
+        }
+        raster.buf.fill([0.46,0.55,0.62,1.0]);
+        raster.draw(&h.ctx.tessellate(h.shapes.clone(),1.0),1.0);
+        let mut rgba=Vec::new();raster.to_rgba8(&mut rgba);
+        image::save_buffer(dest.join(format!("{name}.png")),&rgba,WIN_W as u32,WIN_H as u32,image::ColorType::Rgba8).unwrap();
     }
+    eprintln!("吉祥物主題預覽：{}",dest.display());
 }
 
 #[test]
-fn tiger_mascot_now_uses_the_crisp_vector_art_instead_of_raster_packs(){
+fn tiger_mascot_uses_author_pixels_on_native_themes_and_vector_on_gradients(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    h.app.settings.pet=true;h.app.settings.mascot=crate::mascot::Mascot::Tiger;
+    h.app.settings.pet=true;h.app.settings.mascot=crate::mascot::Mascot::Tiger;h.app.settings.minimal=false;
+    h.app.settings.skin=crate::model::Skin::Classic;
     crate::mascot::set(crate::mascot::Mascot::Tiger);h.app.pet.reload_mascot_pack();
     for _ in 0..60{h.frame(vec![]);}
     let packs:Vec<_>=h.ctx.tex_manager().read().allocated().filter_map(|(id,meta)|meta.name.starts_with("mascot-pack-tiger").then_some(*id)).collect();
-    assert!(packs.is_empty()||h.app.pet.mascot_pack.is_external(),"只有使用者外掛包可以載入點陣影格");
-    if packs.is_empty() {
-        assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Path(p) if (p.stroke.width-1.4).abs()<0.01)),"石虎改用單線條向量");
-    }
-    let atlas=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|(meta.name=="daozai-expressions").then_some(*id));
-    assert!(atlas.map_or(true,|atlas|!h.shapes.iter().any(|s|shape_uses_texture(&s.shape,atlas))),"石虎不能再畫原始表情圖集");
+    assert!(!packs.is_empty(),"原始主題要載入原作者石虎點陣影格");
+    assert!(h.app.uses_native_mascot());
+    h.app.settings.skin=crate::model::Skin::GradAurora;h.app.pet.reload_mascot_pack();
+    for _ in 0..30{h.frame(vec![]);}
+    assert!(!h.app.uses_native_mascot(),"漸層主題改用台灣版向量");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Path(p) if (p.stroke.width-1.4).abs()<0.01)),"漸層主題要畫單線條島虎");
 }
 
 #[test]
