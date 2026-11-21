@@ -2493,6 +2493,61 @@ impl App {
                                 ui.hyperlink_to("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/");
                             });
                         });
+                        // 台灣版：更新內容資料庫只保留最新一筆，每次檢查成功都整份覆寫。
+                        settings_label(ui,"更新內容資料庫");
+                        settings_card(ui,|ui|{
+                            let heading=settings_color(ctx,Color32::from_gray(238),Color32::from_rgb(30,34,41));
+                            let body_color=settings_color(ctx,Color32::from_gray(214),Color32::from_rgb(55,62,72));
+                            let sub_color=settings_color(ctx,Color32::from_gray(145),Color32::from_rgb(105,112,124));
+                            let accent=settings_color(ctx,Color32::from_rgb(126,224,166),Color32::from_rgb(22,122,68));
+                            match self.updates.latest_notes(){
+                                Some(record)=>{
+                                    ui.horizontal(|ui|{
+                                        egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(32,53,41),Color32::from_rgb(230,245,236))).corner_radius(999.0).inner_margin(egui::Margin::symmetric(8,2)).show(ui,|ui|{
+                                            ui.label(egui::RichText::new("最新一筆").size(10.0).color(accent));
+                                        });
+                                        ui.label(egui::RichText::new(&record.version).size(12.0).strong().color(accent));
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
+                                            if let Some(time)=chrono::DateTime::from_timestamp(record.checked_unix,0){
+                                                ui.label(egui::RichText::new(format!("更新於 {}",time.with_timezone(&chrono::Local).format("%m-%d %H:%M"))).size(10.0).color(sub_color));
+                                            }
+                                        });
+                                    });
+                                    ui.label(egui::RichText::new("每次檢查成功後整份覆寫，只保留這一筆，不累積上一筆資料。").size(10.5).color(sub_color));
+                                    ui.add_space(5.0);
+                                    egui::ScrollArea::vertical().id_salt("settings-update-notes").max_height(230.0).auto_shrink([false,true]).show(ui,|ui|{
+                                        for raw in record.notes.lines(){
+                                            let line=raw.trim();
+                                            if line.is_empty(){ui.add_space(2.0);continue;}
+                                            let is_heading=line.starts_with('#');
+                                            let is_bullet=line.starts_with("- ")||line.starts_with("* ");
+                                            let text=if is_heading{line.trim_start_matches('#').trim()}
+                                                else if is_bullet{line[2..].trim()}
+                                                else{line};
+                                            let text=text.replace('`',"");
+                                            let color=if is_heading{heading}else{body_color};
+                                            if is_bullet{
+                                                ui.horizontal(|ui|{
+                                                    let (dot,_)=ui.allocate_exact_size(egui::vec2(9.0,15.0),egui::Sense::hover());
+                                                    ui.painter().circle_filled(egui::pos2(dot.left()+2.0,dot.center().y),2.2,accent);
+                                                    ui.add(egui::Label::new(egui::RichText::new(text).size(11.5).color(color)).wrap());
+                                                });
+                                            }else{
+                                                let mut rich=egui::RichText::new(text).size(if is_heading{16.0}else{11.5}).color(color);
+                                                if is_heading{rich=rich.strong();}
+                                                ui.add(egui::Label::new(rich).wrap());
+                                            }
+                                        }
+                                    });
+                                    ui.add_space(3.0);
+                                    ui.hyperlink_to(egui::RichText::new("檢視完整發布頁").size(10.5).color(sub_color),&record.page);
+                                }
+                                None=>{
+                                    ui.label(egui::RichText::new("正在取得最新更新內容…").size(11.5).color(body_color));
+                                    ui.label(egui::RichText::new("連上更新服務後，這裡只會保留最新一筆，不會累積舊資料。").size(10.5).color(sub_color));
+                                }
+                            }
+                        });
                         // 台灣版：不顯示「支援作者」與收款碼區塊
                         if SUPPORT_SECTION_ENABLED{
                             settings_label(ui,"支援作者");

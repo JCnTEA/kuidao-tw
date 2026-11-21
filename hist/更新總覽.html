@@ -63,6 +63,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
+      <div class="card"><span class="badge">設定</span><h3>關於頁新增更新內容資料庫，只保留最新一筆</h3><p>「關於」頁在版本卡下方新增更新內容資料庫：每次向 GitHub 取得最新 Release 後，整份覆寫本機 update-notes.json，只存一筆版本、內容與時間，不累積上一筆。卡片以綠色「最新一筆」標籤、條列內容與更新時間呈現；連線失敗時保留目前快取，不會長出舊資料。</p></div>
       <div class="card"><span class="badge">設定</span><h3>遊戲設定新增清除掃描，兩顆動作按鈕改成一致膠囊</h3><p>「重新掃描本機遊戲」與「清除掃描本機遊戲」改成同尺寸 34px 膠囊：左側向量圖示、圓角描邊、hover 平滑變色與按下位移。重新掃描是綠色主要動作；清除是低調紅色描邊，只清空本次掃描結果與數量，不會解除安裝、刪除遊戲或清掉已移除的捷徑清單。沒有掃描結果時自動變灰不可按。</p></div>
       <div class="card"><span class="badge">安裝</span><h3>安裝檔固定叫 Kuidao-Setup-TW-x64，官網直接下載</h3><p>安裝檔不再把版本號塞進檔名，固定為 <b>Kuidao-Setup-TW-x64.exe</b>；每次發布會同時更新 GitHub Release 與官網 <b>download/Kuidao-Setup-TW-x64.exe</b>，分享同一個網址即可，不必每次換連結。安裝精靈內的版本資訊仍會顯示目前版本。</p></div>
       <div class="card"><span class="badge">安裝</span><h3>安裝精靈的標題與版本字不再重疊</h3><p>原本 18pt 的「鬼島 桌面靈動島」和版本說明畫在同一行，版本字從標題中間長出來，看起來像被切掉。現在標題、版本、啟動器說明分成三層，版本改成獨立的灰色小字，安裝位置與兩個勾選項同步往下移；底部品牌字直接移除，不再頂到視窗底線；版本字底色改跟頁面一致，不會多出一條白色長條。</p></div>
@@ -145,6 +146,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <button data-f="chg">異動</button>
     </div>
     <div class="tl">
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>關於頁新增「更新內容資料庫」</h3><p>每次取得最新 Release 後整份覆寫本機唯一一筆紀錄，只保留版本、內容與更新時間，不累積上一筆；連線失敗時保留目前快取。卡片放在版本資訊下方，可直接看最新更新內容。</p></div>
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>遊戲設定新增「清除掃描本機遊戲」</h3><p>設定頁的遊戲卡換成兩顆同尺寸膠囊按鈕：重新掃描是綠色主要動作，清除是低調紅色描邊。兩顆都有向量圖示、平滑 hover 與按下位移；清除只清空本次掃描結果與數量，不會解除安裝、刪除遊戲或清掉已移除的捷徑清單。</p></div>
       <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>遊戲庫顯示真實圖示，長按可移除捷徑</h3><p>Steam 改讀收藏庫快取圖示，Riot 抓執行檔圖示；列首不再全部是字母磚。長按圖示半秒出現「移除／取消」，右上角也有小 ×；移除清單存本機，重新掃描不恢復，按右上「顯示全部」才回來。Steamworks 共用元件不再列出。</p></div>
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>KKBOX 同步歌詞，瀏覽器播放也會後備查詢</h3><p>KKBOX 播放時自動用歌名與歌手搜尋，比對長度後抓官方逐句歌詞；瀏覽器 YouTube、Spotify 查不到原本來源時也會改查 KKBOX。台語歌與 MV 標題會拆出合唱署名、中文歌名與英文拼音再比對，作詞作曲不列入歌詞行。抓不到時照原順序往網易雲、QQ 音樂與 LRCLIB，歌詞快取在本機。</p></div>

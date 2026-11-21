@@ -1,6 +1,6 @@
 //! 自动检查正式版更新，下载与安装由用户确认。
 use eframe::egui;
-use std::{io::{Read, Write}, path::PathBuf, sync::{mpsc::{self, Receiver}, Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
+use std::{io::{Read, Write}, path::{Path, PathBuf}, sync::{mpsc::{self, Receiver}, Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 
 const REPOSITORY: &str = "https://github.com/JCnTEA/kuidao-tw";
 const API: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases/latest";
@@ -12,6 +12,8 @@ const MANUAL_INTERVAL: Duration = Duration::from_secs(30);
 
 #[derive(Clone, Debug)]
 struct Release { version: String, notes: String, page: String, package: Option<Package> }
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub(crate) struct NotesRecord { pub version: String, pub notes: String, pub page: String, pub checked_unix: i64 }
 #[derive(Clone, Debug)]
 struct Package { url: String, size: u64, hash: String }
 enum Event { Checked(Result<Option<Release>, String>), Progress(f32), Ready(PathBuf), Installed, Failed(String) }
@@ -31,6 +33,7 @@ pub(crate) struct State {
     automatic_check: bool,
     notified_version: Option<String>,
     history_path: Option<PathBuf>,
+    latest_notes: Option<NotesRecord>,
 }
 
 impl Drop for State {
@@ -40,14 +43,29 @@ impl Drop for State {
 impl State {
     pub(crate) fn load(path: PathBuf) -> Self {
         let mut state = State::default();
+        let notes_path = path.parent().map(|parent| parent.join("update-notes.json"));
         if let Some((_, version)) = std::fs::read(&path).ok()
             .and_then(|bytes| serde_json::from_slice::<(i64, Option<String>)>(&bytes).ok()) {
             // 每次啟動都重新向來源確認一次，避免使用者開著舊結果等一整天。
             state.next_check = Some(Instant::now() + STARTUP_DELAY);
             state.notified_version = version;
         }
+        state.latest_notes = notes_path.and_then(|path| std::fs::read(path).ok())
+            .and_then(|bytes| serde_json::from_slice::<NotesRecord>(&bytes).ok())
+            .filter(|record| !record.notes.trim().is_empty());
         state.history_path = Some(path);
         state
+    }
+
+    pub(crate) fn latest_notes(&self) -> Option<&NotesRecord> {
+        self.latest_notes.as_ref().filter(|record| !record.notes.trim().is_empty())
+    }
+
+    fn refresh_latest_notes(&mut self) {
+        let Some(path) = self.history_path.as_ref().and_then(|path| path.parent()).map(|parent| parent.join("update-notes.json")) else { return };
+        self.latest_notes = std::fs::read(path).ok()
+            .and_then(|bytes| serde_json::from_slice::<NotesRecord>(&bytes).ok())
+            .filter(|record| !record.notes.trim().is_empty());
     }
 
     fn remember_check(&self, delay: Duration) {
@@ -92,6 +110,7 @@ impl State {
             };
             match event {
                 Event::Checked(result) => {
+                    self.refresh_latest_notes();
                     let automatic = std::mem::take(&mut self.automatic_check);
                     self.manual_check_after = Some(Instant::now() + MANUAL_INTERVAL);
                     let delay = if result.is_err() { RETRY_INTERVAL } else { CHECK_INTERVAL };
@@ -387,7 +406,34 @@ fn check() -> Result<Option<Release>, String> {
         .set("Accept", "application/vnd.github+json").call().map_err(check_error)?;
     let value: serde_json::Value = serde_json::from_reader(response.into_reader())
         .map_err(|_| "更新資訊格式異常，請稍後重試".to_owned())?;
-    release_info(&value, env!("CARGO_PKG_VERSION"))
+    let update = release_info(&value, env!("CARGO_PKG_VERSION"))?;
+    // 更新內容資料庫只存一筆最新紀錄；每次檢查成功都整份覆寫，不追加舊資料。
+    if !cfg!(test) {
+        if let Some(record) = notes_record(&value) {
+            let _ = write_notes_record(&crate::model::config_dir().join("update-notes.json"), &record);
+        }
+    }
+    Ok(update)
+}
+
+fn notes_record(value: &serde_json::Value) -> Option<NotesRecord> {
+    if value["draft"].as_bool() != Some(false) || value["prerelease"].as_bool() != Some(false) { return None; }
+    let tag = value["tag_name"].as_str()?;
+    version(tag)?;
+    let notes = value["body"].as_str().unwrap_or("").trim().to_owned();
+    if notes.is_empty() { return None; }
+    Some(NotesRecord {
+        version: tag.to_owned(),
+        notes,
+        page: format!("{REPOSITORY}/releases/tag/{tag}"),
+        checked_unix: chrono::Utc::now().timestamp(),
+    })
+}
+
+fn write_notes_record(path: &Path, record: &NotesRecord) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() { std::fs::create_dir_all(parent)?; }
+    let bytes = serde_json::to_vec(record).map_err(std::io::Error::other)?;
+    crate::model::atomic_write(path, &bytes)
 }
 
 fn release_info(value: &serde_json::Value, current: &str) -> Result<Option<Release>, String> {
@@ -679,6 +725,26 @@ mod tests {
             assert!(parse_release(&value, "0.6.39").is_err());
         }
         assert!(parse_release(&serde_json::json!({}), "0.6.39").is_err());
+    }
+    #[test]
+    fn notes_database_keeps_only_the_latest_record() {
+        let dir = std::env::temp_dir().join(format!("daozai-notes-{}-{}", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let path = dir.join("update-notes.json");
+        let first = notes_record(&serde_json::json!({"tag_name":"v1.0.0","draft":false,"prerelease":false,"body":"第一筆舊資料"})).unwrap();
+        let second = notes_record(&serde_json::json!({"tag_name":"v1.0.1","draft":false,"prerelease":false,"body":"- 第二筆最新資料"})).unwrap();
+        write_notes_record(&path, &first).unwrap();
+        write_notes_record(&path, &second).unwrap();
+        let parsed: NotesRecord = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(parsed.version, "v1.0.1");
+        assert_eq!(parsed.notes, "- 第二筆最新資料");
+        assert!(!std::fs::read_to_string(&path).unwrap().contains("第一筆舊資料"), "覆寫後不能留下上一筆");
+        assert!(notes_record(&serde_json::json!({"tag_name":"v1.0.2","draft":false,"prerelease":false,"body":"  "})).is_none());
+        {
+            let state = State::load(dir.join("update-check.json"));
+            assert_eq!(state.latest_notes().unwrap().version, "v1.0.1", "啟動時應讀到唯一一筆最新內容");
+        }
+        std::fs::remove_file(path).unwrap(); std::fs::remove_dir(dir).unwrap();
     }
     #[test]
     fn only_matching_verified_windows_package_can_install() {
