@@ -720,6 +720,43 @@ fn bluetooth_headset_battery_replaces_missing_desktop_battery() {
 }
 
 #[test]
+fn connected_phone_battery_replaces_missing_desktop_battery_and_beats_earbuds() {
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();h.app.settings.show_battery=true;h.app.settings.pet=false;
+    h.bt=vec![
+        crate::bt::Device{id:"4FA8446CAF75".into(),name:"iPhone 13 Por Max".into(),battery:Some(77),kind:crate::bt::DeviceKind::Phone},
+        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(64),kind:crate::bt::DeviceKind::Earbuds},
+    ];
+    for _ in 0..90 {h.frame(vec![]);}
+    assert_eq!(h.app.resident_power,(Some(77),false),"桌機沒有系統電池時，手機電量應優先顯示");
+}
+
+#[test]
+#[ignore="按需匯出桌機使用手機電量的島體畫面"]
+fn bluetooth_phone_battery_preview(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let dest=std::path::PathBuf::from(std::env::var_os("KUIDAO_BT_BATTERY_PREVIEW_DIR").expect("需指定預覽目錄"));std::fs::create_dir_all(&dest).unwrap();
+    let mut h=H::new();h.app.settings.show_battery=true;h.app.settings.pet=false;
+    let (w,hgt)=(crate::app::CANVAS_W,WIN_H);let ppp=2.0;let mut raster=feature_raster_sized(w,hgt);
+    for frame in 0..90 {
+        h.t+=1.0/60.0;
+        let cursor=Some(H::local(180.0,185.0));
+        let env=Env{t:h.t,clock:"14:08:26".into(),today:"2026-11-21".into(),date:"11月21日 週六".into(),cursor,
+            battery:None,bt:vec![crate::bt::Device{id:"4FA8446CAF75".into(),name:"iPhone 13 Por Max".into(),battery:Some(77),kind:crate::bt::DeviceKind::Phone}],bt_ready:true,..Default::default()};
+        let output=h.ctx.run(egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(w,hgt))),time:Some(h.t),focused:true,
+            events:vec![egui::Event::PointerMoved(cursor.unwrap())],viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(ppp),..Default::default()})).collect(),..Default::default()},
+            |ctx|{egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx,|ui|{h.app.frame(ui,Rect::from_min_size(ui.max_rect().min,Vec2::new(WIN_W,WIN_H)),&env);});});
+        raster.update_textures(&output.textures_delta);
+        if frame==89 {
+            raster.buf.fill([0.07,0.07,0.08,1.0]);raster.draw(&h.ctx.tessellate(output.shapes.clone(),ppp),ppp);
+            let mut rgba=Vec::new();raster.to_rgba8(&mut rgba);
+            image::save_buffer(dest.join("island-phone-battery.png"),&rgba,(w*ppp)as u32,(hgt*ppp)as u32,image::ColorType::Rgba8).unwrap();
+        }
+        raster.free_textures(&output.textures_delta);
+    }
+}
+
+#[test]
 #[ignore="按需匯出桌機使用藍牙耳機電量的島體畫面"]
 fn bluetooth_headset_battery_preview(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());

@@ -462,7 +462,7 @@ impl eframe::App for Shell {
             } else {
                 self.backdrop=None;
             }
-            // 藍牙通知需要掃描；桌機沒有系統電池時，島上的電量也要靠藍牙耳機回報。
+            // 藍牙通知需要掃描；桌機沒有系統電池時，島上的電量也要靠手機或藍牙耳機回報。
             let bt_needed=self.app.settings.bluetooth_notifications || (self.app.settings.show_battery && self.sys.0.is_none());
             if bt_needed {
                 if self.bt_rx.is_none() {self.bt_rx=Some(daozai::bt::spawn());}

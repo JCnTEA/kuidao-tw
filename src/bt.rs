@@ -40,6 +40,8 @@ fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {
             }
         }
     }
+    // 手機走 Windows 藍牙電量屬性（BTHLE 的 Battery Service）回報，比只看音訊裝置更完整。
+    if ["iphone", "ipad", "android", "galaxy", "pixel", "手機"].iter().any(|s| name.contains(s)) { return Phone; }
     if ["headphone", "headset", "耳機"].iter().any(|s| name.contains(s)) { Headphones } else { Other }
 }
 
@@ -62,6 +64,15 @@ pub fn audio_with_battery(devices: &[Device]) -> Option<&Device> {
     devices.iter()
         .filter(|device| device.is_audio() && device.battery.is_some_and(|level| level <= 100))
         .min_by_key(|device| device.battery.unwrap_or(101))
+}
+
+/// 桌機沒有系統電池時，優先用已連線手機的電量；手機沒回報才退回耳機／音箱。
+/// 手機是使用者最常看的一顆，而且 Windows 會同時列出經典藍牙與 BLE 兩筆同名裝置，
+/// 因此只在這一層挑「真的有電量」的那筆，避免顯示到沒有電池資訊的重複項目。
+pub fn battery_with_fallback(devices: &[Device]) -> Option<&Device> {
+    devices.iter()
+        .find(|device| device.kind == DeviceKind::Phone && device.battery.is_some_and(|level| level <= 100))
+        .or_else(|| audio_with_battery(devices))
 }
 
 #[derive(Default)]
@@ -250,7 +261,18 @@ mod tests {
         assert_eq!(device_kind("MX Anywhere", false, Some(962)), DeviceKind::Mouse);
         assert_eq!(device_kind("耳機", true, Some(0x0404)), DeviceKind::Headphones);
         assert_eq!(device_kind("AirPods", true, None), DeviceKind::Earbuds);
+        assert_eq!(device_kind("iPhone 13 Por Max", false, None), DeviceKind::Phone);
         assert_eq!(device_kind("未知裝置", false, None), DeviceKind::Other);
+    }
+
+    #[test]
+    fn phone_battery_wins_over_earbuds_but_missing_phone_falls_back_to_audio() {
+        let mut phone=device("PHONE");phone.kind=DeviceKind::Phone;phone.battery=Some(77);
+        let mut headset=device("AA");headset.kind=DeviceKind::Headphones;headset.battery=Some(80);
+        assert_eq!(battery_with_fallback(&[headset.clone(),phone.clone()]).map(|d|d.id.as_str()),Some("PHONE"));
+        let mut empty_phone=phone.clone();empty_phone.battery=None;
+        assert_eq!(battery_with_fallback(&[headset,empty_phone]).map(|d|d.id.as_str()),Some("AA"));
+        assert!(battery_with_fallback(&[device("EE")]).is_none(),"沒回報電量的裝置不能硬顯示");
     }
 
     #[test]
@@ -270,6 +292,16 @@ mod tests {
         let devices=vec![headset,earbuds,mouse,unknown_battery];
         assert_eq!(audio_with_battery(&devices).map(|device|device.id.as_str()),Some("BB"));
         assert!(audio_with_battery(&[device("EE")]).is_none(),"沒回報電量的裝置不能硬顯示");
+    }
+
+    #[test]
+    #[ignore]
+    fn live_phone_battery_is_visible_to_the_app() {
+        let service=spawn();
+        let devices=service.rx.recv_timeout(Duration::from_secs(10)).expect("藍牙掃描沒有回傳");
+        for device in &devices { println!("{:?} {}",device.kind,device.summary()); }
+        let phone=battery_with_fallback(&devices).filter(|device|device.kind==DeviceKind::Phone);
+        assert!(phone.is_some_and(|device|device.battery.is_some()),"已連線手機應該回報電量");
     }
 }
 

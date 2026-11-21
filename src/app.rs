@@ -159,9 +159,9 @@ impl Env {
     pub fn minute(&self) -> u32 {
         self.clock.get(3..5).and_then(|s| s.parse().ok()).unwrap_or(0)
     }
-    /// 系統電池優先；桌機沒有電池時，改用已連線藍牙耳機／音箱的電量。
+    /// 系統電池優先；桌機沒有電池時，改用已連線手機的電量，手機沒回報才退回藍牙耳機／音箱。
     pub fn display_bluetooth(&self) -> Option<&crate::bt::Device> {
-        if self.battery.is_some() {None} else {crate::bt::audio_with_battery(&self.bt)}
+        if self.battery.is_some() {None} else {crate::bt::battery_with_fallback(&self.bt)}
     }
     pub fn display_power(&self) -> Option<(u8,bool)> {
         self.battery.map(|level|(level,self.charging))
@@ -190,6 +190,14 @@ mod env_power_tests {
         let env=Env{bt:vec![headset(Some(64))],..Default::default()};
         assert_eq!(env.display_power(),Some((64,false)));
         assert_eq!(env.display_bluetooth().map(|device|device.kind),Some(DeviceKind::Headphones));
+    }
+
+    #[test]
+    fn phone_battery_is_preferred_over_bluetooth_audio() {
+        let mut phone=headset(Some(77));phone.id="PHONE".into();phone.name="iPhone 13 Por Max".into();phone.kind=DeviceKind::Phone;
+        let env=Env{bt:vec![headset(Some(30)),phone],..Default::default()};
+        assert_eq!(env.display_power(),Some((77,false)));
+        assert_eq!(env.display_bluetooth().map(|device|device.name.as_str()),Some("iPhone 13 Por Max"));
     }
 
     #[test]
@@ -3180,7 +3188,7 @@ impl App {
         let bt_power=env.display_bluetooth().map(|device|device.kind);
         let show_battery=self.settings.show_battery && power.is_some();
 
-        // 顶栏终点布局：[电池][日期][时钟] 作为一组整体居中；顯示藍牙電量時多留耳機圖示的位置。
+        // 顶栏终点布局：[电池][日期][时钟] 作为一组整体居中；顯示手機或耳機電量時多留裝置圖示的位置。
         let date_w = base.text_w(&env.date, size::DATE, W::Regular);
         let clock_w = paint::clock_width(base,&clock,size::CLOCK);
         let battery_space=if show_battery {if bt_power.is_some(){34.0}else{24.0}}else{0.0};
@@ -3207,6 +3215,15 @@ impl App {
             paint::battery(&base.faded(lerp(layout.clearance(bar::BATTERY),1.0,m)), bpos.0, bpos.1, level, charging, bk);
             if let Some(kind)=bt_power {
                 crate::extras::device_icon(&base.faded(lerp(layout.clearance(bar::BATTERY),1.0,m)),kind,bpos.0-22.0*bk,bpos.1-4.25*bk,8.5*bk);
+            }
+            // 滑過電量圈就看得到是哪一顆裝置，避免手機與耳機同時連線時只剩一個數字。
+            let label=match env.display_bluetooth() {
+                Some(device)=>device.summary(),
+                None=>level.map(|level|format!("系統電池 · 電量 {level}%")).unwrap_or_default(),
+            };
+            if !label.is_empty() {
+                let hit=Rect::from_min_size(Pos2::new(bpos.0-30.0*bk,bpos.1-10.0),Vec2::new(62.0*bk,28.0));
+                base.ui.interact(hit,egui::Id::new("island-battery-device"),egui::Sense::hover()).on_hover_text(label);
             }
         }
 
