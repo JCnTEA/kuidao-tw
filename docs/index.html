@@ -1022,6 +1022,58 @@ footer{border-top-color:rgba(125,211,252,.12)}
     go(0, false);
   })();
 
+  // 首屏島體：時間每秒更新、氣溫自動抓取、番茄專注 25 分鐘倒數。
+  (function(){
+    var clock = document.querySelector('.hi-clock');
+    var weather = document.querySelector('.hi-weather');
+    var temp = weather && weather.querySelector('b');
+    var track = document.querySelector('.hi-track');
+    var tomato = document.querySelector('.hi-tomato');
+
+    function pad(n){ return n < 10 ? '0' + n : String(n); }
+    function tickClock(){
+      var now = new Date();
+      if(clock) clock.textContent = (now.getHours() < 12 ? '上午 ' : '下午 ') + now.getHours() + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+      setTimeout(tickClock, 1000 - (Date.now() % 1000) + 10);
+    }
+    tickClock();
+
+    // 台灣預設座標；抓不到就保留畫面上的 19°，不影響其他區塊。
+    if(temp && window.fetch){
+      var controller = window.AbortController ? new AbortController() : null;
+      var timer = controller ? setTimeout(function(){ controller.abort(); }, 6000) : null;
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=25.033&longitude=121.5654&current=temperature_2m,weather_code&timezone=auto', controller ? {signal:controller.signal} : undefined)
+        .then(function(res){ if(!res.ok) throw new Error('weather'); return res.json(); })
+        .then(function(data){
+          var value = data && data.current && data.current.temperature_2m;
+          if(typeof value === 'number' && isFinite(value)){
+            temp.textContent = Math.round(value) + '°';
+            weather.setAttribute('aria-label', '目前氣溫 ' + Math.round(value) + ' 度');
+          }
+        })
+        .catch(function(){})
+        .then(function(){ if(timer) clearTimeout(timer); });
+    }
+
+    if(track){
+      var total = 25 * 60, left = total, last = Date.now();
+      if(tomato) tomato.setAttribute('title', '專注模式倒數 25 分鐘');
+      track.setAttribute('aria-label', '專注模式剩餘 25 分鐘');
+      function tickFocus(){
+        var now = Date.now();
+        left -= (now - last) / 1000;
+        last = now;
+        if(left <= 0){ left = total; }
+        var seconds = Math.ceil(left);
+        var text = pad(Math.floor(seconds / 60)) + ':' + pad(seconds % 60);
+        track.textContent = text;
+        track.setAttribute('aria-label', '專注模式剩餘 ' + Math.floor(seconds / 60) + ' 分 ' + (seconds % 60) + ' 秒');
+      }
+      tickFocus();
+      setInterval(tickFocus, 1000);
+    }
+  })();
+
   // 導覽目前區塊提示
   var links = Array.prototype.slice.call(document.querySelectorAll('.menu a'));
   var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
