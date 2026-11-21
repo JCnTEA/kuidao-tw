@@ -69,7 +69,7 @@ kuidao.exe --license 授權碼
 
 ## 下載與更新
 
-- 安裝版：`GuiDao-DynamicIsland-Setup-v版本-x64.exe`，可選安裝路徑、桌面捷徑、開機自啟。
+- 安裝版：`Kuidao-Setup-TW-x64.exe`，固定檔名、不帶版本號；可選安裝路徑、桌面捷徑、開機自啟。
 - 免安裝版：解壓後執行 `kuidao.exe`，資料仍寫在 `%APPDATA%\Kuidao`。
 - 更新：設定 → 關於 → 檢查更新；升級保留設定與資料，卸載同樣保留。
 

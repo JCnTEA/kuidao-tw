@@ -79,7 +79,7 @@ jobs:
           if (Test-Path NOTICE)       { Copy-Item NOTICE dist }
           if (Test-Path LICENSE)      { Copy-Item LICENSE dist }
           Compress-Archive -Path "dist\*" -DestinationPath $name -Force
-          $setup = "Kuidao-Setup-v$ver-tw-x64.exe"
+          $setup = "Kuidao-Setup-TW-x64.exe"
           $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
           & $nsis /V2 /WX "/DAPP_VERSION=$ver" "/DPROJECT_DIR=$PWD" "/DBOOTSTRAP_EXE=$(Join-Path $PWD 'target\release\kuidao-bootstrap.exe')" "/DOUTPUT_FILE=$(Join-Path $PWD $setup)" installer\setup.nsi
           if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
@@ -101,3 +101,17 @@ jobs:
             ${{ env.ASSET }}
             ${{ env.SETUP }}
           fail_on_unmatched_files: true
+
+      - name: 更新官網固定下載檔
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path docs\download | Out-Null
+          Copy-Item $env:SETUP "docs\download\Kuidao-Setup-TW-x64.exe" -Force
+          git config user.name "鬼島 發布"
+          git config user.email "bot@users.noreply.github.com"
+          git add "docs/download/Kuidao-Setup-TW-x64.exe"
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          git commit -m "release: 更新官網固定安裝檔"
+          git pull --rebase --autostash origin main
+          git push

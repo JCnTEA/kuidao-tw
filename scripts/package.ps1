@@ -62,7 +62,7 @@ try {
     # 诊断脚本本身内嵌在程序里，不再单独附带，也就不会出现新程序配旧脚本。
     Copy-Item -LiteralPath (Join-Path $projectRoot 'installer\收集岛仔诊断.cmd') -Destination $stagingDirectory
     # 台灣版：安裝檔固定用英文檔名，避免郵件與防毒對中文名誤判。
-    $setup = Join-Path $outputDirectory "Kuidao-Setup-v$version-tw-x64.exe"
+    $setup = Join-Path $outputDirectory "Kuidao-Setup-TW-x64.exe"
     & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DPROJECT_DIR=$projectRoot" "/DBOOTSTRAP_EXE=$bootstrap" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
     $archive = Join-Path $outputDirectory "$packageName.zip"
