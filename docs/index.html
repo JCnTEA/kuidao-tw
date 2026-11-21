@@ -1040,19 +1040,30 @@ footer{border-top-color:rgba(125,211,252,.12)}
 
     // 台灣預設座標；抓不到就保留畫面上的 19°，不影響其他區塊。
     if(temp && window.fetch){
-      var controller = window.AbortController ? new AbortController() : null;
-      var timer = controller ? setTimeout(function(){ controller.abort(); }, 6000) : null;
-      fetch('https://api.open-meteo.com/v1/forecast?latitude=25.033&longitude=121.5654&current=temperature_2m,weather_code&timezone=auto', controller ? {signal:controller.signal} : undefined)
-        .then(function(res){ if(!res.ok) throw new Error('weather'); return res.json(); })
-        .then(function(data){
-          var value = data && data.current && data.current.temperature_2m;
-          if(typeof value === 'number' && isFinite(value)){
-            temp.textContent = Math.round(value) + '°';
-            weather.setAttribute('aria-label', '目前氣溫 ' + Math.round(value) + ' 度');
-          }
-        })
-        .catch(function(){})
-        .then(function(){ if(timer) clearTimeout(timer); });
+      var weatherBusy = false;
+      function loadWeather(){
+        if(weatherBusy) return;
+        weatherBusy = true;
+        var controller = window.AbortController ? new AbortController() : null;
+        var timer = controller ? setTimeout(function(){ controller.abort(); }, 6000) : null;
+        fetch('https://api.open-meteo.com/v1/forecast?latitude=25.033&longitude=121.5654&current=temperature_2m,weather_code&timezone=auto', controller ? {signal:controller.signal} : undefined)
+          .then(function(res){ if(!res.ok) throw new Error('weather'); return res.json(); })
+          .then(function(data){
+            var value = data && data.current && data.current.temperature_2m;
+            if(typeof value === 'number' && isFinite(value)){
+              temp.textContent = Math.round(value) + '°';
+              weather.setAttribute('aria-label', '目前氣溫 ' + Math.round(value) + ' 度');
+            }
+          })
+          .catch(function(){})
+          .then(function(){
+            if(timer) clearTimeout(timer);
+            weatherBusy = false;
+          });
+      }
+      loadWeather();
+      setInterval(loadWeather, 10 * 60 * 1000);
+      document.addEventListener('visibilitychange', function(){ if(!document.hidden) loadWeather(); });
     }
 
     if(track){
