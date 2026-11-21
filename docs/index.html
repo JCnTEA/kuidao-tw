@@ -203,6 +203,7 @@ section{scroll-margin-top:104px}
 .fc-summary{font-size:13.5px;line-height:1.65;color:#70737e;max-width:94%}
 .fc-icons{display:flex;align-items:center;gap:8px;margin-top:14px}
 .fc-icons img{width:24px;height:24px;border-radius:50%;display:block}
+.fc-icons.social img{box-sizing:border-box;background:#fff;padding:1.5px;object-fit:contain}
 .fc-peek{
   position:absolute;left:26px;right:26px;bottom:18px;height:96px;overflow:hidden;
   font-size:13px;line-height:1.75;color:#50535e;opacity:.48;filter:blur(4.2px);
@@ -210,6 +211,7 @@ section{scroll-margin-top:104px}
   -webkit-mask-image:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 18%,#000 55%,#000 100%);
   mask-image:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 18%,#000 55%,#000 100%);
 }
+.fcard.has-icons .fc-peek{height:64px;bottom:12px}
 .fcard::after{
   content:"";position:absolute;left:0;right:0;bottom:0;height:130px;pointer-events:none;
   background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.56));
@@ -643,11 +645,19 @@ footer{border-top-color:rgba(125,211,252,.12)}
         </div>
       </article>
 
-      <article class="fcard" tabindex="0" role="button" aria-expanded="false">
+      <article class="fcard has-icons" tabindex="0" role="button" aria-expanded="false">
         <div class="fc-copy">
           <span class="fc-kicker">MESSAGES · 02</span>
           <h3>訊息上島</h3>
           <p class="fc-summary">LINE、手機連結、Messenger、Threads、Facebook、Instagram 集中顯示。</p>
+          <div class="fc-icons social">
+            <img src="images/social/line.webp" alt="LINE" width="24" height="24">
+            <img src="images/social/phonelink.webp" alt="手機連結" width="24" height="24">
+            <img src="images/social/messenger.webp" alt="Messenger" width="24" height="24">
+            <img src="images/social/threads.webp" alt="Threads" width="24" height="24">
+            <img src="images/social/facebook.webp" alt="Facebook" width="24" height="24">
+            <img src="images/social/instagram.webp" alt="Instagram" width="24" height="24">
+          </div>
         </div>
         <p class="fc-peek" aria-hidden="true">LINE、手機連結、Instagram、Threads、Facebook、Messenger 與系統通知集中到島上，頭像與來源一眼分辨；圖示右上累計未讀則數，點一下直接回到發出通知的桌面程式，不用自己找是哪一個視窗。</p>
         <div class="fc-detail">
@@ -703,7 +713,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
         </div>
       </article>
 
-      <article class="fcard" tabindex="0" role="button" aria-expanded="false">
+      <article class="fcard has-icons" tabindex="0" role="button" aria-expanded="false">
         <div class="fc-copy">
           <span class="fc-kicker">MAIL · 06</span>
           <h3>信箱與驗證碼</h3>
