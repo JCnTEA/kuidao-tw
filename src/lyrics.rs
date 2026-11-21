@@ -261,6 +261,9 @@ pub fn fetch_for_source(source:&str,track:&str,artist:&str,duration:f64,song_id:
     if crate::smtc::is_browser_source(source) {
         return fetch_browser(track,artist,duration);
     }
+    if crate::smtc::is_kkbox(source) {
+        return fetch_kkbox(track,artist,duration);
+    }
     #[cfg(windows)]
     if source.eq_ignore_ascii_case("kwmusic.exe") {
         if let Some(lyrics)=crate::smtc::kuwo::read_lyrics(track,artist){trace(||"酷我本機:命中".into());return Ok(lyrics);}
@@ -321,7 +324,13 @@ pub fn fetch_for_source(source:&str,track:&str,artist:&str,duration:f64,song_id:
             Err(miss)=>trace(||format!("汽水本機:{}",miss.label())),
         }
     }
-    fetch(track,artist,duration)
+    let primary=fetch(track,artist,duration);
+    if primary.as_ref().is_ok_and(|lyrics|lyrics.synced){return primary;}
+    match fetch_kkbox_only(track,artist,duration,&[]) {
+        Ok(lyrics) if lyrics.synced=>{trace(||"其他播放器改用KKBOX:命中".into());Ok(lyrics)}
+        Ok(lyrics)=>if primary.is_err(){Ok(lyrics)}else{primary},
+        Err(_)=>primary,
+    }
 }
 
 fn parse_krc(raw:&str)->Lyrics {
@@ -468,8 +477,343 @@ fn fetch_browser(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError>
     let (result,_)=fetch_with_sources_detail_hints(
         Some("https://music.163.com"),Some("https://c.y.qq.com"),Some("https://lrclib.net"),
         track,artist,duration,&hints);
+    if !result.as_ref().is_ok_and(|lyrics|lyrics.synced) {
+        match fetch_kkbox_only(track,artist,duration,&hints) {
+            Ok(lyrics)=>{
+                trace(||format!("瀏覽器改用KKBOX:{}行",lyrics.lines.len()));
+                if lyrics.synced && !romanized(track,&lyrics){write_cache(&path,&lyrics);}
+                return Ok(lyrics);
+            }
+            Err(error)=>trace(||format!("瀏覽器KKBOX:{}",error.label())),
+        }
+    }
     if let Ok(lyrics)=&result {if lyrics.synced && !romanized(track,lyrics){write_cache(&path,lyrics);}}
     result
+}
+
+/// KKBOX：先用公開搜尋頁找到歌曲 crypt id，再從嵌入播放器取得短期 access token，
+/// 最後呼叫 KKBOX 的 `/tracks/{id}/lyrics`。這條路徑不要求使用者登入，也不用自備 API 金鑰。
+fn fetch_kkbox(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError> {
+    fetch_kkbox_impl(track,artist,duration,&[],true)
+}
+
+/// 只查 KKBOX、不再回頭查其他來源；給瀏覽器與其他播放器當後備用，避免重複往返。
+fn fetch_kkbox_only(track:&str,artist:&str,duration:f64,hints:&[(String,String)])->Result<Lyrics,FetchError> {
+    fetch_kkbox_impl(track,artist,duration,hints,false)
+}
+
+/// 公開 widget 的歌曲 id 只拿來換一顆短期權杖；權杖本身可同時查搜尋與歌詞。
+/// 這樣不必先抓會被 WAF 擋下的歌曲頁，也能直接拿到 KKBOX 的正規搜尋結果。
+const KKBOX_TOKEN_SEED:&str="CkBLTM6qnNz68F3iVQ";
+
+fn kkbox_token_seed()->Option<String> {
+    static CACHE:std::sync::OnceLock<std::sync::Mutex<Option<(String,u64)>>>=std::sync::OnceLock::new();
+    let cache=CACHE.get_or_init(||std::sync::Mutex::new(None));
+    let now=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs();
+    if let Ok(guard)=cache.lock() {
+        if let Some((token,at))=guard.as_ref() {
+            if now.saturating_sub(*at)<900 {return Some(token.clone());}
+        }
+    }
+    for seed in [KKBOX_TOKEN_SEED,"8n6WTr6FMjx8RKg7R3","DX6CNUSSg_DL_T2vOY"] {
+        if let Some(token)=kkbox_token(seed) {
+            if let Ok(mut guard)=cache.lock() {*guard=Some((token.clone(),now));}
+            return Some(token);
+        }
+    }
+    None
+}
+
+fn fetch_kkbox_impl(track:&str,artist:&str,duration:f64,hints:&[(String,String)],allow_fallback:bool)->Result<Lyrics,FetchError> {
+    let common=cache_path(track,artist,duration);
+    let path=common.parent().unwrap_or(std::path::Path::new(".")).join("kkbox").join(common.file_name().unwrap());
+    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"KKBOX本機快取:命中".into());return Ok(lyrics);}
+    if let Some(remembered)=read_negative(&path){trace(||"KKBOX近期已確認無同步歌詞".into());return remembered;}
+
+    let mut queries=Vec::new();
+    let mut seen_queries=Vec::new();
+    for query in std::iter::once(format!("{} {}",track.trim(),artist.trim()))
+        .chain(std::iter::once(track.trim().to_string()))
+        .chain(hints.iter().flat_map(|(title,artist)|{
+            title_variants(title).into_iter().map(move |variant|format!("{} {}",variant,artist.trim()))
+        }))
+        .chain(hints.iter().map(|(title,artist)|format!("{} {}",title.trim(),artist.trim())))
+    {
+        if !query.trim().is_empty() && !seen_queries.iter().any(|seen|seen==&query) {
+            seen_queries.push(query.clone());
+            queries.push(query);
+        }
+    }
+
+    let api_token=kkbox_token_seed();
+    let mut all=Vec::new();
+    let mut seen_ids=Vec::new();
+    if let Some(token)=api_token.as_ref() {
+        for query in queries.iter().take(4) {
+            let url=format!("https://api.kkbox.com/v1.1/search?q={}&type=track&territory=TW",urlencode(query));
+            match request_json_auth(&url,"https://www.kkbox.com/tw/tc/",token) {
+                Ok(json)=>{
+                    let found=kkbox_api_candidates(&json);
+                    trace(||format!("KKBOX API搜尋「{}」:{}筆",query,found.len()));
+                    append_candidates(&mut all,&mut seen_ids,found);
+                }
+                Err(error)=>trace(||format!("KKBOX API搜尋「{}」:{}",query,error.label())),
+            }
+        }
+    }
+
+    // API 權杖失效或搜尋結果為空時，才退回公開搜尋頁。
+    if all.is_empty() {
+        for query in queries.iter().take(3) {
+            let search_url=format!("https://www.kkbox.com/tw/tc/search?q={}&type=song",urlencode(query));
+            match request_text(&search_url,"https://www.kkbox.com/tw/tc/") {
+                Ok(html)=>{
+                    let found=kkbox_candidates(&html);
+                    trace(||format!("KKBOX搜尋「{}」:{}筆",query,found.len()));
+                    append_candidates(&mut all,&mut seen_ids,found);
+                }
+                Err(error)=>trace(||format!("KKBOX搜尋「{}」:{}",query,error.label())),
+            }
+        }
+    }
+
+    let mut identities=title_identity_variants(track,artist);
+    identities.extend(hints.iter().flat_map(|(title,artist)|title_identity_variants(title,artist)));
+    identities.sort();identities.dedup();
+    let candidates=kkbox_pick_for(all,&identities,track,duration);
+    trace(||format!("KKBOX比對:{}筆可用",candidates.len()));
+    trace(||format!("KKBOX比對:{}筆可用",candidates.len()));
+
+    let mut last_error=None;
+    for candidate in candidates.iter().take(4) {
+        if !candidate.has_lyrics {continue;}
+        let token=if let Some(token)=api_token.clone(){token}
+            else if let Some(token)=kkbox_token(&candidate.id){token}
+            else{last_error=Some(FetchError::Unavailable("KKBOX 播放器沒有提供取詞權杖".into()));continue;};
+        let api=format!("https://api.kkbox.com/v1.1/tracks/{}/lyrics?territory=TW",candidate.id);
+        match request_json_auth(&api,"https://www.kkbox.com/",&token) {
+            Ok(json)=>{
+                if let Some(lyrics)=kkbox_lyrics(&json) {
+                    trace(||format!("KKBOX取詞:{}行",lyrics.lines.len()));
+                    if lyrics.synced && !romanized(track,&lyrics){write_cache(&path,&lyrics);}
+                    return Ok(lyrics);
+                }
+                last_error=Some(FetchError::NotFound);
+            }
+            Err(error)=>{trace(||format!("KKBOX取詞:{}",error.label()));last_error=Some(error);}
+        }
+    }
+
+    if !allow_fallback {
+        return Err(last_error.unwrap_or(FetchError::NotFound));
+    }
+    // KKBOX 沒有這首歌或取詞失敗時，仍走網易雲、QQ 音樂與 LRCLIB，避免整個來源直接空白。
+    let fallback=fetch(track,artist,duration);
+    if matches!(&fallback,Err(FetchError::NotFound)){write_negative(&path,None);}
+    match (&fallback,&last_error) {
+        (Ok(lyrics),_)=>Ok(lyrics.clone()),
+        (Err(FetchError::NotFound),Some(FetchError::Unavailable(message)))=>Err(FetchError::Unavailable(message.clone())),
+        (Err(error),_)=>Err(error.clone()),
+    }
+}
+
+#[derive(Clone,Debug)]
+struct KkboxCandidate {
+    id:String,
+    title:String,
+    artist:String,
+    duration:f64,
+    has_lyrics:bool,
+}
+
+fn kkbox_candidates(html:&str)->Vec<KkboxCandidate> {
+    static BLOCK:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    static ID:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    static DURATION:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    static HAS_LYRICS:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    static TITLE:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    static ARTIST:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let block=BLOCK.get_or_init(||regex::Regex::new(r"(?s)<song-li\b(.*?)</song-li>").unwrap());
+    let id=ID.get_or_init(||regex::Regex::new(r#"data-id="([^"]+)""#).unwrap());
+    let duration=DURATION.get_or_init(||regex::Regex::new(r#"data-duration="([^"]*)""#).unwrap());
+    let has_lyrics=HAS_LYRICS.get_or_init(||regex::Regex::new(r#"data-lyrics="([^"]*)""#).unwrap());
+    let title=TITLE.get_or_init(||regex::Regex::new(r#"slot="song-name"[^>]*title="([^"]*)""#).unwrap());
+    let artist=ARTIST.get_or_init(||regex::Regex::new(r#"slot="artist-name"[^>]*title="([^"]*)""#).unwrap());
+    block.captures_iter(html).filter_map(|row|{
+        let body=&row[1];
+        let id=id.captures(body).map(|c|c[1].to_string())?;
+        let title=title.captures(body).map(|c|decode_html(&c[1]))?;
+        let artist=artist.captures(body).map(|c|decode_html(&c[1])).unwrap_or_default();
+        let duration=duration.captures(body).map(|c|kkbox_duration(&decode_html(&c[1]))).unwrap_or(0.0);
+        let has_lyrics=has_lyrics.captures(body).is_some_and(|c|&c[1]=="true");
+        Some(KkboxCandidate{id,title,artist,duration,has_lyrics})
+    }).collect()
+}
+
+fn title_variants(title:&str)->Vec<String> {
+    let cleaned=clean_title(title);
+    let mut out=vec![cleaned.clone()];
+    // 「歌手 ft. 合唱者 歌名」：最後一個連字號後面通常就是真正的歌名。
+    let (_,guests)=split_feature(&cleaned);
+    if !guests.is_empty() {
+        if let Some((_,song))=guests.rsplit_once(['-','–','—']) {
+            let song=song.trim();
+            if song.chars().count()>=2 && song.chars().any(|c|c.is_ascii_alphabetic()) {out.push(song.to_string());}
+        }
+    }
+    // 「愛著啊 AI CHAO A」：中文歌名後面接英文拼音，資料庫多半只收中文那段。
+    let cjk=cleaned.chars().take_while(|c|!c.is_ascii_alphabetic()).collect::<String>();
+    let cjk=cjk.trim_matches(|c:char|c.is_whitespace()||"-–—|｜:：".contains(c)).trim().to_string();
+    if cjk.chars().count()>=2 && cjk.chars().count()<cleaned.chars().count() {out.push(cjk);}
+    out.sort();out.dedup();out
+}
+
+fn title_identity_variants(title:&str,artist:&str)->Vec<(String,Vec<String>)> {
+    let mut out=Vec::new();
+    for variant in title_variants(title) {
+        let identity=song_identity(&variant,artist);
+        if !out.contains(&identity) {out.push(identity);}
+    }
+    // 合唱標題把「主歌手 + 合唱者」放進歌手欄，歌名只取最後一段。
+    let cleaned=clean_title(title);
+    let (lead,guests)=split_feature(&cleaned);
+    if !guests.is_empty() {
+        if let Some((guest,song))=guests.rsplit_once(['-','–','—']) {
+            if song.trim().chars().count()>=2 {
+                let identity=song_identity(song.trim(),&format!("{lead}/{guest}"));
+                if !out.contains(&identity) {out.push(identity);}
+            }
+        }
+    }
+    out
+}
+
+fn kkbox_pick(candidates:Vec<KkboxCandidate>,track:&str,artist:&str,duration:f64)->Vec<KkboxCandidate> {
+    let identities=title_identity_variants(track,artist);
+    kkbox_pick_for(candidates,&identities,track,duration)
+}
+
+fn kkbox_pick_for(candidates:Vec<KkboxCandidate>,identities:&[(String,Vec<String>)],track:&str,duration:f64)->Vec<KkboxCandidate> {
+    let mut accepted=candidates.into_iter().filter_map(|candidate|{
+        let diff=if duration>0.0&&candidate.duration>0.0{(candidate.duration-duration).abs()}else{0.0};
+        // 台語歌、老歌與 MV 常有前奏或片尾，時長差拉到 30%／4 分鐘仍可接受；
+        // 真正的防線是歌名與歌手署名，而不是秒數。
+        if duration>0.0&&candidate.duration>0.0&&diff>(duration*0.30).max(240.0){return None;}
+        let identity=song_identity(&candidate.title,&candidate.artist);
+        let rank=identities.iter().filter_map(|played|{
+            if played.1.is_empty()||played.0!=identity.0{return None;}
+            if played.1==identity.1{Some(0)}
+            else if credit_match(played,track,&identity,false){Some(1)}
+            else if credit_match(played,track,&identity,true){Some(2)}
+            else{None}
+        }).min()?;
+        Some((rank,diff,candidate))
+    }).collect::<Vec<_>>();
+    accepted.sort_by(|a,b|a.0.cmp(&b.0).then_with(||a.1.total_cmp(&b.1)));
+    accepted.into_iter().map(|(_,_,candidate)|candidate).collect()
+}
+
+fn append_candidates(all:&mut Vec<KkboxCandidate>,seen:&mut Vec<String>,found:Vec<KkboxCandidate>) {
+    for candidate in found {
+        if !seen.iter().any(|id|id==&candidate.id) {
+            seen.push(candidate.id.clone());
+            all.push(candidate);
+        }
+    }
+}
+
+fn kkbox_api_candidates(json:&serde_json::Value)->Vec<KkboxCandidate> {
+    let Some(rows)=json.pointer("/tracks/data").and_then(|value|value.as_array()) else{return Vec::new();};
+    rows.iter().filter_map(|row|{
+        let id=row.get("id").and_then(|value|value.as_str())?.to_string();
+        let title=row.get("name").and_then(|value|value.as_str())?.to_string();
+        let artist=row.pointer("/album/artist/name").and_then(|value|value.as_str())
+            .or_else(||row.pointer("/artists/0/name").and_then(|value|value.as_str()))
+            .unwrap_or_default().to_string();
+        let duration=row.get("duration").and_then(|value|value.as_f64()).unwrap_or(0.0)/1000.0;
+        Some(KkboxCandidate{id,title,artist,duration,has_lyrics:true})
+    }).collect()
+}
+
+fn kkbox_duration(raw:&str)->f64 {
+    let mut parts=raw.split(':');
+    let (Some(minute),Some(second))=(parts.next(),parts.next()) else{return 0.0;};
+    let (Ok(minute),Ok(second))=(minute.trim().parse::<f64>(),second.trim().parse::<f64>()) else{return 0.0;};
+    minute*60.0+second
+}
+
+fn kkbox_token(id:&str)->Option<String> {
+    let url=format!("https://widget.kkbox.com/v1/?id={id}&type=song");
+    let html=request_text(&url,"https://www.kkbox.com/").ok()?;
+    static TOKEN:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let token=TOKEN.get_or_init(||regex::Regex::new(r#"accessToken(?:&quot;|"):(?:&quot;|")([^"&<]+)"#).unwrap());
+    token.captures(&html).map(|c|decode_html(&c[1])).filter(|token|!token.is_empty())
+}
+
+fn kkbox_lyrics(json:&serde_json::Value)->Option<Lyrics> {
+    let full=json.get("full_text").and_then(|value|value.as_str())?;
+    if full.trim().is_empty(){return None;}
+    static LINE:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    static TAG:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let line=LINE.get_or_init(||regex::Regex::new(r"^\[(\d{2}):(\d{2})\.(\d{2})[^\]]*\]").unwrap());
+    let tag=TAG.get_or_init(||regex::Regex::new(r"<[^>]+>").unwrap());
+    let mut lines=Vec::new();
+    for raw in full.lines() {
+        let Some(captures)=line.captures(raw) else{continue;};
+        let (Ok(minute),Ok(second),Ok(centi))=(captures[1].parse::<u32>(),captures[2].parse::<u32>(),captures[3].parse::<u32>()) else{continue;};
+        if second>=60||centi>=100{continue;}
+        let text=tag.replace_all(&raw[captures.get(0).unwrap().end()..],"").trim().to_string();
+        if text.is_empty() || ["作詞","作曲","編曲","演唱","原唱","製作人","監製"].iter().any(|label|text.starts_with(*label)){continue;}
+        lines.push(LyricsLine{t:minute as f32*60.0+second as f32+centi as f32/100.0,text});
+    }
+    if lines.is_empty(){
+        let plain=tag.replace_all(full,"").lines().map(str::trim).filter(|line|!line.is_empty()).collect::<Vec<_>>().join("\n");
+        let lyrics=from_plain(&plain);
+        return (!lyrics.lines.is_empty()).then_some(lyrics);
+    }
+    lines.sort_by(|a,b|a.t.total_cmp(&b.t));
+    Some(Lyrics{synced:true,lines})
+}
+
+fn decode_html(raw:&str)->String {
+    let mut text=raw.replace("&amp;","&").replace("&quot;","\"").replace("&#39;","'").replace("&lt;","<").replace("&gt;",">").replace("&nbsp;"," ");
+    static NUM:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let num=NUM.get_or_init(||regex::Regex::new(r"&#(\d+);").unwrap());
+    text=num.replace_all(&text,|c:&regex::Captures|{
+        c[1].parse::<u32>().ok().and_then(char::from_u32).map(|c|c.to_string()).unwrap_or_default()
+    }).to_string();
+    text
+}
+
+fn request_text(url:&str,referer:&str)->Result<String,FetchError> {
+    let response=ureq::get(url)
+        .set("User-Agent",concat!("Kuidao/",env!("CARGO_PKG_VERSION")," (Windows)"))
+        .set("Referer",referer)
+        .set("Accept","text/html,application/xhtml+xml")
+        .timeout(std::time::Duration::from_secs(5))
+        .call()
+        .map_err(|e|FetchError::Unavailable(e.to_string()))?;
+    use std::io::Read;
+    let mut text=String::new();
+    response.into_reader().take((2*MAX_TEXT+1)as u64).read_to_string(&mut text).map_err(|e|FetchError::InvalidResponse(e.to_string()))?;
+    if text.len()>2*MAX_TEXT{rejected_lyrics();return Err(FetchError::InvalidResponse("KKBOX 頁面超過大小上限".into()));}
+    Ok(text)
+}
+
+fn request_json_auth(url:&str,referer:&str,token:&str)->Result<serde_json::Value,FetchError> {
+    let response=ureq::get(url)
+        .set("User-Agent",concat!("Kuidao/",env!("CARGO_PKG_VERSION")," (Windows)"))
+        .set("Referer",referer)
+        .set("Accept","application/json")
+        .set("Authorization",&format!("Bearer {token}"))
+        .timeout(std::time::Duration::from_secs(5))
+        .call()
+        .map_err(|e|FetchError::Unavailable(e.to_string()))?;
+    use std::io::Read;
+    let mut text=String::new();
+    response.into_reader().take((2*MAX_TEXT+1)as u64).read_to_string(&mut text).map_err(|e|FetchError::InvalidResponse(e.to_string()))?;
+    if text.len()>2*MAX_TEXT{rejected_lyrics();return Err(FetchError::InvalidResponse("KKBOX 歌詞響應超過大小上限".into()));}
+    serde_json::from_str(&text).map_err(|e|FetchError::InvalidResponse(e.to_string()))
 }
 
 pub fn fetch(track: &str, artist: &str, duration_secs: f64) -> Result<Lyrics, FetchError> {
@@ -675,7 +1019,7 @@ fn normalized(text:&str)->String {
 }
 
 pub(super) fn artist_set(artist:&str)->Vec<String>{
-    let mut parts=artist.split(['/', '、', ',', '，', '&', ';', '；']).map(normalized).filter(|s|!s.is_empty()).collect::<Vec<_>>();
+    let mut parts=artist.split(['/', '、', ',', '，', '&', ';', '；', '(', '（', ')', '）']).map(normalized).filter(|s|!s.is_empty()).collect::<Vec<_>>();
     parts.sort();parts.dedup();parts
 }
 
@@ -1661,6 +2005,50 @@ mod tests {
         let path=std::env::temp_dir().join(format!("daozai-roman-{}.lrc",std::process::id()));
         write_cache(&path,&parse_lrc("[00:01.00]Hoksi ireon na ttaeme himdeureonni\n[00:04.00]Amu daedap eomneun neo\n[00:07.00]Babocheoreom wae neoreul jiuji mothae"));
         assert!(read_cache(&path).filter(|lyrics|!romanized(title,lyrics)).is_none());std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn kkbox_parses_search_rows_and_timed_lyrics() {
+        let html=r#"<song-li data-id="CkBLTM6qnNz68F3iVQ" data-duration="3:28" data-explicitness="false" data-lyrics="true" data-short="https://kkbox.fm/x">
+            <a slot="song-name" title="NEON" href="https://www.kkbox.com/tw/tc/song/CkBLTM6qnNz68F3iVQ"><mark-text>NEON</mark-text></a>
+            <a slot="album-name" title="NEON" href="/album/8svAcR"><mark-text>NEON</mark-text></a>
+            <a slot="artist-name" href="/artist/PXmXt" title="A2O, A2O LITE"><mark-text>A2O, A2O LITE</mark-text></a>
+        </song-li>"#;
+        let rows=kkbox_candidates(html);
+        assert_eq!(rows.len(),1);
+        assert_eq!(rows[0].title,"NEON");
+        assert_eq!(rows[0].id,"CkBLTM6qnNz68F3iVQ");
+        assert!((rows[0].duration-208.0).abs()<0.1);
+        assert!(rows[0].has_lyrics);
+        let picked=kkbox_pick(rows,"NEON","A2O LITE",207.9);
+        assert_eq!(picked.len(),1,"歌手欄是 A2O, A2O LITE，主藝人也要能匹配");
+        let json=serde_json::json!({"full_text":"[00:00.00 00:00.01]<type=0>作詞 ¦ 測試\n[00:05.20 00:09.00]<type=0>第一句\n[00:10.50 00:14.00]<type=0>第二句"});
+        let lyrics=kkbox_lyrics(&json).unwrap();
+        assert!(lyrics.synced);
+        assert_eq!(lyrics.lines.len(),2,"作詞／作曲署名不應成為歌詞行");
+        assert!((lyrics.lines[0].t-5.2).abs()<0.01);
+        assert!((lyrics.lines[1].t-10.5).abs()<0.01);
+    }
+
+    #[test]
+    #[ignore="聯網：用 KKBOX 公開搜尋與播放器權杖查 NEON 的同步歌詞"]
+    fn live_kkbox_fetches_synced_lyrics() {
+        let lyrics=fetch_kkbox("NEON","A2O LITE",207.9).expect("應抓到 KKBOX 歌詞");
+        println!("KKBOX：{} 行，同步={}",lyrics.lines.len(),lyrics.synced);
+        assert!(lyrics.synced && lyrics.lines.len()>3);
+    }
+
+    #[test]
+    #[ignore="聯網：模擬瀏覽器 YouTube 標題，確認 KKBOX 後備能補上台語與華語歌"]
+    fn live_browser_titles_fall_back_to_kkbox() {
+        for (track,artist,duration) in [
+            ("高爾宣OSN ft.李浩瑋 Howard Lee-Drowning (Official Music Video)","高爾宣OSN",171.0),
+            ("江蕙 - 愛著啊 AI CHAO A (Official Music Video)","阿爾發音樂",0.0),
+        ] {
+            let lyrics=fetch_browser(track,artist,duration).unwrap_or_else(|error|panic!("{track} 抓詞失敗：{error:?}"));
+            println!("瀏覽器→KKBOX：{track} / {} 行，同步={}",lyrics.lines.len(),lyrics.synced);
+            assert!(lyrics.lines.len()>2,"至少要拿到歌詞行");
+        }
     }
 
     #[test]

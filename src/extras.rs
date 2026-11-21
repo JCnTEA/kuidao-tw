@@ -1574,7 +1574,7 @@ impl App {
                                 self.games.refresh();
                             }
                         });
-                        settings_hint(ui,"頁面只在使用者打開時掃描一次；按下右上角「重新掃描」可立即更新。");
+                        settings_hint(ui,"頁面只在使用者打開時掃描一次；按下右上角「重新掃描」可立即更新。已移除的捷徑按「顯示全部」恢復。");
                     }
                     12=>{
                         let on=self.settings_feature_header(ui,crate::app::WEATHER_PAGE,"當地天氣與七日預報",|_,_|{});
@@ -1840,7 +1840,7 @@ impl App {
                                 let mut advance=-self.settings.lyric_delay_ms as f64/1000.0;
                                 if setting_number(ui,"時間偏移",&mut advance,-5.0,5.0," 秒",0.1){self.settings.lyric_delay_ms=(-advance*1000.0).round()as i32;}
                                 settings_hint(ui,"歌詞和歌聲對不上時調整：正數提前，負數延後；預設提前 0.35 秒。");
-                                settings_hint(ui,"查詞為自動進行：播放器本機歌詞 → 網易雲 → QQ 音樂 → LRCLIB；找不到時按播放器上的「詞」可重試。");
+                                settings_hint(ui,"查詞為自動進行：播放器本機歌詞 → KKBOX → 網易雲 → QQ 音樂 → LRCLIB；找不到時按播放器上的「詞」可重試。");
                                 settings_hint(ui,"Chrome、Edge、Firefox 播 YouTube／YouTube Music 時，會從 Windows 右下角播放卡自動讀取歌名；瀏覽器縮小也持續顯示，不需要安裝擴充功能。");
                                 settings_hint(ui,"YouTube 標題常混著頻道名、「Official Video」與「- YouTube」；抓詞前會先拆成歌名與歌手，再逐組比對同步歌詞。");
                                 ui.separator();

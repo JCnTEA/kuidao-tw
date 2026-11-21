@@ -7517,7 +7517,17 @@ fn game_library_preview(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let dest=std::path::PathBuf::from(std::env::var_os("KUIDAO_GAME_PREVIEW_DIR").expect("需指定預覽目錄"));std::fs::create_dir_all(&dest).unwrap();
     let mut h=H::new();let mut r=feature_raster();h.app.settings.skin=crate::model::Skin::GradAurora;h.app.show_page(9);
-    shoot_feature(&mut h,&mut r,&dest,"game-library",90,Some(H::local(200.0,10.0)),"2026-11-21");
+    h.app.games.refresh();
+    shoot_feature(&mut h,&mut r,&dest,"game-library",240,Some(H::local(200.0,10.0)),"2026-11-21");
+}
+
+#[test]
+#[ignore="按需匯出遊戲庫長按移除選單畫面"]
+fn game_library_remove_preview(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let dest=std::path::PathBuf::from(std::env::var_os("KUIDAO_GAME_PREVIEW_DIR").expect("需指定預覽目錄"));std::fs::create_dir_all(&dest).unwrap();
+    let mut h=H::new();let mut r=feature_raster();h.app.settings.skin=crate::model::Skin::GradAurora;h.app.games.refresh();h.app.games.hidden=vec!["Forza Horizon 5".into()];h.app.games.menu=Some("Riot Client".into());h.app.show_page(9);
+    shoot_feature(&mut h,&mut r,&dest,"game-library-remove",240,Some(H::local(200.0,80.0)),"2026-11-21");
 }
 
 #[test]

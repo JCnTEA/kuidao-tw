@@ -24,12 +24,19 @@ pub struct Game {
     pub name: String,
     pub subtitle: String,
     pub kind: Kind,
+    /// 實際程式或 Steam 快取圖示；找不到時退回字母磚。
+    pub icon: Option<PathBuf>,
     launch: Launch,
     last_played: u64,
 }
 
 pub struct Library {
     pub games: Vec<Game>,
+    /// 這次檢視中按 × 或長按移除的項目；重新掃描仍保留，按「顯示全部」恢復。
+    pub hidden: Vec<String>,
+    /// 長按圖示後正在等待確認移除的項目。
+    pub menu: Option<String>,
+    press: Option<(String, f64)>,
     pub scanned: bool,
     pub steam_count: usize,
     pub riot_count: usize,
@@ -41,6 +48,9 @@ impl Default for Library {
     fn default() -> Self {
         Self {
             games: Vec::new(),
+            hidden: Vec::new(),
+            menu: None,
+            press: None,
             scanned: false,
             steam_count: 0,
             riot_count: 0,
@@ -52,7 +62,13 @@ impl Default for Library {
 
 impl Library {
     pub fn load() -> Self {
-        Self::default()
+        Self {
+            hidden: std::fs::read(hidden_path())
+                .ok()
+                .and_then(|raw| serde_json::from_slice(&raw).ok())
+                .unwrap_or_default(),
+            ..Self::default()
+        }
     }
 
     /// 重新讀取 Steam 與 Riot。Steam 讀不到時仍保留 Riot 捷徑。
@@ -64,11 +80,39 @@ impl Library {
         steam.sort_by_key(|game| std::cmp::Reverse(game.last_played));
         riot.sort_by(|a, b| riot_rank(&a.name).cmp(&riot_rank(&b.name)));
         self.error = steam_error;
+        self.menu = None;
+        self.press = None;
         self.games = riot;
         self.games.append(&mut steam);
         self.scanned = true;
         self.scanned_at = chrono::Local::now().format("%H:%M").to_string();
     }
+
+    pub(crate) fn reset_hidden(&mut self) {
+        self.hidden.clear();
+        self.save_hidden();
+    }
+
+    pub(crate) fn hide(&mut self, name: &str) {
+        if !self.hidden.iter().any(|hidden| hidden == name) {
+            self.hidden.push(name.to_string());
+            self.save_hidden();
+        }
+    }
+
+    pub(crate) fn save_hidden(&self) {
+        let path = hidden_path();
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(raw) = serde_json::to_vec_pretty(&self.hidden) {
+            let _ = std::fs::write(path, raw);
+        }
+    }
+}
+
+fn hidden_path() -> PathBuf {
+    crate::model::config_dir().join("games-hidden.json")
 }
 
 fn riot_rank(name: &str) -> usize {
@@ -259,6 +303,49 @@ fn steam_libraries(root: &Path) -> Vec<PathBuf> {
     dedup_paths(libraries)
 }
 
+fn steam_icon(root: &Path, library: &Path, appid: u32) -> Option<PathBuf> {
+    let dirs = [
+        root.join("appcache").join("librarycache").join(appid.to_string()),
+        library.join("appcache").join("librarycache").join(appid.to_string()),
+    ];
+    for dir in dirs {
+        if !dir.is_dir() {
+            continue;
+        }
+        let mut named = None;
+        for name in ["library_600x900.jpg", "header.jpg", "logo.png"] {
+            let path = dir.join(name);
+            if path.is_file() {
+                named = Some(path);
+            }
+        }
+        let mut small = None;
+        if let Ok(entries) = std::fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let image_file = path
+                    .extension()
+                    .and_then(|extension| extension.to_str())
+                    .is_some_and(|extension| matches!(extension.to_ascii_lowercase().as_str(), "jpg" | "jpeg" | "png"));
+                if image_file
+                    && image::image_dimensions(&path)
+                        .is_ok_and(|(width, height)| width == height && width <= 48)
+                {
+                    small = Some(path);
+                    break;
+                }
+            }
+        }
+        if small.is_some() {
+            return small;
+        }
+        if named.is_some() {
+            return named;
+        }
+    }
+    None
+}
+
 fn scan_steam() -> (Vec<Game>, String) {
     let roots = steam_roots();
     if roots.is_empty() {
@@ -269,8 +356,8 @@ fn scan_steam() -> (Vec<Game>, String) {
     }
     let mut games = Vec::new();
     let mut manifests = 0usize;
-    for root in roots {
-        for library in steam_libraries(&root) {
+    for root in &roots {
+        for library in steam_libraries(root) {
             let apps = library.join("steamapps");
             let Ok(entries) = std::fs::read_dir(&apps) else {
                 continue;
@@ -293,6 +380,10 @@ fn scan_steam() -> (Vec<Game>, String) {
                 else {
                     continue;
                 };
+                if appid == 228980 || title.eq_ignore_ascii_case("Steamworks Common Redistributables")
+                {
+                    continue;
+                }
                 let installed = apps
                     .join("common")
                     .join(value_after(&tokens, "installdir").unwrap_or_default())
@@ -320,6 +411,7 @@ fn scan_steam() -> (Vec<Game>, String) {
                         format!("Steam · {detail}")
                     },
                     kind: Kind::Steam,
+                    icon: steam_icon(root, &library, appid),
                     launch: Launch::Steam(appid),
                     last_played: last,
                 });
@@ -382,40 +474,62 @@ fn riot_client() -> Option<PathBuf> {
     None
 }
 
+fn riot_product_exe(client: &Path, product: &str) -> Option<PathBuf> {
+    let base = client.parent().and_then(Path::parent)?;
+    let candidates: &[&str] = match product {
+        "league_of_legends" => &["League of Legends\\LeagueClient.exe"],
+        "valorant" => &["VALORANT\\live\\VALORANT.exe", "VALORANT\\VALORANT.exe"],
+        _ => &[],
+    };
+    candidates
+        .iter()
+        .map(|candidate| base.join(candidate))
+        .find(|path| path.is_file())
+}
+
+
 fn riot_games() -> Vec<Game> {
     let Some(exe) = riot_client() else {
         return Vec::new();
     };
-    let product = |name: &str, product: &str, detail: &str| Game {
-        name: name.into(),
-        subtitle: format!("Riot · {detail}"),
-        kind: Kind::Riot,
-        launch: Launch::Riot {
-            exe: exe.clone(),
-            args: vec![
-                "--launch-product".into(),
-                product.into(),
-                "--launch-patchline".into(),
-                "live".into(),
-            ],
-        },
-        last_played: 0,
+    let product = |name: &str, product: &str, detail: &str| -> Option<Game> {
+        let icon = riot_product_exe(&exe, product)?;
+        Some(Game {
+            name: name.into(),
+            subtitle: format!("Riot · {detail}"),
+            kind: Kind::Riot,
+            icon: Some(icon),
+            launch: Launch::Riot {
+                exe: exe.clone(),
+                args: vec![
+                    "--launch-product".into(),
+                    product.into(),
+                    "--launch-patchline".into(),
+                    "live".into(),
+                ],
+            },
+            last_played: 0,
+        })
     };
-    vec![
-        Game {
+    [
+        Some(Game {
             name: "Riot Client".into(),
             subtitle: "Riot · 啟動器".into(),
             kind: Kind::Riot,
+            icon: Some(exe.clone()),
             launch: Launch::Riot {
                 exe: exe.clone(),
                 args: Vec::new(),
             },
             last_played: 0,
-        },
+        }),
         product("英雄聯盟", "league_of_legends", "League of Legends"),
         product("聯盟戰棋", "league_of_legends", "從英雄聯盟客戶端開啟"),
         product("VALORANT", "valorant", "特戰英豪"),
     ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 #[cfg(windows)]
@@ -504,13 +618,17 @@ impl crate::app::App {
         if !self.games.scanned {
             self.games.refresh();
         }
-        let total = self.games.games.len();
+        let hidden=self.games.hidden.clone();
+        let games=self.games.games.iter().filter(|game|!hidden.contains(&game.name)).cloned().collect::<Vec<_>>();
+        let total = games.len();
+        let steam_visible = games.iter().filter(|game| game.kind == Kind::Steam).count();
+        let riot_visible = games.iter().filter(|game| game.kind == Kind::Riot).count();
         let summary = if !self.games.error.is_empty() && total == 0 {
             self.games.error.clone()
         } else {
-            let mut parts = vec![format!("Steam {} 款", self.games.steam_count)];
-            if self.games.riot_count > 0 {
-                parts.push(format!("Riot {} 項", self.games.riot_count));
+            let mut parts = vec![format!("Steam {steam_visible} 款")];
+            if riot_visible > 0 {
+                parts.push(format!("Riot {riot_visible} 項"));
             }
             if !self.games.scanned_at.is_empty() {
                 parts.push(format!("{} 掃描", self.games.scanned_at));
@@ -526,7 +644,24 @@ impl crate::app::App {
             if total == 0 { theme::GRAY } else { theme::DIM },
             H::Left,
         );
-        let refresh = c.hit(324.0, 29.0, 80.0, 18.0, "games-refresh");
+        if !self.games.hidden.is_empty() {
+            let show_all = c.hit(312.0, 29.0, 46.0, 18.0, "games-show-all");
+            let (hover, _) = c.hover_t(&show_all);
+            c.text(
+                356.0,
+                41.0,
+                "顯示全部",
+                9.5,
+                W::Regular,
+                paint_mix(theme::GRAY, theme::WHITE, hover),
+                H::Right,
+            );
+            if show_all.on_hover_text("恢復所有已移除的遊戲捷徑").clicked() {
+                self.games.reset_hidden();
+                self.say("已恢復全部遊戲捷徑".to_string());
+            }
+        }
+        let refresh = c.hit(360.0, 29.0, 44.0, 18.0, "games-refresh");
         let (hover, _) = c.hover_t(&refresh);
         c.text(
             404.0,
@@ -538,17 +673,17 @@ impl crate::app::App {
             H::Right,
         );
         if refresh
-            .on_hover_text("重新讀取 Steam 收藏庫與 Riot Client")
+            .on_hover_text("重新讀取 Steam 收藏庫與 Riot Client，不會恢復已移除的捷徑")
             .clicked()
         {
             self.games.refresh();
             self.say(format!("已重新掃描：{} 個項目", self.games.games.len()));
         }
-        if self.games.games.is_empty() {
+        if total == 0 {
             c.text(
                 20.0,
                 92.0,
-                "找不到可啟動的遊戲",
+                if self.games.games.is_empty() {"找不到可啟動的遊戲"}else{"已移除全部捷徑"},
                 12.0,
                 W::Semibold,
                 theme::WHITE,
@@ -557,7 +692,7 @@ impl crate::app::App {
             c.text(
                 20.0,
                 110.0,
-                "請先從 Steam 安裝遊戲，或確認 Riot Client 已安裝。",
+                if self.games.games.is_empty() {"請先從 Steam 安裝遊戲，或確認 Riot Client 已安裝。"}else{"按右上角「顯示全部」即可恢復。"},
                 9.5,
                 W::Regular,
                 theme::GRAY,
@@ -595,10 +730,10 @@ impl crate::app::App {
             .show_rows(
                 &mut content,
                 row_h * c.s,
-                self.games.games.len(),
+                games.len(),
                 |ui, range| {
                     for index in range {
-                        let game = self.games.games[index].clone();
+                        let game = games[index].clone();
                         let (rect, _) = ui.allocate_exact_size(
                             egui::vec2(bounds.width() * c.s, row_h * c.s),
                             egui::Sense::hover(),
@@ -608,12 +743,46 @@ impl crate::app::App {
                         row.live = c.live;
                         row.boost = c.boost;
                         let hit = row.hit(
+                            38.0,
                             0.0,
-                            0.0,
-                            bounds.width() - 10.0,
+                            bounds.width() - 48.0,
                             row_h - 1.0,
                             ("game-row", index, game.name.as_str()),
                         );
+                        let icon_hit = row.hit(
+                            8.0,
+                            6.0,
+                            28.0,
+                            28.0,
+                            ("game-icon", index, game.name.as_str()),
+                        );
+                        let remove = row.hit(
+                            29.0,
+                            3.0,
+                            14.0,
+                            14.0,
+                            ("game-remove", index, game.name.as_str()),
+                        );
+                        let now = ui.input(|input| input.time);
+                        let elapsed = self
+                            .games
+                            .press
+                            .as_ref()
+                            .filter(|(name, _)| name == &game.name)
+                            .map(|(_, start)| now - *start)
+                            .unwrap_or(0.0);
+                        let mut menu_open = self.games.menu.as_deref() == Some(game.name.as_str());
+                        if icon_hit.is_pointer_button_down_on() {
+                            if elapsed <= 0.0 {
+                                self.games.press = Some((game.name.clone(), now));
+                            } else if elapsed >= 0.55 {
+                                self.games.menu = Some(game.name.clone());
+                                self.games.press = None;
+                                menu_open = true;
+                            }
+                        } else if elapsed > 0.0 {
+                            self.games.press = None;
+                        }
                         let hovered = ui.ctx().pointer_hover_pos().is_some_and(|point| {
                             rect.contains(point) && ui.clip_rect().contains(point)
                         });
@@ -627,16 +796,30 @@ impl crate::app::App {
                                 Color32::from_white_alpha(14),
                             );
                         }
+                        let icon_rect = row.rect(9.0, 7.0, 26.0, 26.0);
                         row.fill(8.0, 6.0, 28.0, 28.0, 8.0, game.tile_color());
-                        row.text(
-                            22.0,
-                            26.0,
-                            game.badge(),
-                            13.0,
-                            W::Bold,
-                            theme::WHITE,
-                            H::Center,
-                        );
+                        let mut painted = false;
+                        if let Some(path) = game.icon.as_ref() {
+                            if let Some(texture) = self.icons.get(c.ui.ctx(), path).and_then(|preview| preview.image) {
+                                row.painter.image(texture.id(), icon_rect, game_icon_uv(&texture), Color32::WHITE);
+                                painted = true;
+                            }
+                        }
+                        if !painted {
+                            row.text(
+                                22.0,
+                                26.0,
+                                game.badge(),
+                                13.0,
+                                W::Bold,
+                                theme::WHITE,
+                                H::Center,
+                            );
+                        }
+                        if hovered && !menu_open {
+                            row.circle(35.5, 7.0, 6.0, Color32::from_black_alpha(205));
+                            row.text(35.5, 10.4, "×", 10.0, W::Bold, theme::WHITE, H::Center);
+                        }
                         row.text(
                             46.0,
                             19.0,
@@ -659,16 +842,35 @@ impl crate::app::App {
                             theme::GRAY,
                             H::Left,
                         );
-                        row.text(
-                            392.0,
-                            24.0,
-                            "啟動",
-                            9.5,
-                            W::Semibold,
-                            if hovered { theme::BLUE } else { theme::DIM },
-                            H::Right,
-                        );
-                        if hit.on_hover_text(format!("啟動 {}", game.name)).clicked() {
+                        if menu_open {
+                            row.text(336.0, 24.0, "移除", 9.5, W::Semibold, Color32::from_rgb(255,128,128), H::Right);
+                            row.text(388.0, 24.0, "取消", 9.5, W::Semibold, theme::GRAY, H::Right);
+                        } else {
+                            row.text(
+                                392.0,
+                                24.0,
+                                "啟動",
+                                9.5,
+                                W::Semibold,
+                                if hovered { theme::BLUE } else { theme::DIM },
+                                H::Right,
+                            );
+                        }
+                        let remove = remove.on_hover_text("從快速開啟移除；按「顯示全部」可恢復");
+                        let menu_remove = row.hit(300.0, 14.0, 40.0, 20.0, ("game-menu-remove", index, game.name.as_str()));
+                        let menu_cancel = row.hit(360.0, 14.0, 32.0, 20.0, ("game-menu-cancel", index, game.name.as_str()));
+                        if remove.clicked() || (menu_open && menu_remove.clicked()) {
+                            self.games.hide(&game.name);
+                            self.games.menu = None;
+                            self.say(format!("已從快速開啟移除 {}", game.name));
+                        } else if menu_open && menu_cancel.clicked() {
+                            self.games.menu = None;
+                        } else if !menu_open
+                            && (icon_hit
+                                .on_hover_text(format!("點一下啟動；長按可移除（{}）", game.name))
+                                .clicked()
+                                || hit.on_hover_text(format!("啟動 {}", game.name)).clicked())
+                        {
                             match game.launch() {
                                 Ok(()) => self.say(format!("正在啟動 {}", game.name)),
                                 Err(error) => self.say(format!("無法啟動 {}：{error}", game.name)),
@@ -692,4 +894,23 @@ impl crate::app::App {
 
 fn paint_mix(a: Color32, b: Color32, t: f32) -> Color32 {
     crate::paint::mix(a, b, t)
+}
+
+fn game_icon_uv(texture: &egui::TextureHandle) -> egui::Rect {
+    let size = texture.size();
+    let width = size[0] as f32;
+    let height = size[1] as f32;
+    if width <= 0.0 || height <= 0.0 {
+        return egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0));
+    }
+    let aspect = width / height;
+    if aspect > 1.0 {
+        let inset = (1.0 - 1.0 / aspect) * 0.5;
+        egui::Rect::from_min_max(egui::pos2(inset, 0.0), egui::pos2(1.0 - inset, 1.0))
+    } else if aspect < 1.0 {
+        let inset = (1.0 - aspect) * 0.5;
+        egui::Rect::from_min_max(egui::pos2(0.0, inset), egui::pos2(1.0, 1.0 - inset))
+    } else {
+        egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0))
+    }
 }

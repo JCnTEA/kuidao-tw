@@ -109,7 +109,7 @@ impl NowPlaying {
         }
         let source=self.source.to_lowercase();
         if !CN_MUSIC_SOURCES_ENABLED && is_cn_music_source(&source) {return MediaKind::Unknown;}
-        if (matches!(source.as_str(),"kugou"|"kugou.exe"|"cloudmusic.exe"|"汽水音乐"|"sodamusic.exe"|"spotify"|"spotify.exe"|"kwmusic.exe"|"bodian_pc.exe") || is_qqmusic(&source) || apple_music::is_source(&source)) && self.playback_type==MediaKind::Music{return MediaKind::Music;}
+        if (matches!(source.as_str(),"kugou"|"kugou.exe"|"cloudmusic.exe"|"汽水音乐"|"sodamusic.exe"|"spotify"|"spotify.exe"|"kwmusic.exe"|"bodian_pc.exe") || is_qqmusic(&source) || is_kkbox(&source) || apple_music::is_source(&source)) && self.playback_type==MediaKind::Music{return MediaKind::Music;}
         if ["chrome","msedge","firefox","brave","opera"].iter().any(|name|source.contains(name)) {
             let album=self.album.trim().to_lowercase();
             if ["youtube","bilibili","抖音","嗶哩嗶哩"].contains(&album.as_str()){return MediaKind::Video;}
@@ -279,6 +279,12 @@ fn read_artwork(props:&windows::Media::Control::GlobalSystemMediaTransportContro
 /// 进度拖动、音量都要认出它；会话查找仍用原始身份名。
 pub(crate) fn is_qqmusic(source:&str)->bool {
     matches!(source.to_ascii_lowercase().as_str(),"qqmusic"|"qqmusic.exe"|"tencent.qqmusic")
+}
+
+/// KKBOX 桌面版與 Microsoft Store 版在 SMTC 的名稱不一致，統一辨識。
+pub(crate) fn is_kkbox(source:&str)->bool {
+    let source=source.to_ascii_lowercase();
+    source=="kkbox" || source=="kkbox.exe" || source.contains("skysoft.kkbox") || source.contains("kkbox")
 }
 
 pub type Shared = Arc<Mutex<NowPlaying>>;
@@ -1194,8 +1200,16 @@ mod tests {
     }
 
     #[test]
+    fn kkbox_desktop_and_store_sources_are_music(){
+        for source in ["KKBOX.exe","kkbox","com.skysoft.kkbox.android"] {
+            let media=NowPlaying{source:source.into(),title:"歌曲".into(),playback_type:MediaKind::Music,..Default::default()};
+            assert_eq!(media.kind(),MediaKind::Music,"{source} 應被辨識成 KKBOX 音樂");
+        }
+    }
+
+    #[test]
     fn known_music_clients_accept_missing_artist_but_not_video(){
-        for source in ["kugou","QQMusic.exe","cloudmusic.exe","汽水音乐","SodaMusic.exe","Spotify.exe","kwmusic.exe","bodian_pc.exe","AppleMusic.exe","AppleInc.AppleMusicWin_nzyj5cx40ttqa!App"] {
+        for source in ["kugou","QQMusic.exe","cloudmusic.exe","汽水音乐","SodaMusic.exe","Spotify.exe","KKBOX.exe","com.skysoft.kkbox.android","kwmusic.exe","bodian_pc.exe","AppleMusic.exe","AppleInc.AppleMusicWin_nzyj5cx40ttqa!App"] {
             let mut media=NowPlaying{source:source.into(),title:"歌曲".into(),playback_type:MediaKind::Music,..Default::default()};
             assert!(media.is_music(),"{source} 缺少歌手時仍應顯示歌曲");
             media.playback_type=MediaKind::Video;assert!(!media.is_music());

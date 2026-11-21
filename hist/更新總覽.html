@@ -64,6 +64,8 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
       <div class="card"><span class="badge">通知</span><h3>通知來源說明補上 QQ</h3><p>設定頁原本只寫 LINE、Instagram 等來源，下方卻出現「QQ 系統通知通道可用」；現在標題與說明都列上 QQ，並註明 QQ 走 Windows 系統通知，有訊息時會用 QQ 圖示進入未讀。六個固定社群圖示的排序仍只套用 LINE、手機連結、Threads、Messenger、Facebook、Instagram，QQ 不受這排順序影響。</p></div>
+      <div class="card"><span class="badge">遊戲</span><h3>遊戲庫改抓應用程式自己的圖示，長按圖示可移除捷徑</h3><p>Steam 遊戲改從收藏庫快取找 32×32 小圖，找不到才退回 600×900 封面、header 或 logo；Riot Client、VALORANT 直接抓執行檔圖示。每一列左側都是那個應用程式自己的圖示，不再是統一的 R／S 字母磚；點圖示本體也能啟動。長按圖示約半秒會出現「移除／取消」，滑過圖示右上角也有小 ×；移除後寫入本機清單，重新掃描不會自己長回來，按「顯示全部」才恢復。Steamworks 共用元件這類工具不再列進遊戲庫。</p></div>
+      <div class="card"><span class="badge">歌詞</span><h3>KKBOX 也能抓到同步歌詞，瀏覽器播放也納入</h3><p>播放 KKBOX 時會用歌名與歌手在 KKBOX 搜尋，比對歌名、歌手與長度後，透過官方歌詞介面取得逐句時間軸；作詞、作曲、編曲等署名行不會被當成歌詞顯示。瀏覽器播放 YouTube、Spotify 等來源時，原本只查網易雲、QQ 音樂與 LRCLIB，現在查不到也會自動改查 KKBOX；台語歌、老歌與 MV 標題會拆出「歌手 ft. 合唱者 歌名」與中文歌名後再接拼音的各種寫法，比對時放寬 MV 與歌曲的長度差。找不到或取詞失敗時，仍照原本順序往網易雲、QQ 音樂與 LRCLIB 查，不會讓歌詞區整個空白；抓到的歌詞會快取在本機。</p></div>
       <div class="card"><span class="badge">電量</span><h3>桌機沒有電池，也能顯示藍牙耳機電量</h3><p>沒有系統電池的桌機，電量圈改抓 Windows 已連線的藍牙耳機、耳塞與音箱電量，數字直接畫在電池圈內，左側再依裝置類型放耳機或音箱圖示；同時連多顆音訊裝置時取最低的一顆。滑鼠、鍵盤等非音訊裝置不會蓋掉耳機電量，完全沒有可回報電量的裝置才自動隱藏。手機本身通常不會透過 Windows 的裝置屬性回報電量，手機連著耳機的情況仍以手機端顯示為準。</p></div>
       <div class="card"><span class="badge">官網</span><h3>介面展示圖的通知圖示改壓在畫面上，主圖桌布背景完全移除</h3><p>「介面」輪播的右側通知列不再浮在圖片外的空白處，改成貼著每張島體右緣、直接壓在畫面上；原本截圖左右與底部的 macOS 藍色桌布條已裁掉，圓角外側的桌布殘留也一併清掉，只保留島體本身的漸層與內容。</p></div>
       <div class="card"><span class="badge">音樂</span><h3>Chrome、Edge、Firefox 播 YouTube 會自動上島，瀏覽器縮小也看得到</h3><p>瀏覽器播放 YouTube／YouTube Music 時，直接從 Windows 右下角播放卡讀取歌名、歌手、封面與進度，不需要安裝擴充功能。YouTube 分頁即使被標成影片、沒有專輯欄位，也會當成音樂顯示；把瀏覽器縮小或切到其他視窗，播放卡的工作階段仍在，島上持續顯示目前歌曲。</p></div>
@@ -140,6 +142,8 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <button data-f="chg">異動</button>
     </div>
     <div class="tl">
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>遊戲庫顯示真實圖示，長按可移除捷徑</h3><p>Steam 改讀收藏庫快取圖示，Riot 抓執行檔圖示；列首不再全部是字母磚。長按圖示半秒出現「移除／取消」，右上角也有小 ×；移除清單存本機，重新掃描不恢復，按右上「顯示全部」才回來。Steamworks 共用元件不再列出。</p></div>
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>KKBOX 同步歌詞，瀏覽器播放也會後備查詢</h3><p>KKBOX 播放時自動用歌名與歌手搜尋，比對長度後抓官方逐句歌詞；瀏覽器 YouTube、Spotify 查不到原本來源時也會改查 KKBOX。台語歌與 MV 標題會拆出合唱署名、中文歌名與英文拼音再比對，作詞作曲不列入歌詞行。抓不到時照原順序往網易雲、QQ 音樂與 LRCLIB，歌詞快取在本機。</p></div>
       <div class="item" data-cat="fix"><time>最新</time><span class="cat fix">修正</span><h3>Gmail 鈴鐺、歌詞翻譯與每小時中文自檢</h3><p>Gmail 加入 UNSEEN 未讀數補償，IDLE 斷線或解析失敗也會亮鈴鐺；單封新信與補償八秒內只通知一次。歌詞翻譯改為只送非空行、依原行回填，空行不再讓整首失敗，譯文另做繁化、空格與標點清理。倉庫新增每小時中文自檢與自動提版發布流程。</p></div>
       <div class="item" data-cat="fix"><time>最新</time><span class="cat fix">修正</span><h3>開著也能等到最新版</h3><p>更新檢查原本一天只看一次，剛發布的版本要等很久才跳提示；改成每次啟動先確認一次、之後每兩小時再確認，一有新版就顯示最新的更新說明與資源包。按「下載並安裝」會一併換掉程式與 assets，設定和紀錄保留，不需要另外下載檔案。</p></div>
 

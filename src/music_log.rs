@@ -12,6 +12,7 @@ pub(crate) fn player_exe(source:&str)->Option<&'static str> {
         "spotify"|"spotify.exe"=>"Spotify.exe",
         "kwmusic.exe"=>"kwmusic.exe",
         "bodian_pc.exe"=>"bodian_pc.exe",
+        _ if super::is_kkbox(source)=>"KKBOX.exe",
         _ if super::apple_music::is_source(source)=>"AppleMusic.exe",
         _=>return None,
     })
