@@ -64,7 +64,7 @@ impl App {
             c.text(121.0,47.0,"暫無音樂",14.0,W::Bold,theme::WHITE,H::Left);
         } else {
             let text_x=if with_lyrics {99.0}else{121.0};
-            let text_width=if with_lyrics {123.0}else{220.0};
+            let text_width=if with_lyrics {116.0}else{220.0};
             let title_size=if with_lyrics {12.0}else{14.0};
             c.text(text_x,if with_lyrics {41.0}else{53.0},&c.fit(&np.title,title_size,W::Bold,text_width),title_size,W::Bold,theme::WHITE,H::Left);
             c.text(text_x,if with_lyrics {57.0}else{67.0},&c.fit(&np.artist,size::BODY,W::Regular,text_width),size::BODY,W::Regular,theme::GRAY,H::Left);
@@ -224,9 +224,16 @@ impl App {
     }
 
     fn draw_music_lyrics(&mut self,c:&Card) {
-        let col=c.clipped(243.0,28.0,136.0,74.0);
-        c.seg((233.0,32.0),(233.0,98.0),1.0,Color32::from_gray(35));
+        const X:f32=231.0; const W:f32=157.0; const TEXT_W:f32=153.0;
+        let col=c.clipped(X,28.0,W,74.0);
+        c.seg((X-7.0,32.0),(X-7.0,98.0),1.0,Color32::from_gray(35));
         if let Some(lyrics)=&self.ly.lyrics {
+            if lyrics.lines.is_empty() {
+                let ink=col.ink(theme::GRAY);
+                let galley=col.painter.layout("暫無歌詞".into(),col.font(10.0,W::Regular),ink,TEXT_W*c.s);
+                col.painter.galley(col.pos(X+3.0,61.0-galley.size().y/(2.0*c.s)),galley,ink);
+                return;
+            }
             let current=if lyrics.synced {lyrics.index_at(self.lyric_position())}else{Some(0)};
             let target=current.unwrap_or(0);
             let id=egui::Id::new("music-lyrics-scroll");
@@ -235,46 +242,75 @@ impl App {
                 self.ly.scroll_animation_started=true;
             }
             let position=c.ui.ctx().animate_value_with_time(id,target as f32,0.3);
-            let first=(position.floor() as usize).saturating_sub(2);
-            for (index,line) in lyrics.lines.iter().enumerate().skip(first).take(6) {
-                let distance=index as f32-position;
-                if distance.abs()>2.2 {continue;}
+            struct Block {
+                index:usize,
+                active:bool,
+                galley:std::sync::Arc<egui::Galley>,
+                ink:Color32,
+                sub:Option<(std::sync::Arc<egui::Galley>,Color32)>,
+                total:f32,
+            }
+            let mut blocks=Vec::new();
+            for index in target.saturating_sub(2)..=target.saturating_add(2).min(lyrics.lines.len().saturating_sub(1)) {
+                let line=&lyrics.lines[index];
                 let active=current==Some(index);
-                let row=col.faded((1.0-distance.abs()*0.35).clamp(0.0,1.0));
+                let shown=self.ly.zh_lines.get(index).filter(|text|!text.trim().is_empty()).map_or(line.text.as_str(),|text|text.as_str());
+                let translated=self.ly.translation_lines.get(index).map(|text|text.trim()).filter(|text|!text.is_empty());
+                if !active && shown.trim().is_empty() && translated.is_none() {continue;}
+                let row=col.faded(if active {1.0}else{0.7});
                 let ink=row.ink(if active {theme::WHITE}else{theme::GRAY});
                 let font=row.font(if active {12.0}else{10.0},if active {W::Semibold}else{W::Regular});
                 // 维语等从右到左的歌词：先按阅读顺序分行再逐行转换（#200）。
-                let shown=self.ly.zh_lines.get(index).filter(|text|!text.trim().is_empty()).map_or(line.text.as_str(),|text|text.as_str());
-                let translated=self.ly.translation_lines.get(index).map(|text|text.trim()).filter(|text|!text.is_empty());
-                let text=crate::rtl_text::display_wrapped(shown,132.0*c.s,|s|row.painter.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x).into_owned();
-                let mut job=egui::text::LayoutJob::simple(text,font,ink,132.0*c.s);
-                job.wrap.max_rows=if translated.is_some(){1}else if active {3}else{1};
-                job.wrap.break_anywhere=true;
+                let text=crate::rtl_text::display_wrapped(shown,TEXT_W*c.s,|s|row.painter.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x).into_owned();
+                let has_space=text.contains(' ');
+                let mut job=egui::text::LayoutJob::simple(text,font,ink,TEXT_W*c.s);
+                // 当前句完整折行；鄰句維持淡出的一行，避免長歌詞全部被省略號截斷。
+                job.wrap.max_rows=if active {3}else{1};
+                job.wrap.break_anywhere=!has_space;
                 let galley=row.painter.layout_job(job);
-                // 譯文放在原歌詞正下方，字級略小、顏色較淡；沒有譯文時維持原本的單行歌詞。
                 let sub=translated.map(|text|{
                     let tfont=row.font(if active {8.5}else{7.5},W::Regular);
                     let tink=row.ink(if active {Color32::from_rgb(188,197,214)}else{Color32::from_gray(135)});
-                    let mut job=egui::text::LayoutJob::simple(text.to_owned(),tfont,tink,132.0*c.s);
-                    job.wrap.max_rows=1;
-                    job.wrap.break_anywhere=true;
+                    let mut job=egui::text::LayoutJob::simple(text.to_owned(),tfont,tink,TEXT_W*c.s);
+                    job.wrap.max_rows=if active {2}else{1};
+                    job.wrap.break_anywhere=!text.contains(' ');
                     (row.painter.layout_job(job),tink)
                 });
-                let total=(galley.size().y+sub.as_ref().map_or(0.0,|(g,_)|g.size().y))/c.s+if sub.is_some(){1.0}else{0.0};
-                let y=64.0+distance*29.0-total/2.0;
-                let sub_y=y+galley.size().y/c.s+1.0;
-                row.painter.galley(row.pos(246.0,y),galley,ink);
-                if let Some((sub,tink))=sub{row.painter.galley(row.pos(246.0,sub_y),sub,tink);}
+                let total=galley.size().y/c.s+sub.as_ref().map_or(0.0,|(g,_)|g.size().y/c.s)+if sub.is_some(){1.0}else{0.0};
+                blocks.push(Block{index,active,galley,ink,sub,total});
             }
-            if !lyrics.synced {col.text(246.0,39.0,"文字歌詞",8.0,W::Regular,theme::GRAY,H::Left);}
+            let Some(active)=blocks.iter().position(|b|b.active) else{return;};
+            let active_y=64.0-blocks[active].total/2.0+(target as f32-position)*26.0;
+            let paint=|block:&Block,y:f32,alpha:f32| {
+                let row=col.faded(alpha);
+                row.painter.galley(row.pos(X+3.0,y),block.galley.clone(),block.ink);
+                if let Some((sub,tink))=&block.sub {
+                    row.painter.galley(row.pos(X+3.0,y+block.galley.size().y/c.s+1.0),sub.clone(),*tink);
+                }
+            };
+            let mut top=active_y-5.0;
+            for block in blocks[..active].iter().rev() {
+                if top-block.total < 28.0 {break;}
+                top-=block.total;
+                paint(block,top,(1.0-(target-block.index) as f32*0.34).clamp(0.35,0.7));
+                top-=5.0;
+            }
+            let mut bottom=active_y+blocks[active].total+5.0;
+            for block in &blocks[active+1..] {
+                if bottom+block.total > 102.0 {break;}
+                paint(block,bottom,(1.0-(block.index-target) as f32*0.34).clamp(0.35,0.7));
+                bottom+=block.total+5.0;
+            }
+            paint(&blocks[active],active_y,1.0);
+            if !lyrics.synced {col.text(X+3.0,39.0,"文字歌詞",8.0,W::Regular,theme::GRAY,H::Left);}
         } else {
             let status=if self.ly.loading {"正在查詢歌詞…"}else if let Some(error)=&self.ly.error {error.label()}else{"暫無歌詞"};
             let ink=col.ink(theme::GRAY);
-            let galley=col.painter.layout(status.into(),col.font(10.0,W::Regular),ink,130.0*c.s);
-            col.painter.galley(col.pos(246.0,61.0-galley.size().y/(2.0*c.s)),galley,ink);
+            let galley=col.painter.layout(status.into(),col.font(10.0,W::Regular),ink,TEXT_W*c.s);
+            col.painter.galley(col.pos(X+3.0,61.0-galley.size().y/(2.0*c.s)),galley,ink);
             if self.ly.error.is_some() {
-                col.text(246.0,87.0,"點選重試",9.0,W::Regular,theme::GRAY,H::Left);
-                if c.hit(243.0,28.0,136.0,74.0,"lyrics-retry").on_hover_text("重新查詢當前歌曲的歌詞").clicked(){self.ly.key.clear();self.ly.manual_retry=true;}
+                col.text(X+3.0,87.0,"點選重試",9.0,W::Regular,theme::GRAY,H::Left);
+                if c.hit(X,28.0,W,74.0,"lyrics-retry").on_hover_text("重新查詢當前歌曲的歌詞").clicked(){self.ly.key.clear();self.ly.manual_retry=true;}
             }
         }
     }

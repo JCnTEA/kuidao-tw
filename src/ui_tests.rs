@@ -1909,7 +1909,7 @@ fn music_lyrics_show_in_a_separate_right_column() {
     let current=h.shapes.iter().find_map(|shape|match &shape.shape {
         egui::Shape::Text(text) if text.galley.text()=="當前歌詞"=>Some(text.pos),_=>None,
     }).expect("展開頁應顯示同步歌詞");
-    assert!(current.x>=H::local(243.0,0.0).x,"歌詞必須位於播放器右側");
+    assert!(current.x>=H::local(231.0,0.0).x,"歌詞必須位於播放器右側");
     let title=h.shapes.iter().find_map(|shape|match &shape.shape {
         egui::Shape::Text(text) if text.galley.text()=="Track"=>Some(text.pos),_=>None,
     }).unwrap();
@@ -1918,6 +1918,24 @@ fn music_lyrics_show_in_a_separate_right_column() {
     assert!(!h.app.show_lyrics);
     h.frame(vec![]);
     assert!(!h.shapes.iter().any(|shape|matches!(&shape.shape,egui::Shape::Text(text) if text.galley.text()=="當前歌詞")));
+}
+
+#[test]
+fn long_translated_lyrics_wrap_without_truncating_the_current_line() {
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();
+    let original="這是一句很長的中文歌詞用來測試自動換行不要被省略";
+    let translation="這是一段很長的翻譯文字也應該跟著換行不要被截斷";
+    h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),position:6.0,duration:120.0,..Default::default()};
+    h.app.set_lyrics("Track","Artist",120.0,crate::lyrics::parse_lrc(&format!("[00:05]{original}\n[00:10]下一句")));
+    h.app.ly.translation_lines=vec![translation.into(),"下一句的翻譯".into()];
+    h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
+    let rows=|needle:&str|h.shapes.iter().find_map(|shape|match &shape.shape {
+        egui::Shape::Text(text) if text.galley.text()==needle=>Some(text.galley.rows.len()),
+        _=>None,
+    });
+    assert!(rows(original).is_some_and(|rows|rows>=2),"長歌詞應折行，不能只留一行省略號");
+    assert!(rows(translation).is_some_and(|rows|rows>=2),"長譯文也應跟著折行");
 }
 
 #[test]
@@ -7365,7 +7383,7 @@ fn shoot_feature(h:&mut H,raster:&mut crate::preview_raster::Raster,dest:&std::p
     let ppp=2.0;let (w,hgt)=(crate::app::CANVAS_W,WIN_H);
     for f in 0..frames {
         h.t+=1.0/60.0;
-        let env=Env{t:h.t,clock:"09:41:00".into(),today:today.into(),date:"11月4日 週三".into(),cursor,bt_ready:true,..Default::default()};
+        let env=Env{t:h.t,clock:"09:41:00".into(),today:today.into(),date:"11月4日 週三".into(),cursor,bt_ready:true,media:h.media.clone(),..Default::default()};
         let raw=egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(w,hgt))),time:Some(h.t),focused:true,
             events:cursor.map(|p|vec![egui::Event::PointerMoved(p)]).unwrap_or_default(),
             viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(ppp),..Default::default()})).collect(),..Default::default()};
@@ -7383,6 +7401,24 @@ fn shoot_feature(h:&mut H,raster:&mut crate::preview_raster::Raster,dest:&std::p
         }
         raster.free_textures(&output.textures_delta);
     }
+}
+
+#[test]
+#[ignore="按需匯出音樂頁長歌詞換行畫面：KUIDAO_LYRIC_PREVIEW_DIR=目錄"]
+fn long_lyrics_layout_preview(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let dest=std::path::PathBuf::from(std::env::var_os("KUIDAO_LYRIC_PREVIEW_DIR").expect("需指定預覽目錄"));std::fs::create_dir_all(&dest).unwrap();
+    let mut h=H::new();let mut r=feature_raster();h.app.settings.skin=crate::model::Skin::GradAurora;h.app.show_page(0);h.app.show_lyrics=true;
+    h.media=crate::smtc::NowPlaying{title:"NEON".into(),artist:"A2O LITE".into(),position:40.0,duration:227.0,playing:true,..Default::default()};
+    h.app.set_lyrics("NEON","A2O LITE",227.0,crate::lyrics::parse_lrc("[00:05]나시 줄 끝어 주시게 낯이 익은 너의 얼굴처럼\n[00:20]다시 점멸它，彩虹色的火焰（霓虹燈）\n[00:35]We are neon and beyond all the colours we become\n[00:50]낯게 날아 모두 눈치 못 채게\n[01:05]飛得很低但沒有人注意到（霓虹燈）"));
+    h.app.ly.translation_lines=vec![
+        "再次點燃它，彩虹色的火焰（霓虹燈）".into(),
+        "我們是霓虹燈，超越以不同的形式".into(),
+        "我們是霓虹燈，超越我們成為的所有色彩".into(),
+        "飛得很低，所有人都沒注意到".into(),
+        "飛得很低但沒有人注意到（霓虹燈）".into(),
+    ];
+    shoot_feature(&mut h,&mut r,&dest,"music-long-lyrics",90,Some(H::local(120.0,60.0)),"2026-11-21");
 }
 
 #[test]
