@@ -1263,7 +1263,7 @@ mod service {
             let (mut session,stop,server)=inbox(Scenario::EmptyIdle);
             let (ev,rx)=channel();let mut last=Some(40);
             let started=std::time::Instant::now();
-            let result=monitor(&mut session,&account(),&mut last,&stop,&AtomicU64::new(120),&ev);
+            let result=monitor(&mut session,&account(),&mut last,&mut None,&stop,&AtomicU64::new(120),&ev);
             let elapsed=started.elapsed();drop(session);let commands=server.join().unwrap();
             assert!(result.is_ok(),"{result:?}");assert_eq!(last,Some(40));
             assert!(elapsed>=Duration::from_secs(5),"兩次空推送之間應降頻，實際耗時 {elapsed:?}");
@@ -1275,7 +1275,7 @@ mod service {
         fn new_mail_arriving_during_cooldown_is_read_before_idling_again() {
             let (mut session,stop,server)=inbox(Scenario::CooldownMail);
             let (ev,rx)=channel();let mut last=Some(40);
-            let result=monitor(&mut session,&account(),&mut last,&stop,&AtomicU64::new(120),&ev);
+            let result=monitor(&mut session,&account(),&mut last,&mut None,&stop,&AtomicU64::new(120),&ev);
             drop(session);let commands=server.join().unwrap();
             assert!(result.is_ok(),"{result:?}");assert_eq!(last,Some(41));
             assert!(rx.try_iter().any(|event|matches!(event,Event::Mail{item,new:true} if item.uid==41)));
@@ -1286,7 +1286,7 @@ mod service {
         fn supported_idle_still_delivers_mail_without_polling() {
             let (mut session,stop,server)=inbox(Scenario::SupportedIdle);
             let (ev,rx)=channel();let mut last=Some(40);
-            let result=monitor(&mut session,&account(),&mut last,&stop,&AtomicU64::new(0),&ev);
+            let result=monitor(&mut session,&account(),&mut last,&mut None,&stop,&AtomicU64::new(0),&ev);
             drop(session);let commands=server.join().unwrap();
             assert!(result.is_ok(),"{result:?}");assert_eq!(last,Some(41));
             assert!(rx.try_iter().any(|event|matches!(event,Event::Mail{item,new:true} if item.uid==41)));
@@ -1299,7 +1299,7 @@ mod service {
             for provider in Provider::ALL {
                 let (mut session,stop,server)=inbox(Scenario::InitialMailbox);
                 let (ev,rx)=channel();let mut last=None;let account=Account{provider,..account()};
-                let result=monitor(&mut session,&account,&mut last,&stop,&AtomicU64::new(0),&ev);
+                let result=monitor(&mut session,&account,&mut last,&mut None,&stop,&AtomicU64::new(0),&ev);
                 drop(session);server.join().unwrap();
                 assert!(result.is_ok(),"{result:?}");assert_eq!(last,Some(42));
                 let events:Vec<_>=rx.try_iter().collect();
@@ -1314,7 +1314,7 @@ mod service {
         fn rejected_idle_still_receives_new_163_mail() {
             let (mut session,stop,server)=inbox(Scenario::RejectedIdle);
             let (ev,rx)=channel();let mut last=Some(40);
-            let result=monitor(&mut session,&account(),&mut last,&stop,&AtomicU64::new(0),&ev);
+            let result=monitor(&mut session,&account(),&mut last,&mut None,&stop,&AtomicU64::new(0),&ev);
             drop(session);let commands=server.join().unwrap();
             assert!(result.is_ok(),"推送被拒絕後應繼續輪詢收信：{result:?} commands={commands:?}");
             assert_eq!(last,Some(41));
@@ -1327,7 +1327,7 @@ mod service {
         fn reconnect_checks_new_mail_before_waiting_for_push() {
             let (mut session,stop,server)=inbox(Scenario::DisconnectedIdle);
             let (ev,rx)=channel();let mut last=Some(40);
-            assert!(monitor(&mut session,&account(),&mut last,&stop,&AtomicU64::new(0),&ev).is_err());
+            assert!(monitor(&mut session,&account(),&mut last,&mut None,&stop,&AtomicU64::new(0),&ev).is_err());
             drop(session);server.join().unwrap();
             assert_eq!(last,Some(41),"重連後應先補讀斷線期間到達的郵件");
             assert!(rx.try_iter().any(|event|matches!(event,Event::Mail{item,new:true} if item.uid==41)));
@@ -1337,7 +1337,7 @@ mod service {
         fn interrupted_initial_fetch_keeps_history_retryable() {
             let (mut session,stop,server)=inbox(Scenario::BrokenHistory);
             let (ev,rx)=channel();let mut last=None;
-            assert!(monitor(&mut session,&account(),&mut last,&stop,&AtomicU64::new(0),&ev).is_err());
+            assert!(monitor(&mut session,&account(),&mut last,&mut None,&stop,&AtomicU64::new(0),&ev).is_err());
             drop(session);server.join().unwrap();
             assert_eq!(last,None,"最近郵件讀取失敗後不能提交最大 UID");
             assert!(!rx.try_iter().any(|event|matches!(event,Event::Status{status:Status::Ready,..})));
