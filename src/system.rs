@@ -559,10 +559,17 @@ unsafe fn avoidance_for_window(foreground:HWND,island:HWND,pid:u32,settings:&cra
     Some(host.and_then(|hwnd|visible_avoidance_rect(hwnd)).is_some_and(overlaps))
 }
 
+pub struct SocialSeed {
+    pub social: crate::social::Social,
+    pub count: u16,
+    pub app_id: Option<String>,
+    pub launch: Option<String>,
+}
 pub enum Incoming {
     Revoked,
     Status(String),
-    Message(String, String, String, Option<crate::messenger::Target>),
+    Message(String, String, String, Option<crate::messenger::Target>, Option<String>),
+    SocialSeed(Vec<SocialSeed>),
 }
 #[path="toast_source.rs"]
 mod toast_source;
@@ -700,6 +707,7 @@ fn connect_inner(ctx:eframe::egui::Context,filter:crate::messenger::Notification
             let mut baseline=baseline;
             let mut accounts=crate::messenger::ToastAccounts::default();accounts.sample();
             let mut last_status=String::new();
+            let mut social_seeded=false;
             loop {
                 if stopped.try_recv()!=Err(mpsc::TryRecvError::Empty){return Ok(());}
                 let (items,count)=match listener.GetAccessStatus().and_then(|access|{
@@ -741,14 +749,52 @@ fn connect_inner(ctx:eframe::egui::Context,filter:crate::messenger::Notification
                                 if target.is_none(){crate::messenger::windows::trace(format!("通知 {id}·建立 {created} 未能繫結 {} 帳號",client.name()));}
                                 target
                             });
-                        if !body.trim().is_empty(){messages.push((created,app,id,body,target));}
+                        let social=crate::social::detect(&app,&id).or_else(||crate::social::detect_browser_content(&app,&body));
+                        let launch=social.and_then(|_|toast_source::launch(number,created));
+                        if !body.trim().is_empty(){messages.push((created,app,id,body,target,launch));}
                     }
                 }
                 baseline.finish(current,complete);
                 accounts.retain(|client,id,created|baseline.previous.as_ref().and_then(|items|items.get(&id)).is_some_and(|item|item.created==created && item.client==Some(client)));
                 messages.sort_by_key(|item|item.0);
-                for (_,app,id,body,target) in messages {
-                    if !send(Incoming::Message(app,id,body,target)){return Ok(());}
+                if !social_seeded && complete {
+                    // 第一次讀取通知中心時，把仍然留在中心裡的未讀計入島上；
+                    // 之後只靠即時通知累加，避免每次輪詢都重算或把已點開的又加回來。
+                    let mut seeds:HashMap<crate::social::Social,(u16,i64,Option<String>,Option<String>)>=HashMap::new();
+                    for i in 0..count {
+                        let Ok(n)=items.GetAt(i) else{continue};
+                        let (Ok(number),Ok(created))=(n.Id(),n.CreationTime()) else{continue};
+                        let created=created.UniversalTime;
+                        let (app,id)=notification_identity(&n,number,created,None);
+                        let social=crate::social::detect(&app,&id).or_else(||{
+                            let body=notification_body(&n).unwrap_or_default();
+                            crate::social::detect_browser_content(&app,&body)
+                        });
+                        let Some(social)=social else{continue;};
+                        let launch=toast_source::launch(number,created);
+                        let entry=seeds.entry(social).or_insert((0,created,None,None));
+                        entry.0=entry.0.saturating_add(1);
+                        if created>=entry.1{
+                            entry.1=created;
+                            entry.2=social.app_target(Some(&id)).map(str::to_owned);
+                            entry.3=launch;
+                        }else if entry.2.is_none() && social.app_target(Some(&id)).is_some(){entry.2=Some(id.clone());}
+                    }
+                    // 這一輪即將送出的即時通知也會 bump，先扣掉避免重複計算。
+                    let mut live:HashMap<crate::social::Social,u16>=HashMap::new();
+                    for (_,app,id,body,_,_) in &messages{
+                        if let Some(social)=crate::social::detect(app,id).or_else(||crate::social::detect_browser_content(app,body)){
+                            *live.entry(social).or_insert(0)+=1;
+                        }
+                    }
+                    let seeds=seeds.into_iter().map(|(social,(count,_,app_id,launch))|SocialSeed{
+                        social,count:count.saturating_sub(*live.get(&social).unwrap_or(&0)),app_id,launch
+                    }).collect::<Vec<_>>();
+                    if !seeds.is_empty() && !send(Incoming::SocialSeed(seeds)){return Ok(());}
+                    social_seeded=true;
+                }
+                for (_,app,id,body,target,launch) in messages {
+                    if !send(Incoming::Message(app,id,body,target,launch)){return Ok(());}
                 }
                 let status=match filter{crate::messenger::NotificationFilter::Only(client)=>format!("僅監聽 {} · {channels}",client.name()),crate::messenger::NotificationFilter::All=>format!("正在監聽 Windows 通知 · 當前可見 {count} 條\n{channels}")};
                 if status!=last_status {

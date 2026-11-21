@@ -388,20 +388,32 @@ impl App {
     }
     pub fn set_messenger_status(&mut self,client:crate::app::Messenger,status:String){self.messenger_statuses.insert(client,status);}
     pub fn messenger_status(&self,client:crate::app::Messenger)->&str{self.messenger_statuses.get(&client).map(String::as_str).unwrap_or("")}
+    /// 啟動時把通知中心裡還在的未讀補上；點開後仍由 clear 歸零，不會被舊快照復活。
+    pub fn seed_social(&mut self,seeds:Vec<crate::system::SocialSeed>){
+        if !self.settings.read_notifications{return;}
+        for seed in seeds{
+            self.social.seed(seed.social,seed.count,seed.app_id.as_deref(),seed.launch.as_deref());
+        }
+        self.social.persist();
+    }
     pub fn receive_notification(&mut self, app:String, id:String, body:String){
         self.receive_notification_from(app,id,body,None);
     }
     pub fn receive_notification_from(&mut self,app:String,id:String,body:String,unread:Option<crate::app::Unread>){
+        self.receive_notification_from_with_launch(app,id,body,unread,None);
+    }
+    /// `launch` 是 Windows 通知原始的深層連結；LINE 會帶 `line://…`，可回到同一個聊天室。
+    pub fn receive_notification_from_with_launch(&mut self,app:String,id:String,body:String,unread:Option<crate::app::Unread>,launch:Option<String>){
         if !self.settings.read_notifications || id.is_empty() || !crate::messenger::NotificationFilter::for_settings(&self.settings).allows(&id){return;}
         if crate::messenger::suppresses_toast(&app,&id,crate::messenger::toast_suppression(&self.settings)){return;}
-        let social_source=crate::social::detect(&app,&id);
+        let social_source=crate::social::detect(&app,&id).or_else(||crate::social::detect_browser_content(&app,&body));
         let notification_id=id.clone();
         let client=crate::app::Messenger::from_notification_id(&id).filter(|client|client.adapter().capture==crate::messenger::Capture::SystemToast);
         let id=client.map(|client|client.adapter().notification_id.to_string()).unwrap_or(id);
         // 鬼島自己发出的系统提醒会被通知中心回传；已在历史里的同一内容不再入队，避免重复显示。
         if crate::messenger::Messenger::from_notification_id(&id).is_none() && self.history.iter().any(|a|format!("{} · {}",a.title,a.body)==body){return;}
         if !self.notification_apps.observe(&id,&app) || !self.settings.notifications{return;}
-        if let Some(social)=social_source{self.social.bump(social,&notification_id);self.social.persist();}
+        if let Some(social)=social_source{self.social.bump_with_launch(social,&notification_id,launch.as_deref());self.social.persist();}
         let unread=client.map(|client|unread.filter(|u|u.source==client && u.pid!=0).unwrap_or(crate::app::Unread::of(client)));
         if let Some(unread)=unread{self.mark_messenger(unread.source,unread.pid,unread.window);}
         self.notification_bell_at=self.t;

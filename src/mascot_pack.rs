@@ -168,28 +168,7 @@ pub fn open_folder(key: &str) {
     let _ = std::fs::create_dir_all(&dir);
     let readme = dir.join("說明.txt");
     if !readme.exists() {
-        let _ = std::fs::write(&readme, "吉祥物動畫包\n\n把 pack.json 與影格 PNG 放在這個資料夾，重新載入後就會取代內建動畫。\n每格建議 144×90，透明背景。animations 可用的鍵：awake、curious、waking、happy、satisfied、music、worried、focused、dozing、sleeping。\n");
-    }
-    // 第一次打開時放一份可替換的範例，讓外掛包真的能獨立修改。
-    if !dir.join("pack.json").exists() {
-        if let Some(pack) = builtin_tiger(key) {
-            if let Some((frames, _, _)) = pack.animations.get("awake") {
-                for (index, frame) in frames.iter().enumerate() {
-                    if let Some(bytes) = frame.read() { let _ = std::fs::write(dir.join(format!("idle-{index:02}.png")), bytes); }
-                }
-            }
-            let names: Vec<_> = (0..16).map(|index| format!("idle-{index:02}.png")).collect();
-            let manifest = serde_json::json!({
-                "name": "石虎・待機（外掛範例）",
-                "frame_size": [FRAME_W, FRAME_H],
-                "fps": 8,
-                "loops": 1,
-                "animations": {
-                    "awake": {"frames": names, "fps": 8, "loop": true},
-                }
-            });
-            let _ = std::fs::write(dir.join("pack.json"), serde_json::to_vec_pretty(&manifest).unwrap_or_default());
-        }
+        let _ = std::fs::write(&readme, "吉祥物動畫包\n\n把 pack.json 與你自己畫的影格 PNG 放在這個資料夾，重新載入後就會取代內建動畫。\n每格建議 144×90，透明背景。animations 可用的鍵：awake、curious、waking、happy、satisfied、music、worried、focused、dozing、sleeping。\n\n這裡不再自動放入範例影格：舊版放的那組 16 張圖幾乎完全相同，看久了會以為吉祥物不會動。內建石虎改用即時向量動畫，尾巴、耳朵與眨眼都會隨狀態改變。\n");
     }
     #[cfg(windows)]
     { let _ = std::process::Command::new("explorer").arg(&dir).spawn(); }

@@ -178,8 +178,8 @@ pub enum Cmd {
     Open(PathBuf),
     ViewMessenger(Unread),
     OpenUrl(String),
-    /// 社群通知：優先喚起發出通知的桌面程式，沒有 AppID 才退回官網。
-    OpenSocial(crate::social::Social,Option<String>),
+    /// 社群通知：優先開啟通知的深層連結，其次喚起發出通知的桌面程式，最後才退回官網。
+    OpenSocial(crate::social::Social,Option<String>,Option<String>),
     /// 需要键盘输入：外壳应让窗口可激活并取得焦点。
     Focus,
     Reveal(PathBuf),
@@ -2498,7 +2498,7 @@ impl App {
             source.paint(&inner,x,cy);
             crate::social::badge(&inner,x+10.0,cy+7.5,*count,6.0,8.0);
             let button=inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,("social",source.key())).on_hover_text(format!("{} · {} 則訊息，點選開啟",source.name(),count));
-            if button.clicked(){let target=self.social.target(*source);self.social.clear(*source);self.social.persist();cmds.push(Cmd::OpenSocial(*source,target));}
+            if button.clicked(){let target=self.social.target(*source);let launch=self.social.launch(*source);self.social.clear(*source);self.social.persist();cmds.push(Cmd::OpenSocial(*source,target,launch));}
         }
         for (i,kind) in self.health_badges().into_iter().enumerate() {
             let cy=2.0+slot*((self.pending_messengers.len()+socials.len()+i) as f32+0.5)-self.messenger_scroll;
@@ -2548,7 +2548,7 @@ impl App {
         }else if count==0 && socials.len()==1 && health.is_empty() {
             let (source,n)=socials[0];
             let button=c.hit(0.0,0.0,w,h,("social",source.key())).on_hover_text(format!("{} · {} 則訊息，點選開啟",source.name(),n));
-            if button.clicked(){let target=self.social.target(source);self.social.clear(source);self.social.persist();cmds.push(Cmd::OpenSocial(source,target));}
+            if button.clicked(){let target=self.social.target(source);let launch=self.social.launch(source);self.social.clear(source);self.social.persist();cmds.push(Cmd::OpenSocial(source,target,launch));}
         }else if count>1 {
             let native_len=sources.len() as f32*step;
             let (nw,nh)=if horizontal {(native_len,BAR_H)}else{(32.0,native_len)};
@@ -2562,7 +2562,7 @@ impl App {
             let end=if k+1==icons{length}else{(if horizontal{x}else{y})+step/2.0};
             let button=if horizontal{c.hit(start,0.0,end-start,BAR_H,("social",source.key()))}else{c.hit(0.0,start,32.0,end-start,("social",source.key()))};
             if crate::quota_ui::bar_tooltip(button,format!("{} · {} 則訊息，點選開啟",source.name(),n)).clicked(){
-                let target=self.social.target(*source);self.social.clear(*source);self.social.persist();cmds.push(Cmd::OpenSocial(*source,target));
+                let target=self.social.target(*source);let launch=self.social.launch(*source);self.social.clear(*source);self.social.persist();cmds.push(Cmd::OpenSocial(*source,target,launch));
             }
         }
         for (i,kind) in health.into_iter().enumerate() {

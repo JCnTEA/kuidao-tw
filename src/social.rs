@@ -36,12 +36,20 @@ impl Social {
         list
     }
     /// 通知來源的 Windows AppID；有它才能開原生程式，而不是把 LINE 丟到瀏覽器。
-    fn app_target(self,id:Option<&str>)->Option<&str>{
+    pub(crate) fn app_target(self,id:Option<&str>)->Option<&str>{
         id.map(str::trim).filter(|id|!id.is_empty()&&*id!=self.key())
     }
     /// 優先喚起發出通知的桌面程式；LINE 另外還原被收進系統匣的主視窗。
     /// 沒有可用 AppID 或系統拒絕時，才退回官網。
-    pub fn open(self,id:Option<&str>)->Result<(),String>{
+    /// 優先開啟通知帶的深層連結；LINE 的 `line://` 會直接回到同一個聊天室，
+    /// 其他社群則是通知指向的貼文或對話。連結失效才退回啟動主程式。
+    pub fn open(self,id:Option<&str>,launch:Option<&str>)->Result<(),String>{
+        if let Some(launch)=launch.map(str::trim).filter(|launch|is_safe_launch(launch)){
+            if open_uri(launch).is_ok(){
+                if self==Self::Line{focus_line_window();}
+                return Ok(());
+            }
+        }
         #[cfg(windows)]
         if let Some(id)=self.app_target(id){
             if open_app_id(id).is_ok(){
@@ -49,7 +57,7 @@ impl Social {
                 return Ok(());
             }
         }
-        open_url(self.url())
+        open_uri(self.url())
     }
     /// 以 (x,y) 為中心畫 20×20 的圓角標誌。
     pub fn paint(self,c:&Card,x:f32,y:f32){
@@ -62,9 +70,8 @@ impl Social {
             Self::Facebook=>egui::Image::new(egui::include_image!("../assets/social/facebook.png")),
             Self::Instagram=>egui::Image::new(egui::include_image!("../assets/social/instagram.png")),
         };
-        if let Ok(egui::load::TexturePoll::Ready{texture})=icon.load_for_size(c.ui.ctx(),rect.size()){
-            c.painter.image(texture.id,rect,egui::Rect::from_min_max(egui::Pos2::ZERO,egui::pos2(1.0,1.0)),egui::Color32::WHITE);
-        }
+        // 所有社群統一 20×20 圓形；通知數字由島上膠囊另外畫，不影響圖示半徑。
+        icon.corner_radius(10.0).paint_at(c.ui,rect);
     }
     fn index(self)->usize{match self{Self::Line=>0,Self::PhoneLink=>1,Self::Threads=>2,Self::Messenger=>3,Self::Facebook=>4,Self::Instagram=>5}}
 }
@@ -81,16 +88,22 @@ fn open_app_id(id:&str)->Result<(),String>{
 #[cfg(not(windows))]
 fn open_app_id(_id:&str)->Result<(),String>{Err("社群原生程式暫僅支援 Windows".into())}
 
+/// 只放行聊天與內容類協定，避免通知內容被誘導去開本機檔案或命令。
+fn is_safe_launch(launch:&str)->bool{
+    let Some((scheme,_))=launch.split_once(':') else{return false;};
+    matches!(scheme.trim().to_ascii_lowercase().as_str(),
+        "line"|"ms-phone"|"ms-settings"|"https"|"http"|"fb"|"facebook"|"fb-messenger"|"fb-messenger-share"|"instagram"|"instagram-stories"|"threads"|"messenger"|"msteams"|"teams"|"spotify")
+}
+
 #[cfg(windows)]
-fn open_url(url:&str)->Result<(),String>{
-    use windows::{core::{w,PCWSTR},Win32::UI::{Shell::ShellExecuteW,WindowsAndMessaging::SW_SHOWNORMAL}};
+fn open_uri(url:&str)->Result<(),String>{    use windows::{core::{w,PCWSTR},Win32::UI::{Shell::ShellExecuteW,WindowsAndMessaging::SW_SHOWNORMAL}};
     let wide=url.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
     let result=unsafe{ShellExecuteW(None,w!("open"),PCWSTR(wide.as_ptr()),PCWSTR::null(),PCWSTR::null(),SW_SHOWNORMAL)};
-    if result.0 as isize<=32{return Err("無法開啟預設瀏覽器，請檢查 Windows 預設應用程式設定".into());}
+    if result.0 as isize<=32{return Err("無法開啟社群連結，請檢查 Windows 預設應用程式設定".into());}
     Ok(())
 }
 #[cfg(not(windows))]
-fn open_url(_url:&str)->Result<(),String>{Err("社群網址暫僅支援 Windows".into())}
+fn open_uri(_url:&str)->Result<(),String>{Err("社群連結暫僅支援 Windows".into())}
 
 /// LINE 最小化或收進系統匣時，Shell 的 AppID 喚起不一定會還原主視窗，
 /// 這裡只做「還原既有主視窗並切到前景」，不模擬滑鼠鍵盤，也不碰聊天內容。
@@ -153,11 +166,27 @@ pub fn detect(app:&str,id:&str)->Option<Social>{
     None
 }
 
+/// 瀏覽器把網站通知送進 Windows 通知中心時，AUMID 只會是 Chrome／Edge，
+/// 因此改看標題（通知正文第一段）來判斷是哪一個社群網站。
+pub fn detect_browser_content(app:&str,text:&str)->Option<Social>{
+    let app=app.trim().to_lowercase();
+    let browser=app.contains("chrome")||app.contains("chromium")||app.contains("edge")||app.contains("firefox")||app.contains("brave");
+    if !browser{return None;}
+    let head=text.split(" · ").next().unwrap_or(text).trim().to_lowercase();
+    let title=if head.is_empty(){text.to_lowercase()}else{head};
+    if title=="threads"||title.starts_with("threads ")||title.contains("threads.com"){return Some(Social::Threads);}
+    if title=="messenger"||title.contains("messenger.com"){return Some(Social::Messenger);}
+    if title=="facebook"||title.starts_with("facebook ")||title.contains("facebook.com"){return Some(Social::Facebook);}
+    if title=="instagram"||title.starts_with("instagram ")||title.contains("instagram.com"){return Some(Social::Instagram);}
+    if title=="line"||title.starts_with("line ")||title.contains("line.me"){return Some(Social::Line);}
+    None
+}
+
 /// 每個來源的未讀則數；點開應用程式或到通知中心查看後歸零。
 #[derive(Clone,Debug)]
-pub struct Badges{counts:[u16;6],ids:[Option<String>;6]}
+pub struct Badges{counts:[u16;6],ids:[Option<String>;6],launches:[Option<String>;6]}
 impl Default for Badges{
-    fn default()->Self{Self{counts:[0;6],ids:std::array::from_fn(|_|None)}}
+    fn default()->Self{Self{counts:[0;6],ids:std::array::from_fn(|_|None),launches:std::array::from_fn(|_|None)}}
 }
 impl Badges{
     pub fn load()->Self{
@@ -172,6 +201,8 @@ impl Badges{
                 badges.counts[social.index()]=count.min(9999) as u16;
                 badges.ids[social.index()]=item.get("id").and_then(|v|v.as_str()).map(str::trim)
                     .filter(|id|!id.is_empty()&&*id!=key).map(|id|id.to_string());
+                badges.launches[social.index()]=item.get("launch").and_then(|v|v.as_str())
+                    .map(str::trim).filter(|launch|!launch.is_empty()).map(|launch|launch.to_string());
             }
         }
         badges
@@ -180,21 +211,38 @@ impl Badges{
         let list:Vec<_>=Social::ALL.into_iter().filter(|s|self.counts[s.index()]>0)
             .map(|s|{let mut item=serde_json::json!({"app":s.key(),"count":self.counts[s.index()]});
                 if let Some(id)=&self.ids[s.index()]{item["id"]=serde_json::Value::String(id.clone());}
+                if let Some(launch)=&self.launches[s.index()]{item["launch"]=serde_json::Value::String(launch.clone());}
                 item
             }).collect();
         let path=crate::model::config_dir().join("social-badges.json");
         if let Some(parent)=path.parent(){let _=std::fs::create_dir_all(parent);}
         if let Ok(data)=serde_json::to_vec(&list){let _=crate::model::atomic_write(&path,&data);}
     }
-    pub fn bump(&mut self,social:Social,id:&str){
+    pub fn bump(&mut self,social:Social,id:&str){self.bump_with_launch(social,id,None);}
+    pub fn bump_with_launch(&mut self,social:Social,id:&str,launch:Option<&str>){
         let slot=&mut self.counts[social.index()];
         *slot=slot.saturating_add(1).min(9999);
         if let Some(id)=social.app_target(Some(id)){self.ids[social.index()]=Some(id.to_owned());}
+        if let Some(launch)=launch.map(str::trim).filter(|launch|!launch.is_empty()){
+            self.launches[social.index()]=Some(launch.to_owned());
+        }
+    }
+    /// 啟動時把通知中心裡已經存在的未讀補上；只補不減，避免蓋掉即時通知。
+    pub fn seed(&mut self,social:Social,count:u16,id:Option<&str>,launch:Option<&str>){
+        let slot=&mut self.counts[social.index()];
+        if count>*slot{*slot=count.min(9999);}
+        if let Some(id)=id.and_then(|id|social.app_target(Some(id))){self.ids[social.index()]=Some(id.to_owned());}
+        if let Some(launch)=launch.map(str::trim).filter(|launch|!launch.is_empty()){
+            self.launches[social.index()]=Some(launch.to_owned());
+        }
     }
     pub fn clear(&mut self,social:Social){
         self.counts[social.index()]=0;
         self.ids[social.index()]=None;
+        self.launches[social.index()]=None;
     }
+    /// 最後一則通知帶的深層連結；點開後就清掉，避免下次誤開舊對話。
+    pub fn launch(&self,social:Social)->Option<String>{self.launches[social.index()].clone()}
     pub fn persist(&self){self.save();}
     pub fn count(&self,social:Social)->u16{self.counts[social.index()]}
     /// 先記住實際發出通知的 AppID；舊資料沒有 id 時，從已觀察到的通知來源清單補上。
@@ -265,6 +313,44 @@ mod tests{
         badges.clear(Social::Threads);
         assert_eq!(badges.count(Social::Threads),0);
         assert_eq!(badges.total(),1);
+    }
+    #[test]
+    fn a_notification_deep_link_is_kept_until_the_badge_is_opened(){
+        let mut badges=Badges::default();
+        badges.bump_with_launch(Social::Line,"NAVER.WIN32_LINEwin8_8ptj331gd3tyt!LINE",Some(" line://chat/?mid=bank "));
+        assert_eq!(badges.launch(Social::Line).as_deref(),Some("line://chat/?mid=bank"));
+        assert_eq!(badges.count(Social::Line),1);
+        badges.clear(Social::Line);
+        assert_eq!(badges.launch(Social::Line),None);
+        assert_eq!(badges.count(Social::Line),0);
+    }
+    #[test]
+    fn browser_notifications_are_classified_by_their_title(){
+        assert_eq!(detect_browser_content("Google Chrome","Threads · 小明 愛心你的貼文"),Some(Social::Threads));
+        assert_eq!(detect_browser_content("Microsoft Edge","Instagram · 小美 傳送訊息"),Some(Social::Instagram));
+        assert_eq!(detect_browser_content("Firefox","Messenger · 阿宏 傳送訊息"),Some(Social::Messenger));
+        assert_eq!(detect_browser_content("Brave","LINE · 台新銀行 傳送訊息"),Some(Social::Line));
+        assert_eq!(detect_browser_content("LINE","Threads · 小明 愛心你的貼文"),None,"桌面程式不靠正文猜來源");
+    }
+    #[test]
+    fn seeding_from_the_notification_center_only_raises_counts(){
+        let mut badges=Badges::default();
+        badges.seed(Social::Threads,4,Some("handler"),Some("threads://notification"));
+        assert_eq!(badges.count(Social::Threads),4);
+        assert_eq!(badges.launch(Social::Threads).as_deref(),Some("threads://notification"));
+        badges.bump(Social::Threads,"handler");
+        badges.seed(Social::Threads,2,Some("handler"),None);
+        assert_eq!(badges.count(Social::Threads),5,"較舊的快照不能把新通知蓋掉");
+    }
+    #[test]
+    fn only_chat_and_web_protocols_are_opened_from_notifications(){
+        assert!(is_safe_launch("line://chat/?mid=bank"));
+        assert!(is_safe_launch("ms-phone:phonenotifications?deviceid=1"));
+        assert!(is_safe_launch("https://example.com/post/1"));
+        assert!(!is_safe_launch("file:///C:/Windows/System32/cmd.exe"));
+        assert!(!is_safe_launch("cmd:calc.exe"));
+        assert!(!is_safe_launch("javascript:alert(1)"));
+        assert!(!is_safe_launch(""));
     }
     #[test]
     fn launch_uses_the_notifying_desktop_app_and_ignores_placeholder_keys(){

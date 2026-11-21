@@ -485,9 +485,10 @@ impl eframe::App for Shell {
                 while let Ok(event)=rx.try_recv(){match event {
                     daozai::system::Incoming::Revoked=>{self.app.settings.read_notifications=false;self.app.settings.save();},
                     daozai::system::Incoming::Status(s)=>self.app.listener_status=s,
-                    daozai::system::Incoming::Message(a,id,b,target)=>{
+                    daozai::system::Incoming::SocialSeed(seeds)=>self.app.seed_social(seeds),
+                    daozai::system::Incoming::Message(a,id,b,target,launch)=>{
                         if target.is_some_and(|target|self.messengers.track(target)==Err(OpenError::Exited)){continue;}
-                        self.app.receive_notification_from(a,id,b,target.map(|target|target.unread));
+                        self.app.receive_notification_from_with_launch(a,id,b,target.map(|target|target.unread),launch);
                     }
                 }}
             }
@@ -724,8 +725,8 @@ impl eframe::App for Shell {
                         if open_path(std::path::Path::new(&url)).is_err(){self.app.say("無法開啟預設瀏覽器，請檢查 Windows 預設應用程式設定");}
                     }
                 },
-                Cmd::OpenSocial(source,target)=>{
-                    if let Err(error)=source.open(target.as_deref()){self.app.say(error);}
+                Cmd::OpenSocial(source,target,launch)=>{
+                    if let Err(error)=source.open(target.as_deref(),launch.as_deref()){self.app.say(error);}
                 },
                 Cmd::CalendarImport=>{
                     #[cfg(windows)] match daozai::system::pick_files_for("選擇要匯入的行事曆檔案（.ics）",true){

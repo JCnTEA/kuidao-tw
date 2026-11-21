@@ -14,16 +14,16 @@ use crate::theme;
 pub(crate) fn draw(c: &Card, cx: f32, t: f64, state: crate::pet::PetState) {
     let species = crate::mascot::current();
     let (speed, amplitude) = match state {
-        crate::pet::PetState::Awake => (1.6, 1.0),
-        crate::pet::PetState::Curious => (2.0, 1.15),
-        crate::pet::PetState::Waking => (2.6, 1.3),
-        crate::pet::PetState::Happy => (3.4, 1.8),
-        crate::pet::PetState::Satisfied => (2.2, 1.4),
-        crate::pet::PetState::Music => (2.8, 1.5),
-        crate::pet::PetState::Worried => (4.2, 0.7),
-        crate::pet::PetState::Focused => (1.0, 0.45),
-        crate::pet::PetState::Dozing => (0.8, 0.35),
-        crate::pet::PetState::Sleeping => (0.5, 0.2),
+        crate::pet::PetState::Awake => (3.0, 1.45),
+        crate::pet::PetState::Curious => (3.6, 1.7),
+        crate::pet::PetState::Waking => (4.4, 2.0),
+        crate::pet::PetState::Happy => (5.6, 2.5),
+        crate::pet::PetState::Satisfied => (4.0, 2.0),
+        crate::pet::PetState::Music => (4.8, 2.2),
+        crate::pet::PetState::Worried => (6.2, 0.9),
+        crate::pet::PetState::Focused => (1.6, 0.55),
+        crate::pet::PetState::Dozing => (1.0, 0.35),
+        crate::pet::PetState::Sleeping => (0.6, 0.2),
     };
     let swing = (t * speed).sin() as f32 * amplitude;
     let ear = ear_twitch(t) * if matches!(state, crate::pet::PetState::Dozing | crate::pet::PetState::Sleeping) { 0.25 } else { 1.0 };
@@ -51,10 +51,10 @@ pub(crate) fn draw(c: &Card, cx: f32, t: f64, state: crate::pet::PetState) {
     face(c, cx, state, ink);
 }
 
-/// 每 6 秒一次、持續 0.4 秒的耳朵輕顫；幅度只夠看得出來，不會拉扯整張圖。
+/// 每 4 秒一次、持續 0.5 秒的耳朵輕顫；幅度只夠看得出來，不會拉扯整張圖。
 fn ear_twitch(t: f64) -> f32 {
-    let phase = t.rem_euclid(6.0);
-    if phase < 0.4 { ((phase / 0.4) * std::f64::consts::PI).sin() as f32 * 0.45 } else { 0.0 }
+    let phase = t.rem_euclid(4.0);
+    if phase < 0.5 { ((phase / 0.5) * std::f64::consts::PI).sin() as f32 * 0.75 } else { 0.0 }
 }
 
 fn arc_ellipse(c: &Card, cx: f32, cy: f32, rx: f32, ry: f32, a0: f32, a1: f32, width: f32, ink: Color32) {
@@ -185,9 +185,9 @@ fn tail(c: &Card, cx: f32, swing: f32, ink: Color32) {
     cubic(
         c,
         (cx + 5.6, 25.4),
-        (cx + 11.6, 26.0 + swing * 0.5),
-        (cx + 12.0, 21.0 + swing),
-        (cx + 10.0, 17.6),
+        (cx + 11.6 + swing * 0.25, 26.0 + swing * 0.55),
+        (cx + 12.0 + swing * 0.45, 21.0 + swing * 0.85),
+        (cx + 10.0 + swing * 0.65, 17.6 + swing * 1.15),
         1.3,
         ink,
     );
