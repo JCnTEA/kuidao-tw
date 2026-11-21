@@ -148,27 +148,33 @@ section{scroll-margin-top:104px}
 .hero-facts span{display:inline-flex;align-items:center;gap:7px}
 .hero-facts span::before{content:"";width:4px;height:4px;border-radius:50%;background:rgba(95,92,255,.45)}
 
-/* 島體示意 */
+/* 島體示意：依圖二重繪，內容由左至右為電量、時間、天氣、AI、番茄、播放時間、訊號與石虎 */
 .hero-island{
-  width:min(690px,84vw);height:46px;margin:38px auto 0;
-  display:flex;align-items:center;gap:14px;padding:0 18px;
-  border-radius:999px;color:#e8efff;
-  background:linear-gradient(180deg,#191a20 0%,#0f1014 100%);
-  box-shadow:0 30px 64px -34px rgba(20,22,40,.85),0 0 0 1px rgba(255,255,255,.08),0 0 90px -20px rgba(80,120,255,.28);
-  font-size:11px;letter-spacing:.02em;
-  position:relative;overflow:hidden;
+  width:min(660px,92vw);height:56px;margin:40px auto 0;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 20px;
+  border-radius:999px;color:#f4f5f7;
+  background:#090a0c;
+  box-shadow:0 34px 70px -38px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.07),0 0 90px -28px rgba(34,211,238,.22);
+  font-size:13px;letter-spacing:.01em;
+  position:relative;overflow:hidden;box-sizing:border-box;
 }
-.hero-island::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(74,184,255,.16),transparent 30%,transparent 72%,rgba(159,97,255,.18));pointer-events:none}
-.hi-left{display:flex;align-items:center;gap:11px;white-space:nowrap;position:relative;z-index:1}
-.hi-time{font-weight:700;color:#fff}
-.hi-weather{color:#b9c1d3}
-.hi-mid{display:flex;align-items:center;gap:9px;flex:1;min-width:0;color:#cdd6e6;position:relative;z-index:1}
-.hi-wave{display:flex;align-items:flex-end;gap:2px;height:12px}
-.hi-wave b{display:block;width:2px;border-radius:2px;background:#7ed8ff}
-.hi-mid em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hi-right{margin-left:auto;display:flex;align-items:center;gap:10px;position:relative;z-index:1}
-.hi-ring{width:24px;height:24px;border-radius:50%;border:1px solid rgba(255,255,255,.35);display:grid;place-items:center;font-size:7px;color:#dfe8ff}
-.hi-count{width:22px;height:22px;border-radius:50%;background:#ff4d67;display:grid;place-items:center;font-size:9px;font-weight:700;color:#fff}
+.hero-island::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.07),transparent 42%);pointer-events:none}
+.hero-island > *{position:relative;z-index:1}
+.hi-battery{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:2.5px solid #24b455;display:grid;place-items:center;color:#24b455;background:rgba(36,180,85,.04)}
+.hi-battery svg{width:16px;height:16px;display:block}
+.hi-clock{flex:0 0 auto;font-size:24px;font-weight:800;color:#fff;letter-spacing:.005em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.hi-weather{flex:0 0 auto;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.hi-weather svg{width:27px;height:21px;display:block}
+.hi-weather b{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.hi-ai{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:2px solid #4a4d56;display:grid;place-items:center;font-size:9px;font-weight:700;color:#d6d9e0}
+.hi-tomato{flex:0 0 auto;display:grid;place-items:center}
+.hi-tomato svg{width:26px;height:26px;display:block}
+.hi-track{flex:0 0 auto;font-size:17px;font-weight:800;color:#9e4135;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.hi-signal{flex:0 0 auto;display:flex;align-items:flex-end;gap:2.5px;height:15px}
+.hi-signal b{display:block;width:2.5px;border-radius:2px;background:#f0f2f5}
+.hi-tiger{flex:0 0 auto;position:relative;display:grid;place-items:center;margin-left:0}
+.hi-tiger img{height:42px;width:auto;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.18))}
+.hi-note{position:absolute;right:-8px;top:-5px;color:#fff;font-size:13px;line-height:1}
 
 /* ===== 特色功能 ===== */
 .features{padding-top:112px}
@@ -249,6 +255,56 @@ section{scroll-margin-top:104px}
 .mini-mail{left:-36px;bottom:14px;width:248px;transform:rotate(-2.2deg)}
 .mini-weather{right:-28px;top:-22px;width:218px;transform:rotate(2deg)}
 .visual-cap{margin-top:18px;font-size:10.5px;letter-spacing:.1em;color:#999ca6;text-align:right}
+
+/* ===== 展開畫面幻燈片 ===== */
+.island-showcase{
+  margin-top:52px;display:grid;grid-template-columns:minmax(0,1fr) 92px;
+  gap:22px;align-items:center;
+}
+.island-stage{
+  position:relative;min-width:0;padding:16px 14px;border-radius:30px;
+  background:linear-gradient(180deg,rgba(12,20,34,.92),rgba(7,11,18,.96));
+  border:1px solid rgba(125,211,252,.18);
+  box-shadow:0 40px 90px -48px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.06);
+  touch-action:pan-y;overflow:hidden;
+}
+.island-stage::before{
+  content:"";position:absolute;inset:-40% 20% auto;height:70%;
+  background:radial-gradient(ellipse at center,rgba(34,211,238,.14),transparent 66%);
+  pointer-events:none;
+}
+.island-viewport{position:relative;overflow:hidden;border-radius:20px;background:#05080e;z-index:1}
+.island-track{display:flex;transition:transform .52s cubic-bezier(.22,.61,.36,1)}
+.island-slide{position:relative;flex:0 0 100%;min-width:100%;height:440px;margin:0}
+.island-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:18px;display:block;user-select:none;-webkit-user-drag:none}
+.island-stage:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.island-dots{position:relative;z-index:2;display:flex;justify-content:center;gap:7px;margin-top:12px;margin-bottom:14px}
+.island-dots button{
+  width:7px;height:7px;padding:0;border:0;border-radius:50%;cursor:pointer;
+  background:rgba(185,203,228,.28);transition:width .25s,background .25s;
+}
+.island-dots button[aria-current="true"]{width:24px;border-radius:99px;background:var(--accent)}
+.island-rail{display:flex;flex-direction:column;gap:13px;align-items:center;justify-content:center}
+.rail-item{position:relative;width:48px;height:48px;border-radius:50%;display:grid;place-items:center}
+.rail-item>img{width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;box-shadow:0 8px 20px -10px rgba(0,0,0,.8)}
+.rail-item svg{width:48px;height:48px;border-radius:50%;display:block}
+.rail-badge{
+  position:absolute;right:-6px;top:-6px;min-width:20px;height:20px;padding:0 5px;
+  border-radius:99px;background:#ff3b30;color:#fff;border:1.5px solid #f4f7fb;
+  font:800 10px/17px "Noto Sans TC",system-ui,sans-serif;text-align:center;
+  box-shadow:0 3px 8px rgba(255,59,48,.35);
+}
+.rail-item.pop{animation:railPop .5s both;animation-delay:calc(var(--i) * 55ms)}
+@keyframes railPop{
+  0%{transform:scale(.72) translateY(7px);opacity:0}
+  62%{transform:scale(1.08) translateY(0);opacity:1}
+  100%{transform:scale(1);opacity:1}
+}
+.island-note{margin-top:18px;text-align:center;font-size:10.5px;letter-spacing:.1em;color:#999ca6}
+@media(prefers-reduced-motion:reduce){
+  .island-track{transition:none}
+  .rail-item.pop{animation:none}
+}
 
 /* ===== 台灣版 ===== */
 .taiwan{padding-top:122px}
@@ -348,9 +404,18 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
   .hero-sub{font-size:13.5px;padding:0 4px}
   .hero-cta{margin-top:22px}
   .btn-main,.btn-soft{height:46px;padding:0 20px;font-size:13px}
-  .hero-island{height:42px;margin-top:30px;gap:8px;padding:0 12px;font-size:9.5px}
-  .hi-weather{display:none}
-  .hi-mid{display:none}
+  .hero-island{height:54px;margin-top:28px;gap:8px;padding:0 12px}
+  .hi-battery{width:28px;height:28px;border-width:2px}
+  .hi-battery svg{width:14px;height:14px}
+  .hi-clock{font-size:14.5px}
+  .hi-weather svg{width:21px;height:17px}
+  .hi-weather b{font-size:14px}
+  .hi-ai{width:24px;height:24px;border-width:1.5px;font-size:8px}
+  .hi-tomato svg{width:21px;height:21px}
+  .hi-track{font-size:12px}
+  .hi-signal{display:none}
+  .hi-tiger img{height:34px}
+  .hi-note{font-size:11px;right:-6px;top:-4px}
   .hero-facts{font-size:10px;gap:7px 12px}
   .features{padding-top:86px}
   .section-gap{height:36px}
@@ -361,6 +426,13 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
   .interface{padding-top:88px}
   .visual-mini{position:relative;box-shadow:var(--shadow-soft);transform:none;width:auto}
   .interface-visual{padding-bottom:0}
+  .island-showcase{grid-template-columns:1fr;margin-top:32px;gap:14px}
+  .island-stage{padding:11px 9px;border-radius:22px}
+  .island-slide{height:204px}
+  .island-dots{margin-top:9px}
+  .island-rail{flex-direction:row;gap:10px}
+  .rail-item,.rail-item>img,.rail-item svg{width:40px;height:40px}
+  .rail-badge{right:-4px;top:-4px;min-width:18px;height:18px;font-size:9px;line-height:15px}
   .mini-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;margin-top:9px;align-items:start}
   .visual-mini{left:auto;right:auto;top:auto;bottom:auto;width:auto;min-width:0}
   .visual-mini img{width:100%;height:auto}
@@ -433,9 +505,8 @@ body::before{
 .hero-facts{color:#7d93b0}
 .hero-facts span::before{background:rgba(45,212,191,.7)}
 .hero-island{box-shadow:0 34px 70px -36px #000,0 0 0 1px rgba(125,211,252,.2),0 0 100px -24px rgba(34,211,238,.35)}
-.hero-island::after{background:linear-gradient(90deg,rgba(45,212,191,.20),transparent 30%,transparent 72%,rgba(251,146,60,.20))}
-.hi-weather{color:#b9cbe4}
-.hi-mid{color:#d3e0f1}
+.hero-island::after{background:linear-gradient(180deg,rgba(255,255,255,.07),transparent 42%)}
+.hi-weather b{color:#fff}
 .hi-wave b{background:linear-gradient(180deg,#8bf5ff,#2dd4bf)}
 .fcard{
   border-color:rgba(125,211,252,.14);
@@ -523,12 +594,27 @@ footer{border-top-color:rgba(125,211,252,.12)}
   </div>
 
   <div class="hero-island" aria-hidden="true">
-    <div class="hi-left"><span class="hi-time">09:41</span><span class="hi-weather">台北 22°　多雲</span></div>
-    <div class="hi-mid">
-      <span class="hi-wave"><b style="height:4px"></b><b style="height:9px"></b><b style="height:12px"></b><b style="height:7px"></b><b style="height:3px"></b></span>
-      <em>正在播放 · 鬼島</em>
-    </div>
-    <div class="hi-right"><span class="hi-ring">82</span><span class="hi-count">3</span></div>
+    <span class="hi-battery"><svg viewBox="0 0 24 24" fill="none"><path d="M13.5 2 5.5 13h5.5L10 22l8.5-11.5h-5.5L13.5 2Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></span>
+    <span class="hi-clock">下午 14:19:58</span>
+    <span class="hi-weather">
+      <svg viewBox="0 0 36 26" fill="none">
+        <circle cx="26" cy="8" r="5.5" fill="#f5c542"/>
+        <g stroke="#f5c542" stroke-width="2" stroke-linecap="round"><path d="M26 1v2M26 13v2M33 8h2M17 8h2M31.5 2.5l1.4-1.4M19.1 11.9l1.4-1.4M31.5 13.5l1.4 1.4"/></g>
+        <path d="M8 22c-3.3 0-5.7-2.2-5.7-5.1 0-2.7 2.1-4.8 5-4.8.5-3.1 3.2-5.4 6.5-5.4 3.9 0 7.1 2.9 7.4 6.6 2.7.3 4.7 2.2 4.7 4.4 0 2.3-2 4.3-5.1 4.3H8z" fill="#eff1f4"/>
+      </svg>
+      <b>19°</b>
+    </span>
+    <span class="hi-ai">AI</span>
+    <span class="hi-tomato">
+      <svg viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="18" r="10.5" fill="#a93a32"/>
+        <circle cx="12.5" cy="15.5" r="3.4" fill="#c25248" opacity=".55"/>
+        <path d="M16 8.5c-.7-2.6.3-4.8 2.7-6.2M16 8.5c1.5-2 3.7-2.8 6-2.6M16 8.5c-1.6-1.5-3.7-1.9-5.6-1.3M16 8.5c-2.4-.5-4.5.4-5.8 2.2" stroke="#3d7a3c" stroke-width="2.1" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span class="hi-track">25:00</span>
+    <span class="hi-signal"><b style="height:6px"></b><b style="height:9px"></b><b style="height:12px"></b><b style="height:16px"></b></span>
+    <span class="hi-tiger"><img src="images/brand/tiger-line.png" alt="" width="36" height="44"><span class="hi-note">♪</span></span>
   </div>
 </section>
 
@@ -666,6 +752,41 @@ footer{border-top-color:rgba(125,211,252,.12)}
         <p class="visual-cap">實機畫面 · 外觀、信箱與天氣</p>
       </div>
     </div>
+
+    <div class="island-showcase">
+      <div class="island-stage" id="islandStage" tabindex="0" role="region" aria-roledescription="carousel" aria-label="鬼島展開畫面，左右滑動切換">
+        <div class="island-viewport">
+          <div class="island-track" id="islandTrack">
+            <figure class="island-slide" data-counts="50,32,18,10"><img src="images/showcase/island-weather.webp" alt="鬼島展開天氣：台北 19 度、體感、濕度、風速與七日預報" loading="eager" decoding="async"></figure>
+            <figure class="island-slide" data-counts="42,28,16,12"><img src="images/showcase/island-music.webp" alt="鬼島展開音樂：GIRL LIKE ME、播放進度與原文譯文歌詞" loading="eager" decoding="async"></figure>
+            <figure class="island-slide" data-counts="38,25,14,10"><img src="images/showcase/island-lyrics.webp" alt="鬼島島上歌詞：單行原文與右側譯文" loading="eager" decoding="async"></figure>
+            <figure class="island-slide" data-counts="35,22,13,11"><img src="images/showcase/island-focus.webp" alt="鬼島番茄專注：05:00 休息、專注與休息按鈕" loading="eager" decoding="async"></figure>
+            <figure class="island-slide" data-counts="48,30,17,10"><img src="images/showcase/island-clipboard.webp" alt="鬼島置物架與剪貼簿：複製的文字會出現在這裡" loading="eager" decoding="async"></figure>
+            <figure class="island-slide" data-counts="40,26,15,12"><img src="images/showcase/island-todo.webp" alt="鬼島待辦清單：0/0 已完成與今天還沒有安排" loading="eager" decoding="async"></figure>
+            <figure class="island-slide" data-counts="44,29,16,13"><img src="images/showcase/island-calendar.webp" alt="鬼島行程：2026 年 11 月月曆與當天暫無行程" loading="eager" decoding="async"></figure>
+          </div>
+        </div>
+        <div class="island-dots" id="islandDots" role="tablist" aria-label="選擇展開畫面">
+          <button type="button" aria-current="true" aria-label="天氣"></button>
+          <button type="button" aria-label="音樂"></button>
+          <button type="button" aria-label="島上歌詞"></button>
+          <button type="button" aria-label="番茄專注"></button>
+          <button type="button" aria-label="剪貼簿"></button>
+          <button type="button" aria-label="待辦清單"></button>
+          <button type="button" aria-label="行程"></button>
+        </div>
+      </div>
+      <div class="island-rail" id="islandRail" aria-label="展開時旁邊的未讀通知範例">
+        <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt="Gmail"><span class="rail-badge">50</span></div>
+        <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt="LINE"><span class="rail-badge">32</span></div>
+        <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt="手機連結"><span class="rail-badge">18</span></div>
+        <div class="rail-item" style="--i:3">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="bellBg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff7a59"/><stop offset="1" stop-color="#ef3b46"/></linearGradient></defs><circle cx="24" cy="24" r="24" fill="url(#bellBg)"/><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z" fill="#fff"/></svg>
+          <span class="rail-badge">10</span>
+        </div>
+      </div>
+    </div>
+    <p class="island-note">七種展開模樣可左右滑動 · 旁邊同步亮起 Gmail、LINE、手機連結與系統通知未讀</p>
   </div>
 </section>
 
@@ -808,6 +929,71 @@ footer{border-top-color:rgba(125,211,252,.12)}
     if(lastTouch && !e.target.closest('.fcard')) closeAll(null);
   }, true);
   window.addEventListener('keydown', function(){ lastTouch = false; }, true);
+
+  // 展開畫面幻燈片：滑鼠拖曳、觸控左右滑、鍵盤方向鍵與圓點都能切換。
+  (function(){
+    var stage = document.getElementById('islandStage');
+    if(!stage) return;
+    var track = document.getElementById('islandTrack');
+    var dots = Array.prototype.slice.call(document.querySelectorAll('#islandDots button'));
+    var slides = Array.prototype.slice.call(track.querySelectorAll('.island-slide'));
+    var railItems = Array.prototype.slice.call(document.querySelectorAll('#islandRail .rail-item'));
+    var index = 0, startX = null, startY = null, dragX = 0, pointerId = null;
+
+    function countsFor(i){
+      return (slides[i].dataset.counts || '50,32,18,10').split(',').map(function(n){ return n.trim(); });
+    }
+    function applyRail(i, animate){
+      var counts = countsFor(i);
+      railItems.forEach(function(item, n){
+        var badge = item.querySelector('.rail-badge');
+        if(badge) badge.textContent = counts[n] || '10';
+        item.classList.remove('pop');
+        if(animate){
+          void item.offsetWidth;
+          item.classList.add('pop');
+        }
+      });
+    }
+    function go(i, animate){
+      index = (i + slides.length) % slides.length;
+      track.style.transform = 'translate3d(-' + (index * 100) + '%,0,0)';
+      dots.forEach(function(dot, n){ dot.setAttribute('aria-current', n === index ? 'true' : 'false'); });
+      stage.setAttribute('aria-label', '鬼島展開畫面：' + (slides[index].querySelector('img').alt.split('：')[0] || '第 ' + (index + 1) + ' 張'));
+      applyRail(index, animate !== false);
+    }
+    dots.forEach(function(dot, n){
+      dot.addEventListener('click', function(){ go(n, true); });
+    });
+    stage.addEventListener('pointerdown', function(e){
+      if(e.target.closest('button')) return;
+      startX = e.clientX; startY = e.clientY; dragX = 0; pointerId = e.pointerId;
+      try { stage.setPointerCapture(pointerId); } catch(_) {}
+    });
+    stage.addEventListener('pointermove', function(e){
+      if(startX === null || e.pointerId !== pointerId) return;
+      dragX = e.clientX - startX;
+      if(Math.abs(dragX) > Math.abs(e.clientY - startY) && Math.abs(dragX) > 12){
+        if(e.cancelable) e.preventDefault();
+      }
+    });
+    function finish(e){
+      if(startX === null) return;
+      if(Math.abs(dragX) > 42) go(index + (dragX < 0 ? 1 : -1), true);
+      startX = null; startY = null; dragX = 0;
+      if(pointerId !== null){
+        try { stage.releasePointerCapture(pointerId); } catch(_) {}
+        pointerId = null;
+      }
+    }
+    stage.addEventListener('pointerup', finish);
+    stage.addEventListener('pointercancel', finish);
+    stage.addEventListener('keydown', function(e){
+      if(e.key === 'ArrowLeft'){ e.preventDefault(); go(index - 1, true); }
+      if(e.key === 'ArrowRight'){ e.preventDefault(); go(index + 1, true); }
+    });
+    go(0, false);
+  })();
 
   // 導覽目前區塊提示
   var links = Array.prototype.slice.call(document.querySelectorAll('.menu a'));
