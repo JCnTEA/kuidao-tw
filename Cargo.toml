@@ -1,6 +1,6 @@
 [package]
 name = "kuidao"
-version = "0.6.85"
+version = "0.6.86"
 edition = "2021"
 license = "MIT"
 description = "鬼島：Windows 顶部的桌面伙伴与信息岛"
@@ -14,6 +14,11 @@ path = "src/lib.rs"
 [[bin]]
 name = "kuidao"
 path = "src/main.rs"
+
+# 極小安裝啟動器：安裝包不含主程式，第一次開啟才下載 Release 內容。
+[[bin]]
+name = "kuidao-bootstrap"
+path = "src/bin/kuidao-bootstrap/main.rs"
 
 # 无窗口演示录制器：脚本驱动 + 软件光栅化，输出 RGBA 帧流给 ffmpeg。
 [[bin]]

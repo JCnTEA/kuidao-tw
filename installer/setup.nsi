@@ -12,6 +12,9 @@ Unicode true
 !ifndef APP_NAME
   !define APP_NAME "鬼島 桌面靈動島"
 !endif
+!ifndef BOOTSTRAP_EXE
+  !error "BOOTSTRAP_EXE is required"
+!endif
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
 Name "${APP_NAME}"
 OutFile "${OUTPUT_FILE}"
@@ -20,7 +23,7 @@ InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
 ManifestDPIAware true
 SetCompressor /SOLID lzma
-VIProductVersion "0.6.85.0"
+VIProductVersion "0.6.86.0"
 VIAddVersionKey /LANG=1028 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=1028 "FileDescription" "${APP_NAME}安裝程式"
 VIAddVersionKey /LANG=1028 "FileVersion" "${APP_VERSION}"
@@ -37,9 +40,10 @@ Var AutoStartChoice
 Page custom InstallPage InstallPageLeave
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_TITLE "鬼島已安裝"
-!define MUI_FINISHPAGE_TEXT "音樂、提醒和日常小事，現在都在桌面上的小島裡。"
-!define MUI_FINISHPAGE_RUN "$INSTDIR\kuidao.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "開啟鬼島"
+!define MUI_FINISHPAGE_TEXT "安裝包只放入極小啟動器。按下完成後會自動下載主程式，下載完成便會開啟鬼島。"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\kuidao-bootstrap.exe"
+!define MUI_FINISHPAGE_RUN_PARAMETERS "--update"
+!define MUI_FINISHPAGE_RUN_TEXT "下載並開啟鬼島"
 !insertmacro MUI_PAGE_FINISH
 !define MUI_UNCONFIRMPAGE_TEXT_TOP "將解除安裝鬼島。設定、待辦和連線記錄會保留，重新安裝後仍可使用。"
 !insertmacro MUI_UNPAGE_CONFIRM
@@ -104,9 +108,9 @@ Function InstallPage
   Pop $0
   CreateFont $1 "Microsoft YaHei UI" 18 700
   SendMessage $0 ${WM_SETFONT} $1 0
-  ${NSD_CreateLabel} 112u 14u 188u 14u "v${APP_VERSION} · 升級保留設定和記錄"
+  ${NSD_CreateLabel} 112u 14u 188u 14u "v${APP_VERSION} · 安裝後自動補齊主程式"
   Pop $0
-  ${NSD_CreateLabel} 58u 34u 240u 20u "讓重要的資訊，輕輕出現在螢幕頂部。"
+  ${NSD_CreateLabel} 58u 34u 240u 20u "先安裝極小啟動器，不一次下載完整安裝包。"
   Pop $0
   ${NSD_CreateLabel} 0 58u 300u 16u "音樂歌詞 · 郵件驗證碼 · 行程提醒 · AI 額度"
   Pop $0
@@ -171,6 +175,9 @@ Function EnsureOwnFolder
     Return
   ${EndIf}
   ${If} ${FileExists} "$INSTDIR\kuidao.exe"
+    Return
+  ${EndIf}
+  ${If} ${FileExists} "$INSTDIR\kuidao-bootstrap.exe"
     Return
   ${EndIf}
   ClearErrors
@@ -257,7 +264,7 @@ Section "安裝"
   Call ValidateDirectory
   SetOutPath "$INSTDIR"
   SetOverwrite on
-  File /oname=kuidao.exe "${SOURCE_EXE}"
+  File /oname=kuidao-bootstrap.exe "${BOOTSTRAP_EXE}"
   File "${PROJECT_DIR}\LICENSE"
   File "${PROJECT_DIR}\THIRD_PARTY_NOTICES.txt"
   ; 診斷指令碼已內嵌在程式裡（kuidao.exe --collect-diagnostics），清掉測試版留下的單獨診斷檔案。
@@ -266,7 +273,7 @@ Section "安裝"
   RMDir "$INSTDIR\scripts"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   ${If} $DesktopChoice == 1
-    CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\kuidao.exe"
+    CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\kuidao-bootstrap.exe"
   ${Else}
     Delete "$DESKTOP\${APP_NAME}.lnk"
   ${EndIf}
@@ -275,23 +282,23 @@ Section "安裝"
   ${Else}
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APP_ID}"
   ${EndIf}
-  CreateShortcut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\kuidao.exe"
-  CreateShortcut "$SMPROGRAMS\${APP_NAME}設定.lnk" "$INSTDIR\kuidao.exe" "--settings"
-  ; 鬼島打不開、卡死時的備用入口；能開啟時用「設定 → 關於 → 收集診斷」。
-  CreateShortcut "$SMPROGRAMS\收集${APP_NAME}診斷.lnk" "$INSTDIR\kuidao.exe" "--collect-diagnostics" "$INSTDIR\kuidao.exe" 0
+  CreateShortcut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\kuidao-bootstrap.exe"
+  CreateShortcut "$SMPROGRAMS\${APP_NAME}設定.lnk" "$INSTDIR\kuidao-bootstrap.exe" "--settings"
+  ; 鬼島打不開、卡死時的備用入口；主程式補齊後由啟動器轉交診斷參數。
+  CreateShortcut "$SMPROGRAMS\收集${APP_NAME}診斷.lnk" "$INSTDIR\kuidao-bootstrap.exe" "--collect-diagnostics" "$INSTDIR\kuidao-bootstrap.exe" 0
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayName" "${APP_NAME}（Kuidao）"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "Publisher" "鬼島"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "URLInfoAbout" "https://github.com/"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "HelpLink" "https://github.com/"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\kuidao.exe,0"
+  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\kuidao-bootstrap.exe,0"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKLM "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S'
   WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoRepair" 1
   ; 登記鬼島自己檔案的大小（KB），軟體管家就不會去統計整個安裝資料夾。
-  ${GetSize} "$INSTDIR" "/M=kuidao.exe /S=0K /G=0" $0 $1 $2
+  ${GetSize} "$INSTDIR" "/M=kuidao-bootstrap.exe /S=0K /G=0" $0 $1 $2
   ${GetSize} "$INSTDIR" "/M=Uninstall.exe /S=0K /G=0" $3 $1 $2
   IntOp $0 $0 + $3
   ${GetSize} "$INSTDIR" "/M=THIRD_PARTY_NOTICES.txt /S=0K /G=0" $3 $1 $2
@@ -309,14 +316,17 @@ FunctionEnd
 Section "Uninstall"
   Call un.CheckClosed
   Delete "$INSTDIR\kuidao.exe"
+  Delete "$INSTDIR\kuidao-bootstrap.exe"
   Delete "$INSTDIR\kuidao-previous.exe"
   Delete "$INSTDIR\kuidao-v0.2-backup.exe"
   Delete "$INSTDIR\LICENSE"
   Delete "$INSTDIR\THIRD_PARTY_NOTICES.txt"
+  Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\uninstall.ps1"
   Delete "$INSTDIR\收集鬼島診斷.cmd"
   Delete "$INSTDIR\scripts\collect-diagnostics.ps1"
-  RMDir "$INSTDIR\scripts"
+  RMDir /r "$INSTDIR\assets"
+  RMDir /r "$INSTDIR\scripts"
   Delete "$INSTDIR\Uninstall.exe"
   Delete "$DESKTOP\${APP_NAME}.lnk"
   Delete "$SMPROGRAMS\${APP_NAME}.lnk"

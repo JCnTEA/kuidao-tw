@@ -18,17 +18,20 @@ try {
         try {
             $trimFlags = $privatePaths | ForEach-Object { '"/d1trimfile:' + $_ + '"' }
             $env:CL = (@($originalCL) + $trimFlags) -join ' '
-            cargo +stable-x86_64-pc-windows-msvc build --locked --release --bin daozai --target x86_64-pc-windows-msvc
+            cargo +stable-x86_64-pc-windows-msvc build --locked --release --bin kuidao --bin kuidao-bootstrap --target x86_64-pc-windows-msvc
             if ($LASTEXITCODE -ne 0) { throw 'Release build failed' }
         } finally {
             $env:CL = $originalCL
         }
     }
     if (-not $Executable) {
-        $Executable = Join-Path $targetDirectory 'x86_64-pc-windows-msvc\release\daozai.exe'
+        $Executable = Join-Path $targetDirectory 'x86_64-pc-windows-msvc\release\kuidao.exe'
     }
+    $bootstrap = Join-Path (Split-Path $Executable -Parent) 'kuidao-bootstrap.exe'
+    if (-not (Test-Path -LiteralPath $bootstrap)) { throw 'Bootstrap executable not found' }
     $binary = Get-Item -LiteralPath $Executable
     & (Join-Path $PSScriptRoot 'check-runtime.ps1') -Executable $binary.FullName
+    & (Join-Path $PSScriptRoot 'check-runtime.ps1') -Executable $bootstrap
     if ($binary.VersionInfo.FileVersion -ne $version -and $binary.VersionInfo.FileVersion -ne "$version.0") { throw 'Executable version mismatch' }
     $bytes = [IO.File]::ReadAllBytes($binary.FullName)
     foreach ($encoding in @([Text.Encoding]::UTF8, [Text.Encoding]::Unicode)) {
@@ -60,7 +63,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'installer\收集岛仔诊断.cmd') -Destination $stagingDirectory
     # 台灣版：安裝檔固定用英文檔名，避免郵件與防毒對中文名誤判。
     $setup = Join-Path $outputDirectory "GuiDao-DynamicIsland-Setup-v$version-x64.exe"
-    & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DPROJECT_DIR=$projectRoot" "/DSOURCE_EXE=$($binary.FullName)" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
+    & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DPROJECT_DIR=$projectRoot" "/DBOOTSTRAP_EXE=$bootstrap" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
     $archive = Join-Path $outputDirectory "$packageName.zip"
     Compress-Archive -LiteralPath $stagingDirectory -DestinationPath $archive

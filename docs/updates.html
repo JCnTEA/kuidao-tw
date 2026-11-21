@@ -66,6 +66,9 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="hero-shot"><img src="images/showcase/update.webp" alt="鬼島發現新版本時的更新視窗，列出本次更新重點與立即更新按鈕" loading="lazy"></div>
     <div class="grid">
+      <div class="card"><span class="badge">安裝</span><h3>安裝包只剩啟動器，完成後自動下載主程式</h3><p>系統「新增／移除」裡的安裝包不再塞入完整 22MB 主程式，只剩約 1.2MB 的啟動器與卸載資訊。按下完成後會自動跳出品牌下載視窗，查詢 GitHub 最新正式版、顯示下載進度與大小，驗證 SHA-256 後才解壓到安裝資料夾並開啟鬼島。日常從捷徑開啟時，主程式已存在就直接啟動，不會每次重新下載；主程式仍沿用原本的應用內自動更新。</p></div>
+      <div class="card"><span class="badge">遊戲</span><h3>第十頁「遊戲庫」讀取本機 Steam 與 Riot</h3><p>讀取 Steam 登錄檔與 libraryfolders.vdf，列出各收藏庫已安裝的遊戲、最後遊玩與容量；同一路徑大小寫不同不再重複計算。Riot 端固定列出 Riot Client、英雄聯盟、聯盟戰棋與 VALORANT，按下啟動會走 Steam 或 Riot 的正式協定。只在使用者打開頁面或按重新掃描時讀 manifest，不在背景登入、不上傳收藏庫，也不定時輪詢。</p></div>
+      <div class="card"><span class="badge">官網</span><h3>介面輪播補上遊戲庫，功能卡增至七張</h3><p>官網「介面」區的展開畫面新增第八張遊戲庫，Riot 四項與可滾動的 Steam 清單直接入鏡；右側通知列數字一樣在 10–50 間跟著切換。特色功能新增「本機遊戲庫」卡，說明只讀本機資料與啟動方式。</p></div>
       <div class="card"><span class="badge">外觀</span><h3>吉祥物在亮底自動改用深墨線</h3><p>奶油、毛玻璃·淺，以及偏亮的懸浮漸層不再用白線硬畫：程式會先看島體底色，亮底自動換成深墨線，暗底維持白線，眼睛、嘴巴與歌詞表情一起換色。這樣不必犧牲台灣島虎，也不會在橙黃、粉紅或白底上糊成一團；仍可用外掛動畫包換成自己上傳的圖。</p></div>
       <div class="card"><span class="badge">官網</span><h3>介面區加入七張展開畫面與通知列</h3><p>「介面」區多一組可左右滑動的實機畫面：天氣、音樂、島上歌詞、番茄專注、剪貼簿、待辦清單與行程，滑鼠拖曳、觸控滑動、鍵盤方向鍵與圓點都能切換。畫面旁同步亮起 Gmail、LINE、手機連結與系統通知四顆圓形圖示，未讀數字在 10–50 之間跟著畫面更換，切換時依序彈出。</p></div>
       <div class="card"><span class="badge">官網</span><h3>首頁島體換成圖二內容</h3><p>首頁主視覺的深色膠囊改成圖二的排列：左起綠圈電量、下午時間、雲加太陽與氣溫、AI 圓環、番茄、紅色倒數、四格訊號，最後是白色線稿石虎與音符。手機版隱藏訊號並縮小石虎，實際 390px 寬度沒有水平溢位；深色主題也改成同一套黑底白光，不再被青綠漸層蓋掉。</p></div>

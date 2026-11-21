@@ -61,8 +61,11 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: 安裝 NSIS
+        run: choco install nsis -y --no-progress
+
       - name: 編譯
-        run: cargo build --release --bin kuidao
+        run: cargo build --release --bin kuidao --bin kuidao-bootstrap
 
       - name: 打包
         shell: pwsh
@@ -76,7 +79,12 @@ jobs:
           if (Test-Path NOTICE)       { Copy-Item NOTICE dist }
           if (Test-Path LICENSE)      { Copy-Item LICENSE dist }
           Compress-Archive -Path "dist\*" -DestinationPath $name -Force
+          $setup = "Kuidao-Setup-v$ver-tw-x64.exe"
+          $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
+          & $nsis /V2 /WX "/DAPP_VERSION=$ver" "/DPROJECT_DIR=$PWD" "/DBOOTSTRAP_EXE=$(Join-Path $PWD 'target\release\kuidao-bootstrap.exe')" "/DOUTPUT_FILE=$(Join-Path $PWD $setup)" installer\setup.nsi
+          if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
           echo "ASSET=$name" >> $env:GITHUB_ENV
+          echo "SETUP=$setup" >> $env:GITHUB_ENV
           echo "VER=$ver"    >> $env:GITHUB_ENV
 
       - name: 發布 Release
@@ -86,8 +94,10 @@ jobs:
           name: 鬼島 桌面靈動島 v${{ env.VER }}（台灣版）
           body: |
             由上游開源專案（MIT）v${{ env.VER }} 自動同步，經繁體中文與台灣用語調整後編譯。
-            - 介面：台灣繁體（設定／檔案／資料夾／網路／螢幕）
-            - 免安裝：解壓即用
+            - 安裝版：`Kuidao-Setup` 只含極小啟動器，第一次開啟才下載主程式並顯示下載進度
+            - 免安裝：`windows-x64.zip` 解壓即用
             - 無程式碼簽章，首次執行如遇 SmartScreen 請選「仍要執行」
-          files: ${{ env.ASSET }}
+          files: |
+            ${{ env.ASSET }}
+            ${{ env.SETUP }}
           fail_on_unmatched_files: true

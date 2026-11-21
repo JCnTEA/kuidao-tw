@@ -51,6 +51,7 @@ mod weather_ui;
 mod weather_source_ui;
 mod qweather;
 mod pages;
+mod games;
 mod extras;
 mod mascot_art;
 mod pet;

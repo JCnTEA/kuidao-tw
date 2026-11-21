@@ -762,7 +762,7 @@ mod tests {
 
     #[test]
     fn settings_groups_keep_every_page_reachable() {
-        let groups = ["通用", "音樂", "專注與健康", "專注與健康", "待辦與置物", "待辦與置物", "訊息提醒", "信箱", "行程", "關於", "頁面管理", "AI 額度", "天氣", "外觀", "位置"];
+        let groups = ["通用", "音樂", "專注與健康", "專注與健康", "待辦與置物", "待辦與置物", "訊息提醒", "信箱", "行程", "關於", "頁面管理", "AI 額度", "天氣", "外觀", "位置", "遊戲"];
         for (tab, expected) in groups.iter().enumerate() {
             let matches: Vec<_> = SETTINGS_GROUPS.iter().filter(|(_,start,end,_)| (*start..=*end).contains(&tab)).collect();
             assert_eq!(matches.len(), 1, "頁面 {tab} 必須且只能屬於一個分組");
@@ -1287,6 +1287,7 @@ fn settings_page_icon(page:usize)->egui::ImageSource<'static>{
         MAIL_PAGE=>("mail",include_bytes!("../assets/settings-icons/system/mail.svg")),
         QUOTA_PAGE=>("quota",include_bytes!("../assets/settings-icons/system/quota.svg")),
         CALENDAR_PAGE=>("calendar",include_bytes!("../assets/settings-icons/system/calendar.svg")),
+        GAME_PAGE=>("game",include_bytes!("../assets/settings-icons/system/game.svg")),
         _=>("weather",include_bytes!("../assets/settings-icons/system/weather.svg")),
     };
     egui::ImageSource::Bytes{uri:format!("bytes://settings-header-{name}.svg").into(),bytes:bytes.into()}
@@ -1296,7 +1297,7 @@ fn settings_page_icon(page:usize)->egui::ImageSource<'static>{
 #[cfg_attr(not(test),allow(dead_code))]
 pub(crate) fn settings_tab_module(tab:usize)->Option<usize>{
     use crate::app::*;
-    match tab {1=>Some(MUSIC_PAGE),2=>Some(FOCUS_PAGE),3=>Some(WATER_PAGE),4=>Some(TODO_PAGE),5=>Some(SHELF_PAGE),7=>Some(MAIL_PAGE),8=>Some(CALENDAR_PAGE),11=>Some(QUOTA_PAGE),12=>Some(WEATHER_PAGE),_=>None}
+    match tab {1=>Some(MUSIC_PAGE),2=>Some(FOCUS_PAGE),3=>Some(WATER_PAGE),4=>Some(TODO_PAGE),5=>Some(SHELF_PAGE),7=>Some(MAIL_PAGE),8=>Some(CALENDAR_PAGE),11=>Some(QUOTA_PAGE),12=>Some(WEATHER_PAGE),15=>Some(GAME_PAGE),_=>None}
 }
 
 pub(crate) fn settings_label(ui:&mut egui::Ui,text:&str){
@@ -1431,9 +1432,9 @@ pub(crate) const SETTINGS_TAB_APPEARANCE: usize = 13;
 pub(crate) const SETTINGS_TAB_POSITION: usize = 14;
 /// 侧栏：一项就是一页，不再有页内子标签。专注与健康（2、3）、待办与置物（4、5）各合成一页；关于固定左下角。
 /// 第四列是这一项之前的分组标题。
-const SETTINGS_GROUPS: [(&str,usize,usize,&str);13] = [
+const SETTINGS_GROUPS: [(&str,usize,usize,&str);14] = [
     ("通用",0,0,"鬼島"), ("外觀",SETTINGS_TAB_APPEARANCE,SETTINGS_TAB_APPEARANCE,""), ("位置",SETTINGS_TAB_POSITION,SETTINGS_TAB_POSITION,""), ("頁面管理",10,10,""),
-    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("信箱",7,7,""), ("行程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""),
+    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("信箱",7,7,""), ("行程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("遊戲",15,15,""),
     ("關於",9,9,""),
 ];
 /// 分页标题；合并页（3→2、5→4）显示合并后的名字。
@@ -1539,6 +1540,7 @@ impl App {
                         12=>egui::include_image!("../assets/settings-icons/system/weather.svg"),
                         7=>egui::include_image!("../assets/settings-icons/system/mail.svg"),
                         8=>egui::include_image!("../assets/settings-icons/system/calendar.svg"),
+                        15=>egui::include_image!("../assets/settings-icons/system/game.svg"),
                         SETTINGS_TAB_APPEARANCE=>egui::include_image!("../assets/settings-icons/system/appearance.svg"),
                         SETTINGS_TAB_POSITION=>egui::include_image!("../assets/settings-icons/system/position.svg"),
                         _=>egui::include_image!("../assets/settings-icons/system/about.svg"),
@@ -1559,6 +1561,21 @@ impl App {
                     // 右侧给滚动条留出空隙，卡片和开关不会被它压住。
                     ui.set_width((ui.available_width()-12.0).max(240.0));
                     match tab {
+                    15=>{
+                        let on=self.settings_feature_header(ui,crate::app::GAME_PAGE,"Steam 收藏庫與 Riot Client 捷徑",|_,_|{});
+                        ui.add_space(4.0);
+                        settings_card(ui,|ui|{
+                            ui.label(egui::RichText::new(format!("Steam {} 款 · Riot {} 項",self.games.steam_count,self.games.riot_count)).size(12.0).color(settings_color(ctx,Color32::from_gray(190),Color32::from_gray(65))));
+                            ui.label(egui::RichText::new("掃描只讀取本機 Steam 的 libraryfolders.vdf 與 appmanifest，不會登入帳號，也不會上傳收藏庫。Riot 捷徑會尋找 RiotClientServices.exe。").size(10.5).color(settings_color(ctx,Color32::from_gray(160),Color32::from_gray(95))));
+                        });
+                        ui.add_space(4.0);
+                        ui.add_enabled_ui(on,|ui|{
+                            if ui.add(egui::Button::new("重新掃描本機遊戲").min_size(egui::vec2(156.0,26.0))).clicked(){
+                                self.games.refresh();
+                            }
+                        });
+                        settings_hint(ui,"頁面只在使用者打開時掃描一次；按下右上角「重新掃描」可立即更新。");
+                    }
                     12=>{
                         let on=self.settings_feature_header(ui,crate::app::WEATHER_PAGE,"當地天氣與七日預報",|_,_|{});
                         ui.add_space(4.0);
@@ -1588,7 +1605,7 @@ impl App {
                         });
                         settings_label(ui,"功能頁面");
                         settings_card(ui,|ui|{
-                            let descriptions=["播放控制與同步歌詞","番茄鍾與休息計時","喝水與久坐提醒","臨時收納檔案位置","任務清單與到期提醒","郵件摘要與驗證碼","Agent 剩餘額度和帳號切換","月曆、郵件邀請與工作行程","當地天氣與七日預報"];
+                            let descriptions=["播放控制與同步歌詞","番茄鍾與休息計時","喝水與久坐提醒","臨時收納檔案位置","任務清單與到期提醒","郵件摘要與驗證碼","Agent 剩餘額度和帳號切換","月曆、郵件邀請與工作行程","當地天氣與七日預報","Steam 收藏庫與 Riot 捷徑"];
                             ui.label(egui::RichText::new("拖動左側手柄調整順序；關閉的功能不在後台執行，不同步也不提醒，已有資料保留。").size(11.5).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
                             #[derive(Clone)]
                             struct PageDrag(usize);
