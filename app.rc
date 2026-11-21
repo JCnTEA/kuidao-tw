@@ -19,8 +19,8 @@ BEGIN
             VALUE "InternalName", "Kuidao"
             VALUE "OriginalFilename", "kuidao.exe"
             VALUE "ProductName", "鬼島 桌面靈動島（台灣版）"
-            VALUE "ProductVersion", "0.6.94"
-            VALUE "FileVersion", "0.6.94"
+            VALUE "ProductVersion", "0.6.95"
+            VALUE "FileVersion", "0.6.95"
         END
     END
     BLOCK "VarFileInfo"

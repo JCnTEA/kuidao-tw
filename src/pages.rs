@@ -251,7 +251,13 @@ impl App {
                 total:f32,
             }
             let mut blocks=Vec::new();
-            for index in target.saturating_sub(2)..=target.saturating_add(2).min(lyrics.lines.len().saturating_sub(1)) {
+            let (start,end)=if lyrics.synced {
+                (target.saturating_sub(2),target.saturating_add(2).min(lyrics.lines.len().saturating_sub(1)))
+            } else {
+                // KKBOX 有些台語歌只給純文字：沒有時間軸時從頭排出多行，至少能讀完整段，而不是只顯示第一句。
+                (0,lyrics.lines.len().min(10).saturating_sub(1))
+            };
+            for index in start..=end {
                 let line=&lyrics.lines[index];
                 let active=current==Some(index);
                 let shown=self.ly.zh_lines.get(index).filter(|text|!text.trim().is_empty()).map_or(line.text.as_str(),|text|text.as_str());
