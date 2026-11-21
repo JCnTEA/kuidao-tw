@@ -13,8 +13,20 @@ use crate::theme;
 /// 目前形象在 48×30 槽位內的單線條待機動畫。
 pub(crate) fn draw(c: &Card, cx: f32, t: f64, state: crate::pet::PetState) {
     let species = crate::mascot::current();
-    let swing = (t * 1.6).sin() as f32;
-    let ear = ear_twitch(t);
+    let (speed, amplitude) = match state {
+        crate::pet::PetState::Awake => (1.6, 1.0),
+        crate::pet::PetState::Curious => (2.0, 1.15),
+        crate::pet::PetState::Waking => (2.6, 1.3),
+        crate::pet::PetState::Happy => (3.4, 1.8),
+        crate::pet::PetState::Satisfied => (2.2, 1.4),
+        crate::pet::PetState::Music => (2.8, 1.5),
+        crate::pet::PetState::Worried => (4.2, 0.7),
+        crate::pet::PetState::Focused => (1.0, 0.45),
+        crate::pet::PetState::Dozing => (0.8, 0.35),
+        crate::pet::PetState::Sleeping => (0.5, 0.2),
+    };
+    let swing = (t * speed).sin() as f32 * amplitude;
+    let ear = ear_twitch(t) * if matches!(state, crate::pet::PetState::Dozing | crate::pet::PetState::Sleeping) { 0.25 } else { 1.0 };
     let ink = theme::WHITE;
 
     // 尾巴先畫，身體與頭再蓋上去，重疊處才不會多出一截。

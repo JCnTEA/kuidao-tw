@@ -103,7 +103,7 @@ impl MascotPack {
         if self.palette != palette { self.textures.clear(); self.palette = palette; }
         let Some(pack) = &self.pack else { return false; };
         let name = state_key(state);
-        let Some((frames, fps, repeat)) = pack.animations.get(name).or_else(|| pack.animations.get("awake")) else { return false; };
+        let Some((frames, fps, repeat)) = pack.animations.get(name) else { return false; };
         if frames.is_empty() { return false; }
         let frames = frames.clone();
         let fps = *fps;
@@ -203,6 +203,9 @@ fn load_pack(key: &str) -> Option<LoadedPack> {
     if manifest.is_file() {
         let text = std::fs::read_to_string(&manifest).ok()?;
         let parsed: Manifest = serde_json::from_str(&text).ok()?;
+        // 舊版「開啟資料夾」會自動放一份只有 awake 的範例包；那不是使用者自製動畫，
+        // 直接忽略，讓石虎改用內建向量，才看得到各狀態的動作差異。
+        if parsed.name.contains("外掛範例") && parsed.animations.len() == 1 { return None; }
         let mut animations = HashMap::new();
         for (name, animation) in parsed.animations {
             if animation.frames.is_empty() { continue; }

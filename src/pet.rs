@@ -329,10 +329,11 @@ impl Pet {
         let has_pack = self.mascot_pack.active_for(crate::mascot::current().key());
         let time = self.mascot_animation_time(t);
         if has_pack {
-            // 有動畫包的形象完全交給影格播放，不再退回原版的矢量表情與位移。
-            self.mascot_pack.draw(c.ui.ctx(), c, cx, state, time, palette);
-            self.draw_state_marks(c, cx, t);
-            return;
+            // 動畫包只接手它真的有定義的狀態；缺少該狀態就退回內建單線條，不會整套都播同一段待機。
+            if self.mascot_pack.draw(c.ui.ctx(), c, cx, state, time, palette) {
+                self.draw_state_marks(c, cx, t);
+                return;
+            }
         }
         // 沒有外掛動畫包時一律畫自製的單線條向量吉祥物；
         // 身體固定在槽位內，只有尾巴、耳朵與眼睛會動。

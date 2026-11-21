@@ -11,7 +11,7 @@
 <meta property="og:image" content="https://jcntea.github.io/kuidao-tw/images/brand/logo.webp">
 <meta name="robots" content="index,follow">
 <link rel="icon" type="image/png" href="images/brand/favicon.png">
-<link rel="apple-touch-icon" href="images/brand/favicon.png">
+<link rel="apple-touch-icon" href="images/brand/apple-touch-icon.png">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap">
 <style>
 :root{
@@ -67,7 +67,7 @@ button{font:inherit}
 }
 .brand{display:flex;align-items:center;gap:11px;font-size:22px;font-weight:900;letter-spacing:.04em;white-space:nowrap}
 .brand-mark{
-  width:34px;height:34px;border-radius:11px;flex:none;
+  width:40px;height:40px;border-radius:13px;flex:none;
   box-shadow:0 10px 24px -14px rgba(68,86,255,.62);
   overflow:hidden;background:transparent;
 }
@@ -316,7 +316,7 @@ section{scroll-margin-top:104px}
 footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.08)}
 .foot-inner{max-width:1200px;margin:0 auto;padding:0 28px;display:flex;align-items:flex-start;justify-content:space-between;gap:30px;flex-wrap:wrap}
 .foot-brand{display:flex;align-items:center;gap:10px}
-.foot-brand .brand-mark{width:28px;height:28px;border-radius:9px}
+.foot-brand .brand-mark{width:34px;height:34px;border-radius:11px}
 .foot-brand strong{font-size:15px;font-weight:900;letter-spacing:.04em}
 .foot-note{font-size:10.5px;line-height:1.9;color:#92959f;max-width:620px}
 .foot-links{display:flex;gap:18px;font-size:11px;color:#7a7d87}
@@ -341,7 +341,7 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
   .status-pill{display:none}
   .brand{font-size:19px}
   .brand small{display:none}
-  .brand-mark{width:30px;height:30px;border-radius:10px}
+  .brand-mark{width:34px;height:34px;border-radius:11px}
   .wrap{padding:0 18px}
   .hero{padding:58px 18px 18px}
   .hero h1{font-size:clamp(40px,11vw,56px);letter-spacing:-.04em}
@@ -378,6 +378,109 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
   .foot-note{margin-top:14px}
   .foot-links{margin-top:16px;flex-wrap:wrap;gap:12px}
 }
+/* ===== 霓虹夜版：配色取自官網 logo 的深海藍、青綠、琥珀與珊瑚紅 ===== */
+:root{
+  --ink:#eaf4ff;
+  --ink-2:#b9cbe4;
+  --muted:#8298b5;
+  --line:rgba(125,211,252,.13);
+  --card:rgba(11,22,39,.76);
+  --accent:#22d3ee;
+  --teal:#2dd4bf;
+  --violet:#fb923c;
+  --shadow:0 30px 80px -40px rgba(0,0,0,.85);
+  --shadow-soft:0 20px 50px -34px rgba(0,0,0,.7);
+}
+body{
+  background:
+    radial-gradient(900px 560px at 50% -120px,rgba(34,211,238,.16) 0%,rgba(34,211,238,0) 66%),
+    radial-gradient(760px 560px at -6% 34%,rgba(45,212,191,.10) 0%,rgba(45,212,191,0) 64%),
+    radial-gradient(780px 600px at 106% 52%,rgba(251,146,60,.12) 0%,rgba(251,146,60,0) 66%),
+    radial-gradient(820px 560px at 50% 96%,rgba(251,113,133,.10) 0%,rgba(251,113,133,0) 68%),
+    #070d18;
+  color:var(--ink);
+}
+body::before{
+  background:
+    linear-gradient(180deg,rgba(7,13,24,.2),transparent 42%),
+    radial-gradient(520px 320px at 18% 16%,rgba(34,211,238,.08),transparent 70%),
+    radial-gradient(540px 340px at 84% 24%,rgba(251,146,60,.07),transparent 72%);
+}
+::selection{background:rgba(34,211,238,.24)}
+.nav{background:rgba(7,13,24,.82);border-bottom:1px solid rgba(125,211,252,.12)}
+.brand small{color:#7f96b4}
+.brand-mark{box-shadow:0 12px 30px -16px rgba(34,211,238,.62);border-radius:12px}
+.menu{background:rgba(12,23,40,.66);box-shadow:inset 0 0 0 1px rgba(125,211,252,.12),0 12px 30px -20px #000}
+.menu a{color:#9fb3cd}
+.menu a:hover{color:#fff;background:rgba(34,211,238,.12)}
+.menu a.active{color:#fff;background:linear-gradient(135deg,rgba(45,212,191,.22),rgba(251,146,60,.20));box-shadow:inset 0 0 0 1px rgba(125,211,252,.2)}
+.status-pill{background:rgba(12,23,40,.7);border-color:rgba(125,211,252,.16);color:#a9bcd4}
+.status-pill i{background:#2dd4bf;box-shadow:0 0 0 4px rgba(45,212,191,.16)}
+.nav-cta{background:linear-gradient(135deg,#06b6d4 0%,#2dd4bf 48%,#fb923c 100%);box-shadow:0 14px 30px -16px rgba(34,211,238,.65)}
+.eyebrow-pill{background:rgba(12,23,40,.66);border-color:rgba(125,211,252,.16);color:#9fc0dd;box-shadow:0 8px 20px -16px #000}
+.sec-head p,.local-head p{color:#8298b5}
+.hero-kicker{color:#7fd8e8}
+.hero h1{
+  background:linear-gradient(100deg,#8bf5ff 0%,#5eead4 34%,#fbbf24 68%,#fb7185 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 10px 30px rgba(34,211,238,.18));
+}
+.hero-sub{color:#9db2cc}
+.btn-main{background:linear-gradient(135deg,#06b6d4 0%,#2dd4bf 46%,#fb923c 100%);box-shadow:0 22px 46px -22px rgba(34,211,238,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn-main:hover{box-shadow:0 28px 54px -24px rgba(251,146,60,.6)}
+.btn-soft{background:rgba(12,23,40,.72);border-color:rgba(125,211,252,.18);color:#bfd3ea}
+.btn-soft:hover{background:rgba(20,38,62,.9);color:#fff}
+.hero-facts{color:#7d93b0}
+.hero-facts span::before{background:rgba(45,212,191,.7)}
+.hero-island{box-shadow:0 34px 70px -36px #000,0 0 0 1px rgba(125,211,252,.2),0 0 100px -24px rgba(34,211,238,.35)}
+.hero-island::after{background:linear-gradient(90deg,rgba(45,212,191,.20),transparent 30%,transparent 72%,rgba(251,146,60,.20))}
+.hi-weather{color:#b9cbe4}
+.hi-mid{color:#d3e0f1}
+.hi-wave b{background:linear-gradient(180deg,#8bf5ff,#2dd4bf)}
+.fcard{
+  border-color:rgba(125,211,252,.14);
+  background:linear-gradient(160deg,rgba(16,31,53,.88),rgba(9,18,33,.78));
+  box-shadow:var(--shadow);backdrop-filter:blur(18px);
+}
+.fcard:hover,.fcard:focus-visible{box-shadow:0 36px 84px -40px #000,0 0 0 1px rgba(45,212,191,.24);border-color:rgba(94,234,212,.32)}
+.fcard::before{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.22);color:#7fe9f7}
+.fcard:hover::before,.fcard:focus-visible::before{background:rgba(45,212,191,.24)}
+.fc-kicker{color:#7f96b4}
+.fc-copy h3{color:#f2f8ff}
+.fc-summary{color:#a6bbd4}
+.fcard::after{background:linear-gradient(180deg,rgba(7,13,24,0),rgba(7,13,24,.72))}
+.fc-peek{color:#a9bfd8}
+.fc-detail{background:linear-gradient(165deg,#0e1d33 0%,#091324 100%)}
+.fc-detail .fc-kicker{color:#67e8f9}
+.fc-detail p{color:#b8cbe2}
+.fc-hint{border-top-color:rgba(125,211,252,.14);color:#7389a6}
+.split-copy p,.checklist li{color:#a2b7d0}
+.checklist li i{background:rgba(45,212,191,.14)}
+.checklist li i::after{border-left-color:#5eead4;border-bottom-color:#5eead4}
+.visual-main{background:#0c192b;box-shadow:0 46px 96px -50px #000,0 0 0 1px rgba(125,211,252,.16)}
+.visual-mini{background:#0c192b;box-shadow:0 26px 56px -30px #000,0 0 0 1px rgba(125,211,252,.12)}
+.visual-cap{color:#7188a6}
+.local-item{background:rgba(12,24,42,.72);border-color:rgba(125,211,252,.13);box-shadow:var(--shadow-soft)}
+.local-item b{color:#eaf4ff}
+.local-item p{color:#9db2cc}
+.license-line{background:rgba(12,23,40,.6);border-color:rgba(125,211,252,.12);color:#8298b5}
+.license-line b{color:#c4d7ee}
+.access-card{background:linear-gradient(155deg,rgba(17,33,56,.94),rgba(8,16,30,.82));border-color:rgba(125,211,252,.16);box-shadow:var(--shadow)}
+.access-card::before{background:radial-gradient(circle,rgba(34,211,238,.22),transparent 68%)}
+.access-card p{color:#a6bbd4}
+.access-meta span{background:rgba(12,23,40,.72);border-color:rgba(125,211,252,.14);color:#9db2cc}
+.access-meta span::before{color:#5f7898}
+.faq details{background:rgba(12,24,42,.7);border-color:rgba(125,211,252,.13);box-shadow:var(--shadow-soft)}
+.faq details[open]{background:rgba(14,29,51,.9);box-shadow:0 28px 64px -38px #000}
+.faq summary{color:#e6f1ff}
+.faq summary .plus{background:linear-gradient(135deg,rgba(34,211,238,.16),rgba(251,146,60,.12));border-color:rgba(34,211,238,.2)}
+.faq summary .plus::before,.faq summary .plus::after{background:#67e8f9}
+.faq details[open] summary .plus{background:rgba(45,212,191,.18)}
+.faq .answer{color:#a6bbd4}
+footer{border-top-color:rgba(125,211,252,.12)}
+.foot-note{color:#8298b5}
+.foot-links{color:#9db2cc}
+.foot-links a:hover{color:#8bf5ff}
 </style>
 </head>
 <body>
@@ -386,7 +489,7 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
 <header class="nav">
   <div class="nav-inner">
     <a class="brand" href="#top" aria-label="鬼島 桌面靈動島 首頁">
-      <span class="brand-mark"><img src="images/brand/logo.webp" alt="" width="34" height="34"></span>
+      <span class="brand-mark"><img src="images/brand/logo.webp" alt="" width="40" height="40"></span>
       <span>鬼島</span><small>GUIDAO</small>
     </a>
     <nav class="menu" aria-label="主要導覽">
@@ -458,13 +561,13 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
         <div class="fc-copy">
           <span class="fc-kicker">MESSAGES · 02</span>
           <h3>訊息上島</h3>
-          <p class="fc-summary">LINE、Messenger、Threads、Facebook、Instagram 集中顯示。</p>
+          <p class="fc-summary">LINE、手機連結、Messenger、Threads、Facebook、Instagram 集中顯示。</p>
         </div>
-        <p class="fc-peek" aria-hidden="true">LINE、Instagram、Threads、Facebook、Messenger 與系統通知集中到島上，頭像與來源一眼分辨；圖示右上累計未讀則數，點一下直接回到發出通知的桌面程式，不用自己找是哪一個視窗。</p>
+        <p class="fc-peek" aria-hidden="true">LINE、手機連結、Instagram、Threads、Facebook、Messenger 與系統通知集中到島上，頭像與來源一眼分辨；圖示右上累計未讀則數，點一下直接回到發出通知的桌面程式，不用自己找是哪一個視窗。</p>
         <div class="fc-detail">
           <span class="fc-kicker">MESSAGES · 02</span>
           <h3>訊息上島</h3>
-          <p>LINE、Instagram、Threads、Facebook、Messenger 與系統通知集中到島上，頭像與來源一眼分辨；圖示右上累計未讀則數，點一下直接回到發出通知的桌面程式，不用自己找是哪一個視窗。</p>
+          <p>LINE、手機連結、Instagram、Threads、Facebook、Messenger 與系統通知集中到島上，頭像與來源一眼分辨；圖示右上累計未讀則數，點一下直接回到發出通知的桌面程式，不用自己找是哪一個視窗。</p>
           <span class="fc-hint">移開或點外面即收起</span>
         </div>
       </article>
@@ -551,7 +654,7 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
         <ul class="checklist">
           <li><i aria-hidden="true"></i><span>劉海與膠囊兩種形態，四向停靠不佔桌面</span></li>
           <li><i aria-hidden="true"></i><span>主題、漸層、形狀與大小都在同一頁調整</span></li>
-          <li><i aria-hidden="true"></i><span>五種吉祥物共用單線條動畫，切換立即生效</span></li>
+          <li><i aria-hidden="true"></i><span>島虎專用單線條動畫，狀態切換立即生效</span></li>
         </ul>
       </div>
       <div class="interface-visual">
@@ -577,7 +680,7 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
     <div class="local-grid">
       <div class="local-item"><b>台灣用語</b><p>設定、檔案、資料夾、記憶體、螢幕、系統匣、捷徑、行事曆，照台灣人實際講法，不是逐字轉換。</p></div>
       <div class="local-item"><b>地名與時間</b><p>天氣顯示「台灣 · 市 · 區」，不會冒出「臺灣省」；時鐘可切 12／24 小時與秒數。</p></div>
-      <div class="local-item"><b>外觀與動畫</b><p>奶油、毛玻璃、懸浮與漸層主題；五種吉祥物共用自製單線條動畫，身體不位移。</p></div>
+      <div class="local-item"><b>外觀與動畫</b><p>奶油、毛玻璃、懸浮與漸層主題；吉祥物固定島虎，使用自製單線條動畫，身體不位移。</p></div>
       <div class="local-item"><b>免安裝打包</b><p>解壓即用、不寫登錄檔；換電腦或換資料夾直接搬走，不留下安裝殘留。</p></div>
     </div>
     <p class="license-line"><b>授權</b>　鬼島台灣版衍生自 Renly1994／xiaotang-daozai（Windows 桌面靈動島），原專案以 MIT 授權釋出；依授權保留原作者版權聲明與條文，<b>LICENSE</b> 隨程式附上。</p>
@@ -633,7 +736,7 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
       </details>
       <details>
         <summary>可以換吉祥物嗎？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>可以。石虎、柴犬、貓、哈士奇與黃金獵犬都在設定裡直接切換，五種共用單線條動畫，尾巴、耳朵與眨眼會自己動；外掛動畫包仍可替換。</p></div>
+        <div class="answer"><p>可以。台灣版固定島虎（石虎），設定只保留這一種形象；尾巴、耳朵與眨眼會自己動，待機、開心、擔心、專注與沉睡各有不同節奏。</p></div>
       </details>
     </div>
   </div>

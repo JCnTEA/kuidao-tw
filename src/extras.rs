@@ -1729,13 +1729,9 @@ impl App {
                             ui.separator();
                             ui.horizontal(|ui|{
                                 ui.label("吉祥物形象");
-                                let mut mascot=self.settings.mascot;
-                                egui::ComboBox::from_id_salt("tw-mascot-species").selected_text(mascot.label()).show_ui(ui,|ui|{
-                                    for option in crate::mascot::Mascot::ALL {ui.selectable_value(&mut mascot,option,option.label());}
-                                });
-                                if mascot!=self.settings.mascot {self.settings.mascot=mascot;crate::mascot::set(mascot);self.pet.reload_mascot_pack();}
+                                ui.label(egui::RichText::new("島虎（石虎）").strong());
                             });
-                            settings_hint(ui,"五種形象共用單線條動畫，切換後立即生效；尾巴、耳朵與眨眼會自己動，不再沿用原始版點陣表情。");
+                            settings_hint(ui,"台灣版只保留島虎；其他四種形象已隱藏，避免選單切換後看起來仍是同一隻。尾巴、耳朵與眨眼會隨狀態自己動。");
                             ui.horizontal(|ui|{
                                 ui.label("吉祥物動畫包");
                                 if ui.button("開啟資料夾").clicked(){crate::mascot_pack::open_folder(self.settings.mascot.key());}
@@ -1946,6 +1942,43 @@ impl App {
                                     });
                                 });
                                 settings_hint(ui,"LINE、Instagram、Facebook、Threads 等應用程式的訊息，透過 Windows 通知集中到島上。");
+                                // 社群圖示順序：直接拖動標籤，放得越左邊越先顯示。
+                                #[derive(Clone)]
+                                struct SocialDrag(String);
+                                let mut order=self.settings.social_order.clone();
+                                let mut movement:Option<(String,usize)>=None;
+                                ui.horizontal_wrapped(|ui|{
+                                    ui.spacing_mut().item_spacing=egui::vec2(6.0,6.0);
+                                    for (index,key) in order.clone().iter().enumerate() {
+                                        let Some(social)=crate::social::Social::ALL.iter().copied().find(|social|social.key()==key) else {continue;};
+                                        let label=format!("{} {}",index+1,social.name());
+                                        let color=settings_color(ctx,Color32::from_gray(225),Color32::from_rgb(40,44,52));
+                                        let galley=ui.painter().layout_no_wrap(label,egui::FontId::proportional(11.5),color);
+                                        let width=galley.size().x+20.0;
+                                        let (rect,response)=ui.allocate_exact_size(egui::vec2(width,26.0),egui::Sense::drag());
+                                        ui.painter().rect_filled(rect,13.0,settings_color(ctx,Color32::from_rgba_unmultiplied(255,255,255,26),Color32::from_rgb(243,246,250)));
+                                        ui.painter().rect_stroke(rect,13.0,egui::Stroke::new(1.0,settings_color(ctx,Color32::from_rgba_unmultiplied(255,255,255,41),Color32::from_rgb(210,216,226))),egui::StrokeKind::Inside);
+                                        ui.painter().galley(rect.center()-galley.size()/2.0,galley,color);
+                                        if let Some(payload)=response.dnd_hover_payload::<SocialDrag>() {
+                                            if payload.0!=*key {
+                                                let before=order.iter().position(|item|item==&payload.0).is_some_and(|from|from<index);
+                                                let x=if before{rect.right()}else{rect.left()};
+                                                ui.painter().line_segment([egui::pos2(x,rect.top()-2.0),egui::pos2(x,rect.bottom()+2.0)],egui::Stroke::new(2.0,Color32::from_rgb(34,211,238)));
+                                            }
+                                        }
+                                        if let Some(payload)=response.dnd_release_payload::<SocialDrag>() {movement=Some((payload.0.clone(),index));}
+                                        response.on_hover_cursor(egui::CursorIcon::Grab).dnd_set_drag_payload(SocialDrag(key.clone()));
+                                    }
+                                });
+                                if let Some((key,to))=movement {
+                                    if let Some(from)=order.iter().position(|item|item==&key) {
+                                        if from<to {order[from..=to].rotate_left(1);}
+                                        else {order[to..=from].rotate_right(1);}
+                                        self.settings.social_order=order;
+                                        self.settings.save();
+                                    }
+                                }
+                                settings_hint(ui,"拖動標籤調整優先順序：越左邊越先出現在島上，LINE 與手機連結可並排。");
                                 sub(ui,"顯示通知正文","僅系統通知內容；可能包含私密訊息，螢幕共享時建議關閉",&mut self.settings.notification_preview);
                                 // 收到过通知的应用可能有几十个：默认收起，展开后用可点选的标签排成几行，不再一应用一行。
                                 let before_apps=self.notification_apps.items.clone();

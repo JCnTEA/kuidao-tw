@@ -4,19 +4,37 @@ use crate::paint::Card;
 use eframe::egui;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Social { Threads, Messenger, Facebook, Line, Instagram }
+pub enum Social { Line, PhoneLink, Threads, Messenger, Facebook, Instagram }
 
 impl Social {
-    pub const ALL:[Self;5]=[Self::Threads,Self::Messenger,Self::Facebook,Self::Line,Self::Instagram];
-    pub fn key(self)->&'static str{match self{Self::Threads=>"threads",Self::Messenger=>"messenger",Self::Facebook=>"facebook",Self::Line=>"line",Self::Instagram=>"instagram"}}
-    pub fn name(self)->&'static str{match self{Self::Threads=>"Threads",Self::Messenger=>"Messenger",Self::Facebook=>"Facebook",Self::Line=>"LINE",Self::Instagram=>"Instagram"}}
+    pub const ALL:[Self;6]=[Self::Line,Self::PhoneLink,Self::Threads,Self::Messenger,Self::Facebook,Self::Instagram];
+    pub fn key(self)->&'static str{match self{Self::Line=>"line",Self::PhoneLink=>"phonelink",Self::Threads=>"threads",Self::Messenger=>"messenger",Self::Facebook=>"facebook",Self::Instagram=>"instagram"}}
+    pub fn name(self)->&'static str{match self{Self::Line=>"LINE",Self::PhoneLink=>"手機連結",Self::Threads=>"Threads",Self::Messenger=>"Messenger",Self::Facebook=>"Facebook",Self::Instagram=>"Instagram"}}
     pub fn url(self)->&'static str{match self{
+        Self::Line=>"https://line.me/",
+        Self::PhoneLink=>"ms-settings:mobile-devices",
         Self::Threads=>"https://www.threads.net/",
         Self::Messenger=>"https://www.messenger.com/",
         Self::Facebook=>"https://www.facebook.com/",
-        Self::Line=>"https://line.me/",
         Self::Instagram=>"https://www.instagram.com/",
     }}
+    /// 預設順序：LINE 與手機連結先並排，其餘依原本習慣往右排。
+    pub fn default_order()->Vec<String>{Self::ALL.iter().map(|social|social.key().to_owned()).collect()}
+    /// 設定檔存的是逗號分隔的 key；未知或重複的項目忽略，缺少的補在最後。
+    pub fn parse_order(value:&str)->Vec<String>{
+        let mut order=Vec::new();
+        for key in value.split(',').map(str::trim).filter(|key|!key.is_empty()){
+            if Self::ALL.iter().any(|social|social.key()==key)&&!order.iter().any(|item:&String|item==key){order.push(key.to_owned());}
+        }
+        for social in Self::ALL {if !order.iter().any(|item|item==social.key()){order.push(social.key().to_owned());}}
+        order
+    }
+    /// 依使用者排序回傳所有來源；左邊優先。
+    pub fn ordered(order:&[String])->Vec<Self>{
+        let mut list:Vec<Self>=order.iter().filter_map(|key|Self::ALL.iter().copied().find(|social|social.key()==key)).collect();
+        for social in Self::ALL {if !list.contains(&social){list.push(social);}}
+        list
+    }
     /// 通知來源的 Windows AppID；有它才能開原生程式，而不是把 LINE 丟到瀏覽器。
     fn app_target(self,id:Option<&str>)->Option<&str>{
         id.map(str::trim).filter(|id|!id.is_empty()&&*id!=self.key())
@@ -37,17 +55,18 @@ impl Social {
     pub fn paint(self,c:&Card,x:f32,y:f32){
         let rect=c.rect(x-10.0,y-10.0,20.0,20.0);
         let icon=match self {
+            Self::Line=>egui::Image::new(egui::include_image!("../assets/social/line.png")),
+            Self::PhoneLink=>egui::Image::new(egui::include_image!("../assets/social/phonelink.png")),
             Self::Threads=>egui::Image::new(egui::include_image!("../assets/social/threads.png")),
             Self::Messenger=>egui::Image::new(egui::include_image!("../assets/social/messenger.png")),
             Self::Facebook=>egui::Image::new(egui::include_image!("../assets/social/facebook.png")),
-            Self::Line=>egui::Image::new(egui::include_image!("../assets/social/line.png")),
             Self::Instagram=>egui::Image::new(egui::include_image!("../assets/social/instagram.png")),
         };
         if let Ok(egui::load::TexturePoll::Ready{texture})=icon.load_for_size(c.ui.ctx(),rect.size()){
             c.painter.image(texture.id,rect,egui::Rect::from_min_max(egui::Pos2::ZERO,egui::pos2(1.0,1.0)),egui::Color32::WHITE);
         }
     }
-    fn index(self)->usize{match self{Self::Threads=>0,Self::Messenger=>1,Self::Facebook=>2,Self::Line=>3,Self::Instagram=>4}}
+    fn index(self)->usize{match self{Self::Line=>0,Self::PhoneLink=>1,Self::Threads=>2,Self::Messenger=>3,Self::Facebook=>4,Self::Instagram=>5}}
 }
 
 #[cfg(windows)]
@@ -126,6 +145,7 @@ pub fn detect(app:&str,id:&str)->Option<Social>{
     let app=app.trim().to_lowercase();
     let id=id.to_lowercase();
     if text.contains("messenger"){return Some(Social::Messenger);}
+    if text.contains("phonelink")||text.contains("phone link")||text.contains("yourphone")||text.contains("your phone")||app.contains("手機連結"){return Some(Social::PhoneLink);}
     if text.contains("threads"){return Some(Social::Threads);}
     if text.contains("instagram")||text.contains("insta gram"){return Some(Social::Instagram);}
     if text.contains("naver.line")||app=="line"||id.ends_with(".line")||id.contains("line.messenger"){return Some(Social::Line);}
@@ -135,9 +155,9 @@ pub fn detect(app:&str,id:&str)->Option<Social>{
 
 /// 每個來源的未讀則數；點開應用程式或到通知中心查看後歸零。
 #[derive(Clone,Debug)]
-pub struct Badges{counts:[u16;5],ids:[Option<String>;5]}
+pub struct Badges{counts:[u16;6],ids:[Option<String>;6]}
 impl Default for Badges{
-    fn default()->Self{Self{counts:[0;5],ids:std::array::from_fn(|_|None)}}
+    fn default()->Self{Self{counts:[0;6],ids:std::array::from_fn(|_|None)}}
 }
 impl Badges{
     pub fn load()->Self{
@@ -184,6 +204,10 @@ impl Badges{
     pub fn active(&self)->Vec<(Social,u16)>{
         Social::ALL.into_iter().filter_map(|s|{let n=self.count(s);(n>0).then_some((s,n))}).collect()
     }
+    /// 依設定的優先順序回傳目前有未讀的來源；左邊先顯示。
+    pub fn active_ordered(&self,order:&[String])->Vec<(Social,u16)>{
+        Social::ordered(order).into_iter().filter_map(|s|{let n=self.count(s);(n>0).then_some((s,n))}).collect()
+    }
     pub fn total(&self)->u32{self.active().iter().map(|(_,n)|*n as u32).sum()}
 }
 
@@ -211,15 +235,26 @@ pub fn badge(c:&Card,x:f32,y:f32,count:u16,radius:f32,font:f32){
 mod tests{
     use super::*;
     #[test]
-    fn detects_the_five_sources_without_mixing_facebook_and_messenger(){
+    fn detects_the_six_sources_without_mixing_facebook_and_messenger(){
         assert_eq!(detect("Threads","com.burbn.threads"),Some(Social::Threads));
         assert_eq!(detect("Messenger","com.facebook.messenger"),Some(Social::Messenger));
         assert_eq!(detect("Facebook","com.facebook.katana"),Some(Social::Facebook));
         assert_eq!(detect("LINE","jp.naver.line"),Some(Social::Line));
         assert_eq!(detect("Instagram","com.instagram.android"),Some(Social::Instagram));
+        assert_eq!(detect("手機連結","Microsoft.YourPhone_8wekyb3d8bbwe!App"),Some(Social::PhoneLink));
+        assert_eq!(detect("Phone Link","Microsoft.YourPhone_8wekyb3d8bbwe!App"),Some(Social::PhoneLink));
         assert_eq!(detect("LINE","jp.naver.line"),Some(Social::Line));
         assert_eq!(detect("Outlook","Microsoft.Outlook"),None);
     }
+    #[test]
+    fn order_keeps_the_saved_priority_and_fills_missing_sources(){
+        let order=Social::parse_order("phonelink,line,unknown,phonelink");
+        assert_eq!(order[0],"phonelink");
+        assert_eq!(order[1],"line");
+        assert_eq!(order.len(),Social::ALL.len());
+        assert_eq!(Social::ordered(&order)[0],Social::PhoneLink);
+    }
+
     #[test]
     fn counts_survive_a_round_trip_and_clear(){
         let mut badges=Badges::default();

@@ -920,7 +920,9 @@ impl App {
             s.visuals.text_cursor.stroke = egui::Stroke::new(1.5_f32, theme::BLUE);
             s.visuals.selection.bg_fill = theme::alpha_blue(0.45);
         });
-        let settings = model::Settings::load();
+        let mut settings = model::Settings::load();
+        // 台灣版吉祥物固定島虎；舊設定選過其他形象也在啟動時收回，避免五種圖示輪替時看起來都一樣。
+        settings.mascot = crate::mascot::Mascot::Tiger;
         crate::mascot::set(settings.mascot);
         let clipboard_on = settings.clipboard_history;
         let (bw, bh) = if settings.minimal { (BAR_W_MIN, BAR_H_MIN) } else { (BAR_W, BAR_H) };
@@ -1622,7 +1624,7 @@ impl App {
         let (bx,by)=(x+10.0,y+7.0);
         c.circle(bx,by,5.2,Color32::from_black_alpha(130));
         paint::bell(&c.scaled(bx,by,0.44),bx,by,theme::WHITE,swing);
-        crate::social::badge(c,x+9.5,y-7.0,count.max(1),5.5,7.0);
+        if count>0 {crate::social::badge(c,x+9.5,y-7.0,count,5.5,7.0);}
     }
     /// 剪贴板监听是否应运行：置物架模块开启且打开了「记录剪贴板」。
     pub fn clipboard_active(&self)->bool {self.module_on(SHELF_PAGE) && self.settings.clipboard_history}
@@ -2404,7 +2406,7 @@ impl App {
     fn unread_slot(&self,height:f32)->f32 {
         if self.unread_count()>=3 {(height-4.0)/3.0} else {UNREAD_SLOT}
     }
-    fn unread_count(&self)->usize {self.pending_messengers.len()+self.social.active().len()+self.health_badges().len()}
+    fn unread_count(&self)->usize {self.pending_messengers.len()+self.social.active_ordered(&self.settings.social_order).len()+self.health_badges().len()}
     /// 收起时叠放的来源图标，每个客户端各占一个。
     fn unread_sources(&self)->Vec<Messenger>{
         let mut sources=Vec::new();
@@ -2413,7 +2415,7 @@ impl App {
     }
     /// 收起时叠放区沿胶囊方向的长度。
     fn unread_stack_len(&self,horizontal:bool)->f32 {
-        let icons=(self.unread_sources().len()+self.social.active().len()+self.health_badges().len()) as f32;
+        let icons=(self.unread_sources().len()+self.social.active_ordered(&self.settings.social_order).len()+self.health_badges().len()) as f32;
         32.0+unread_step(horizontal)*(icons-1.0)
     }
 
@@ -2459,9 +2461,14 @@ impl App {
         let height=rect.height()/c.s;
         let slot=self.unread_slot(height);
         let max_scroll=(n as f32-3.0).max(0.0)*slot;
+        let hovering=cursor.is_some_and(|p|rect.contains(p));
         if max_scroll>0.0 && cursor.is_some_and(|p|rect.contains(p)) {
             let delta=ctx.input(|i|i.raw_scroll_delta.y);
             self.messenger_scroll-=delta*0.5;
+        }else if max_scroll>0.0 && !hovering {
+            // 超過三個未讀時緩慢往下刷，讓下面的來源自己露出來；滑鼠移進膠囊就停止，改用手動滾輪。
+            self.messenger_scroll+=ctx.input(|i|i.stable_dt).clamp(0.0,0.1)*7.0;
+            if self.messenger_scroll>=max_scroll{self.messenger_scroll=0.0;}
         }
         self.messenger_scroll=self.messenger_scroll.clamp(0.0,max_scroll);
         let c=c.faded(self.messenger_appear());
@@ -2484,7 +2491,7 @@ impl App {
             let button=inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,self.unread_id(i)).on_hover_text(format!("檢視{name}"));
             if button.clicked(){cmds.push(Cmd::ViewMessenger(u));}
         }
-        let socials=self.social.active();
+        let socials=self.social.active_ordered(&self.settings.social_order);
         for (i,(source,count)) in socials.iter().enumerate() {
             let cy=2.0+slot*((self.pending_messengers.len()+i) as f32+0.5)-self.messenger_scroll;
             if cy< -slot || cy>height+slot {continue;}
@@ -2512,7 +2519,7 @@ impl App {
     /// 收起时的未读入口：每个来源一个图标加小红点（同一来源多个账号合成一个）。只有一条时点它直接跳转，多条时展开面板挑选。
     fn draw_unread_stack(&mut self,c:&Card,horizontal:bool,cmds:&mut Vec<Cmd>){
         let sources=self.unread_sources();
-        let socials=self.social.active();
+        let socials=self.social.active_ordered(&self.settings.social_order);
         let health=self.health_badges();
         let count=self.pending_messengers.len();
         let icons=sources.len()+socials.len()+health.len();
