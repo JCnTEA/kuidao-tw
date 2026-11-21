@@ -259,10 +259,7 @@ section{scroll-margin-top:104px}
 .visual-cap{margin-top:18px;font-size:10.5px;letter-spacing:.1em;color:#999ca6;text-align:right}
 
 /* ===== 展開畫面幻燈片 ===== */
-.island-showcase{
-  margin-top:52px;display:grid;grid-template-columns:minmax(0,1fr) 92px;
-  gap:22px;align-items:center;
-}
+.island-showcase{margin-top:52px}
 .island-stage{
   position:relative;min-width:0;padding:16px 14px;border-radius:30px;
   background:linear-gradient(180deg,rgba(12,20,34,.92),rgba(7,11,18,.96));
@@ -277,8 +274,9 @@ section{scroll-margin-top:104px}
 }
 .island-viewport{position:relative;overflow:hidden;border-radius:20px;background:#05080e;z-index:1}
 .island-track{display:flex;transition:transform .52s cubic-bezier(.22,.61,.36,1)}
-.island-slide{position:relative;flex:0 0 100%;min-width:100%;height:440px;margin:0}
-.island-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:18px;display:block;user-select:none;-webkit-user-drag:none}
+.island-slide{position:relative;flex:0 0 100%;min-width:100%;height:440px;margin:0;display:flex;align-items:center;justify-content:center}
+.island-frame{position:relative;width:min(100%,calc(440px * var(--ar)));aspect-ratio:var(--ar);max-height:100%}
+.island-frame>img{width:100%;height:100%;object-fit:contain;border-radius:18px;display:block;user-select:none;-webkit-user-drag:none}
 .island-stage:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .island-dots{position:relative;z-index:2;display:flex;justify-content:center;gap:7px;margin-top:12px;margin-bottom:14px}
 .island-dots button{
@@ -286,17 +284,29 @@ section{scroll-margin-top:104px}
   background:rgba(185,203,228,.28);transition:width .25s,background .25s;
 }
 .island-dots button[aria-current="true"]{width:24px;border-radius:99px;background:var(--accent)}
-.island-rail{display:flex;flex-direction:column;gap:13px;align-items:center;justify-content:center}
-.rail-item{position:relative;width:48px;height:48px;border-radius:50%;display:grid;place-items:center}
-.rail-item>img{width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;box-shadow:0 8px 20px -10px rgba(0,0,0,.8)}
-.rail-item svg{width:48px;height:48px;border-radius:50%;display:block}
-.rail-badge{
-  position:absolute;right:-6px;top:-6px;min-width:20px;height:20px;padding:0 5px;
-  border-radius:99px;background:#ff3b30;color:#fff;border:1.5px solid #f4f7fb;
-  font:800 10px/17px "Noto Sans TC",system-ui,sans-serif;text-align:center;
+.slide-rail{
+  position:absolute;z-index:3;right:clamp(6px,.8vw,8px);top:50%;
+  transform:translateY(-50%);display:flex;flex-direction:column;
+  gap:clamp(6px,1vw,13px);pointer-events:none;
+}
+.slide-rail .rail-item{
+  position:relative;width:clamp(18px,4.8vw,40px);height:clamp(18px,4.8vw,40px);
+  border-radius:50%;display:grid;place-items:center;flex:none;
+}
+.slide-rail .rail-item>img,.slide-rail .rail-item>svg{
+  width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;
+  box-shadow:0 8px 20px -10px rgba(0,0,0,.8);
+}
+.slide-rail .rail-bell{background:linear-gradient(135deg,#ff7a59,#ef3b46);box-shadow:0 8px 20px -10px rgba(0,0,0,.8)}
+.slide-rail .rail-bell svg{fill:#fff;background:none;box-shadow:none}
+.slide-rail .rail-badge{
+  position:absolute;right:-4px;top:-4px;min-width:clamp(14px,1.9vw,18px);height:clamp(14px,1.9vw,18px);
+  padding:0 4px;border-radius:99px;background:#ff3b30;color:#fff;border:1.5px solid #f4f7fb;
+  font:800 clamp(7px,1vw,9px)/1 "Noto Sans TC",system-ui,sans-serif;
+  display:grid;place-items:center;
   box-shadow:0 3px 8px rgba(255,59,48,.35);
 }
-.rail-item.pop{animation:railPop .5s both;animation-delay:calc(var(--i) * 55ms)}
+.slide-rail .rail-item.pop{animation:railPop .5s both;animation-delay:calc(var(--i) * 55ms)}
 @keyframes railPop{
   0%{transform:scale(.72) translateY(7px);opacity:0}
   62%{transform:scale(1.08) translateY(0);opacity:1}
@@ -428,13 +438,11 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
   .interface{padding-top:88px}
   .visual-mini{position:relative;box-shadow:var(--shadow-soft);transform:none;width:auto}
   .interface-visual{padding-bottom:0}
-  .island-showcase{grid-template-columns:1fr;margin-top:32px;gap:14px}
+  .island-showcase{margin-top:32px}
   .island-stage{padding:11px 9px;border-radius:22px}
   .island-slide{height:204px}
+  .island-frame>img{border-radius:14px}
   .island-dots{margin-top:9px}
-  .island-rail{flex-direction:row;gap:10px}
-  .rail-item,.rail-item>img,.rail-item svg{width:40px;height:40px}
-  .rail-badge{right:-4px;top:-4px;min-width:18px;height:18px;font-size:9px;line-height:15px}
   .mini-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;margin-top:9px;align-items:start}
   .visual-mini{left:auto;right:auto;top:auto;bottom:auto;width:auto;min-width:0}
   .visual-mini img{width:100%;height:auto}
@@ -782,14 +790,88 @@ footer{border-top-color:rgba(125,211,252,.12)}
       <div class="island-stage" id="islandStage" tabindex="0" role="region" aria-roledescription="carousel" aria-label="鬼島展開畫面，左右滑動切換">
         <div class="island-viewport">
           <div class="island-track" id="islandTrack">
-            <figure class="island-slide" data-counts="50,32,18,10"><img src="images/showcase/island-weather.webp" alt="鬼島展開天氣：台北 19 度、體感、濕度、風速與七日預報" loading="eager" decoding="async"></figure>
-            <figure class="island-slide" data-counts="42,28,16,12"><img src="images/showcase/island-music.webp" alt="鬼島展開音樂：GIRL LIKE ME、播放進度與原文譯文歌詞" loading="eager" decoding="async"></figure>
-            <figure class="island-slide" data-counts="38,25,14,10"><img src="images/showcase/island-lyrics.webp" alt="鬼島島上歌詞：單行原文與右側譯文" loading="eager" decoding="async"></figure>
-            <figure class="island-slide" data-counts="35,22,13,11"><img src="images/showcase/island-focus.webp" alt="鬼島番茄專注：05:00 休息、專注與休息按鈕" loading="eager" decoding="async"></figure>
-            <figure class="island-slide" data-counts="48,30,17,10"><img src="images/showcase/island-clipboard.webp" alt="鬼島置物架與剪貼簿：複製的文字會出現在這裡" loading="eager" decoding="async"></figure>
-            <figure class="island-slide" data-counts="40,26,15,12"><img src="images/showcase/island-todo.webp" alt="鬼島待辦清單：0/0 已完成與今天還沒有安排" loading="eager" decoding="async"></figure>
-            <figure class="island-slide" data-counts="44,29,16,13"><img src="images/showcase/island-calendar.webp" alt="鬼島行程：2026 年 11 月月曆與當天暫無行程" loading="eager" decoding="async"></figure>
-            <figure class="island-slide" data-counts="30,22,13,11"><img src="images/showcase/island-games.webp" alt="鬼島遊戲庫：Riot Client、英雄聯盟、聯盟戰棋與 VALORANT 捷徑，以及 Steam 已安裝遊戲" loading="eager" decoding="async"></figure>
+            <figure class="island-slide" data-counts="50,32,18,10">
+              <div class="island-frame" style="--ar:1.9354">
+                <img src="images/showcase/island-weather.webp" alt="鬼島展開天氣：台北 19 度、體感、濕度、風速與七日預報" loading="eager" decoding="async">
+                <div class="slide-rail" aria-hidden="true">
+                  <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt=""><span class="rail-badge">50</span></div>
+                  <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt=""><span class="rail-badge">32</span></div>
+                  <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt=""><span class="rail-badge">18</span></div>
+                  <div class="rail-item rail-bell" style="--i:3"><svg viewBox="0 0 48 48"><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z"/></svg><span class="rail-badge">10</span></div>
+                </div>
+              </div>
+            </figure>
+            <figure class="island-slide" data-counts="42,28,16,12">
+              <div class="island-frame" style="--ar:3.2647">
+                <img src="images/showcase/island-music.webp" alt="鬼島展開音樂：GIRL LIKE ME、播放進度與原文譯文歌詞" loading="eager" decoding="async">
+                <div class="slide-rail" aria-hidden="true">
+                  <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt=""><span class="rail-badge">42</span></div>
+                  <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt=""><span class="rail-badge">28</span></div>
+                  <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt=""><span class="rail-badge">16</span></div>
+                  <div class="rail-item rail-bell" style="--i:3"><svg viewBox="0 0 48 48"><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z"/></svg><span class="rail-badge">12</span></div>
+                </div>
+              </div>
+            </figure>
+            <figure class="island-slide" data-counts="38,25,14,10">
+              <div class="island-frame" style="--ar:13.7941">
+                <img src="images/showcase/island-lyrics.webp" alt="鬼島島上歌詞：單行原文與右側譯文" loading="eager" decoding="async">
+              </div>
+            </figure>
+            <figure class="island-slide" data-counts="35,22,13,11">
+              <div class="island-frame" style="--ar:3.2684">
+                <img src="images/showcase/island-focus.webp" alt="鬼島番茄專注：05:00 休息、專注與休息按鈕" loading="eager" decoding="async">
+                <div class="slide-rail" aria-hidden="true">
+                  <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt=""><span class="rail-badge">35</span></div>
+                  <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt=""><span class="rail-badge">22</span></div>
+                  <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt=""><span class="rail-badge">13</span></div>
+                  <div class="rail-item rail-bell" style="--i:3"><svg viewBox="0 0 48 48"><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z"/></svg><span class="rail-badge">11</span></div>
+                </div>
+              </div>
+            </figure>
+            <figure class="island-slide" data-counts="48,30,17,10">
+              <div class="island-frame" style="--ar:3.2274">
+                <img src="images/showcase/island-clipboard.webp" alt="鬼島置物架與剪貼簿：複製的文字會出現在這裡" loading="eager" decoding="async">
+                <div class="slide-rail" aria-hidden="true">
+                  <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt=""><span class="rail-badge">48</span></div>
+                  <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt=""><span class="rail-badge">30</span></div>
+                  <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt=""><span class="rail-badge">17</span></div>
+                  <div class="rail-item rail-bell" style="--i:3"><svg viewBox="0 0 48 48"><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z"/></svg><span class="rail-badge">10</span></div>
+                </div>
+              </div>
+            </figure>
+            <figure class="island-slide" data-counts="40,26,15,12">
+              <div class="island-frame" style="--ar:3.2116">
+                <img src="images/showcase/island-todo.webp" alt="鬼島待辦清單：0/0 已完成與今天還沒有安排" loading="eager" decoding="async">
+                <div class="slide-rail" aria-hidden="true">
+                  <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt=""><span class="rail-badge">40</span></div>
+                  <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt=""><span class="rail-badge">26</span></div>
+                  <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt=""><span class="rail-badge">15</span></div>
+                  <div class="rail-item rail-bell" style="--i:3"><svg viewBox="0 0 48 48"><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z"/></svg><span class="rail-badge">12</span></div>
+                </div>
+              </div>
+            </figure>
+            <figure class="island-slide" data-counts="44,29,16,13">
+              <div class="island-frame" style="--ar:2.0746">
+                <img src="images/showcase/island-calendar.webp" alt="鬼島行程：2026 年 11 月月曆與當天暫無行程" loading="eager" decoding="async">
+                <div class="slide-rail" aria-hidden="true">
+                  <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt=""><span class="rail-badge">44</span></div>
+                  <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt=""><span class="rail-badge">29</span></div>
+                  <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt=""><span class="rail-badge">16</span></div>
+                  <div class="rail-item rail-bell" style="--i:3"><svg viewBox="0 0 48 48"><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z"/></svg><span class="rail-badge">13</span></div>
+                </div>
+              </div>
+            </figure>
+            <figure class="island-slide" data-counts="30,22,13,11">
+              <div class="island-frame" style="--ar:2.1422">
+                <img src="images/showcase/island-games.webp" alt="鬼島遊戲庫：Riot Client、英雄聯盟、聯盟戰棋與 VALORANT 捷徑，以及 Steam 已安裝遊戲" loading="eager" decoding="async">
+                <div class="slide-rail" aria-hidden="true">
+                  <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt=""><span class="rail-badge">30</span></div>
+                  <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt=""><span class="rail-badge">22</span></div>
+                  <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt=""><span class="rail-badge">13</span></div>
+                  <div class="rail-item rail-bell" style="--i:3"><svg viewBox="0 0 48 48"><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z"/></svg><span class="rail-badge">11</span></div>
+                </div>
+              </div>
+            </figure>
           </div>
         </div>
         <div class="island-dots" id="islandDots" role="tablist" aria-label="選擇展開畫面">
@@ -803,17 +885,8 @@ footer{border-top-color:rgba(125,211,252,.12)}
           <button type="button" aria-label="遊戲庫"></button>
         </div>
       </div>
-      <div class="island-rail" id="islandRail" aria-label="展開時旁邊的未讀通知範例">
-        <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt="Gmail"><span class="rail-badge">50</span></div>
-        <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt="LINE"><span class="rail-badge">32</span></div>
-        <div class="rail-item" style="--i:2"><img src="images/showcase/notif-phone.png" alt="手機連結"><span class="rail-badge">18</span></div>
-        <div class="rail-item" style="--i:3">
-          <svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="bellBg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff7a59"/><stop offset="1" stop-color="#ef3b46"/></linearGradient></defs><circle cx="24" cy="24" r="24" fill="url(#bellBg)"/><path d="M24 12c-5 0-8.2 3.8-8.2 9v5.2L13 31.5h22l-2.8-5.3V21c0-5.2-3.2-9-8.2-9Zm0 23c2.2 0 3.8-1.4 4.2-3.5h-8.4c.4 2.1 2 3.5 4.2 3.5Z" fill="#fff"/></svg>
-          <span class="rail-badge">10</span>
-        </div>
-      </div>
     </div>
-    <p class="island-note">八種展開模樣可左右滑動 · 旁邊同步亮起 Gmail、LINE、手機連結與系統通知未讀</p>
+    <p class="island-note">八種展開模樣可左右滑動 · 右側通知會跟著畫面同步亮起</p>
   </div>
 </section>
 
@@ -964,15 +1037,16 @@ footer{border-top-color:rgba(125,211,252,.12)}
     var track = document.getElementById('islandTrack');
     var dots = Array.prototype.slice.call(document.querySelectorAll('#islandDots button'));
     var slides = Array.prototype.slice.call(track.querySelectorAll('.island-slide'));
-    var railItems = Array.prototype.slice.call(document.querySelectorAll('#islandRail .rail-item'));
     var index = 0, startX = null, startY = null, dragX = 0, pointerId = null;
 
     function countsFor(i){
       return (slides[i].dataset.counts || '50,32,18,10').split(',').map(function(n){ return n.trim(); });
     }
     function applyRail(i, animate){
+      var rail = slides[i].querySelector('.slide-rail');
+      if(!rail) return;
       var counts = countsFor(i);
-      railItems.forEach(function(item, n){
+      Array.prototype.slice.call(rail.querySelectorAll('.rail-item')).forEach(function(item, n){
         var badge = item.querySelector('.rail-badge');
         if(badge) badge.textContent = counts[n] || '10';
         item.classList.remove('pop');
@@ -1101,3 +1175,4 @@ footer{border-top-color:rgba(125,211,252,.12)}
 </script>
 </body>
 </html>
+

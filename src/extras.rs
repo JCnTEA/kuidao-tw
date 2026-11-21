@@ -1841,6 +1841,7 @@ impl App {
                                 if setting_number(ui,"時間偏移",&mut advance,-5.0,5.0," 秒",0.1){self.settings.lyric_delay_ms=(-advance*1000.0).round()as i32;}
                                 settings_hint(ui,"歌詞和歌聲對不上時調整：正數提前，負數延後；預設提前 0.35 秒。");
                                 settings_hint(ui,"查詞為自動進行：播放器本機歌詞 → 網易雲 → QQ 音樂 → LRCLIB；找不到時按播放器上的「詞」可重試。");
+                                settings_hint(ui,"Chrome、Edge、Firefox 播 YouTube／YouTube Music 時，會從 Windows 右下角播放卡自動讀取歌名；瀏覽器縮小也持續顯示，不需要安裝擴充功能。");
                                 ui.separator();
                                 let translate=self.settings.lyrics_translate;
                                 setting_row(ui,"自動翻譯歌詞","非中文歌詞保留原文，譯文顯示在原文下方；中文歌本身就是繁體，不做翻譯",&mut self.settings.lyrics_translate);

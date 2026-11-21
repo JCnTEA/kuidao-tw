@@ -79,9 +79,28 @@ fn is_cn_music_source(source: &str) -> bool {
         || is_qqmusic(source)
 }
 
+/// Chrome／Edge／Firefox／IE 等瀏覽器也會把分頁音訊註冊到 Windows 播放卡；
+/// 這裡只認來源，不要求使用者安裝擴充功能，也不看瀏覽器是否在前景。
+pub fn is_browser_source(source:&str)->bool{
+    let source=source.to_ascii_lowercase();
+    ["chrome","msedge","firefox","brave","opera","vivaldi","iexplore","internet explorer"]
+        .iter().any(|name|source.contains(name))
+}
+
+/// YouTube 分頁在 SMTC 常缺少專輯欄位，甚至被瀏覽器標成影片；
+/// 專輯或標題後綴是唯一穩定的辨識點。
+fn is_youtube(media:&NowPlaying)->bool{
+    let title=media.title.trim().to_ascii_lowercase();
+    let album=media.album.trim().to_ascii_lowercase();
+    album.contains("youtube") || title.ends_with(" - youtube") || title.ends_with(" - youtube music")
+}
+
 impl NowPlaying {
     pub fn kind(&self)->MediaKind {
         if self.title.trim().is_empty(){return MediaKind::Unknown;}
+        // 使用者在瀏覽器播放 YouTube／YouTube Music 時，Windows 播放卡仍會保留工作階段，
+        // 瀏覽器縮小或切到別的分頁都能讀到歌名；不能因缺少專輯或型別被標成影片就被濾掉。
+        if is_browser_source(&self.source) && is_youtube(self) {return MediaKind::Music;}
         if self.playback_type==MediaKind::Video {return MediaKind::Video;}
         // 部分浏览器把所有媒体都上报为音乐，补充识别明确的视频页面标题。
         let title=self.title.trim().to_lowercase();
@@ -1294,10 +1313,24 @@ mod tests {
     fn browser_video_authors_are_not_enough_to_identify_a_song(){
         let mut np=NowPlaying{title:"A video".into(),artist:"Video creator".into(),source:"Chrome".into(),playback_type:MediaKind::Music,..Default::default()};
         assert_eq!(np.kind(),MediaKind::Unknown);
-        np.album="YouTube".into();assert_eq!(np.kind(),MediaKind::Video);
+        np.album="YouTube".into();assert_eq!(np.kind(),MediaKind::Music,"YouTube 分頁要上島，不能當成一般影片濾掉");
         np.title="阿拉斯加海灣".into();np.artist="藍心羽".into();np.album="阿拉斯加海灣".into();
         assert_eq!(np.kind(),MediaKind::Music,"網易雲網頁版的完整歌曲後設資料仍應識別為音樂");
         np.source="Spotify.exe".into();np.album.clear();assert_eq!(np.kind(),MediaKind::Music,"音樂客戶端不強制要求專輯資訊");
+    }
+
+    #[test]
+    fn youtube_in_any_browser_is_music_even_without_album_or_when_marked_video(){
+        for source in ["chrome.exe","Google.Chrome.SxS","msedge.exe","firefox.exe","iexplore.exe","brave.exe","opera.exe"] {
+            let mut np=NowPlaying{title:"Movie - YouTube".into(),source:source.into(),playback_type:MediaKind::Music,..Default::default()};
+            assert_eq!(np.kind(),MediaKind::Music,"{source} 的 YouTube 分頁應上島");
+            np.playback_type=MediaKind::Video;
+            assert_eq!(np.kind(),MediaKind::Music,"{source} 把 YouTube 標成影片時仍要顯示");
+            np.title="Song - YouTube Music".into();np.album.clear();
+            assert_eq!(np.kind(),MediaKind::Music,"YouTube Music 缺少專輯時仍要顯示");
+            np.title="A video".into();np.album="bilibili".into();
+            assert_eq!(np.kind(),MediaKind::Video,"非 YouTube 的瀏覽器影片維持影片分類");
+        }
     }
 
     #[test]
