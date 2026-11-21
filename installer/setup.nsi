@@ -49,7 +49,7 @@ Page custom InstallPage InstallPageLeave
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "TradChinese"
-BrandingText "鬼島 · Kuidao"
+BrandingText " "
 SetFont "Microsoft YaHei UI" 9
 
 Function .onInit
@@ -111,7 +111,7 @@ Function InstallPage
   ; 版本與標題分開兩行，避免 18pt 標題和版本字疊在一起被截斷。
   ${NSD_CreateLabel} 59u 31u 240u 12u "v${APP_VERSION} · 安裝後自動補齊主程式"
   Pop $0
-  SetCtlColors $0 0x666666 0xFFFFFF
+  SetCtlColors $0 0x666666 0xF0F0F0
   ${NSD_CreateLabel} 58u 45u 240u 16u "先安裝極小啟動器，不一次下載完整安裝包。"
   Pop $0
   ${NSD_CreateLabel} 0 64u 300u 16u "音樂歌詞 · 郵件驗證碼 · 行程提醒 · AI 額度"
