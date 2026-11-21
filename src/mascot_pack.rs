@@ -214,7 +214,10 @@ fn load_pack(key: &str) -> Option<LoadedPack> {
         }
         return (!animations.is_empty()).then_some(LoadedPack { name: parsed.name, animations });
     }
-    builtin_tiger(key)
+    // 內建形象改用向量單線條，不再載入會糊掉的點陣影格；
+    // 只有使用者放在 `%APPDATA%\Kuidao\mascot-packs` 的外掛包才走逐格動畫。
+    let _ = key;
+    None
 }
 
 /// 只允許動畫包資料夾內的相對路徑，避免 pack.json 讀到其他位置。

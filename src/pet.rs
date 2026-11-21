@@ -334,18 +334,28 @@ impl Pet {
             self.draw_state_marks(c, cx, t);
             return;
         }
-        if self.expressions.draw(c,cx,palette) {return;}
+        // 沒有外掛動畫包時一律畫自製的單線條向量吉祥物；
+        // 身體固定在槽位內，只有尾巴、耳朵與眼睛會動。
+        crate::mascot_art::draw(c, cx, t, state);
         for (i, eye) in self.eyes.iter().enumerate() {
-            let x = cx + if i == 0 { -5.6 } else { 5.6 } + self.gaze[0];
-            let y = 14.5 + self.y + eye.y + self.gaze[1];
-            let points: Vec<_> = (0..=12).map(|n| {
-                let q = n as f32 / 6.0 - 1.0;
-                (x + q * eye.spread, y + q * (eye.height / 2.0 + eye.tilt) + (1.0 - q*q) * eye.curve)
-            }).collect();
-            let stroke=if self.state==PetState::Music {3.6-0.8*smoothstep(0.5,1.5,eye.spread.abs())}else{3.6};
-            c.path(&points, stroke, theme::WHITE);
-            // 圆端点保持胶囊眼睛的轮廓。
-            for p in [points[0], points[12]] { c.circle(p.0, p.1, stroke/2.0, theme::WHITE); }
+            let x = cx + if i == 0 { -3.2 } else { 3.2 } + self.gaze[0] * 0.5;
+            let y = 13.5 + self.y + eye.y + self.gaze[1] * 0.4;
+            if eye.height < 0.7 {
+                c.seg((x - 1.4, y), (x + 1.4, y), 1.0, theme::WHITE);
+            } else if eye.curve.abs() > 0.8 {
+                let points: Vec<_> = (0..=8).map(|n| {
+                    let q = n as f32 / 4.0 - 1.0;
+                    (x + q * 1.8, y + q * (eye.height / 2.0 + eye.tilt) + (1.0 - q * q) * eye.curve)
+                }).collect();
+                c.path(&points, 1.1, theme::WHITE);
+            } else {
+                let radius = (eye.height / 4.4 * 1.15).clamp(0.3, 1.2);
+                c.circle(x, y, radius, theme::WHITE);
+            }
+        }
+        if state == PetState::Music {
+            // 單線條身體照樣保留原本的麥克風小道具，唱歌時才不會兩手空空。
+            microphone(c, cx, self.y, self.music_age);
         }
         match self.state {
             PetState::Dozing | PetState::Sleeping => {

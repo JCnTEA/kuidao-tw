@@ -1488,7 +1488,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kuidao"
-version = "0.6.78"
+version = "0.6.79"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -4288,4 +4288,3 @@ checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
 dependencies = [
  "zune-core",
 ]
-

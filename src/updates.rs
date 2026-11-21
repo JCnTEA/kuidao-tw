@@ -783,8 +783,8 @@ mod tests {
         std::env::set_var("KUIDAO_DATA_DIR", dest.join("data"));
         let ctx = egui::Context::default();
         let mut app = crate::app::App::new(&ctx, Default::default());
-        app.updates.result = Some(Ok(Some(Release { version: "v0.6.63".into(),
-            notes: "- 更新下載支援 Windows 系統代理\n- 連線失敗及時提示，避免長時間停在 0%\n- 新增網盤下載入口".into(), page: RELEASES.into(),
+        app.updates.result = Some(Ok(Some(Release { version: "v0.6.79-tw".into(),
+            notes: "- 島體大小上限 200%，預設 80%\n- 五種吉祥物改成單線條動畫\n- 歌詞譯名、繁化與版面修正\n- Gmail 未讀補償與每小時中文自檢".into(), page: RELEASES.into(),
             package: Some(Package { url: String::new(), size: 100, hash: String::new() }) })));
         app.updates.dialog_open = true;
         app.settings_tab = 9;

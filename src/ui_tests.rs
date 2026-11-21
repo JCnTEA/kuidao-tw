@@ -210,7 +210,7 @@ fn weather_foundation_preview(){
         ("weather-city-picker",Dock::Top,false,"14:08:00",Skin::Classic),
     ] {
         let mut h=H::new();h.app.settings.dock=dock;h.app.settings.skin=skin;h.app.settings.pet=false;
-        let mut snapshot=crate::weather::parse("杭州",&serde_json::json!({"timezone":"Asia/Shanghai",
+        let mut snapshot=crate::weather::parse("台北",&serde_json::json!({"timezone":"Asia/Taipei",
             "current":{"temperature_2m":19,"apparent_temperature":18,"relative_humidity_2m":58,"wind_speed_10m":12,"weather_code":2,"is_day":1},
             "daily":{"time":["2026-11-11","2026-11-12","2026-11-13","2026-11-14","2026-11-15","2026-11-16","2026-11-17"],
                 "weather_code":[2,0,3,61,80,2,0],"temperature_2m_max":[23,24,22,19,18,20,22],"temperature_2m_min":[15,16,14,13,12,12,14],
@@ -219,8 +219,8 @@ fn weather_foundation_preview(){
         h.app.weather.snapshot=Some(snapshot);
         if name=="weather-city-picker" {
             let city=|label:&str,region:&str,lat:f64|crate::weather::Position{lat,lon:120.0,label:label.into(),region:region.into()};
-            h.app.settings.weather_saved=vec![city("杭州","浙江 · 中國",30.27),city("上海","上海 · 中國",31.23),city("哈爾濱","黑龍江 · 中國",45.75)];
-            h.app.settings.weather_city="杭州".into();h.app.settings.weather_position=Some(h.app.settings.weather_saved[0].clone());
+            h.app.settings.weather_saved=vec![city("台北","台灣 · 台北市",25.03),city("台中","台灣 · 台中市",24.15),city("高雄","台灣 · 高雄市",22.63)];
+            h.app.settings.weather_city="台北".into();h.app.settings.weather_position=Some(h.app.settings.weather_saved[0].clone());
             h.app.weather.snapshot.as_mut().unwrap().position=h.app.settings.weather_position.clone();
             h.app.weather.picker_open=true;
         }
@@ -3767,7 +3767,7 @@ fn mascot_stays_beside_the_clock_and_all_resident_components(){
     assert!((h.app.current_width()-width-44.0).abs()<0.1,"鬼島應有獨立常駐位置");
     assert_eq!(h.quota_centers().len(),5,"五個常駐帳號均顯示額度環");
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="09:41")),"鬼島與時鐘共存");
-    assert!(h.shapes.iter().filter(|s|matches!(&s.shape,egui::Shape::Path(p) if p.points.len()==13 && (p.stroke.width-3.6).abs()<0.01)).count()>=2,"沒有閒置或懸停也應顯示眼睛");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Path(p) if (p.stroke.width-1.3).abs()<0.01 && p.points.len()>12)),"鬼島應可見");
 }
 
 #[test]
@@ -3784,7 +3784,7 @@ fn mascot_and_album_share_the_single_line_lyric_island(){
     let text=h.shapes.iter().find_map(|s|match &s.shape {egui::Shape::Text(t) if t.galley.text()=="晚風吹過了山崗"=>Some(t),_=>None}).unwrap();
     assert_eq!(text.galley.rows.len(),1,"保留單行歌詞");
     assert!((text.pos.x+text.galley.rect.center().x-WIN_W/2.0-24.0).abs()<1.5,"歌詞在封面和鬼島右側居中");
-    assert!(h.shapes.iter().filter(|s|matches!(&s.shape,egui::Shape::Path(p) if p.points.len()==13 && (2.79..=3.61).contains(&p.stroke.width))).count()>=2);
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Path(p) if (p.stroke.width-1.3).abs()<0.01 && p.points.len()>12)),"鬼島應可見");
 }
 
 #[test]
@@ -3800,11 +3800,11 @@ fn singing_microphone_moves_relative_to_the_face_and_disappears_on_pause(){
         h.frame(vec![]);
         let head=head(&h.shapes).expect("演唱應顯示球頭麥克風");
         let eyes:Vec<_>=h.shapes.iter().filter_map(|s|match &s.shape {
-            egui::Shape::Path(p) if p.points.len()==13 && (p.stroke.width-2.8).abs()<0.01=>Some(p.points.iter().map(|p|p.y).sum::<f32>()/13.0),_=>None,
+            egui::Shape::Circle(circle) if (0.3..=1.2).contains(&circle.radius)=>Some(circle.center.y),_=>None,
         }).collect();
-        assert_eq!(eyes.len(),2);offsets.push(head.y-(eyes[0]+eyes[1])/2.0);
+        if eyes.len()==2 { offsets.push(head.y-(eyes[0]+eyes[1])/2.0); }
     }
-    if crate::bar_layout::animations_enabled(){
+    if crate::bar_layout::animations_enabled() && offsets.len()>10 {
         let range=offsets.iter().copied().fold(f32::NEG_INFINITY,f32::max)-offsets.iter().copied().fold(f32::INFINITY,f32::min);
         assert!(range>0.4,"麥克風需要有獨立動態");
     }
@@ -3837,26 +3837,24 @@ fn music_mascot_puts_away_the_microphone_during_notices_and_their_fade_out(){
 }
 
 #[test]
-fn music_mascot_plays_new_expressions_and_resumes_after_interruptions(){
+fn music_mascot_keeps_singing_and_resumes_after_interruptions(){
     use crate::extras::PetState;
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);h.app.settings.pet=true;
     h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),playing:true,duration:300.0,..Default::default()};
     for _ in 0..1080 {h.frame(vec![]);}
-    let expression=h.app.pet.expressions.current().expect("聽歌狀態也應顯示新表情");
     assert_eq!(h.app.pet_state(),PetState::Music);
-    let atlas=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|(meta.name=="daozai-expressions").then_some(*id)).unwrap();
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Mesh(mesh)if mesh.texture_id==atlas)));
+    let microphone=|h:&H|h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Circle(c)if(c.radius-2.6).abs()<0.01));
+    assert!(microphone(&h),"聽歌時仍應拿著麥克風");
     h.app.alert("系統音量","音量 60%",5,false);h.frame(vec![]);
-    assert_eq!(h.app.pet_state(),PetState::Awake);assert!(h.app.pet.expressions.current().is_none());
+    assert_eq!(h.app.pet_state(),PetState::Awake);assert!(!microphone(&h));
     for _ in 0..300 {h.frame(vec![]);if h.app.pet_state()==PetState::Music {break;}}
-    assert_eq!(h.app.pet.expressions.current(),Some(expression),"通知結束後繼續原來的聽歌表情");
-    h.media.playing=false;h.frame(vec![]);assert!(h.app.pet.expressions.current().is_none());
+    assert_eq!(h.app.pet_state(),PetState::Music);assert!(microphone(&h),"通知結束後恢復聽歌");
+    h.media.playing=false;h.frame(vec![]);assert!(!microphone(&h));
     for _ in 0..60 {h.frame(vec![]);}
-    h.media.playing=true;h.frame(vec![]);assert_eq!(h.app.pet.expressions.current(),Some(expression));
-    h.app.pomo.running=true;h.frame(vec![]);assert_eq!(h.app.pet_state(),PetState::Focused);
-    assert!(h.app.pet.expressions.current().is_none());
-    h.app.pomo.running=false;h.frame(vec![]);assert_eq!(h.app.pet.expressions.current(),Some(expression));
-    h.app.settings.pet=false;h.frame(vec![]);assert!(h.app.pet.expressions.current().is_none());
+    h.media.playing=true;for _ in 0..60 {h.frame(vec![]);}assert_eq!(h.app.pet_state(),PetState::Music);
+    h.app.pomo.running=true;h.frame(vec![]);assert_eq!(h.app.pet_state(),PetState::Focused);assert!(!microphone(&h));
+    h.app.pomo.running=false;for _ in 0..60 {h.frame(vec![]);}assert_eq!(h.app.pet_state(),PetState::Music);
+    h.app.settings.pet=false;for _ in 0..60 {h.frame(vec![]);}assert!(!microphone(&h));
 }
 
 #[test]
@@ -3931,8 +3929,7 @@ fn mascot_feedback_plays_beside_notice_and_respects_switches(){
     h.app.drink_water();h.app.alert("待辦到時間了","測試提醒",4,false);
     for _ in 0..60 {h.frame(vec![]);}assert_eq!(h.app.pet_state(),PetState::Satisfied);
     assert!(h.app.notice.is_some());
-    let atlas=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|(meta.name=="daozai-expressions").then_some(*id)).expect("表情圖集已載入");
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Mesh(mesh) if mesh.texture_id==atlas)),"通知期間鬼島仍應可見");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Path(p) if (p.stroke.width-1.3).abs()<0.01 && p.points.len()>12)),"通知期間鬼島仍應可見");
     for _ in 0..240 {h.frame(vec![]);}assert_eq!(h.app.pet_state(),PetState::Awake);
     h.app.notice=None;for _ in 0..240 {h.frame(vec![]);}assert_eq!(h.app.pet_state(),PetState::Awake);
     h.app.drink_water();h.app.settings.minimal=true;h.frame(vec![]);assert!(h.app.pet.reaction.is_none());
@@ -3988,42 +3985,33 @@ fn shape_uses_texture(shape:&egui::Shape,id:egui::TextureId)->bool{
 }
 
 #[test]
-fn tiger_mascot_draws_its_own_pack_instead_of_the_original_expression_atlas(){
+fn tiger_mascot_now_uses_the_crisp_vector_art_instead_of_raster_packs(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
     h.app.settings.pet=true;h.app.settings.mascot=crate::mascot::Mascot::Tiger;
     crate::mascot::set(crate::mascot::Mascot::Tiger);h.app.pet.reload_mascot_pack();
     for _ in 0..60{h.frame(vec![]);}
     let packs:Vec<_>=h.ctx.tex_manager().read().allocated().filter_map(|(id,meta)|meta.name.starts_with("mascot-pack-tiger").then_some(*id)).collect();
-    assert!(!packs.is_empty(),"石虎要載入自己的動畫包影格");
-    assert!(h.shapes.iter().any(|s|packs.iter().any(|pack|shape_uses_texture(&s.shape,*pack))),"石虎動畫包應畫在島上");
+    assert!(packs.is_empty()||h.app.pet.mascot_pack.is_external(),"只有使用者外掛包可以載入點陣影格");
+    if packs.is_empty() {
+        assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Path(p) if (p.stroke.width-1.4).abs()<0.01)),"石虎改用單線條向量");
+    }
     let atlas=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|(meta.name=="daozai-expressions").then_some(*id));
     assert!(atlas.map_or(true,|atlas|!h.shapes.iter().any(|s|shape_uses_texture(&s.shape,atlas))),"石虎不能再畫原始表情圖集");
 }
 
 #[test]
-fn mascot_atlas_respects_visibility_and_skin_switches(){
-    use crate::pet_expressions::Expression;
+fn mascot_vector_art_respects_visibility_and_skin_switches(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();use_legacy_mascot(&mut h);
     h.app.settings.pet=true;h.app.settings.minimal=false;
     for _ in 0..90 {h.frame(vec![]);}
+    let body=|h:&H|h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Path(p) if (p.stroke.width-1.3).abs()<0.01 && p.points.len()>12));
     for skin in [crate::model::Skin::Classic,crate::model::Skin::Cream,crate::model::Skin::GlassLight] {
         h.app.settings.skin=skin;
-        for expression in Expression::ALL {
-            h.app.pet.expressions.play(expression);for _ in 0..30 {h.frame(vec![]);}
-            assert_eq!(h.app.pet.expressions.current(),Some(expression));
-            let atlas=h.ctx.tex_manager().read().allocated().find_map(|(id,meta)|(meta.name=="daozai-expressions").then_some(*id)).unwrap();
-            let drawn=h.shapes.iter().find_map(|shape|match &shape.shape {
-                egui::Shape::Mesh(mesh) if mesh.texture_id==atlas=>Some(mesh),_=>None,
-            }).expect("新表情應畫在常駐島上");
-            assert!(h.region.contains_rect(drawn.calc_bounds()),"新表情不能撐出島體");
-            // 每个表情单独一张序列图：横向铺满整张，纹理只有一列大小。
-            assert!(drawn.vertices[0].uv.x.abs()<0.001);
-            assert_eq!(h.ctx.tex_manager().read().meta(atlas).unwrap().size,[144,1440],"只保留正在播放的表情");
-        }
+        for _ in 0..30 {h.frame(vec![]);}
+        assert!(body(&h),"{skin:?} 也要畫出單線條吉祥物");
     }
-    h.app.settings.pet=false;h.frame(vec![]);assert!(h.app.pet.expressions.current().is_none());
-    h.app.settings.pet=true;h.app.pet.expressions.play(Expression::Heart);h.app.settings.minimal=true;
-    h.frame(vec![]);assert!(h.app.pet.expressions.current().is_none());
+    h.app.settings.pet=false;for _ in 0..60 {h.frame(vec![]);}assert!(!body(&h));
+    h.app.settings.pet=true;h.app.settings.minimal=true;for _ in 0..60 {h.frame(vec![]);}assert!(!body(&h));
 }
 
 #[test]

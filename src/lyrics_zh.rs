@@ -74,7 +74,7 @@ fn polish_translation(text:&str)->String{
     let mut previous=None;
     for c in trimmed.chars(){
         if c==' ' {
-            if previous.is_some_and(is_cjk_or_fullwidth)&&out.chars().next().is_some(){continue;}
+            if previous.is_some_and(no_space_after)&&out.chars().next().is_some(){continue;}
         }
         if matches!(c,'，'|','|'。'|'！'|'？'|'、'|'；'|'：')&&out.chars().last().is_some_and(|last|punctuation_family(last)==punctuation_family(c)&&punctuation_family(c)>0){continue;}
         out.push(c);
@@ -96,6 +96,11 @@ fn polish_translation(text:&str)->String{
 
 fn is_cjk_or_fullwidth(c:char)->bool{
     matches!(c as u32,0x3000..=0x303F|0x3400..=0x4DBF|0x4E00..=0x9FFF|0xFF00..=0xFFEF)
+}
+
+/// 中文排版不在標點後留半形空格；英文逗號、句號之後也一併收掉，避免轉全形後變成「， world」。
+fn no_space_after(c:char)->bool{
+    is_cjk_or_fullwidth(c)||matches!(c,','|'.'|';'|':'|'!'|'?')
 }
 
 fn punctuation_family(c:char)->u8{

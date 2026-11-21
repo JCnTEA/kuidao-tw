@@ -700,7 +700,7 @@ pub(crate) fn parse_due(value: &str, today: &str) -> Option<String> {
 mod tests {
     use super::*;
     #[test]
-    fn island_size_drag_commits_only_on_release(){
+    fn island_size_drag_commits_during_drag(){
         let ctx=egui::Context::default();let mut value=100;
         let pos=egui::pos2(30.0,30.0);let end=egui::pos2(110.0,30.0);
         let button=|pos,pressed|egui::Event::PointerButton{pos,button:egui::PointerButton::Primary,pressed,modifiers:Default::default()};
@@ -709,7 +709,7 @@ mod tests {
             let _=ctx.run(egui::RawInput{events,screen_rect:Some(Rect::from_min_size(egui::Pos2::ZERO,egui::vec2(320.0,80.0))),..Default::default()},|ctx|{
                 egui::CentralPanel::default().frame(egui::Frame::new().inner_margin(20)).show(ctx,|ui|{ui.spacing_mut().slider_width=180.0;island_size_slider(ui,&mut value);});
             });
-            if i<4{assert_eq!(value,100);}else{assert_ne!(value,100);}
+            if i<2{assert_eq!(value,100);}else{assert_ne!(value,100);}
         }
     }
     #[test]
@@ -1153,10 +1153,11 @@ fn island_size_slider(ui:&mut egui::Ui,value:&mut u32)->egui::Response {
     let mut draft=ui.data(|d|d.get_temp::<u32>(id)).unwrap_or(*value);
     let response=ui.add(egui::Slider::new(&mut draft,crate::model::ISLAND_SIZE_MIN..=crate::model::ISLAND_SIZE_MAX)
         .step_by(crate::model::ISLAND_SIZE_STEP as f64).suffix("%"));
-    if ui.input(|i|i.pointer.primary_down()) {
-        if response.changed(){ui.data_mut(|d|d.insert_temp(id,draft));}
-    }else{
+    // 文字輸入與拖曳都在變更當下就套用，避免放開滑鼠前的舊草稿把數字跳回最大值。
+    if response.changed() {
         *value=crate::model::island_size_value(draft);
+        ui.data_mut(|d|d.remove::<u32>(id));
+    }else if !ui.input(|i|i.pointer.primary_down()) {
         ui.data_mut(|d|d.remove::<u32>(id));
     }
     response
@@ -1700,10 +1701,10 @@ impl App {
                                     // 给百分比和恢复按钮留出空间，宽窗口仍使用原来的轨道长度。
                                     ui.spacing_mut().slider_width=(ui.available_width()-150.0).clamp(64.0,180.0);
                                     island_size_slider(ui,&mut self.settings.island_size);
-                                    if ui.add_enabled(self.settings.island_size!=100,egui::Button::new("恢復預設")).clicked(){self.settings.island_size=100;}
+                                    if ui.add_enabled(self.settings.island_size!=crate::model::ISLAND_SIZE_DEFAULT,egui::Button::new("恢復預設")).clicked(){self.settings.island_size=crate::model::ISLAND_SIZE_DEFAULT;}
                                 }).response
                             });
-                            settings_hint(ui,"隻影響島體，放大後文字和圖示依舊清晰。");
+                            settings_hint(ui,"只影響島體，放大後文字和圖示依舊清晰。建議 80%，最大 200%。");
                         });
                         settings_label(ui,"島體顯示");
                         settings_card(ui,|ui|{
@@ -1723,7 +1724,7 @@ impl App {
                                 });
                                 if mascot!=self.settings.mascot {self.settings.mascot=mascot;crate::mascot::set(mascot);self.pet.reload_mascot_pack();}
                             });
-                            settings_hint(ui,"五種形象都能直接切換；島虎使用自己的待機動畫包，不再沿用原始版表情序列。");
+                            settings_hint(ui,"五種形象共用單線條動畫，切換後立即生效；尾巴、耳朵與眨眼會自己動，不再沿用原始版點陣表情。");
                             ui.horizontal(|ui|{
                                 ui.label("吉祥物動畫包");
                                 if ui.button("開啟資料夾").clicked(){crate::mascot_pack::open_folder(self.settings.mascot.key());}

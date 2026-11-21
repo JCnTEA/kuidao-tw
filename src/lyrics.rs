@@ -1089,7 +1089,13 @@ mod tests {
             {"id":3,"name":"No Reason","artists":[{"name":"Other Artist"}],"duration":215497}
         ]);
         assert_eq!(netease_candidates(items.as_array().unwrap(),"No Reason","永彬",215.497),vec![1]);
-        assert_eq!(netease_candidates(items.as_array().unwrap(),"No Reason","永彬",0.0),vec![1],"播放器沒給長度時，唯一譯名候選仍可用");
+        // 沒有播放長度時無法分辨同歌手的另一個中文譯名，寧可不配。
+        assert!(netease_candidates(items.as_array().unwrap(),"No Reason","永彬",0.0).is_empty());
+        let unique=serde_json::json!([
+            {"id":1,"name":"没有理由","artists":[{"name":"永彬Ryan.B"},{"name":"周延英（英子-effie）"}],"duration":215497},
+            {"id":3,"name":"No Reason","artists":[{"name":"Other Artist"}],"duration":215497}
+        ]);
+        assert_eq!(netease_candidates(unique.as_array().unwrap(),"No Reason","永彬",0.0),vec![1],"播放器沒給長度、譯名候選唯一時仍可用");
         // 同歌手同長度但有兩個不同譯名：無法判斷是哪一首，寧可不配。
         let ambiguous=serde_json::json!([
             {"id":4,"name":"沒有理由","artists":[{"name":"永彬Ryan.B"}],"duration":215497},
@@ -1110,7 +1116,12 @@ mod tests {
             {"trackName":"放个大招给你看","artistName":"永彬Ryan.B","trackTimeMillis":178720}
         ]);
         assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",215.497),Some(("沒有理由".into(),"永彬Ryan.B & 周延英".into())));
-        assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",0.0),Some(("沒有理由".into(),"永彬Ryan.B & 周延英".into())),"播放器沒給長度時仍可從 Shazam／Apple 目錄還原");
+        // 長度未知時，同歌手的兩個中文譯名無法分辨，不採用。
+        assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",0.0),None);
+        let unique=serde_json::json!([
+            {"trackName":"沒有理由","artistName":"永彬Ryan.B & 周延英","trackTimeMillis":215497}
+        ]);
+        assert_eq!(catalog_alias_from_items(unique.as_array().unwrap(),"No Reason","永彬",0.0),Some(("沒有理由".into(),"永彬Ryan.B & 周延英".into())),"播放器沒給長度、目錄候選唯一時仍可還原");
         // 長度不同、或同長度有兩個譯名時不猜。
         assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",200.0),None);
         let ambiguous=serde_json::json!([

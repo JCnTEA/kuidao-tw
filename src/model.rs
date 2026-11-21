@@ -205,8 +205,10 @@ impl Dock {
 
 /// 岛体大小（百分比）的范围与步进。
 pub const ISLAND_SIZE_MIN: u32 = 80;
-pub const ISLAND_SIZE_MAX: u32 = 140;
+pub const ISLAND_SIZE_MAX: u32 = 200;
 pub const ISLAND_SIZE_STEP: u32 = 5;
+/// 建議大小：多數螢幕在 80% 時字與圖示仍清楚，且不會擋住兩側。
+pub const ISLAND_SIZE_DEFAULT: u32 = 80;
 /// 水平位置：-100 = 最左，0 = 居中，100 = 最右（按可移动范围的百分比）。
 pub const ISLAND_OFFSET_MAX: i32 = 100;
 
@@ -314,7 +316,7 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { display_id: String::new(), skin: Skin::Classic, island_shape: IslandShape::Notch, glass_blur: true, gradient_brightness: 80, island_size: 100, island_offset: 0, oled_shift: false, dock: Dock::Top, settings_theme: Default::default(), pet: true, minimal: false, browser_minimal: false, avoid_browsers: true, avoid_apps: Vec::new(), visible_pages: [true; 9], page_order: [0,1,2,3,4,5,6,7,8], show_clock: true, show_battery: true, show_weather: true, clock_12h: false, clock_period: 0, clock_seconds: false, resident_order: Vec::new(), system_hud: true, bluetooth_notifications: true, read_notifications:false, wechat_notifications:false, wecom_notifications:false, feishu_notifications:false, dingtalk_notifications:false, wechat_tray_open:false, qq_only:false, notification_preview:false, notifications: true, system_notify: true, sound: false, lyrics_enabled:true, mascot:crate::mascot::Mascot::default(), island_lyrics:false, lyric_delay_ms:-350, lyrics_translate:false, hide_fullscreen: true, avoid_top_bar: true, top_bar_on_top: false, focus_minutes: 25, rest_minutes: 5, water_minutes: 45, serving_ml: 250, water_start: 9, water_end: 22, sit_remind: true, sit_minutes: 60, lunch_rest: true, lunch_start: 720, lunch_end: 810, mail_enabled: true, mail_sync_operations:false, mail_code: true, mail_code_hide_seconds:60, mail_interval: 120, mail_ics: 15, ignored_mail_events: Vec::new(), calendar_prompt: true, calendar_auto_sync: true, clipboard_history: true, weather_city: String::new(), weather_position: None, weather_saved: Vec::new(), render_compat: false, render_compat_reason: String::new() }
+        Self { display_id: String::new(), skin: Skin::Classic, island_shape: IslandShape::Notch, glass_blur: true, gradient_brightness: 80, island_size: ISLAND_SIZE_DEFAULT, island_offset: 0, oled_shift: false, dock: Dock::Top, settings_theme: Default::default(), pet: true, minimal: false, browser_minimal: false, avoid_browsers: true, avoid_apps: Vec::new(), visible_pages: [true; 9], page_order: [0,1,2,3,4,5,6,7,8], show_clock: true, show_battery: true, show_weather: true, clock_12h: false, clock_period: 0, clock_seconds: false, resident_order: Vec::new(), system_hud: true, bluetooth_notifications: true, read_notifications:false, wechat_notifications:false, wecom_notifications:false, feishu_notifications:false, dingtalk_notifications:false, wechat_tray_open:false, qq_only:false, notification_preview:false, notifications: true, system_notify: true, sound: false, lyrics_enabled:true, mascot:crate::mascot::Mascot::default(), island_lyrics:false, lyric_delay_ms:-350, lyrics_translate:false, hide_fullscreen: true, avoid_top_bar: true, top_bar_on_top: false, focus_minutes: 25, rest_minutes: 5, water_minutes: 45, serving_ml: 250, water_start: 9, water_end: 22, sit_remind: true, sit_minutes: 60, lunch_rest: true, lunch_start: 720, lunch_end: 810, mail_enabled: true, mail_sync_operations:false, mail_code: true, mail_code_hide_seconds:60, mail_interval: 120, mail_ics: 15, ignored_mail_events: Vec::new(), calendar_prompt: true, calendar_auto_sync: true, clipboard_history: true, weather_city: String::new(), weather_position: None, weather_saved: Vec::new(), render_compat: false, render_compat_reason: String::new() }
     }
 }
 
@@ -360,7 +362,7 @@ impl Settings {
                 "dock" => s.dock = Dock::parse(&v),
                 "glass_blur" => s.glass_blur = v != "0",
                 "gradient_brightness" => s.gradient_brightness = v.parse::<u32>().unwrap_or(80).clamp(60,100),
-                "island_size" => s.island_size = island_size_value(v.parse::<u32>().unwrap_or(100)),
+                "island_size" => s.island_size = island_size_value(v.parse::<u32>().unwrap_or(ISLAND_SIZE_DEFAULT)),
                 "island_offset" => s.island_offset = v.parse::<i32>().unwrap_or(0).clamp(-ISLAND_OFFSET_MAX, ISLAND_OFFSET_MAX),
                 "oled_shift" => s.oled_shift = v != "0",
                 "pet" => s.pet = v == "1" || v.eq_ignore_ascii_case("true"),
@@ -903,15 +905,17 @@ mod tests {
         assert_eq!(island_size_value(100), 100);
         assert_eq!(island_size_value(10), ISLAND_SIZE_MIN);
         assert_eq!(island_size_value(999), ISLAND_SIZE_MAX);
+        assert_eq!(island_size_value(199), 200);
         assert_eq!(island_size_value(113), 115);
         assert_eq!(island_size_value(112), 110);
+        assert_eq!(island_size_value(ISLAND_SIZE_DEFAULT), ISLAND_SIZE_DEFAULT);
         for skin in Skin::ALL { assert_eq!(Skin::parse(skin.key()), skin); }
         assert_eq!(Skin::parse("unknown"), Skin::Classic);
         assert_eq!(Skin::parse("glass"), Skin::GlassDark, "舊版本儲存的毛玻璃即深色毛玻璃");
         for shape in IslandShape::ALL { assert_eq!(IslandShape::parse(shape.key()), shape); }
         assert_eq!(Settings::default().island_shape, IslandShape::Notch);
         let mut s = Settings::default();
-        assert_eq!((s.skin, s.glass_blur, s.island_scale(), s.island_offset_ratio()), (Skin::Classic, true, 1.0, 0.0));
+        assert_eq!((s.skin, s.glass_blur, s.island_scale(), s.island_offset_ratio()), (Skin::Classic, true, 0.8, 0.0));
         s.island_size = 125; s.island_offset = -250;
         assert_eq!((s.island_scale(), s.island_offset_ratio()), (1.25, -1.0));
     }
