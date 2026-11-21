@@ -1265,6 +1265,86 @@ pub(crate) fn settings_modal_title(ui:&mut egui::Ui,title:&str)->bool{
 }
 /// 设置页分割线（样式由 settings_apply_style 统一设定）。
 fn settings_separator(ui:&mut egui::Ui){ui.separator();}
+/// 设置页的小型动作按钮图标；用矢量绘制，避免额外位图在深浅主题下发灰。
+#[derive(Clone, Copy)]
+enum SettingsActionGlyph { Refresh, Trash }
+/// 设置页动作按钮：34px 高胶囊、左侧图标、平滑 hover；主要动作用绿色，清除类用安静的描边红。
+fn settings_action_button(ui:&mut egui::Ui,text:&str,glyph:SettingsActionGlyph,primary:bool,enabled:bool,id:&str)->egui::Response{
+    let ctx=ui.ctx().clone();
+    let active=enabled&&ui.is_enabled();
+    let font=egui::FontId::proportional(12.5);
+    let galley=ui.painter().layout_no_wrap(text.to_owned(),font,Color32::WHITE);
+    let width=(galley.size().x+48.0).max(180.0);
+    let (rect,response)=ui.allocate_exact_size(egui::vec2(width,34.0),if active{egui::Sense::click()}else{egui::Sense::hover()});
+    let hover=ctx.animate_bool_with_time(egui::Id::new(("settings-action",id)).with("hover"),active&&response.hovered(),0.13);
+    let press=ctx.animate_bool_with_time(egui::Id::new(("settings-action",id)).with("press"),active&&response.is_pointer_button_down_on(),0.08);
+    let body=rect.translate(egui::vec2(0.0,press*1.2));
+    let (fill,fill_hover,stroke,stroke_hover,fg,fg_hover)=if primary{
+        (
+            settings_color(&ctx,Color32::from_rgb(26,47,35),Color32::from_rgb(228,245,234)),
+            settings_color(&ctx,Color32::from_rgb(34,62,45),Color32::from_rgb(211,239,222)),
+            settings_color(&ctx,Color32::from_rgb(55,98,72),Color32::from_rgb(188,222,199)),
+            settings_color(&ctx,Color32::from_rgb(86,150,109),Color32::from_rgb(151,205,172)),
+            settings_color(&ctx,Color32::from_rgb(146,229,175),Color32::from_rgb(25,111,57)),
+            settings_color(&ctx,Color32::from_rgb(178,244,202),Color32::from_rgb(19,92,46)),
+        )
+    }else{
+        (
+            settings_color(&ctx,Color32::from_rgb(42,40,42),Color32::from_rgb(247,244,245)),
+            settings_color(&ctx,Color32::from_rgb(57,40,42),Color32::from_rgb(252,232,234)),
+            settings_color(&ctx,Color32::from_rgb(72,61,63),Color32::from_rgb(230,207,210)),
+            settings_color(&ctx,Color32::from_rgb(127,72,77),Color32::from_rgb(218,158,164)),
+            settings_color(&ctx,Color32::from_rgb(218,182,185),Color32::from_rgb(145,62,70)),
+            settings_color(&ctx,Color32::from_rgb(249,190,194),Color32::from_rgb(178,44,56)),
+        )
+    };
+    let (fill,stroke,fg)=if !active{
+        (
+            settings_color(&ctx,Color32::from_rgb(38,38,41),Color32::from_rgb(240,241,244)),
+            settings_color(&ctx,Color32::from_rgb(54,54,58),Color32::from_rgb(225,228,233)),
+            settings_color(&ctx,Color32::from_gray(105),Color32::from_gray(155)),
+        )
+    }else{
+        (crate::paint::mix(fill,fill_hover,hover),crate::paint::mix(stroke,stroke_hover,hover),crate::paint::mix(fg,fg_hover,hover))
+    };
+    let rad=body.height()*0.5;
+    ui.painter().rect_filled(body.translate(egui::vec2(0.0,2.0-press)),rad,Color32::from_black_alpha(if active{34}else{18}));
+    ui.painter().rect_filled(body,rad,fill);
+    ui.painter().rect_stroke(body,rad,egui::Stroke::new(1.0,stroke),egui::StrokeKind::Inside);
+    let content_w=14.0+7.0+galley.size().x;
+    let left=body.center().x-content_w*0.5;
+    let icon_center=egui::pos2(left+7.0,body.center().y);
+    match glyph {SettingsActionGlyph::Refresh=>paint_refresh_glyph(ui,icon_center,fg),SettingsActionGlyph::Trash=>paint_trash_glyph(ui,icon_center,fg)}
+    ui.painter().galley(egui::pos2(left+21.0,body.center().y-galley.size().y*0.5),galley,fg);
+    if active&&response.hovered(){ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);}
+    response
+}
+fn paint_refresh_glyph(ui:&egui::Ui,center:egui::Pos2,color:Color32){
+    let radius=5.2_f32;
+    let mut points=Vec::with_capacity(25);
+    for i in 0..=24 {
+        let angle=0.15+4.56*(i as f32/24.0);
+        points.push(center+egui::vec2(angle.cos()*radius,angle.sin()*radius));
+    }
+    let stroke=egui::Stroke::new(1.6,color);
+    ui.painter().add(egui::Shape::line(points,stroke));
+    let end_angle=4.71_f32;
+    let end=center+egui::vec2(end_angle.cos()*radius,end_angle.sin()*radius);
+    let tangent=egui::vec2(-end_angle.sin(),end_angle.cos());
+    let normal=egui::vec2(end_angle.cos(),end_angle.sin());
+    // 箭頭放在正上方的缺口，24px 下仍能看出是「重新整理」而不是一個 C。
+    let tip=end+tangent*3.0;
+    let base=end-tangent*1.4;
+    ui.painter().add(egui::Shape::convex_polygon(vec![tip,base+normal*2.6,base-normal*2.6],color,egui::Stroke::NONE));
+}
+fn paint_trash_glyph(ui:&egui::Ui,center:egui::Pos2,color:Color32){
+    let stroke=egui::Stroke::new(1.5,color);
+    let body=egui::Rect::from_min_max(center+egui::vec2(-4.3,-1.6),center+egui::vec2(4.3,6.3));
+    ui.painter().rect_stroke(body,1.0,stroke,egui::StrokeKind::Inside);
+    ui.painter().line_segment([center+egui::vec2(-6.1,-3.3),center+egui::vec2(6.1,-3.3)],stroke);
+    ui.painter().line_segment([center+egui::vec2(-2.5,-5.1),center+egui::vec2(2.5,-5.1)],stroke);
+    for x in [-1.7,1.7]{ui.painter().line_segment([center+egui::vec2(x,0.4),center+egui::vec2(x,3.8)],stroke);}
+}
 /// 可点选的标签：开启时绿色底，关闭时描边灰字。
 fn settings_toggle_chip(ui:&mut egui::Ui,text:&str,on:bool)->egui::Response{
     let ctx=&ui.ctx().clone();
@@ -1568,13 +1648,17 @@ impl App {
                             ui.label(egui::RichText::new(format!("Steam {} 款 · Riot {} 項",self.games.steam_count,self.games.riot_count)).size(12.0).color(settings_color(ctx,Color32::from_gray(190),Color32::from_gray(65))));
                             ui.label(egui::RichText::new("掃描只讀取本機 Steam 的 libraryfolders.vdf 與 appmanifest，不會登入帳號，也不會上傳收藏庫。Riot 捷徑會尋找 RiotClientServices.exe。").size(10.5).color(settings_color(ctx,Color32::from_gray(160),Color32::from_gray(95))));
                         });
-                        ui.add_space(4.0);
-                        ui.add_enabled_ui(on,|ui|{
-                            if ui.add(egui::Button::new("重新掃描本機遊戲").min_size(egui::vec2(156.0,26.0))).clicked(){
-                                self.games.refresh();
-                            }
+                        ui.add_space(6.0);
+                        let has_scan=!self.games.games.is_empty()||self.games.steam_count>0||self.games.riot_count>0;
+                        ui.horizontal(|ui|{
+                            if settings_action_button(ui,"重新掃描本機遊戲",SettingsActionGlyph::Refresh,true,on,"games-rescan")
+                                .on_hover_text("重新讀取 Steam 收藏庫與 Riot Client，不會恢復已移除的捷徑")
+                                .clicked(){self.games.refresh();}
+                            if settings_action_button(ui,"清除掃描本機遊戲",SettingsActionGlyph::Trash,false,on&&has_scan,"games-clear-scan")
+                                .on_hover_text("只清空本次掃描結果，不會解除安裝或刪除任何遊戲；已移除的捷徑設定仍保留")
+                                .clicked(){self.games.clear_scan();self.say("已清除本機遊戲掃描結果".to_string());}
                         });
-                        settings_hint(ui,"頁面只在使用者打開時掃描一次；按下右上角「重新掃描」可立即更新。已移除的捷徑按「顯示全部」恢復。");
+                        settings_hint(ui,"頁面只在使用者打開時掃描一次；按下「重新掃描本機遊戲」可立即更新。清除只會移除本次掃描結果，不會動到已安裝的遊戲或已移除的捷徑設定。");
                     }
                     12=>{
                         let on=self.settings_feature_header(ui,crate::app::WEATHER_PAGE,"當地天氣與七日預報",|_,_|{});

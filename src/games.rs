@@ -88,6 +88,19 @@ impl Library {
         self.scanned_at = chrono::Local::now().format("%H:%M").to_string();
     }
 
+    /// 清空本次掃描結果，但保留使用者已移除的捷徑清單。
+    /// `scanned` 保持 true，避免設定頁清空後下一幀又自動掃回來。
+    pub(crate) fn clear_scan(&mut self) {
+        self.games.clear();
+        self.menu = None;
+        self.press = None;
+        self.steam_count = 0;
+        self.riot_count = 0;
+        self.error.clear();
+        self.scanned_at.clear();
+        self.scanned = true;
+    }
+
     pub(crate) fn reset_hidden(&mut self) {
         self.hidden.clear();
         self.save_hidden();
@@ -912,5 +925,30 @@ fn game_icon_uv(texture: &egui::TextureHandle) -> egui::Rect {
         egui::Rect::from_min_max(egui::pos2(0.0, inset), egui::pos2(1.0, 1.0 - inset))
     } else {
         egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Library;
+
+    #[test]
+    fn clearing_scan_resets_results_without_losing_hidden_shortcuts() {
+        let mut library = Library::default();
+        library.hidden = vec!["Forza Horizon 5".into()];
+        library.steam_count = 3;
+        library.riot_count = 4;
+        library.scanned_at = "12:34".into();
+        library.error = "Steam 路徑失效".into();
+
+        library.clear_scan();
+
+        assert!(library.games.is_empty());
+        assert_eq!(library.steam_count, 0);
+        assert_eq!(library.riot_count, 0);
+        assert!(library.scanned_at.is_empty());
+        assert!(library.error.is_empty());
+        assert_eq!(library.hidden, vec!["Forza Horizon 5"]);
+        assert!(library.scanned, "清除後應停在空白狀態，不立即自動重掃");
     }
 }
