@@ -1607,6 +1607,19 @@ impl App {
     pub fn module_on(&self,page:usize)->bool {self.settings.visible_pages.get(page).copied().unwrap_or(false)}
     /// 收信线程是否应运行：邮箱模块开启且打开了「新邮件提醒」。
     pub fn mail_active(&self)->bool {self.module_on(MAIL_PAGE) && self.settings.mail_enabled}
+    /// 島上信箱通知使用的服務圖示：優先看最近觸發鈴鐺的帳號，其次看最近一封信。
+    fn mail_provider(&self)->mail::Provider {
+        let account=if self.mail_bell_account.is_empty() {self.mail.recent.first().map(|m|m.account.as_str()).unwrap_or("")}else{self.mail_bell_account.as_str()};
+        self.mail.accounts.iter().find(|a|a.email.eq_ignore_ascii_case(account)).map(|a|a.provider).unwrap_or(mail::Provider::Custom)
+    }
+    /// 信箱鈴鐺：服務圖示 + 右下小鈴鐺 + 右上未讀數字，維持在島體邊緣。
+    pub(crate) fn paint_mail_beacon(&self,c:&Card,x:f32,y:f32,count:u16,swing:f32) {
+        crate::mail_icon::paint(c,self.mail_provider(),x,y,20.0);
+        let (bx,by)=(x+10.0,y+7.0);
+        c.circle(bx,by,5.2,Color32::from_black_alpha(130));
+        paint::bell(&c.scaled(bx,by,0.44),bx,by,theme::WHITE,swing);
+        crate::social::badge(c,x+9.5,y-7.0,count.max(1),5.5,7.0);
+    }
     /// 剪贴板监听是否应运行：置物架模块开启且打开了「记录剪贴板」。
     pub fn clipboard_active(&self)->bool {self.module_on(SHELF_PAGE) && self.settings.clipboard_history}
     /// 额度查询是否应运行：AI 额度模块开启且打开了「开启 AI 额度」。
@@ -2129,15 +2142,21 @@ impl App {
             if let Some(a)=self.hud_notice.clone() {
                 let opacity=self.hud_alpha*smoothstep(0.45,0.95,self.notice_width.pos/44.0);
                 let c=c.faded(opacity);let c=if self.notice.is_none()||opacity<0.85 {c.ghost()}else{c};
-                if a.source!=crate::extras::AlertSource::Internal {
+                if a.title=="新郵件" && self.mail_unread>0 {
+                    self.paint_mail_beacon(&c,17.0,15.0,self.mail_unread,paint::bell_swing(self.t-self.mail_bell_at));
+                }else if a.source!=crate::extras::AlertSource::Internal {
                     paint::bell(&c.scaled(18.0,15.0,0.85),18.0,15.0,theme::WHITE,paint::bell_swing(self.t-a.at));
                     crate::social::badge(&c,22.0,10.5,self.mail_unread.max(1),6.0,8.0);
                 }else{crate::extras::notice_badge(&c,18.0,15.0,&a);}
                 let button=crate::quota_ui::bar_tooltip(c.hit(0.0,0.0,36.0,BAR_H,"notice-badge"),format!("{}\n{}",a.title,a.body));
                 if button.clicked(){if let Some(kind)=a.health(){self.confirm_health_reminder(kind);}else{self.notice_details=!self.notice_details;}}
             }else if self.bell_active() {
-                paint::bell(&c.scaled(20.0,14.0,1.2),20.0,14.0,theme::WHITE,paint::bell_swing(self.t-self.notification_bell_at));
-                crate::social::badge(&c,24.0,9.5,self.mail_unread.max(1),6.0,8.0);
+                if self.mail_unread>0 {
+                    self.paint_mail_beacon(&c,17.0,15.0,self.mail_unread,paint::bell_swing(self.t-self.mail_bell_at));
+                }else{
+                    paint::bell(&c.scaled(20.0,14.0,1.2),20.0,14.0,theme::WHITE,paint::bell_swing(self.t-self.notification_bell_at));
+                    crate::social::badge(&c,24.0,9.5,1,6.0,8.0);
+                }
                 if c.hit(6.0,0.0,28.0,30.0,"bell-mail").clicked(){self.show_page(MAIL_PAGE);}
             }
         }

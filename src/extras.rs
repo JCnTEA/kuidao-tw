@@ -2024,8 +2024,14 @@ impl App {
                                 let status=self.mail.status_of(&email).label();
                                 let mut on=self.mail.accounts[i].enabled;
                                 if i>0{ui.separator();}
-                                ui.label(egui::RichText::new(&email).size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
-                                ui.label(egui::RichText::new(format!("{} · {}",provider.label(),status)).size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
+                                ui.horizontal(|ui|{
+                                    ui.add(crate::mail_icon::image(provider).fit_to_exact_size(egui::vec2(22.0,22.0)));
+                                    ui.vertical(|ui|{
+                                        ui.spacing_mut().item_spacing.y=2.0;
+                                        ui.label(egui::RichText::new(&email).size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
+                                        ui.label(egui::RichText::new(format!("{} · {}",provider.label(),status)).size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
+                                    });
+                                });
                                 ui.horizontal(|ui|{
                                     if ui.add_sized([66.0,30.0],egui::Button::new("測試")).clicked(){test=Some(i);}
                                     if ui.add_sized([66.0,30.0],egui::Button::new("刪除")).clicked(){remove=Some(i);}
@@ -2069,7 +2075,14 @@ impl App {
                             ui.spacing_mut().item_spacing.y=8.0;
                             settings_control_row(ui,"信箱服務",56.0,|ui|{
                                 egui::ComboBox::from_id_salt("mail-provider").width(160.0).selected_text(self.mail.form.provider.label()).show_ui(ui,|ui|{
-                                    for p in crate::mail::Provider::ALL{if ui.selectable_label(self.mail.form.provider==p,p.label()).clicked(){self.mail.form.provider=p;}}
+                                    ui.spacing_mut().item_spacing.y=2.0;
+                                    for p in crate::mail::Provider::ALL{
+                                        let chosen=ui.horizontal(|ui|{
+                                            ui.add(crate::mail_icon::image(p).fit_to_exact_size(egui::vec2(16.0,16.0)));
+                                            ui.selectable_label(self.mail.form.provider==p,p.label())
+                                        }).inner;
+                                        if chosen.clicked(){self.mail.form.provider=p;}
+                                    }
                                 }).response
                             });
                             ui.add_space(5.0);

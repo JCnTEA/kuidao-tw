@@ -45,7 +45,7 @@ impl App {
         if self.media.is_music() { items.push(SideItem::Music); }
         if self.pomo.running { items.push(SideItem::Focus); }
         items.extend(self.quota_side_items().into_iter().map(|(index, h)| SideItem::Quota(index, h)));
-        if self.t < self.notification_bell_until { items.push(SideItem::Bell); }
+        if self.t < self.notification_bell_until || self.mail_unread>0 { items.push(SideItem::Bell); }
         items
     }
 
@@ -143,8 +143,12 @@ impl App {
                 }
                 SideItem::Quota(index, h) => self.draw_quota_side(c, cx, mid, h, index),
                 SideItem::Bell => {
-                    paint::bell(&c.scaled(cx, mid, 1.1), cx, mid, theme::WHITE, paint::bell_swing(self.t - self.notification_bell_at));
-                    c.circle(cx + 4.0, mid - 4.5, 2.0, Color32::from_rgb(255, 72, 72));
+                    if self.mail_unread>0 {
+                        self.paint_mail_beacon(c,cx,mid,self.mail_unread,paint::bell_swing(self.t-self.mail_bell_at));
+                    }else{
+                        paint::bell(&c.scaled(cx, mid, 1.1), cx, mid, theme::WHITE, paint::bell_swing(self.t - self.notification_bell_at));
+                        c.circle(cx + 4.0, mid - 4.5, 2.0, Color32::from_rgb(255, 72, 72));
+                    }
                 }
             }
             y += h;

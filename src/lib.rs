@@ -34,6 +34,7 @@ pub mod lyrics_zh;
 pub mod zh;
 pub mod mail;
 pub mod mail_format;
+mod mail_icon;
 mod mail_reader;
 pub mod mail_manage;
 mod mail_manage_ui;
