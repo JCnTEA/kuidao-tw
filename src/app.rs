@@ -553,8 +553,10 @@ pub(crate) struct LyricsState {
     /// 用户点了「重试」：下一次查询跳过近期「没有歌词」的记录。
     pub manual_retry: bool,
     pub lyrics: Option<lyrics::Lyrics>,
-    /// 顯示用字：中文歌已轉繁體，非中文歌開啟翻譯時是譯文；長度與 lyrics.lines 對齊。
+    /// 主歌詞顯示字：中文歌已轉繁體，其餘保留原文；長度與 lyrics.lines 對齊。
     pub zh_lines: Vec<String>,
+    /// 非中文歌開啟自動翻譯後的譯文，畫在原文底下；沒有譯文時為空。
+    pub translation_lines: Vec<String>,
     pub rx: Option<std::sync::mpsc::Receiver<Result<(lyrics::Lyrics,bool), lyrics::FetchError>>>,
     pub native_rx: Option<std::sync::mpsc::Receiver<Option<lyrics::Lyrics>>>,
 }
@@ -811,6 +813,7 @@ pub struct App {
     pub(crate) ly_worker: Option<std::thread::JoinHandle<()>>,
     pub(crate) show_lyrics: bool,
     island_lyric_layout: Option<std::sync::Arc<egui::Galley>>,
+    island_lyric_translation: Option<std::sync::Arc<egui::Galley>>,
     media_anchor: (String, f64, f64, bool),
     pub(crate) media: NowPlaying,
     pub(crate) music_artwork: Option<(std::sync::Arc<egui::ColorImage>,egui::TextureHandle)>,
@@ -1001,6 +1004,7 @@ impl App {
             ly_worker: None,
             show_lyrics: initial_lyrics,
             island_lyric_layout: None,
+            island_lyric_translation: None,
             media_anchor: (String::new(), 0.0, 0.0, false),
             media: NowPlaying::default(),
             music_artwork: None,
@@ -1772,7 +1776,7 @@ impl App {
     }
 
     fn update_island_lyric_layout(&mut self,ctx:&egui::Context) {
-        if !self.island_lyrics_active(){self.island_lyric_layout=None;return;}
+        if !self.island_lyrics_active(){self.island_lyric_layout=None;self.island_lyric_translation=None;return;}
         let current=self.island_lyric();
         let lyrics=self.ly.lyrics.as_ref().filter(|lyrics|lyric_key_matches(&self.ly.key,&self.media)
             && lyrics.synced && lyrics.lines.iter().any(|line|!line.text.trim().is_empty()));
@@ -1782,30 +1786,44 @@ impl App {
                 if lyrics.index_at(self.lyric_position()).is_none() {"前奏"}
                 else {"間奏"}
             } else {self.media.title.trim()};
+        let translation=current.and_then(|(index,_)|self.ly.translation_lines.get(index)).map(|text|text.trim()).filter(|text|!text.is_empty());
         let ink=if current.is_some()||title{theme::WHITE}else{theme::GRAY};
         let layout=|text:String| {
             // 维语等从右往左的歌词：先按阅读顺序分行再逐行转换，否则折行后第一行会是句子的结尾（#200）。
-            let font=theme::font(11.0,W::Semibold);
+            let font=theme::font(if translation.is_some(){10.5}else{11.0},W::Semibold);
             let text=crate::rtl_text::display_wrapped(&text,LYRIC_BAR_W-80.0,|s|ctx.fonts(|fonts|fonts.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x)).into_owned();
             let mut job=egui::text::LayoutJob::simple(text,font,ink,LYRIC_BAR_W-80.0);
             job.halign=egui::Align::Center;
             job.wrap.break_anywhere=true;
-            if title {job.wrap.max_rows=1;}
+            // 有譯文時原文只留一行，兩行都完整落在島體高度內。
+            if title||translation.is_some(){job.wrap.max_rows=1;}
+            ctx.fonts(|fonts|fonts.layout_job(job))
+        };
+        let sub_layout=|text:String| {
+            let font=theme::font(8.5,W::Regular);
+            let color=Color32::from_white_alpha(175);
+            let mut job=egui::text::LayoutJob::simple(text,font,color,LYRIC_BAR_W-80.0);
+            job.halign=egui::Align::Center;
+            job.wrap.max_rows=1;
+            job.wrap.break_anywhere=true;
             ctx.fonts(|fonts|fonts.layout_job(job))
         };
         let mut galley=layout(text.to_owned());
-        if let Some((index,_))=current.filter(|_|galley.rows.len()>1) {
-            let lyrics=self.ly.lyrics.as_ref().unwrap();
-            let start=lyrics.lines[index].t;
-            let end=lyrics.lines.iter().skip(index+1).find(|line|line.t>start).map_or(self.media.duration as f32,|line|line.t);
-            let progress=if end>start {((self.lyric_position()-start)/(end-start)).clamp(0.0,1.0)}else{0.0};
-            // 按当前句的时间范围与各段字数切换，暂停和跳转直接跟随播放位置。
-            let total:usize=galley.rows.iter().map(|row|row.glyphs.len()).sum();
-            let mut count=0;
-            let page=galley.rows.iter().position(|row|{count+=row.glyphs.len();progress*(total as f32)<count as f32}).unwrap_or(galley.rows.len()-1);
-            let segment=galley.rows[page].glyphs.iter().map(|glyph|glyph.chr).collect::<String>();
-            galley=layout(segment.trim().to_owned());
+        if translation.is_none() {
+            if let Some((index,_))=current.filter(|_|galley.rows.len()>1) {
+                let lyrics=self.ly.lyrics.as_ref().unwrap();
+                let start=lyrics.lines[index].t;
+                let end=lyrics.lines.iter().skip(index+1).find(|line|line.t>start).map_or(self.media.duration as f32,|line|line.t);
+                let progress=if end>start {((self.lyric_position()-start)/(end-start)).clamp(0.0,1.0)}else{0.0};
+                // 按当前句的时间范围与各段字数切换，暂停和跳转直接跟随播放位置。
+                let total:usize=galley.rows.iter().map(|row|row.glyphs.len()).sum();
+                let mut count=0;
+                let page=galley.rows.iter().position(|row|{count+=row.glyphs.len();progress*(total as f32)<count as f32}).unwrap_or(galley.rows.len()-1);
+                let segment=galley.rows[page].glyphs.iter().map(|glyph|glyph.chr).collect::<String>();
+                galley=layout(segment.trim().to_owned());
+            }
         }
+        self.island_lyric_translation=translation.map(|text|sub_layout(text.to_owned()));
         self.island_lyric_layout=Some(galley);
     }
 
@@ -2997,8 +3015,15 @@ impl App {
             }
             let shown=c.ui.ctx().animate_value_with_time(id,index as f32,0.18);
             let fade=1.0-(index as f32-shown).abs().min(1.0);
-            let position=c.pos(left+content_width-LYRIC_BAR_W/2.0,center_y-galley.size().y/2.0+(1.0-fade)*3.0);
+            let sub=self.island_lyric_translation.clone();
+            let shift=(1.0-fade)*3.0;
+            let origin_y=if let Some(sub)=sub.as_ref() {
+                center_y-(galley.size().y+sub.size().y+1.0)/2.0+shift
+            } else {center_y-galley.size().y/2.0+shift};
+            let position=c.pos(left+content_width-LYRIC_BAR_W/2.0,origin_y);
+            let sub_y=origin_y+galley.size().y+1.0;
             c.painter.galley(position,galley,if lyric.is_some(){theme::WHITE}else{theme::GRAY});
+            if let Some(sub)=sub{c.painter.galley(c.pos(left+content_width-LYRIC_BAR_W/2.0,sub_y),sub,Color32::from_white_alpha(175));}
             paint::playback_bars(&c,left+content_width-21.0,center_y,self.t,self.media.playing,theme::WHITE);
             if self.pomo.running {
                 let alpha=smoothstep(0.88,1.0,(width-content_width)/self.lyric_focus_space());
@@ -3574,7 +3599,10 @@ impl App {
         let (track,artist,duration)=(self.media.title.clone(),self.media.artist.clone(),self.media.duration);
         let translate=self.settings.lyrics_translate;
         self.ly.zh_lines=self.ly.lyrics.as_ref()
-            .map(|lyrics|crate::lyrics_zh::display_lines(lyrics,translate,&track,&artist,duration))
+            .map(crate::lyrics_zh::display_lines)
+            .unwrap_or_default();
+        self.ly.translation_lines=self.ly.lyrics.as_ref()
+            .map(|lyrics|crate::lyrics_zh::translation_lines(lyrics,translate,&track,&artist,duration))
             .unwrap_or_default();
     }
 

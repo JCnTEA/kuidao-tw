@@ -4804,6 +4804,31 @@ fn notice_mode_layout_gallery(){
 }
 
 #[test]
+#[ignore="按需匯出島上歌詞的原文加譯文畫面"]
+fn island_lyric_translation_gallery(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let dest=std::path::PathBuf::from(std::env::var_os("KUIDAO_LYRIC_TRANSLATION_PREVIEW").expect("需指定預覽目錄"));std::fs::create_dir_all(&dest).unwrap();
+    let mut h=H::new();h.app.settings.pet=true;h.app.settings.island_lyrics=true;h.app.settings.lyrics_translate=true;
+    h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),playing:true,position:7.0,duration:120.0,..Default::default()};
+    h.app.set_lyrics("Track","Artist",120.0,crate::lyrics::parse_lrc("[00:00]When the night falls down\n[00:05]I hear your voice again\n[00:10]We were young and free"));
+    h.app.ly.translation_lines=vec!["當夜幕降臨時".into(),"我再次聽到你的聲音".into(),"我們年輕而自由".into()];
+    let mut raster=crate::preview_raster::Raster::new(1920,405);
+    for frame in 0..120{
+        let t=frame as f64/60.0;
+        let env=Env{t,clock:"09:41:00".into(),today:"2026-11-01".into(),date:"11月1日 週日".into(),media:h.media.clone(),..Default::default()};
+        let raw=egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(crate::app::CANVAS_W,WIN_H))),time:Some(t),viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(1.5),..Default::default()})).collect(),..Default::default()};
+        let output=h.ctx.run(raw,|ctx|{egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx,|ui|{h.app.frame(ui,Rect::from_min_size(Pos2::ZERO,Vec2::new(WIN_W,WIN_H)),&env);});});
+        raster.update_textures(&output.textures_delta);
+        if frame==119{
+            raster.buf.fill([0.94,0.95,0.97,1.0]);raster.draw(&h.ctx.tessellate(output.shapes,output.pixels_per_point),output.pixels_per_point);
+            let mut rgba=Vec::new();raster.to_rgba8(&mut rgba);let image=image::RgbaImage::from_raw(1920,405,rgba).unwrap();
+            image::imageops::crop_imm(&image,105,0,960,140).to_image().save(dest.join("島上歌詞_原文加譯文.png")).unwrap();
+        }
+        raster.free_textures(&output.textures_delta);
+    }
+}
+
+#[test]
 fn lyric_caps_lock_notice_keeps_one_glass_outline(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     for skin in [crate::model::Skin::GlassLight,crate::model::Skin::GlassDark]{

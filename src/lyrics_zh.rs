@@ -1,10 +1,11 @@
-//! 非中文歌詞的自動翻譯：設定開啟後，把整首歌詞送去翻譯並依原行對齊，結果快取在 lyrics/zh。
-//! 中文歌（含日文、韓文原文）不翻：中文歌只做繁體化，日韓原文保持原樣並可另行翻譯。
+//! 歌詞翻譯：中文歌只轉繁體；非中文歌保留原文，另存一份繁體譯文顯示在原文下方，結果快取在 lyrics/zh。
 
 use crate::lyrics::Lyrics;
 use std::io::Read;
 
-const ENDPOINT:&str="https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-TW&dt=t";
+// Google 的 translate_a/single 會對共用出口 IP 直接回 429；clients5 端點仍可批次翻譯，
+// 一次送一整段歌詞並保留換行，回傳格式同樣是 [["譯文","來源語言"]]。
+const ENDPOINT:&str="https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=zh-TW";
 const MAX_CACHE:usize=1024*1024;
 const CHUNK_CHARS:usize=700;
 const CHUNK_LINES:usize=28;
@@ -121,15 +122,22 @@ fn request(lines:&[String])->Option<Vec<String>>{
         .send_string(&body).ok()?;
     let mut text=String::new();
     response.into_reader().take(MAX_CACHE as u64).read_to_string(&mut text).ok()?;
-    let json:serde_json::Value=serde_json::from_str(&text).ok()?;
-    let segments=json.get(0)?.as_array()?;
+    parse_batch(&text,lines.len())
+}
+
+/// clients5 回傳 `[["第一行\n第二行","en"]]`，一次請求的譯文都在同一段字串裡，
+/// 必須按換行拆回逐行清單，才能和原歌詞一對一對齊。
+fn parse_batch(raw:&str,lines:usize)->Option<Vec<String>>{
+    let json:serde_json::Value=serde_json::from_str(raw).ok()?;
+    // 一整個 q 只會回一組：[["第一行\n第二行","en"]]，譯文是本組第一個字串。
+    let segments=json.as_array()?;
     let mut merged=String::new();
     for segment in segments{
         if let Some(part)=segment.get(0).and_then(|value|value.as_str()){merged.push_str(part);}
     }
     if merged.trim().is_empty(){return None;}
-    let parts:Vec<String>=merged.split('\n').map(|part|part.trim_end_matches('\r').to_owned()).collect();
-    (parts.len()==lines.len()).then_some(parts)
+    let parts:Vec<String>=merged.lines().map(|part|part.trim_end_matches('\r').to_owned()).collect();
+    (parts.len()==lines).then_some(parts)
 }
 
 fn push_encoded(out:&mut String,c:char){
@@ -146,17 +154,18 @@ fn push_encoded(out:&mut String,c:char){
     }
 }
 
-/// 把每行換成要顯示的字：中文歌 → 繁體；非中文歌且開啟翻譯 → 譯文；否則原文。
-pub fn display_lines(lyrics:&Lyrics,translate:bool,track:&str,artist:&str,duration:f64)->Vec<String>{
+/// 主歌詞：中文歌只轉繁體，其餘保留原文；譯文另行回傳，介面把兩者上下並排。
+pub fn display_lines(lyrics:&Lyrics)->Vec<String>{
     let chinese=crate::lyrics::is_chinese_lyrics(lyrics);
-    let translations=if translate&&!chinese{cached(track,artist,duration,lyrics.lines.len())}else{None};
-    lyrics.lines.iter().enumerate().map(|(index,line)|{
-        if line.text.trim().is_empty(){return String::new();}
-        if let Some(text)=translations.as_ref().and_then(|list|list.get(index)).filter(|text|!text.trim().is_empty()){
-            return text.clone();
-        }
-        if chinese {crate::zh::to_traditional(&line.text)} else {line.text.clone()}
+    lyrics.lines.iter().map(|line|{
+        if line.text.trim().is_empty(){String::new()} else if chinese {crate::zh::to_traditional(&line.text)} else {line.text.clone()}
     }).collect()
+}
+
+/// 要放在原歌詞底下的譯文；中文歌或未開啟翻譯時回空清單。
+pub fn translation_lines(lyrics:&Lyrics,translate:bool,track:&str,artist:&str,duration:f64)->Vec<String>{
+    if !translate||crate::lyrics::is_chinese_lyrics(lyrics){return Vec::new();}
+    cached(track,artist,duration,lyrics.lines.len()).unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -185,7 +194,7 @@ mod tests {
             crate::lyrics::LyricsLine{t:1.0,text:"我们都一样".into()},
             crate::lyrics::LyricsLine{t:3.0,text:"".into()},
         ]};
-        let shown=display_lines(&lyrics,true,"我们都一样","歌手",180.0);
+        let shown=display_lines(&lyrics);
         assert_eq!(shown[0],"我們都一樣");
         assert_eq!(shown[1],"");
     }
@@ -193,7 +202,16 @@ mod tests {
     #[test]
     fn english_lyrics_stay_original_without_cache(){
         let lyrics=Lyrics{synced:true,lines:vec![crate::lyrics::LyricsLine{t:1.0,text:"Hello from the other side".into()}]};
-        assert_eq!(display_lines(&lyrics,false,"Hello","Adele",295.0)[0],"Hello from the other side");
+        assert_eq!(display_lines(&lyrics)[0],"Hello from the other side");
+        assert!(translation_lines(&lyrics,false,"Hello","Adele",295.0).is_empty());
+    }
+
+    #[test]
+    fn clients5_batch_is_split_back_into_lines(){
+        let parsed=parse_batch("[[\"第一行\\n第二行\\n第三行\",\"en\"]]",3).unwrap();
+        assert_eq!(parsed,vec!["第一行","第二行","第三行"]);
+        assert!(parse_batch("[[\"只有一行\",\"en\"]]",2).is_none());
+        assert!(parse_batch("[]",1).is_none());
     }
 
     #[test]

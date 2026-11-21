@@ -245,13 +245,26 @@ impl App {
                 let font=row.font(if active {12.0}else{10.0},if active {W::Semibold}else{W::Regular});
                 // 维语等从右到左的歌词：先按阅读顺序分行再逐行转换（#200）。
                 let shown=self.ly.zh_lines.get(index).filter(|text|!text.trim().is_empty()).map_or(line.text.as_str(),|text|text.as_str());
+                let translated=self.ly.translation_lines.get(index).map(|text|text.trim()).filter(|text|!text.is_empty());
                 let text=crate::rtl_text::display_wrapped(shown,132.0*c.s,|s|row.painter.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x).into_owned();
                 let mut job=egui::text::LayoutJob::simple(text,font,ink,132.0*c.s);
-                job.wrap.max_rows=if active {3}else{1};
+                job.wrap.max_rows=if translated.is_some(){1}else if active {3}else{1};
                 job.wrap.break_anywhere=true;
                 let galley=row.painter.layout_job(job);
-                let y=64.0+distance*29.0-galley.size().y/(2.0*c.s);
+                // 譯文放在原歌詞正下方，字級略小、顏色較淡；沒有譯文時維持原本的單行歌詞。
+                let sub=translated.map(|text|{
+                    let tfont=row.font(if active {8.5}else{7.5},W::Regular);
+                    let tink=row.ink(if active {Color32::from_rgb(188,197,214)}else{Color32::from_gray(135)});
+                    let mut job=egui::text::LayoutJob::simple(text.to_owned(),tfont,tink,132.0*c.s);
+                    job.wrap.max_rows=1;
+                    job.wrap.break_anywhere=true;
+                    (row.painter.layout_job(job),tink)
+                });
+                let total=(galley.size().y+sub.as_ref().map_or(0.0,|(g,_)|g.size().y))/c.s+if sub.is_some(){1.0}else{0.0};
+                let y=64.0+distance*29.0-total/2.0;
+                let sub_y=y+galley.size().y/c.s+1.0;
                 row.painter.galley(row.pos(246.0,y),galley,ink);
+                if let Some((sub,tink))=sub{row.painter.galley(row.pos(246.0,sub_y),sub,tink);}
             }
             if !lyrics.synced {col.text(246.0,39.0,"文字歌詞",8.0,W::Regular,theme::GRAY,H::Left);}
         } else {

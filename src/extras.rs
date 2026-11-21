@@ -1818,7 +1818,7 @@ impl App {
                                 settings_hint(ui,"查詞為自動進行：播放器本機歌詞 → 網易雲 → QQ 音樂 → LRCLIB；找不到時按播放器上的「詞」可重試。");
                                 ui.separator();
                                 let translate=self.settings.lyrics_translate;
-                                setting_row(ui,"自動翻譯歌詞","非中文歌詞依原意翻成繁體中文並顯示；中文歌本身就是繁體，不做翻譯",&mut self.settings.lyrics_translate);
+                                setting_row(ui,"自動翻譯歌詞","非中文歌詞保留原文，譯文顯示在原文下方；中文歌本身就是繁體，不做翻譯",&mut self.settings.lyrics_translate);
                                 settings_hint(ui,"日文、韓文原文也會翻譯；譯文快取在本機，同一首歌不重複送翻。翻譯需連網，歌詞文字會送到 Google 翻譯，失敗時照常顯示原文。");
                                 if translate!=self.settings.lyrics_translate {self.refresh_translation();}
                             });
