@@ -313,6 +313,16 @@ section{scroll-margin-top:104px}
   100%{transform:scale(1);opacity:1}
 }
 .island-note{margin-top:18px;text-align:center;font-size:10.5px;letter-spacing:.1em;color:#999ca6}
+.island-auto{
+  appearance:none;border:1px solid rgba(125,211,252,.2);border-radius:99px;
+  background:rgba(12,23,40,.72);color:#9fc0dd;cursor:pointer;
+  padding:5px 10px;margin-left:6px;vertical-align:middle;
+  font:700 10px/1 "Noto Sans TC",system-ui,sans-serif;letter-spacing:.04em;
+  transition:background .2s,border-color .2s,color .2s,transform .15s;
+}
+.island-auto:hover{background:rgba(20,38,62,.92);border-color:rgba(103,232,249,.38);color:#e6f1ff}
+.island-auto:active{transform:translateY(1px)}
+.island-auto:focus-visible{outline:2px solid rgba(103,232,249,.5);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){
   .island-track{transition:none}
   .rail-item.pop{animation:none}
@@ -623,7 +633,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
         <path d="M16 8.5c-.7-2.6.3-4.8 2.7-6.2M16 8.5c1.5-2 3.7-2.8 6-2.6M16 8.5c-1.6-1.5-3.7-1.9-5.6-1.3M16 8.5c-2.4-.5-4.5.4-5.8 2.2" stroke="#3d7a3c" stroke-width="2.1" stroke-linecap="round"/>
       </svg>
     </span>
-    <span class="hi-track">25:00</span>
+    <span class="hi-track">05:00</span>
     <span class="hi-signal"><b style="height:6px"></b><b style="height:9px"></b><b style="height:12px"></b><b style="height:16px"></b></span>
     <span class="hi-tiger"><img src="images/brand/tiger-line.png" alt="" width="36" height="44"><span class="hi-note">♪</span></span>
   </div>
@@ -635,7 +645,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
     <div class="sec-head">
       <span class="eyebrow-pill">Features</span>
       <h2>特色功能</h2>
-      <p>七件事，收進同一條島</p>
+      <p>九件事，收進同一條島</p>
     </div>
 
     <div class="feature-grid">
@@ -747,13 +757,43 @@ footer{border-top-color:rgba(125,211,252,.12)}
         <div class="fc-copy">
           <span class="fc-kicker">GAMES · 07</span>
           <h3>本機遊戲庫</h3>
-          <p class="fc-summary">Steam 已安裝遊戲與 Riot 捷徑，一鍵啟動。</p>
+          <p class="fc-summary">Steam 與 Riot 已安裝遊戲、最後遊玩與容量；可重新或清除掃描。</p>
         </div>
-        <p class="fc-peek" aria-hidden="true">讀取本機 Steam 收藏庫與 Riot Client 安裝位置，列出已安裝遊戲、最後遊玩時間與容量，每一列都抓應用程式自己的圖示；按一下圖示或「啟動」就走 Steam 或 Riot 的正式協定開啟。長按圖示可把捷徑移除，按「顯示全部」恢復；不在背景登入、不上傳收藏庫，也不定時掃描。</p>
+        <p class="fc-peek" aria-hidden="true">讀取本機 Steam 收藏庫與 Riot Client 安裝位置，列出已安裝遊戲、最後遊玩時間與容量，每一列都抓應用程式自己的圖示；按一下圖示或「啟動」就走 Steam 或 Riot 的正式協定開啟。按「重新掃描」更新清單；按「清除掃描」只清空本次結果與數量，不會解除安裝、刪除遊戲，也不會動到已移除的捷徑清單。長按圖示可把捷徑移除，按「顯示全部」恢復；不在背景登入、不上傳收藏庫，也不定時掃描。</p>
         <div class="fc-detail">
           <span class="fc-kicker">GAMES · 07</span>
           <h3>本機遊戲庫</h3>
-          <p>讀取本機 Steam 收藏庫與 Riot Client 安裝位置，列出已安裝遊戲、最後遊玩時間與容量，每一列都抓應用程式自己的圖示；按一下圖示或「啟動」就走 Steam 或 Riot 的正式協定開啟。長按圖示可把捷徑移除，按「顯示全部」恢復；不在背景登入、不上傳收藏庫，也不定時掃描。</p>
+          <p>讀取本機 Steam 收藏庫與 Riot Client 安裝位置，列出已安裝遊戲、最後遊玩時間與容量，每一列都抓應用程式自己的圖示；按一下圖示或「啟動」就走 Steam 或 Riot 的正式協定開啟。按「重新掃描」更新清單；按「清除掃描」只清空本次結果與數量，不會解除安裝、刪除遊戲，也不會動到已移除的捷徑清單。長按圖示可把捷徑移除，按「顯示全部」恢復；不在背景登入、不上傳收藏庫，也不定時掃描。</p>
+          <span class="fc-hint">移開或點外面即收起</span>
+        </div>
+      </article>
+
+      <article class="fcard" tabindex="0" role="button" aria-expanded="false">
+        <div class="fc-copy">
+          <span class="fc-kicker">UPDATE · 08</span>
+          <h3>更新內容</h3>
+          <p class="fc-summary">關於頁只留最新一筆，版本、時間與說明一次看清。</p>
+        </div>
+        <p class="fc-peek" aria-hidden="true">每次成功取得最新 Release，關於頁版本卡下方的更新內容資料庫會整份覆寫，只保留這一筆版本、時間與說明，不累積上一筆。啟動約 5 秒先檢查一次，之後每 2 小時與手動檢查都會刷新；連線失敗時保留目前這一筆，不會長出舊資料。</p>
+        <div class="fc-detail">
+          <span class="fc-kicker">UPDATE · 08</span>
+          <h3>更新內容</h3>
+          <p>每次成功取得最新 Release，關於頁版本卡下方的更新內容資料庫會整份覆寫，只保留這一筆版本、時間與說明，不累積上一筆。啟動約 5 秒先檢查一次，之後每 2 小時與手動檢查都會刷新；連線失敗時保留目前這一筆，不會長出舊資料。</p>
+          <span class="fc-hint">移開或點外面即收起</span>
+        </div>
+      </article>
+
+      <article class="fcard" tabindex="0" role="button" aria-expanded="false">
+        <div class="fc-copy">
+          <span class="fc-kicker">LOCAL · 09</span>
+          <h3>本機優先</h3>
+          <p class="fc-summary">設定、登入資料與紀錄留在本機，不經中繼伺服器。</p>
+        </div>
+        <p class="fc-peek" aria-hidden="true">設定、憑證與紀錄都存在你自己的電腦；天氣、額度、信箱直接用你填的設定連到該服務，不經過本專案的中繼伺服器。免安裝版不寫登錄檔，換電腦或換資料夾直接搬走；安裝檔固定為 Kuidao-Setup-TW-x64.exe，下載位置不會因版本變動。</p>
+        <div class="fc-detail">
+          <span class="fc-kicker">LOCAL · 09</span>
+          <h3>本機優先</h3>
+          <p>設定、憑證與紀錄都存在你自己的電腦；天氣、額度、信箱直接用你填的設定連到該服務，不經過本專案的中繼伺服器。免安裝版不寫登錄檔，換電腦或換資料夾直接搬走；安裝檔固定為 Kuidao-Setup-TW-x64.exe，下載位置不會因版本變動。</p>
           <span class="fc-hint">移開或點外面即收起</span>
         </div>
       </article>
@@ -887,7 +927,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
         </div>
       </div>
     </div>
-    <p class="island-note">八種展開模樣可左右滑動 · 右側通知會跟著畫面同步亮起</p>
+    <p class="island-note">八種展開模樣會自動輪播 · 滑鼠移入暫停 · 左右滑動可切換 <button type="button" class="island-auto" id="islandAuto" aria-label="暫停自動輪播" aria-pressed="false">暫停自動輪播</button></p>
   </div>
 </section>
 
@@ -940,6 +980,18 @@ footer{border-top-color:rgba(125,211,252,.12)}
       <details>
         <summary>跟原版差在哪裡？<span class="plus" aria-hidden="true"></span></summary>
         <div class="answer"><p>功能面沿用上游開源專案，差異在語言與在地化：全繁體台灣用語、地名與時間格式、外觀與品牌識別、免安裝打包。程式架構與模組邏輯沒有重寫。</p></div>
+      </details>
+      <details>
+        <summary>更新內容資料庫是什麼？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>在「關於」頁版本資訊下方，只保留最新一筆更新說明。每次成功取得最新 Release 後整份覆寫本機 <b>update-notes.json</b>，不會累積上一筆；啟動約 5 秒先檢查，之後每 2 小時與手動檢查都會刷新，卡片會顯示版本、取得時間與完整發布頁連結。</p></div>
+      </details>
+      <details>
+        <summary>按「清除掃描」會刪掉遊戲嗎？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>不會。清除只清空本次掃描結果與數量，不會解除安裝、刪除遊戲，也不會動到「已移除捷徑」清單；按「重新掃描本機遊戲」就能重新列出已安裝項目。</p></div>
+      </details>
+      <details>
+        <summary>安裝檔為什麼沒有版本號？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>安裝檔固定命名為 <b>Kuidao-Setup-TW-x64.exe</b>，官網下載連結與 Release 固定資產都不會因版本變動；第一次開啟安裝器才會下載當時的主程式，並顯示下載進度。</p></div>
       </details>
       <details>
         <summary>需要管理員權限嗎？<span class="plus" aria-hidden="true"></span></summary>
@@ -1040,6 +1092,29 @@ footer{border-top-color:rgba(125,211,252,.12)}
     var dots = Array.prototype.slice.call(document.querySelectorAll('#islandDots button'));
     var slides = Array.prototype.slice.call(track.querySelectorAll('.island-slide'));
     var index = 0, startX = null, startY = null, dragX = 0, pointerId = null;
+    var autoBtn = document.getElementById('islandAuto');
+    var autoEnabled = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var autoPaused = false, autoHover = false, autoTimer = null, AUTO_MS = 6000;
+
+    function clearAuto(){
+      if(autoTimer){ clearTimeout(autoTimer); autoTimer = null; }
+    }
+    function scheduleAuto(){
+      clearAuto();
+      if(!autoEnabled || autoPaused || autoHover || document.hidden) return;
+      autoTimer = setTimeout(function(){ go(index + 1, true); scheduleAuto(); }, AUTO_MS);
+    }
+    function renderAutoButton(){
+      if(!autoBtn) return;
+      autoBtn.textContent = autoPaused ? '開始自動輪播' : '暫停自動輪播';
+      autoBtn.setAttribute('aria-pressed', autoPaused ? 'true' : 'false');
+      autoBtn.setAttribute('aria-label', autoPaused ? '開始自動輪播' : '暫停自動輪播');
+    }
+    function setAutoPaused(value){
+      autoPaused = value;
+      renderAutoButton();
+      if(value){ clearAuto(); } else { scheduleAuto(); }
+    }
 
     function countsFor(i){
       return (slides[i].dataset.counts || '50,32,18,10').split(',').map(function(n){ return n.trim(); });
@@ -1066,11 +1141,29 @@ footer{border-top-color:rgba(125,211,252,.12)}
       applyRail(index, animate !== false);
     }
     dots.forEach(function(dot, n){
-      dot.addEventListener('click', function(){ go(n, true); });
+      dot.addEventListener('click', function(){ go(n, true); scheduleAuto(); });
+    });
+    stage.addEventListener('pointerenter', function(e){
+      if(e.pointerType === 'mouse'){ autoHover = true; clearAuto(); }
+    });
+    stage.addEventListener('pointerleave', function(e){
+      if(e.pointerType === 'mouse'){ autoHover = false; scheduleAuto(); }
+    });
+    stage.addEventListener('focusin', function(){ autoHover = true; clearAuto(); });
+    stage.addEventListener('focusout', function(e){
+      if(!stage.contains(e.relatedTarget)){ autoHover = false; scheduleAuto(); }
+    });
+    if(autoBtn){
+      if(!autoEnabled){ autoBtn.hidden = true; }
+      else { autoBtn.addEventListener('click', function(){ setAutoPaused(!autoPaused); }); }
+    }
+    document.addEventListener('visibilitychange', function(){
+      if(document.hidden){ clearAuto(); } else { scheduleAuto(); }
     });
     stage.addEventListener('pointerdown', function(e){
       if(e.target.closest('button')) return;
       startX = e.clientX; startY = e.clientY; dragX = 0; pointerId = e.pointerId;
+      clearAuto();
       try { stage.setPointerCapture(pointerId); } catch(_) {}
     });
     stage.addEventListener('pointermove', function(e){
@@ -1088,17 +1181,20 @@ footer{border-top-color:rgba(125,211,252,.12)}
         try { stage.releasePointerCapture(pointerId); } catch(_) {}
         pointerId = null;
       }
+      scheduleAuto();
     }
     stage.addEventListener('pointerup', finish);
     stage.addEventListener('pointercancel', finish);
     stage.addEventListener('keydown', function(e){
-      if(e.key === 'ArrowLeft'){ e.preventDefault(); go(index - 1, true); }
-      if(e.key === 'ArrowRight'){ e.preventDefault(); go(index + 1, true); }
+      if(e.key === 'ArrowLeft'){ e.preventDefault(); go(index - 1, true); scheduleAuto(); }
+      if(e.key === 'ArrowRight'){ e.preventDefault(); go(index + 1, true); scheduleAuto(); }
     });
+    renderAutoButton();
     go(0, false);
+    scheduleAuto();
   })();
 
-  // 首屏島體：時間每秒更新、氣溫自動抓取、番茄專注 25 分鐘倒數。
+  // 首屏島體：時間每秒更新、氣溫自動抓取、番茄專注 5 分鐘倒數。
   (function(){
     var clock = document.querySelector('.hi-clock');
     var weather = document.querySelector('.hi-weather');
@@ -1143,9 +1239,9 @@ footer{border-top-color:rgba(125,211,252,.12)}
     }
 
     if(track){
-      var total = 25 * 60, left = total, last = Date.now();
-      if(tomato) tomato.setAttribute('title', '專注模式倒數 25 分鐘');
-      track.setAttribute('aria-label', '專注模式剩餘 25 分鐘');
+      var total = 5 * 60, left = total, last = Date.now();
+      if(tomato) tomato.setAttribute('title', '專注模式倒數 5 分鐘');
+      track.setAttribute('aria-label', '專注模式剩餘 5 分鐘');
       function tickFocus(){
         var now = Date.now();
         left -= (now - last) / 1000;
