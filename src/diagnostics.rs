@@ -17,7 +17,7 @@ fn write_report(directory: &Path, title: &str, details: &str) -> std::io::Result
 fn message(directory: &Path, title: &str, details: &str) -> String {
     match write_report(directory, title, details) {
         Ok(path) => format!("{title}\n\n請將以下日誌發給開發者，幫助定位問題：\n{}", path.display()),
-        Err(error) => format!("{title}\n\n{details}\n\n日誌無法儲存：{error}\n請截圖反饋。"),
+        Err(error) => format!("{title}\n\n{details}\n\n日誌無法儲存：{error}\n請截圖回饋。"),
     }
 }
 

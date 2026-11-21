@@ -411,7 +411,7 @@ mod tests {
         assert!(crate::glass::contrast(seen, paper) >= 2.9, "半透明的彩色字也要可讀：{faded_red:?}");
         // 深色彩色底块（选中态）变成浅色淡彩，墨色文字压在上面清晰可读
         let chip = map_color(Color32::from_rgb(30, 58, 110), &GLASS_LIGHT).to_srgba_unmultiplied();
-        assert!(chip[0] > 180 && chip[2] > chip[0], "深色選中底塊變為淺淡藍：{chip:?}");
+        assert!(chip[0] > 180 && chip[2] > chip[0], "深色選取底塊變為淺淡藍：{chip:?}");
         let ink = [22.0 / 255.0, 22.0 / 255.0, 26.0 / 255.0];
         assert!(crate::glass::contrast(f(chip), ink) >= 7.0);
     }

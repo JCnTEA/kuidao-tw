@@ -840,6 +840,10 @@ pub struct App {
     pub(crate) notification_bell_at: f64,
     /// 未讀郵件數；鈴鐺常駐並顯示數字，開啟郵件頁後歸零。
     pub(crate) mail_unread: u16,
+    /// 上一次因郵件點亮鈴鐺的時間，避免單封事件與 UNSEEN 補償重複通知。
+    pub(crate) mail_bell_at: f64,
+    /// 上一次通知的帳號；不同 Gmail 帳號的新信不應被同一組八秒抑制吃掉。
+    pub(crate) mail_bell_account: String,
     /// Threads／Messenger／Facebook／LINE／Instagram 的未讀則數。
     pub(crate) social: crate::social::Badges,
     pub(crate) notice: Option<Alert>,
@@ -1002,7 +1006,7 @@ impl App {
             music_artwork: None,
             forced_open_until:0.0, settings_open:false, settings_window:std::sync::Arc::new(std::sync::Mutex::new(crate::settings_window::State::load())), displays:Vec::new(), browser_at_top:false, browser_minimal_active:false, glass_tint:0.0, fluid:Default::default(), fluid_origin:Pos2::ZERO, fluid_art:None, fluid_title:String::new(), screen:None, settings_focus_requested:false, settings_tab:0, settings_category:0, messenger_statuses:Default::default(), notification_apps:model::NotificationApps::load(), subpage:None, task_dialog:None,
             listener_status: "尚未連線".into(),
-            notification_bell_until: 0.0, notification_bell_at: -10.0, mail_unread: 0, social: crate::social::Badges::load(), notice: None, hud_notice: None, hud_alpha: 0.0, notice_width:Spring::new(0.0,CLOSE.0,CLOSE.1), notice_details:false, pending_messengers:Vec::new(), messenger_scroll:0.0, alerts: Default::default(), history: Default::default(), pending: vec![],
+            notification_bell_until: 0.0, notification_bell_at: -10.0, mail_unread: 0, mail_bell_at: -10.0, mail_bell_account: String::new(), social: crate::social::Badges::load(), notice: None, hud_notice: None, hud_alpha: 0.0, notice_width:Spring::new(0.0,CLOSE.0,CLOSE.1), notice_details:false, pending_messengers:Vec::new(), messenger_scroll:0.0, alerts: Default::default(), history: Default::default(), pending: vec![],
             todo_first: 0, todo_choosing: false, pet: Default::default(), last_drink: None,
             toast: None, toast_below: false,
             last_input: 0.0, system_idle: None,
@@ -1124,7 +1128,24 @@ impl App {
                     self.mail_unread=self.mail_unread.saturating_add(1).min(99);
                     self.notification_bell_at = self.t;
                     self.notification_bell_until = self.t + 6.0;
+                    self.mail_bell_at = self.t;
+                    self.mail_bell_account = self.mail.recent[0].account.clone();
                 }
+            }
+            mail::Event::Unread { account, count } => {
+                if !watching(&account){return;}
+                // 單封事件已通知過就不再重複；IDLE 斷線或解析失敗時，這條補償仍會亮鈴鐺。
+                // 只抑制同一個帳號；另一個 Gmail 在八秒內收到新信仍要通知。
+                if self.t - self.mail_bell_at < 8.0 && self.mail_bell_account.eq_ignore_ascii_case(&account) {
+                    self.mail_unread=self.mail_unread.max(count.min(99) as u16);
+                    return;
+                }
+                self.mail_unread=self.mail_unread.max(count.min(99) as u16);
+                self.notification_bell_at = self.t;
+                self.notification_bell_until = self.t + 6.0;
+                self.mail_bell_at = self.t;
+                self.mail_bell_account = account.clone();
+                self.alert("新郵件",format!("{account} 有 {count} 封未讀"),5,false);
             }
             mail::Event::Test { account, ok, note } => {
                 self.mail.testing = None;

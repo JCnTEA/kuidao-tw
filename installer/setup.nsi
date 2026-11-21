@@ -20,7 +20,7 @@ InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
 ManifestDPIAware true
 SetCompressor /SOLID lzma
-VIProductVersion "0.6.77.0"
+VIProductVersion "0.6.78.0"
 VIAddVersionKey /LANG=1028 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=1028 "FileDescription" "${APP_NAME}安裝程式"
 VIAddVersionKey /LANG=1028 "FileVersion" "${APP_VERSION}"
@@ -154,7 +154,7 @@ Function CheckFolderPath
   StrCpy $0 0
 FunctionEnd
 
-; 選中的資料夾裡已有別的東西（又不是鬼島自己的）時，在其中新建 Kuidao 子資料夾，
+; 選取的資料夾裡已有別的東西（又不是鬼島自己的）時，在其中新建 Kuidao 子資料夾，
 ; 避免把整個共享資料夾登記成鬼島的安裝位置（軟體管家會把整個資料夾的大小算到鬼島頭上）。
 ; 資料夾本身叫 Kuidao、裡面已有鬼島（原地升級）、不存在或為空（使用者特意準備的）時原樣使用。
 Function EnsureOwnFolder

@@ -438,7 +438,7 @@ fn fetch(agent:&ureq::Agent,account:&Account)->Result<Snapshot,(String,u64)>{
 #[cfg(test)] mod tests {
     use super::*;
     #[test] fn lightweight_quota_startup_has_no_unused_workers(){
-        let mut service=Service::start();assert!(service.workers.is_empty(),"未啟用額度來源時不應建立後臺執行緒");
+        let mut service=Service::start();assert!(service.workers.is_empty(),"未啟用額度來源時不應建立後台執行緒");
         assert!(service.refresh(vec![]));assert!(service.workers.is_empty());
     }
     #[test] fn api_cache_is_bound_to_endpoint_region_and_credential(){

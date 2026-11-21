@@ -1466,7 +1466,7 @@ mod tests {
                 let changed=match command {Transport::Toggle=>after.playing!=before.playing,_=>after.song_id!=before.song_id};
                 if changed {println!("{command:?}：{} -> {}，playing={}，其他客戶端未變化",before.title,after.title,after.playing);break;}
             }
-            assert_eq!(unsafe {windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow()},foreground,"後臺控制不能搶佔焦點");
+            assert_eq!(unsafe {windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow()},foreground,"後台控制不能搶佔焦點");
         }
     }
 

@@ -42,8 +42,9 @@ pub(crate) fn romanized(track:&str,lyrics:&Lyrics)->bool {
 }
 
 fn negative_path(path:&std::path::Path)->std::path::PathBuf {
-    // 匹配規則加入跨語言別名後，舊版寫下的「沒有歌詞」可能其實找得到；改用新副檔名讓它失效一次。
-    path.with_extension("none2")
+    // 每次加入新的跨語言／歌手別名規則，就換一次副檔名，讓舊版寫下的「沒有歌詞」失效。
+    // 0.6.78 的 No Reason 就是卡在舊記錄，明明網易雲有同步歌詞卻不再連網。
+    path.with_extension("none3")
 }
 thread_local!{static SKIP_NEGATIVE:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
 /// 用户手动点「重试」时，本线程的这次查询跳过「近期已确认没有歌词」的记录，真正重新联网。
@@ -434,13 +435,13 @@ pub(crate) fn bare_title(title:&str)->String {
 /// Shazam 的搜尋索引本身走 Apple 目錄；用它把 Spotify 的譯名、縮短藝名還原成正式條目。
 /// 只在候選唯一且長度幾乎相同時採用，避免把同歌手的其他作品套進來。
 fn catalog_alias_from_items(items:&[serde_json::Value],track:&str,artist:&str,duration:f64)->Option<(String,String)> {
-    if duration<=0.0 {return None;}
     let identity=song_identity(track,artist);
     let mut found:Vec<(String,String)>=Vec::new();
     for item in items {
         let (Some(name),Some(singer))=(item.get("trackName").and_then(|v|v.as_str()),item.get("artistName").and_then(|v|v.as_str())) else{continue;};
         let millis=item.get("trackTimeMillis").and_then(|v|v.as_f64()).unwrap_or_default();
-        if millis<=0.0 || (millis/1000.0-duration).abs()>1.5 {continue;}
+        // 播放器沒有回報長度時仍可查目錄，但只在候選唯一時採用，避免抓到同歌手的其他版本。
+        if millis<=0.0 || (duration>0.0 && (millis/1000.0-duration).abs()>1.5) {continue;}
         let candidate=song_identity(name,singer);
         if !translated_title_pair(&identity.0,&candidate.0) || !artist_alias_match(&identity,&candidate){continue;}
         found.push((name.to_owned(),singer.to_owned()));
@@ -607,9 +608,10 @@ fn netease_candidates(items:&[serde_json::Value],track:&str,artist:&str,duration
         matches.push((id,!exact,difference));
     }
     }
-    if matches.is_empty() && duration>0.0 {
+    if matches.is_empty() {
         // 部分華語歌在 Spotify 會用英文譯名（No Reason），網易雲仍是中文原名（沒有理由）。
         // 只在「歌手可辨識、長度幾乎相同、且全場只有一個候選」時採用，避免亂套同歌手的其他歌。
+        // 播放器沒有回報長度時仍可比對，但同樣要求全場唯一。
         let mut translated=Vec::new();
         for item in items {
             let Some(id)=item.get("id").and_then(|v|v.as_u64()) else{continue;};
@@ -620,7 +622,7 @@ fn netease_candidates(items:&[serde_json::Value],track:&str,artist:&str,duration
             let candidate=song_identity(name,&names);
             if normalized(name)==title || !translated_title_pair(&identity.0,&candidate.0) || !artist_alias_match(&identity,&candidate){continue;}
             let candidate_duration=item.get("duration").or_else(||item.get("dt")).and_then(|v|v.as_f64()).unwrap_or_default()/1000.0;
-            if candidate_duration<=0.0 || (candidate_duration-duration).abs()>1.0 {continue;}
+            if duration>0.0 && (candidate_duration<=0.0 || (candidate_duration-duration).abs()>1.0) {continue;}
             translated.push(id);
         }
         translated.sort_unstable();translated.dedup();
@@ -909,7 +911,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore="按需驗證使用者反饋的合唱歌曲，只輸出同步狀態和行數"]
+    #[ignore="按需驗證使用者回饋的合唱歌曲，只輸出同步狀態和行數"]
     fn live_qq_featured_track() {
         let lyrics=fetch_qqmusic("https://c.y.qq.com","溯 (Reverse)feat. 馬吟吟","CORSAK胡夢周",192.0).unwrap();
         assert!(lyrics.synced && lyrics.lines.len()>10);
@@ -942,7 +944,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore="按需驗證使用者反饋的 QQ 音樂歌曲，只輸出同步狀態和行數"]
+    #[ignore="按需驗證使用者回饋的 QQ 音樂歌曲，只輸出同步狀態和行數"]
     fn live_qq_reported_track() {
         let lyrics=fetch_for_source("QQMusic.exe","蘭香如故","葉炫清",215.0,None).unwrap();
         assert!(lyrics.synced && lyrics.lines.len()>10);
@@ -1087,6 +1089,7 @@ mod tests {
             {"id":3,"name":"No Reason","artists":[{"name":"Other Artist"}],"duration":215497}
         ]);
         assert_eq!(netease_candidates(items.as_array().unwrap(),"No Reason","永彬",215.497),vec![1]);
+        assert_eq!(netease_candidates(items.as_array().unwrap(),"No Reason","永彬",0.0),vec![1],"播放器沒給長度時，唯一譯名候選仍可用");
         // 同歌手同長度但有兩個不同譯名：無法判斷是哪一首，寧可不配。
         let ambiguous=serde_json::json!([
             {"id":4,"name":"沒有理由","artists":[{"name":"永彬Ryan.B"}],"duration":215497},
@@ -1107,6 +1110,7 @@ mod tests {
             {"trackName":"放个大招给你看","artistName":"永彬Ryan.B","trackTimeMillis":178720}
         ]);
         assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",215.497),Some(("沒有理由".into(),"永彬Ryan.B & 周延英".into())));
+        assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",0.0),Some(("沒有理由".into(),"永彬Ryan.B & 周延英".into())),"播放器沒給長度時仍可從 Shazam／Apple 目錄還原");
         // 長度不同、或同長度有兩個譯名時不猜。
         assert_eq!(catalog_alias_from_items(items.as_array().unwrap(),"No Reason","永彬",200.0),None);
         let ambiguous=serde_json::json!([
@@ -1369,6 +1373,10 @@ mod tests {
     fn confirmed_missing_lyrics_are_remembered_for_a_week_but_failures_are_not(){
         let path=std::env::temp_dir().join(format!("daozai-negative-{}-{:?}.lrc",std::process::id(),std::thread::current().id()));
         let _=std::fs::remove_file(negative_path(&path));
+        let old=path.with_extension("none2");
+        let _=std::fs::write(&old,b"");
+        assert!(read_negative(&path).is_none(),"舊版 none2 記錄不得再擋住查詞");
+        let _=std::fs::remove_file(&old);
         assert!(read_negative(&path).is_none());
         write_negative(&path,None);
         assert_eq!(read_negative(&path).unwrap().unwrap_err(),FetchError::NotFound);

@@ -1069,7 +1069,7 @@ mod avoidance_tests {
             assert_eq!(avoidance_for_window(panel,island,0,&settings,&last),Some(true),"面板程序不可識別時仍可透過所有者識別宿主");
             let independent=create(600,300,300,200,None,WS_EX_APPWINDOW);
             last.set(None);
-            assert_eq!(poll(detached,&settings),Some(false),"兩個可見主窗且無法確定宿主時，不借用後臺視窗");
+            assert_eq!(poll(detached,&settings),Some(false),"兩個可見主窗且無法確定宿主時，不借用後台視窗");
             let small=poll(independent,&settings);
             assert_eq!(poll(detached,&settings),Some(false),"當前主窗不遮島時不能借用同程序另一個大窗");
             SetWindowPos(independent,HWND_BOTTOM,-9700,-9995,96,80,SWP_NOACTIVATE).unwrap();

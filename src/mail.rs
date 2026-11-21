@@ -350,6 +350,8 @@ pub struct Meeting {
 pub enum Event {
     Status { account: String, status: Status },
     Mail { item: Item, new: bool },
+    /// Gmail 的未讀數補償：IDLE 斷線或單封解析失敗時，UNSEEN 增加仍要點亮島上鈴鐺。
+    Unread { account: String, count: u32 },
     Test { account: String, ok: bool, note: String },
     Managed(crate::mail_manage::Completed),
 }
@@ -985,6 +987,7 @@ mod service {
         }
         let mut last_uid = None;
         let mut last_validity=None;
+        let mut last_unseen=None;
         let mut failures=0;
         loop {
             if stop.load(Ordering::Relaxed) {
@@ -1034,7 +1037,7 @@ mod service {
             if mailbox.uid_validity.is_none() || mailbox.uid_validity!=last_validity{last_uid=None;}
             last_validity=mailbox.uid_validity;
             let connected_at=std::time::Instant::now();
-            match monitor(&mut session,&account,&mut last_uid,&stop,&interval,&ev) {
+            match monitor(&mut session,&account,&mut last_uid,&mut last_unseen,&stop,&interval,&ev) {
                 Ok(())=>return,
                 Err(note)=>{let _=ev.send(Event::Status{account:account.email.clone(),status:Status::Failed(note)});}
             }
@@ -1046,9 +1049,12 @@ mod service {
     }
 
     fn monitor<S:std::io::Read+std::io::Write+imap::extensions::idle::SetReadTimeout>(
-        session:&mut imap::Session<S>,account:&Account,last_uid:&mut Option<u32>,
+        session:&mut imap::Session<S>,account:&Account,last_uid:&mut Option<u32>,last_unseen:&mut Option<u32>,
         stop:&AtomicBool,interval:&AtomicU64,ev:&Sender<Event>,
     )->Result<(),String> {
+        if account.provider==Provider::Gmail && last_unseen.is_none() {
+            *last_unseen=unseen(session);
+        }
         match last_uid {
             Some(last)=>fetch_new(session,account,last,ev).map_err(|_|"讀取新郵件失敗，正在重連")?,
             None=>{*last_uid=Some(recent(session,account,ev).map_err(|_|"讀取最近郵件失敗，正在重連")?);}
@@ -1073,10 +1079,26 @@ mod service {
             }
             if stop.load(Ordering::Relaxed){let _=session.logout();return Ok(());}
             fetch_new(session,account,last_uid.as_mut().unwrap(),ev).map_err(|_|"讀取新郵件失敗，正在重連")?;
+            if let Some(previous)=*last_unseen {
+                if let Some(count)=unseen(session) {
+                    if count>previous {
+                        let _=ev.send(Event::Unread{account:account.email.clone(),count});
+                    }
+                    *last_unseen=Some(count);
+                }
+            }
             if idle_supported && *last_uid==previous && cycle_started.elapsed()<Duration::from_secs(5) {
                 if sleep_stop(stop,5){let _=session.logout();return Ok(());}
                 // 冷却后补读新邮件，并消费等待期间到达的通知，再进入下一轮推送等待。
                 fetch_new(session,account,last_uid.as_mut().unwrap(),ev).map_err(|_|"讀取新郵件失敗，正在重連")?;
+                if let Some(previous)=*last_unseen {
+                    if let Some(count)=unseen(session) {
+                        if count>previous {
+                            let _=ev.send(Event::Unread{account:account.email.clone(),count});
+                        }
+                        *last_unseen=Some(count);
+                    }
+                }
             }
         }
     }
@@ -1233,7 +1255,7 @@ mod service {
             let worker=std::thread::spawn(move || sleep_stop(&worker_stop,30));
             std::thread::sleep(Duration::from_millis(50));stop.store(true,Ordering::Relaxed);
             assert!(worker.join().unwrap());
-            assert!(started.elapsed()<Duration::from_secs(2),"停止監聽應打斷後臺等待");
+            assert!(started.elapsed()<Duration::from_secs(2),"停止監聽應打斷後台等待");
         }
 
         #[test]
@@ -1334,6 +1356,11 @@ mod service {
         }
     }
 
+    /// Gmail 的 UNSEEN 數量；讀取失敗時不影響原本的收信迴圈。
+    fn unseen<S:std::io::Read+std::io::Write>(session:&mut imap::Session<S>)->Option<u32>{
+        session.uid_search("UNSEEN").ok().map(|uids|uids.len() as u32)
+    }
+
     /// 首次连接：把最近 20 封读进面板，但不当作新邮件提示。
     fn recent<S:std::io::Read+std::io::Write>(
         session: &mut imap::Session<S>,
@@ -1356,7 +1383,7 @@ mod service {
     }
 
     #[test]
-    #[ignore = "需要真實 QQ 信箱及新測試郵件，驗證後臺監聽"]
+    #[ignore = "需要真實 QQ 信箱及新測試郵件，驗證後台監聽"]
     fn qq_live_notification_worker() {
         let accounts=load_accounts().into_iter().filter(|a|a.provider==Provider::Qq&&a.enabled).collect::<Vec<_>>();
         assert!(!accounts.is_empty());
@@ -1368,7 +1395,7 @@ mod service {
                     Event::Status{status,..}=>println!("worker_status={status:?}"),
                     Event::Mail{new,item}=>{
                         println!("worker_mail new={new} test_message={}",item.subject.starts_with("鬼島"));
-                        if new && item.subject=="鬼島後臺監聽實測" {
+                        if new && item.subject=="鬼島後台監聽實測" {
                             service.sync(&[],120);return;
                         }
                     },

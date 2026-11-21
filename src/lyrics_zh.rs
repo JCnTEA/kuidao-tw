@@ -38,30 +38,70 @@ pub fn ensure(track:&str,artist:&str,duration:f64,lyrics:&Lyrics){
 }
 
 fn translate(lines:&[String])->Option<Vec<String>>{
-    let mut output=Vec::with_capacity(lines.len());
+    translate_with(lines,request)
+}
+
+/// 只送非空行，回填時保留原行索引；空行、純符號行不會被 Google 合併而造成整首翻譯失敗。
+fn translate_with(lines:&[String],mut request:impl FnMut(&[String])->Option<Vec<String>>)->Option<Vec<String>>{
+    let active:Vec<(usize,&String)>=lines.iter().enumerate().filter(|(_,line)|!line.trim().is_empty()).collect();
+    let mut output=vec![String::new();lines.len()];
     let mut start=0usize;
-    while start<lines.len(){
+    while start<active.len(){
         let mut end=start;
         let mut chars=0usize;
-        while end<lines.len()&&end-start<CHUNK_LINES{
-            let add=lines[end].chars().count()+1;
+        while end<active.len()&&end-start<CHUNK_LINES{
+            let add=active[end].1.chars().count()+1;
             if end>start&&chars+add>CHUNK_CHARS{break;}
             chars+=add;end+=1;
         }
-        let chunk=&lines[start..end];
-        // 整段都是空行或符號：不需要翻譯，原樣填入。
-        if chunk.iter().all(|line|line.trim().is_empty()){
-            output.extend(chunk.iter().cloned());
-            start=end;
-            continue;
-        }
-        let translated=request(chunk)?;
+        let chunk:Vec<String>=active[start..end].iter().map(|(_,line)|(*line).clone()).collect();
+        let translated=request(&chunk)?;
         if translated.len()!=chunk.len(){return None;}
-        output.extend(translated);
+        for ((index,_),text) in active[start..end].iter().zip(translated){
+            output[*index]=polish_translation(&text);
+        }
         start=end;
-        if start<lines.len(){std::thread::sleep(std::time::Duration::from_millis(120));}
+        if start<active.len(){std::thread::sleep(std::time::Duration::from_millis(120));}
     }
     Some(output)
+}
+
+/// 機翻常見的排版問題：CJK 之間被插入空格、連續標點、行首殘留逗號；統一轉繁體後再修。
+fn polish_translation(text:&str)->String{
+    let traditional=crate::zh::to_traditional(text);
+    let trimmed=traditional.trim().trim_start_matches(|c:char|matches!(c,'，'|','|'。'|'！'|'!'|'？'|'?'|'、'|'；'|';'|'：'|':'));
+    let mut out=String::new();
+    let mut previous=None;
+    for c in trimmed.chars(){
+        if c==' ' {
+            if previous.is_some_and(is_cjk_or_fullwidth)&&out.chars().next().is_some(){continue;}
+        }
+        if matches!(c,'，'|','|'。'|'！'|'？'|'、'|'；'|'：')&&out.chars().last().is_some_and(|last|punctuation_family(last)==punctuation_family(c)&&punctuation_family(c)>0){continue;}
+        out.push(c);
+        previous=Some(c);
+    }
+    let mut chars=out.chars().peekable();
+    let mut clean=String::new();
+    while let Some(c)=chars.next(){
+        if c==',' {clean.push('，');}
+        else if c=='.'&&chars.peek().is_none(){clean.push('。');}
+        else if c==';' {clean.push('；');}
+        else if c==':' {clean.push('：');}
+        else if c=='!' {clean.push('！');}
+        else if c=='?' {clean.push('？');}
+        else {clean.push(c);}
+    }
+    clean.trim().to_string()
+}
+
+fn is_cjk_or_fullwidth(c:char)->bool{
+    matches!(c as u32,0x3000..=0x303F|0x3400..=0x4DBF|0x4E00..=0x9FFF|0xFF00..=0xFFEF)
+}
+
+fn punctuation_family(c:char)->u8{
+    match c {
+        '，'|','=>1,'。'|'.'=>2,'！'|'!'=>3,'？'|'?'=>4,'、'=>5,'；'|';'=>6,'：'|':'=>7,_=>0,
+    }
 }
 
 fn request(lines:&[String])->Option<Vec<String>>{
@@ -117,6 +157,22 @@ pub fn display_lines(lyrics:&Lyrics,translate:bool,track:&str,artist:&str,durati
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn blank_lines_keep_alignment_and_are_not_sent() {
+        let lines = vec!["hello".to_string(), "".into(), "world".into()];
+        let shown = translate_with(&lines, |chunk| Some(chunk.iter().map(|_| "你 好 ，".to_string()).collect())).unwrap();
+        assert_eq!(shown, vec!["你好，".to_string(), "".to_string(), "你好，".to_string()]);
+    }
+
+    #[test]
+    fn machine_translation_spacing_and_punctuation_are_cleaned() {
+        assert_eq!(polish_translation(" 你 好 ， 世 界 。"), "你好，世界。");
+        let input = format!("{}第一句{}第二句。", "，", "，".repeat(2));
+        assert_eq!(polish_translation(&input), "第一句，第二句。");
+        assert_eq!(polish_translation("Hello, world."), "Hello，world。");
+        assert_eq!(polish_translation("我 愛 你"), "我愛你");
+    }
 
     #[test]
     fn display_lines_turns_chinese_into_traditional(){

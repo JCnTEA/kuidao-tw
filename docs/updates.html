@@ -62,6 +62,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
+      <div class="card"><span class="badge">修正</span><h3>Gmail 通知、歌詞翻譯與每小時中文自檢</h3><p>Gmail 不再只等單封新信事件：改用 UNSEEN 未讀數補償，IDLE 斷線或信件解析失敗時仍會點亮島上鈴鐺，八秒內不重複通知。歌詞翻譯只送非空行並保留原行對齊，空行不會再讓整首翻譯失敗；譯文統一轉繁體，順手清掉漢字間多餘空格、重複標點與行首殘留逗號。倉庫新增每小時中文自檢，會自動修台灣用語與重複助詞，有修正就提版本、提交並觸發編譯發布，鬼島可直接從更新檢查取得。</p></div>
       <div class="card"><span class="badge">外觀</span><h3>漸層亮度可調，日期更清楚</h3><p>設定「外觀 → 懸浮漸層」新增 60–100% 亮度滑桿，預設 80%；只壓暗漸層底色，不改文字與圖示。漸層皮膚的頂欄日期改成近白字並加一層淡影，不再被亮色底吃掉；日期區域懸停時只出現細把手，不再鋪一塊白底。</p></div>
       <div class="card"><span class="badge">社群</span><h3>點通知開桌面程式，不再只丟網頁</h3><p>社群圖示會記住實際發出通知的 Windows AppID，點下去優先喚起 LINE、Messenger、Threads、Instagram、Facebook 的原生程式或已安裝的桌面版；LINE 另外會還原被最小化或收進系統匣的主視窗並切到前景。只有找不到 AppID 或系統拒絕喚起時，才退回原本的官方網站。LINE 的 PC 版沒有第三方指定聊天室的介面，因此會停在 LINE 主視窗的聊天列表，不會直接跳到某位好友的對話。</p></div>
       <div class="card"><span class="badge">吉祥物</span><h3>動物自己動，不再整隻位移</h3><p>石虎待機改成逐格動物動作：身體固定在槽位內，只有尾巴擺動與眨眼；拿掉整張圖上下左右的位移、縮放與原版矢量表情備援。外掛動畫包同樣固定位置，載入後只播放影格。</p></div>
@@ -94,7 +95,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <div class="card"><span class="badge">天氣</span><h3>實況與預報</h3><p>當地實況、四日到七日預報、日出日落、多城市切換、日照軌跡視圖；新增和風天氣來源與憑據保護，常駐欄時鐘旁顯示溫度。</p></div>
       <div class="card"><span class="badge">外觀</span><h3>形態與動效</h3><p>皮膚、停靠形態、橫線模式、極簡劉海、側邊常駐；拖曳加入拿起、跟手、吸附與落位動效，頂欄避讓、OLED 像素偏移、系統不支援模糊時改用半透明底。</p></div>
       <div class="card"><span class="badge">效能</span><h3>渲染與資源</h3><p>相容渲染改為 Direct3D 12 優先、失敗退 Vulkan、再退 OpenGL；分層視窗消除邊緣鋸齒，核顯降低記憶體占用，閒置不再被截圖流程帶到滿幀，CPU 約降四成。</p></div>
-      <div class="card"><span class="badge">設定</span><h3>設定頁重組</h3><p>側欄一項一頁、功能卡片統一、長表單收進彈窗；頁面開關改為模組總開關，記住視窗位置與大小。</p></div>
+      <div class="card"><span class="badge">設定</span><h3>設定頁重組</h3><p>側欄一項一頁、功能卡片統一、長表單收進彈出視窗；頁面開關改為模組總開關，記住視窗位置與大小。</p></div>
       <div class="card"><span class="badge">穩定</span><h3>全屏與相容修補</h3><p>全屏判定改看客戶區是否蓋滿整屏，修掉遊戲與建模軟體裡反覆彈出；另處理郵件驗證碼（含繁中與純字母）、日曆自簽憑證、代理下請求失敗、更新檢查限流等問題。</p></div>
     </div>
     <div class="note"><b>時間軸</b>：開源（11/3）→ 音樂與額度（11/5）→ 通知與天候（11/10）→ 渲染與設定改版（11/18）。期間累計 174 筆提交，以功能修補與相容性調整為主。</div>

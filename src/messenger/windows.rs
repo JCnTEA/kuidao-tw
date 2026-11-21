@@ -557,7 +557,7 @@ mod tests {
         history.observe(30,Some(vec![b]));
         assert!(runtime.exited_with(&[unknown],|_|Some(vec![b.unread.pid])).is_empty());
         let click=runtime.request(unknown,&Settings::default()).start(Default::default());
-        assert!(matches!(click,Err(OpenError::Unidentified)),"舊提醒不能啟動喚起剩餘帳號的後臺任務");
+        assert!(matches!(click,Err(OpenError::Unidentified)),"舊提醒不能啟動喚起剩餘帳號的後台任務");
     }
     #[test]
     fn qq_notifications_bind_only_to_the_stable_account_at_creation(){

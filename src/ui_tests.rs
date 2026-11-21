@@ -426,7 +426,7 @@ fn weather_cities_switch_from_the_island_title_and_keep_their_own_cache(){
     h.click(H::local(115.0,112.0));h.hover(H::local(330.0,200.0),0.4);
     assert!(h.app.weather.picker_open,"點地點行展開城市下拉");assert!(!h.app.weather.solar_open,"點地點行不應切到日照");
     for phrase in ["自動定位","杭州","北京","新增或管理城市"] {
-        assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text().contains(phrase))),"下拉框缺少 {phrase}");
+        assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text().contains(phrase))),"下拉選單缺少 {phrase}");
     }
     let row=h.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="杭州"=>Some(t.visual_bounding_rect().center()),_=>None}).unwrap();
     h.click(row);h.hover(row,0.3);
@@ -435,7 +435,7 @@ fn weather_cities_switch_from_the_island_title_and_keep_their_own_cache(){
     // 点面板外收起，不触发日照视图。
     h.click(H::local(209.0,147.0));h.hover(H::local(330.0,200.0),0.4);assert!(h.app.weather.picker_open,"無資料時入口在頁面中下方");
     h.click(H::local(330.0,200.0));h.hover(H::local(330.0,200.0),0.3);
-    assert!(!h.app.weather.picker_open);assert!(!h.app.weather.solar_open,"點外面只收起下拉框");
+    assert!(!h.app.weather.picker_open);assert!(!h.app.weather.solar_open,"點外面只收起下拉選單");
     // 删除当前城市：回到自动定位。
     h.app.remove_weather_city(&hz);
     assert_eq!(h.app.settings.weather_saved,vec![bj.clone()]);assert!(h.app.settings.weather_city.is_empty());assert!(h.app.settings.weather_position.is_none());
@@ -468,8 +468,8 @@ fn weather_city_dropdown_selects_the_region_without_applying_the_draft(){
     for _ in 0..3 {draw(&mut h,vec![]);}
     h.ctx.memory_mut(|m|m.open_popup(egui::Id::new("weather-city-options")));
     for _ in 0..3 {draw(&mut h,vec![]);}
-    let point=h.shapes.iter().find_map(|s|match &s.shape {egui::Shape::Text(text) if text.galley.text()=="佛山市"=>Some(text.visual_bounding_rect().center()),_=>None}).expect("下拉框必須顯示完整城市名");
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="廣東 · 中國")),"下拉框必須顯示省份");
+    let point=h.shapes.iter().find_map(|s|match &s.shape {egui::Shape::Text(text) if text.galley.text()=="佛山市"=>Some(text.visual_bounding_rect().center()),_=>None}).expect("下拉選單必須顯示完整城市名");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="廣東 · 中國")),"下拉選單必須顯示省份");
     draw(&mut h,vec![egui::Event::PointerMoved(point),egui::Event::PointerButton{pos:point,button:egui::PointerButton::Primary,pressed:true,modifiers:Default::default()}]);
     draw(&mut h,vec![egui::Event::PointerButton{pos:point,button:egui::PointerButton::Primary,pressed:false,modifiers:Default::default()}]);
     assert_eq!(h.app.weather.selected_city.as_ref(),Some(&correct));assert_eq!(h.app.weather.draft_city(),Some("佛山市"));
@@ -3423,6 +3423,42 @@ fn regression_microsoft_traditional_mail_creates_code_card() {
 }
 
 #[test]
+fn gmail_unread_fallback_rings_the_bell_once() {
+    let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut h = H::new();
+    h.app.mail.accounts = vec![crate::mail::Account {
+        custom: None, email: "gmail-user@gmail.com".into(),
+        provider: crate::mail::Provider::Gmail,
+        enabled: true,
+    }, crate::mail::Account {
+        custom: None, email: "gmail-second@gmail.com".into(),
+        provider: crate::mail::Provider::Gmail,
+        enabled: true,
+    }];
+    h.app.mail_event(crate::mail::Event::Unread {
+        account: "gmail-user@gmail.com".into(),
+        count: 3,
+    });
+    assert!(h.app.notification_bell_until > 0.0, "Gmail UNSEEN 增加也必須點亮鈴鐺");
+    assert_eq!(h.app.mail_unread, 3);
+    assert!(h.app.alerts.iter().any(|a| a.title == "新郵件" && a.page == 5), "補償通知也要進佇列");
+    h.app.t += 1.0;
+    h.app.mail_event(crate::mail::Event::Unread {
+        account: "gmail-user@gmail.com".into(),
+        count: 4,
+    });
+    let alerts = h.app.alerts.iter().filter(|a| a.title == "新郵件").count();
+    assert_eq!(alerts, 1, "八秒內不可重複通知同一批新信");
+    assert_eq!(h.app.mail_unread, 4);
+    h.app.mail_event(crate::mail::Event::Unread {
+        account: "gmail-second@gmail.com".into(),
+        count: 2,
+    });
+    let alerts = h.app.alerts.iter().filter(|a| a.title == "新郵件").count();
+    assert_eq!(alerts, 2, "另一個 Gmail 帳號的新信不能被同一個八秒窗口吃掉");
+}
+
+#[test]
 fn mail_page_shows_code_and_copies_on_click() {
     let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut h = H::new();
@@ -3797,7 +3833,7 @@ fn music_mascot_puts_away_the_microphone_during_notices_and_their_fade_out(){
         assert!(h.media.playing);assert!(h.app.island_lyric().is_some());
     }
     h.app.pet.react(PetState::Satisfied);h.app.alert("大寫鎖定","已開啟",5,false);h.frame(vec![]);
-    assert_eq!(h.app.pet_state(),PetState::Satisfied,"已有的喝水反饋應保留優先順序");
+    assert_eq!(h.app.pet_state(),PetState::Satisfied,"已有的喝水回饋應保留優先順序");
 }
 
 #[test]
@@ -5047,7 +5083,7 @@ fn calendar_first_schedule_has_a_large_time_and_keeps_the_lower_list_scrollable(
     h.click(H::local(260.0,138.0));h.hover(H::local(300.0,194.0),0.2);
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="12:00" && t.galley.job.sections[0].format.font_id.size>=23.0)),"點選才切換大卡片");
     h.wheel(-40.0);
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="12:00" && t.galley.job.sections[0].format.font_id.size>=23.0)),"選中後滾動仍保持詳情");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="12:00" && t.galley.job.sections[0].format.font_id.size>=23.0)),"選取後滾動仍保持詳情");
     h.app.open_calendar(Some(h.app.calendar.view.events[6].clone()));h.hover(H::local(300.0,40.0),0.3);
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="會議 6")),"提醒定位的末條行程應完整可見");
 }
@@ -5657,7 +5693,7 @@ fn reminder_and_reader_layout_gallery(){
     for picker in [true,false]{
         let mut h=H::new();h.ctx.set_embed_viewports(true);
         h.app.todos.items=vec![crate::model::TodoItem{text:"提交產品方案".into(),due:None,done_on:None,reminded:false,..Default::default()}];h.app.open_task_reminder(0);
-        let body=(1..=12).map(|n|format!("第 {n} 項 · 工作安排\n請確認需求與交付範圍，整理設計方案和本週待辦，並在評審前同步進度。相關意見請彙總後反饋給產品團隊。\n\n")).collect::<String>();
+        let body=(1..=12).map(|n|format!("第 {n} 項 · 工作安排\n請確認需求與交付範圍，整理設計方案和本週待辦，並在評審前同步進度。相關意見請彙總後回饋給產品團隊。\n\n")).collect::<String>();
         h.app.mail.reading=Some(crate::mail::Item {received_unix: None, account:"work@icloud.com".into(),from:"產品團隊".into(),subject:"專案方案與下階段工作安排".into(),time:"10-31 09:41".into(),code:None,html: String::new().into(), summary:format!("各位好，\n\n以下是專案安排與交付要求，請逐項確認。\n\n{body}最後一段\n請在週五前確認，感謝配合。").into(),links:vec![crate::mail::Link{label:"檢視專案資料".into(),url:"https://example.com/project".into()}],meeting:None,uid:42});
         let (w,height)=if picker{(WIN_W as u32,WIN_H as u32)}else{(700,620)};let ppp=1.5;
         let mut raster=crate::preview_raster::Raster::new((w as f32*ppp)as usize,(height as f32*ppp)as usize);
@@ -6084,7 +6120,7 @@ fn calendar_sync_result_does_not_enqueue_another_sync() {
     h.app.calendar.config=Some(config.clone());h.app.open_calendar(None);h.app.pending.clear();
     h.app.calendar.view.loading=false;
     h.app.calendar_event(crate::calendar::Event::Synced{config,events:vec![],at:"12:00".into()});
-    assert!(!h.app.pending.iter().any(|cmd|matches!(cmd,crate::app::Cmd::CalendarMonth(_))),"同步結果不能觸發下一輪同步，否則後臺會持續請求");
+    assert!(!h.app.pending.iter().any(|cmd|matches!(cmd,crate::app::Cmd::CalendarMonth(_))),"同步結果不能觸發下一輪同步，否則後台會持續請求");
 }
 
 #[test]
@@ -7119,7 +7155,7 @@ fn skin_gallery_pages(){
         for page in 0..9usize {
             let mut h=H::new();h.app.settings.skin=skin;h.app.settings.island_shape=crate::model::IslandShape::Pill;
             h.quota_accounts(2);
-            h.app.todos.items.push(crate::model::TodoItem{text:"整理鬼島主題反饋".into(),done_on:None,due:Some("2026-11-05 10:00".into()),reminded:false,..Default::default()});
+            h.app.todos.items.push(crate::model::TodoItem{text:"整理鬼島主題回饋".into(),done_on:None,due:Some("2026-11-05 10:00".into()),reminded:false,..Default::default()});
             h.app.todos.items.push(crate::model::TodoItem{text:"已完成的事項".into(),done_on:Some("2026-11-04".into()),due:None,reminded:false,..Default::default()});
             h.media=crate::smtc::NowPlaying{title:"Paper Boats".into(),artist:"The Lanterns".into(),position:64.0,duration:201.0,playing:true,..Default::default()};
             let (w,hgt)=((crate::app::CANVAS_W*2.0) as usize,(WIN_H*2.0) as usize);

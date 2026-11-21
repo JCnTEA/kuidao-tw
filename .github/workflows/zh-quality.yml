@@ -1,0 +1,63 @@
+name: 中文自檢與自動修正
+
+on:
+  schedule:
+    - cron: '17 * * * *'   # 每小時檢查一次，避開整點的上游同步
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: zh-quality
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 中文自檢與自動修正
+        run: python tools/zh_lint.py --fix --report /tmp/zh-report.json
+
+      - name: 檢查是否有修正
+        id: chk
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 提版本並提交
+        if: steps.chk.outputs.changed == 'true'
+        run: |
+          ver=$(python tools/bump_version.py)
+          git config user.name "鬼島 中文自檢"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: 中文自檢修正（$ver）"
+          git push
+          echo "VER=$ver" >> "$GITHUB_ENV"
+
+      - name: 觸發編譯與發布
+        if: steps.chk.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run auto-update.yml --ref main
+
+      - name: 儲存自檢報告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zh-report
+          path: /tmp/zh-report.json
+          if-no-files-found: ignore

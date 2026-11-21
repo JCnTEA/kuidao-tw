@@ -222,7 +222,7 @@ fn detail_lookup_runs_in_background_retries_then_stops(){
         if round<2 {cache.retry_at=Some(Instant::now());}
         if round==0 {
             let busy=[crate::resources::COVER.acquire().unwrap(),crate::resources::COVER.acquire().unwrap()];
-            cache.get_with(7,|_|panic!("已有兩個後臺請求"));
+            cache.get_with(7,|_|panic!("已有兩個後台請求"));
             drop(busy);
         }
     }

@@ -44,7 +44,7 @@ mod tests {
             assert_eq!(pet.expressions.current(),Some(expression),"恢復聽歌應從暫停處繼續");
         }
         pet.react(PetState::Satisfied);pet.step(PetState::Satisfied,43.0,0.1,[0.0;2],true);
-        assert_eq!(pet.expressions.current(),Some(crate::pet_expressions::Expression::Heart),"喝水反饋應保留優先順序");
+        assert_eq!(pet.expressions.current(),Some(crate::pet_expressions::Expression::Heart),"喝水回饋應保留優先順序");
     }
     #[test]
     fn singing_keeps_each_expression_for_fifteen_seconds_after_the_transition() {

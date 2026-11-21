@@ -968,7 +968,7 @@ mod tests {
         assert!(protocol_executable(r#""C:\Windows\cmd.exe" /c Weixin.exe"#).is_none());
     }
     #[test]
-    #[ignore="需要已啟動並位於後臺的微信視窗；僅向測試視窗傳送模擬事件"]
+    #[ignore="需要已啟動並位於後台的微信視窗；僅向測試視窗傳送模擬事件"]
     fn local_wechat_background_window(){unsafe{
         let target:isize=std::env::var("KUIDAO_TEST_WECHAT_HWND").unwrap().parse().unwrap();
         let listener=Listener::new(Default::default()).unwrap();
@@ -998,7 +998,7 @@ mod tests {
         listener.forget(std::process::id());
         SendMessageW(hwnd,message,WPARAM(FLASH),LPARAM(hwnd.0 as isize));
         SendMessageW(hwnd,message,WPARAM(0x8004),LPARAM(hwnd.0 as isize));
-        assert!(!listener.take().is_empty(),"後臺視窗的啟用事件應保留尚未消費的提醒");
+        assert!(!listener.take().is_empty(),"後台視窗的啟用事件應保留尚未消費的提醒");
         DeregisterShellHookWindow(hwnd).ok().unwrap();
         SendMessageW(hwnd,RegisterWindowMessageW(w!("TaskbarCreated")),WPARAM(0),LPARAM(0));
         assert!(listener.registered());

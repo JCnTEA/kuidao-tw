@@ -1154,7 +1154,7 @@ impl App {
             if let Some(position)=removed {self.remove_weather_city(&position);}
             else if let Some(position)=chosen {self.switch_weather_city(position);}
             ui.add_space(4.0);
-            settings_hint(ui,&format!("最多儲存 {} 個城市。點上方列表或島上天氣頁的地點就能切換；只有當前城市會在後臺定時更新。",weather::MAX_CITIES));
+            settings_hint(ui,&format!("最多儲存 {} 個城市。點上方列表或島上天氣頁的地點就能切換；只有當前城市會在後台定時更新。",weather::MAX_CITIES));
         });
 
         settings_label(ui,"新增城市");

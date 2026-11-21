@@ -975,7 +975,7 @@ mod tests {
         assert!(w.scheduled_on("2026-11-04") && !w.scheduled_on("2026-11-03"));
         assert!(!w.reminder_due("2026-11-02 10:00"), "當天已提醒");
         assert!(!w.reminder_due("2026-11-04 09:00") && w.reminder_due("2026-11-04 09:30"));
-        assert!(!w.reminder_due("2026-11-03 10:00"), "不在選中的星期幾不提醒");
+        assert!(!w.reminder_due("2026-11-03 10:00"), "不在選取的星期幾不提醒");
         let o = &loaded.items[1];
         assert_eq!((o.repeat, o.reminded, o.done_on.as_deref()), (0, true, Some("2026-11-01")));
         assert!(o.done_for("2026-11-09") && o.scheduled_on("2026-11-03"));
