@@ -49,7 +49,7 @@ Page custom InstallPage InstallPageLeave
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "TradChinese"
-BrandingText "鬼島 · 桌面靈動島 · Kuidao"
+BrandingText "鬼島 · Kuidao"
 SetFont "Microsoft YaHei UI" 9
 
 Function .onInit
@@ -104,27 +104,29 @@ Function InstallPage
   System::Call 'user32::LoadImageW(p 0, w "$PLUGINSDIR\brand.ico", i 1, i 64, i 64, i 0x10) p .r1'
   StrCpy $BrandIcon $1
   SendMessage $0 0x170 $1 0
-  ${NSD_CreateLabel} 58u 8u 240u 22u "${APP_NAME}"
+  ${NSD_CreateLabel} 58u 6u 240u 24u "${APP_NAME}"
   Pop $0
   CreateFont $1 "Microsoft YaHei UI" 18 700
   SendMessage $0 ${WM_SETFONT} $1 0
-  ${NSD_CreateLabel} 112u 14u 188u 14u "v${APP_VERSION} · 安裝後自動補齊主程式"
+  ; 版本與標題分開兩行，避免 18pt 標題和版本字疊在一起被截斷。
+  ${NSD_CreateLabel} 59u 31u 240u 12u "v${APP_VERSION} · 安裝後自動補齊主程式"
   Pop $0
-  ${NSD_CreateLabel} 58u 34u 240u 20u "先安裝極小啟動器，不一次下載完整安裝包。"
+  SetCtlColors $0 0x666666 0xFFFFFF
+  ${NSD_CreateLabel} 58u 45u 240u 16u "先安裝極小啟動器，不一次下載完整安裝包。"
   Pop $0
-  ${NSD_CreateLabel} 0 58u 300u 16u "音樂歌詞 · 郵件驗證碼 · 行程提醒 · AI 額度"
+  ${NSD_CreateLabel} 0 64u 300u 16u "音樂歌詞 · 郵件驗證碼 · 行程提醒 · AI 額度"
   Pop $0
-  ${NSD_CreateLabel} 0 80u 300u 12u "安裝位置"
+  ${NSD_CreateLabel} 0 84u 300u 12u "安裝位置"
   Pop $0
-  ${NSD_CreateDirRequest} 0 96u 245u 16u "$INSTDIR"
+  ${NSD_CreateDirRequest} 0 100u 245u 16u "$INSTDIR"
   Pop $PathInput
-  ${NSD_CreateBrowseButton} 250u 96u 50u 16u "瀏覽…"
+  ${NSD_CreateBrowseButton} 250u 100u 50u 16u "瀏覽…"
   Pop $0
   ${NSD_OnClick} $0 BrowseDirectory
-  ${NSD_CreateCheckbox} 0 122u 150u 14u "建立桌面捷徑"
+  ${NSD_CreateCheckbox} 0 126u 150u 14u "建立桌面捷徑"
   Pop $DesktopCheckbox
   ${NSD_SetState} $DesktopCheckbox $DesktopChoice
-  ${NSD_CreateCheckbox} 165u 122u 135u 14u "開機自啟"
+  ${NSD_CreateCheckbox} 165u 126u 135u 14u "開機自啟"
   Pop $AutoStartCheckbox
   ${NSD_SetState} $AutoStartCheckbox $AutoStartChoice
   GetDlgItem $0 $HWNDPARENT 1
