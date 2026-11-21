@@ -4090,6 +4090,59 @@ fn mascot_integrated_expression_gallery(){
     }
 }
 #[test]
+#[ignore="按需匯出未讀膠囊的全部已讀按鈕：KUIDAO_UNREAD_PREVIEW_DIR=目錄"]
+fn unread_all_read_layout_preview(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let dest=std::path::PathBuf::from(std::env::var_os("KUIDAO_UNREAD_PREVIEW_DIR").expect("需指定預覽目錄"));
+    std::fs::create_dir_all(&dest).unwrap();
+    let mut h=H::new();let mut r=feature_raster();
+    h.app.settings.skin=crate::model::Skin::GradMeadow;
+    h.app.social.bump(crate::social::Social::Line,"jp.naver.line");
+    h.app.social.bump(crate::social::Social::PhoneLink,"Microsoft.YourPhone_8wekyb3d8bbwe!App");
+    h.app.pending_messengers.push(crate::app::Unread::of(crate::app::Messenger::Wechat));
+    h.app.reveal_unread();
+    let ppp=2.0;let (w,hgt)=(crate::app::CANVAS_W,WIN_H);
+    for f in 0..120 {
+        h.t+=1.0/60.0;
+        let env=Env{t:h.t,clock:"09:41:00".into(),today:"2026-11-21".into(),date:"11月21日 週六".into(),cursor:Some(H::local(300.0,60.0)),bt_ready:true,..Default::default()};
+        let raw=egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(w,hgt))),time:Some(h.t),focused:true,
+            events:vec![egui::Event::PointerMoved(H::local(300.0,60.0))],
+            viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(ppp),..Default::default()})).collect(),..Default::default()};
+        let app=&mut h.app;
+        let output=h.ctx.run(raw,|ctx|{egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx,|ui|{let win=Rect::from_min_size(ui.max_rect().min,Vec2::new(WIN_W,WIN_H));app.frame(ui,win,&env);});});
+        r.update_textures(&output.textures_delta);
+        let primitives=h.ctx.tessellate(output.shapes,output.pixels_per_point);
+        if f+1==120 {
+            r.buf.fill([0.20,0.24,0.32,1.0]);
+            r.draw(&primitives,output.pixels_per_point);
+            let mut rgba=Vec::new();r.to_rgba8(&mut rgba);
+            let image=image::RgbaImage::from_raw((w*ppp) as u32,(hgt*ppp) as u32,rgba).unwrap();
+            let crop_h=(h.app.expanded_height()*ppp+24.0).max(330.0).min(hgt*ppp) as u32;
+            image::imageops::crop_imm(&image,200,0,1040,crop_h).to_image().save(dest.join("unread-all-read.png")).unwrap();
+        }
+        r.free_textures(&output.textures_delta);
+    }
+}
+
+#[test]
+fn unread_all_read_clears_and_closes_without_opening_a_program(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();
+    h.app.social.bump(crate::social::Social::Line,"jp.naver.line");
+    h.app.social.bump(crate::social::Social::PhoneLink,"Microsoft.YourPhone_8wekyb3d8bbwe!App");
+    h.app.pending_messengers.push(crate::app::Unread::of(crate::app::Messenger::Wechat));
+    h.app.reveal_unread();
+    for _ in 0..120 {h.frame(vec![]);}
+    assert!(h.app.open && h.app.messenger_appear()>0.9,"未讀膠囊應先展開");
+    h.cmds.clear();
+    h.click_text("全部已讀");
+    assert!(h.app.pending_messengers.is_empty(),"全部已讀應清掉原生聊天未讀");
+    assert_eq!(h.app.social.total(),0,"全部已讀應清掉社群未讀");
+    assert!(!h.app.open,"全部已讀後應直接收起");
+    assert!(h.cmds.is_empty(),"全部已讀不應開啟任何程式");
+}
+
+#[test]
 fn minimal_island_hides_messenger_notices_until_expanded(){
     // 群友截图：极简刘海下来电 / 新消息后，细线变成带微信图标的方块。极简刘海照常弹横幅，收起后只留细线，未读不常挂。
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());

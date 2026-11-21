@@ -164,9 +164,11 @@ impl Env {
 pub use crate::messenger::{Messenger,Unread};
 
 /// 展开后未读胶囊的宽度、离面板的间距和每个图标占的高度。
-pub(crate) const UNREAD_W: f32 = 40.0;
+pub(crate) const UNREAD_W: f32 = 68.0;
 pub(crate) const UNREAD_GAP: f32 = 8.0;
 pub(crate) const UNREAD_SLOT: f32 = 36.0;
+/// 未读胶囊底部的「全部已讀」高度；图标列表只用到剩下的空间。
+const UNREAD_CLEAR_H: f32 = 34.0;
 /// 收起时两个来源图标的间距：并排各占一格，不叠放。
 fn unread_step(_horizontal: bool) -> f32 { 22.0 }
 
@@ -2407,11 +2409,12 @@ impl App {
     /// 展开胶囊高度：一个是圆，两个是短胶囊，三个及以上与面板等高（多出的滚动）。
     fn unread_capsule_height(&self,panel_h:f32)->f32 {
         let n=self.unread_count();
-        if n>=3 {panel_h} else {4.0+UNREAD_SLOT*n as f32}
+        let list=if n>=3 {panel_h}else{4.0+UNREAD_SLOT*n as f32};
+        (list+UNREAD_CLEAR_H).min(panel_h)
     }
     pub(crate) fn unread_top_inset(&self)->f32 {if self.dock()==model::Dock::Top {UNREAD_GAP}else{0.0}}
     fn unread_slot(&self,height:f32)->f32 {
-        if self.unread_count()>=3 {(height-4.0)/3.0} else {UNREAD_SLOT}
+        if self.unread_count()>=3 {((height-4.0-UNREAD_CLEAR_H)/3.0).max(26.0)} else {UNREAD_SLOT}
     }
     fn unread_count(&self)->usize {self.pending_messengers.len()+self.social.active_ordered(&self.settings.social_order).len()+self.health_badges().len()}
     /// 收起时叠放的来源图标，每个客户端各占一个。
@@ -2467,24 +2470,27 @@ impl App {
         let n=self.unread_count();
         let height=rect.height()/c.s;
         let slot=self.unread_slot(height);
-        let max_scroll=(n as f32-3.0).max(0.0)*slot;
+        // 底部留給「全部已讀」，圖示只在上面這段捲動。
+        let list_h=(height-UNREAD_CLEAR_H-2.0).max(slot);
+        let visible=((list_h-2.0)/slot).floor().max(1.0);
+        let max_scroll=(n as f32-visible).max(0.0)*slot;
         let hovering=cursor.is_some_and(|p|rect.contains(p));
         if max_scroll>0.0 && cursor.is_some_and(|p|rect.contains(p)) {
             let delta=ctx.input(|i|i.raw_scroll_delta.y);
             self.messenger_scroll-=delta*0.5;
         }else if max_scroll>0.0 && !hovering {
-            // 超過三個未讀時緩慢往下刷，讓下面的來源自己露出來；滑鼠移進膠囊就停止，改用手動滾輪。
+            // 超過可見數量時緩慢往下刷，讓下面的來源自己露出來；滑鼠移進膠囊就停止，改用手動滾輪。
             self.messenger_scroll+=ctx.input(|i|i.stable_dt).clamp(0.0,0.1)*7.0;
             if self.messenger_scroll>=max_scroll{self.messenger_scroll=0.0;}
         }
         self.messenger_scroll=self.messenger_scroll.clamp(0.0,max_scroll);
         let c=c.faded(self.messenger_appear());
-        let inner=c.clipped(0.0,2.0,UNREAD_W,height-4.0);
+        let inner=c.clipped(0.0,2.0,UNREAD_W,list_h);
         let x=UNREAD_W/2.0;
         for i in 0..self.pending_messengers.len() {
             let u=self.pending_messengers[i];
             let cy=2.0+slot*(i as f32+0.5)-self.messenger_scroll;
-            if cy< -slot || cy>height+slot {continue;}
+            if cy< -slot || cy>list_h+slot {continue;}
             let scale=u.source.adapter().icon_scale;
             crate::extras::messenger_icon(&inner.scaled(x,cy,scale),x,cy,u.source);
             inner.circle(x+10.0,cy-9.0,2.6,Color32::from_rgb(255,72,72));
@@ -2501,7 +2507,7 @@ impl App {
         let socials=self.social.active_ordered(&self.settings.social_order);
         for (i,(source,count)) in socials.iter().enumerate() {
             let cy=2.0+slot*((self.pending_messengers.len()+i) as f32+0.5)-self.messenger_scroll;
-            if cy< -slot || cy>height+slot {continue;}
+            if cy< -slot || cy>list_h+slot {continue;}
             source.paint(&inner,x,cy);
             crate::social::badge(&inner,x+10.0,cy+7.5,*count,6.0,8.0);
             let button=inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,("social",source.key())).on_hover_text(format!("{} · {} 則訊息，點選開啟",source.name(),count));
@@ -2509,7 +2515,7 @@ impl App {
         }
         for (i,kind) in self.health_badges().into_iter().enumerate() {
             let cy=2.0+slot*((self.pending_messengers.len()+socials.len()+i) as f32+0.5)-self.messenger_scroll;
-            if cy< -slot || cy>height+slot {continue;}
+            if cy< -slot || cy>list_h+slot {continue;}
             kind.icon(&inner,x,cy,0.8);
             inner.circle(x+10.0,cy-9.0,2.6,Color32::from_rgb(255,59,48));
             let button=crate::quota_ui::bar_tooltip(inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,kind.id().to_string()),format!("{} · 點選確認，重新計時",kind.label()));
@@ -2519,7 +2525,17 @@ impl App {
             // 还有没露出的图标：上下边缘各一条淡淡的指示。
             let ink=paint::alpha(theme::WHITE,0.35);
             if self.messenger_scroll>0.5 {c.fill(x-6.0,4.0,12.0,2.0,1.0,ink);}
-            if self.messenger_scroll<max_scroll-0.5 {c.fill(x-6.0,height-6.0,12.0,2.0,1.0,ink);}
+            if self.messenger_scroll<max_scroll-0.5 {c.fill(x-6.0,list_h-6.0,12.0,2.0,1.0,ink);}
+        }
+        if !self.pending_messengers.is_empty() || !socials.is_empty() {
+            let bh=26.0;
+            let bw=UNREAD_W-12.0;
+            let bx=6.0;
+            let by=height-bh-4.0;
+            c.fill(bx,by,bw,bh,bh/2.0,Color32::from_rgba_unmultiplied(10,16,26,180));
+            c.centered_text(UNREAD_W/2.0,by+bh/2.0,"全部已讀",10.0,W::Bold,theme::WHITE,H::Center);
+            let button=c.hit(bx,by,bw,bh,"unread-all-read").on_hover_text("將所有訊息標為已讀並收起");
+            if button.clicked(){self.clear_all_unread();}
         }
     }
 
@@ -2587,6 +2603,32 @@ impl App {
         self.open=true; self.forced_open_until=self.t+4.0;
         self.w.tune(OPEN_W.0,OPEN_W.1);self.h.tune(OPEN_H.0,OPEN_H.1);
         self.w.target=PW;self.h.target=self.expanded_height();
+    }
+    /// 全部已讀：只清掉島上的訊息未讀，不開任何程式，然後把島體收回。
+    pub(crate) fn clear_all_unread(&mut self){
+        let pending=self.pending_messengers.clone();
+        for unread in pending {self.discard_unread(unread);}
+        for source in crate::social::Social::ALL {
+            if self.social.count(source)>0 {self.social.clear(source);}
+        }
+        self.social.persist();
+        self.mail_unread=0;
+        self.notice=None;
+        self.hud_notice=None;
+        self.notice_details=false;
+        self.notification_bell_until=0.0;
+        self.messenger_scroll=0.0;
+        self.open=false;
+        self.hover_lock=true;
+        self.hover_since=None;
+        self.leave_since=None;
+        self.forced_open_until=0.0;
+        self.music_volume_open=false;
+        let (bw,bh)=self.base_size();
+        self.w.tune(CLOSE.0,CLOSE.1);
+        self.h.tune(CLOSE.0,CLOSE.1);
+        self.w.target=bw;
+        self.h.target=bh;
     }
     fn notice_rect(&self,cx:f32,top:f32)->Option<Rect>{
         if !self.compact_notices(){return None;}
