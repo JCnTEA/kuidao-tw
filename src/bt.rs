@@ -51,6 +51,17 @@ impl Device {
             None => self.name.clone(),
         }
     }
+    pub fn is_audio(&self) -> bool {
+        matches!(self.kind, DeviceKind::Bone|DeviceKind::Earbuds|DeviceKind::Headphones|DeviceKind::Speaker)
+    }
+}
+
+/// 桌機沒有系統電池時，挑一顆已連線且真的有回報電量的藍牙音訊裝置。
+/// 同時連了多顆時取最低電量，讓快沒電的那顆優先被看見。
+pub fn audio_with_battery(devices: &[Device]) -> Option<&Device> {
+    devices.iter()
+        .filter(|device| device.is_audio() && device.battery.is_some_and(|level| level <= 100))
+        .min_by_key(|device| device.battery.unwrap_or(101))
 }
 
 #[derive(Default)]
@@ -248,6 +259,17 @@ mod tests {
         assert_eq!(d.summary(), "Headset");
         let d = Device { battery: Some(80), ..d };
         assert_eq!(d.summary(), "Headset · 電量 80%");
+    }
+
+    #[test]
+    fn picks_the_lowest_connected_audio_battery_and_ignores_other_devices() {
+        let mut headset=device("AA");headset.kind=DeviceKind::Headphones;headset.battery=Some(80);
+        let mut earbuds=device("BB");earbuds.kind=DeviceKind::Earbuds;earbuds.battery=Some(20);
+        let mut mouse=device("CC");mouse.kind=DeviceKind::Mouse;mouse.battery=Some(5);
+        let mut unknown_battery=device("DD");unknown_battery.kind=DeviceKind::Headphones;
+        let devices=vec![headset,earbuds,mouse,unknown_battery];
+        assert_eq!(audio_with_battery(&devices).map(|device|device.id.as_str()),Some("BB"));
+        assert!(audio_with_battery(&[device("EE")]).is_none(),"沒回報電量的裝置不能硬顯示");
     }
 }
 

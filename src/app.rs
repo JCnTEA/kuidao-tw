@@ -159,6 +159,44 @@ impl Env {
     pub fn minute(&self) -> u32 {
         self.clock.get(3..5).and_then(|s| s.parse().ok()).unwrap_or(0)
     }
+    /// 系統電池優先；桌機沒有電池時，改用已連線藍牙耳機／音箱的電量。
+    pub fn display_bluetooth(&self) -> Option<&crate::bt::Device> {
+        if self.battery.is_some() {None} else {crate::bt::audio_with_battery(&self.bt)}
+    }
+    pub fn display_power(&self) -> Option<(u8,bool)> {
+        self.battery.map(|level|(level,self.charging))
+            .or_else(||self.display_bluetooth().and_then(|device|device.battery).map(|level|(level,false)))
+    }
+}
+
+#[cfg(test)]
+mod env_power_tests {
+    use super::*;
+    use crate::bt::{Device,DeviceKind};
+
+    fn headset(level:Option<u8>)->Device {
+        Device{id:"AA".into(),name:"Headset".into(),battery:level,kind:DeviceKind::Headphones}
+    }
+
+    #[test]
+    fn system_battery_keeps_priority_over_bluetooth() {
+        let env=Env{battery:Some(55),charging:true,bt:vec![headset(Some(30))],..Default::default()};
+        assert_eq!(env.display_power(),Some((55,true)));
+        assert!(env.display_bluetooth().is_none(),"有系統電池時不應該改抓耳機電量");
+    }
+
+    #[test]
+    fn desktop_without_a_battery_uses_the_connected_headset() {
+        let env=Env{bt:vec![headset(Some(64))],..Default::default()};
+        assert_eq!(env.display_power(),Some((64,false)));
+        assert_eq!(env.display_bluetooth().map(|device|device.kind),Some(DeviceKind::Headphones));
+    }
+
+    #[test]
+    fn hides_when_neither_system_nor_headset_reports_a_level() {
+        let env=Env{bt:vec![headset(None)],..Default::default()};
+        assert_eq!(env.display_power(),None);
+    }
 }
 
 pub use crate::messenger::{Messenger,Unread};
@@ -1945,8 +1983,8 @@ impl App {
         if self.compact_notices(){self.notice_width.step(dt);}else{self.notice_width.snap(0.0);self.notice_details=false;}
         self.update_media(env,&ctx);
         let bell=self.bell_active()&&!self.compact_notices();
-        self.resident_power=(env.battery,env.charging);
-        let mut layout=Layout::new(self.settings.show_battery&&env.battery.is_some(),self.quota_bar_indices().len(),self.media.is_music()&&!bell,self.pomo.running,bell,self.pet_enabled(),self.weather_pill().is_some());
+        self.resident_power=env.display_power().map_or((None,false),|(level,charging)|(Some(level),charging));
+        let mut layout=Layout::new(self.settings.show_battery&&self.resident_power.0.is_some(),self.quota_bar_indices().len(),self.media.is_music()&&!bell,self.pomo.running,bell,self.pet_enabled(),self.weather_pill().is_some());
         layout.reorder(&self.settings.resident_order);
         for (position,extra) in self.quota_balance_layout(&ctx){layout.balance_tail(position,extra);}
         if self.settings.clock_period!=0 { layout.widen_clock(40.0); }
@@ -3138,17 +3176,19 @@ impl App {
         let base=&header;
         let m = anim::ease_in_out(smoothstep(0.0, 0.85, p));
         let clock = self.settings.clock_text(&env.clock);
-        let show_battery=self.settings.show_battery && env.battery.is_some();
+        let power=env.display_power();
+        let bt_power=env.display_bluetooth().map(|device|device.kind);
+        let show_battery=self.settings.show_battery && power.is_some();
 
-        // 顶栏终点布局：[电池][日期][时钟] 作为一组整体居中
+        // 顶栏终点布局：[电池][日期][时钟] 作为一组整体居中；顯示藍牙電量時多留耳機圖示的位置。
         let date_w = base.text_w(&env.date, size::DATE, W::Regular);
         let clock_w = paint::clock_width(base,&clock,size::CLOCK);
-        let battery_space=if show_battery {24.0}else{0.0};
+        let battery_space=if show_battery {if bt_power.is_some(){34.0}else{24.0}}else{0.0};
         let group = battery_space + date_w + 8.0 + clock_w;
         let gx = local_cx - group / 2.0 + if show_battery {6.0}else{0.0};
         // 日程页左侧还有新增按钮，顶栏从操作区右侧开始，避免较长的日期和时段文字挤到按钮上。
         let gx = if self.page==CALENDAR_PAGE {gx.max(155.0)}else{gx};
-        let hb = (gx + 8.5, 18.6);
+        let hb = (gx + if bt_power.is_some(){22.5}else{8.5}, 18.6);
         let hd = gx + battery_space;
         let hc = hd + date_w + 8.0;
         // 药丸起点布局
@@ -3161,7 +3201,14 @@ impl App {
         // 电池：位置/大小连续插值
         let bk = lerp(1.0, 0.8, m);
         let bpos = (lerp(pb.0, hb.0, m), lerp(pb.1, hb.1, m));
-        if show_battery {paint::battery(&base.faded(lerp(layout.clearance(bar::BATTERY),1.0,m)), bpos.0, bpos.1, env.battery, env.charging, bk);}
+        if show_battery {
+            let level=power.map(|(level,_)|level);
+            let charging=power.is_some_and(|(_,charging)|charging);
+            paint::battery(&base.faded(lerp(layout.clearance(bar::BATTERY),1.0,m)), bpos.0, bpos.1, level, charging, bk);
+            if let Some(kind)=bt_power {
+                crate::extras::device_icon(&base.faded(lerp(layout.clearance(bar::BATTERY),1.0,m)),kind,bpos.0-22.0*bk,bpos.1-4.25*bk,8.5*bk);
+            }
+        }
 
         // 时钟：两个字号沿同一路径交叉淡化，避免逐帧换字号
         let cpos = (lerp(pcx, hc, m), lerp(21.0, 23.0, m));
@@ -3263,7 +3310,7 @@ impl App {
         }
         self.pet.last_idle = idle;
         self.pet.hovered = env.cursor.is_some_and(|p| (p.x-cx).abs() <= BAR_W/2.0+24.0 && (0.0..70.0).contains(&p.y));
-        self.pet.worried = self.settings.show_battery && env.battery.is_some_and(|v|v<=20) && !env.charging || env.network == Some(false);
+        self.pet.worried = self.settings.show_battery && env.display_power().is_some_and(|(level,charging)|level<=20&&!charging) || env.network == Some(false);
         let allowed = self.pet_enabled();
         if !allowed { self.pet.reaction = None; self.pet.waking_until = 0.0; self.pet.expressions.clear(); }
         let available = allowed && !self.open && !self.drag_hot;

@@ -1595,7 +1595,7 @@ impl App {
                             ui.separator();
                             setting_row(ui,"時間","關閉後仍可在展開頂欄檢視",&mut self.settings.show_clock);
                             ui.separator();
-                            setting_row(ui,"電量","無電池裝置自動隱藏",&mut self.settings.show_battery);
+                            setting_row(ui,"電量","系統電池優先；桌機改顯示已連線藍牙耳機、音箱的電量，都沒有才自動隱藏",&mut self.settings.show_battery);
                             ui.separator();
                             setting_row(ui,"天氣","天氣圖示和溫度，點選開啟天氣頁",&mut self.settings.show_weather);
                             ui.separator();
