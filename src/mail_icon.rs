@@ -1,4 +1,5 @@
-//! 信箱服務圖示：統一 224px 內容圓、透明背景，設定頁與島上通知共用。
+//! 信箱服務圖示：512px 畫布、448px 平面品牌圓、透明背景，
+//! 與社群通知圖示共用同一套圓形比例，設定頁與島上通知共用。
 use crate::mail::Provider;
 use crate::paint::Card;
 use eframe::egui;
@@ -37,5 +38,30 @@ mod tests {
         assert_eq!(Provider::Yahoo.key(), "yahoo");
         assert_eq!(Provider::Gmail.key(), "gmail");
         assert_eq!(Provider::ICloud.key(), "icloud");
+    }
+
+    #[test]
+    fn mail_icons_keep_the_same_round_geometry_as_social_icons() {
+        for bytes in [
+            include_bytes!("../assets/mail-icons/gmail.png").as_slice(),
+            include_bytes!("../assets/mail-icons/yahoo.png").as_slice(),
+            include_bytes!("../assets/mail-icons/icloud.png").as_slice(),
+            include_bytes!("../assets/mail-icons/generic.png").as_slice(),
+        ] {
+            let image = image::load_from_memory(bytes).expect("信箱圖示必須可讀").into_rgba8();
+            assert_eq!(image.dimensions(), (512, 512), "信箱圖示固定 512×512 畫布");
+            assert_eq!(image.get_pixel(0, 0).0[3], 0, "圓外必須透明");
+            let mut min_x = 512;
+            let mut max_x = 0;
+            for y in 0..512 {
+                for x in 0..512 {
+                    if image.get_pixel(x, y).0[3] > 16 {
+                        min_x = min_x.min(x);
+                        max_x = max_x.max(x);
+                    }
+                }
+            }
+            assert!((448..=458).contains(&(max_x - min_x + 1)), "內容圓直徑要與社群圖示一致");
+        }
     }
 }
