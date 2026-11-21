@@ -1743,7 +1743,7 @@ impl App {
                                 ui.label("吉祥物形象");
                                 ui.label(egui::RichText::new("島虎（石虎）").strong());
                             });
-                            settings_hint(ui,"台灣版只保留島虎；其他四種形象已隱藏，避免選單切換後看起來仍是同一隻。尾巴、耳朵與眨眼會隨狀態自己動。");
+                            settings_hint(ui,"台灣版只保留島虎；其他四種形象已隱藏，避免選單切換後看起來仍是同一隻。尾巴、耳朵與眨眼會隨狀態自己動，奶油或淺色玻璃會自動改用深墨線，亮底不再把線條吃掉。");
                             ui.horizontal(|ui|{
                                 ui.label("吉祥物動畫包");
                                 if ui.button("開啟資料夾").clicked(){crate::mascot_pack::open_folder(self.settings.mascot.key());}

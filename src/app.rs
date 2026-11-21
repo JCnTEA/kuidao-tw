@@ -2211,7 +2211,7 @@ impl App {
             let y=(h.min(self.base_size().1)-BAR_H).max(0.0)/2.0;
             // 吉祥物跟随皮肤换色：浅色底上变成深色版本，保持清晰。
             let fit=if self.island_lyrics_active()||self.notice.is_some(){1.0}else{((WIN_W-32.0)/self.resident.target.width).min(1.0)};
-            self.pet.draw(&base.scaled(cx-origin.x,15.0,fit).shifted(0.0,y).faded(pet_alpha),cx-origin.x+self.resident.position(bar::PET),self.t,self.skin_palette());
+            self.pet.draw(&base.scaled(cx-origin.x,15.0,fit).shifted(0.0,y).faded(pet_alpha),cx-origin.x+self.resident.position(bar::PET),self.t,self.skin_palette(),self.mascot_ink());
         }
         let mut page_transition=false;
         if reveal > 0.004 && !banner && !restoring_lyrics {
@@ -2600,9 +2600,23 @@ impl App {
         match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Classic|model::Skin::Fluid|model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>None}
     }
 
+    /// 吉祥物線條色：跟著島體底色選深墨或白線，亮底不再把白線吃糊。
+    pub(crate) fn mascot_ink(&self)->Color32 {
+        if let Some(p)=self.skin_palette() {
+            return Color32::from_rgb(p.ink[0],p.ink[1],p.ink[2]);
+        }
+        let bg=self.preview_fill();
+        let channel=|v:u8|{let s=v as f32/255.0;if s<=0.04045{s/12.92}else{((s+0.055)/1.055).powf(2.4)}};
+        let lum=0.2126*channel(bg.r())+0.7152*channel(bg.g())+0.0722*channel(bg.b());
+        if (lum+0.05)/0.05 >= 1.05/(lum+0.05) {
+            Color32::from_rgb(16,24,34)
+        } else {
+            theme::WHITE
+        }
+    }
+
     /// 设置页预览用的岛体底色：没有真实模糊，毛玻璃按较实的玻璃表现。
-    pub(crate) fn preview_fill(&self)->Color32 {
-        match self.settings.skin {
+    pub(crate) fn preview_fill(&self)->Color32 {        match self.settings.skin {
             model::Skin::GlassDark=>{let (r,g,b)=glass::GROUND_DARK;Color32::from_rgba_unmultiplied(r,g,b,215)}
             model::Skin::GlassLight=>{let [r,g,b]=glass::LIGHT_GROUND.map(|v|(v*255.0).round() as u8);Color32::from_rgba_unmultiplied(r,g,b,225)}
             model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient_with_brightness(self.settings.skin,self.settings.gradient_brightness).map_or(Color32::BLACK,|g|g.mid()),

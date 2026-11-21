@@ -324,7 +324,7 @@ impl Pet {
         self.y = approach(self.y, y, 14.0, dt);
     }
 
-    pub fn draw(&mut self, c: &Card, cx: f32, t: f64, palette:Option<crate::skin_paint::Palette>) {
+    pub fn draw(&mut self, c: &Card, cx: f32, t: f64, palette:Option<crate::skin_paint::Palette>, ink: Color32) {
         let state = self.state;
         let has_pack = self.mascot_pack.active_for(crate::mascot::current().key());
         let time = self.mascot_animation_time(t);
@@ -337,21 +337,21 @@ impl Pet {
         }
         // 沒有外掛動畫包時一律畫自製的單線條向量吉祥物；
         // 身體固定在槽位內，只有尾巴、耳朵與眼睛會動。
-        crate::mascot_art::draw(c, cx, t, state);
+        crate::mascot_art::draw(c, cx, t, state, ink);
         for (i, eye) in self.eyes.iter().enumerate() {
             let x = cx + if i == 0 { -3.2 } else { 3.2 } + self.gaze[0] * 0.5;
             let y = 13.5 + self.y + eye.y + self.gaze[1] * 0.4;
             if eye.height < 0.7 {
-                c.seg((x - 1.4, y), (x + 1.4, y), 1.0, theme::WHITE);
+                c.seg((x - 1.4, y), (x + 1.4, y), 1.0, ink);
             } else if eye.curve.abs() > 0.8 {
                 let points: Vec<_> = (0..=8).map(|n| {
                     let q = n as f32 / 4.0 - 1.0;
                     (x + q * 1.8, y + q * (eye.height / 2.0 + eye.tilt) + (1.0 - q * q) * eye.curve)
                 }).collect();
-                c.path(&points, 1.1, theme::WHITE);
+                c.path(&points, 1.1, ink);
             } else {
                 let radius = (eye.height / 4.4 * 1.15).clamp(0.3, 1.2);
-                c.circle(x, y, radius, theme::WHITE);
+                c.circle(x, y, radius, ink);
             }
         }
         if state == PetState::Music {
@@ -375,7 +375,7 @@ impl Pet {
             PetState::Satisfied => crate::paint::droplet(c,cx+18.0,12.0,5.0,theme::CYAN),
             PetState::Music => {
                 let segment=music_segment_at(self.music_age);
-                self.draw_music(&c.faded(smoothstep(0.0,1.0,segment.elapsed)),cx,segment.pose);
+                self.draw_music(&c.faded(smoothstep(0.0,1.0,segment.elapsed)),cx,segment.pose,ink);
             },
             PetState::Worried => {
                 c.fill(cx+17.0,8.0,1.6,4.2,0.8,theme::YELLOW);
@@ -415,28 +415,28 @@ impl Pet {
         }
     }
 
-    fn draw_music(&self,c:&Card,cx:f32,pose:MusicPose){
+    fn draw_music(&self,c:&Card,cx:f32,pose:MusicPose,ink:Color32){
         let y=self.y+self.gaze[1];
         let pulse=(self.music_age*2.0).sin()*0.5+0.5;
         let mouth=|rx:f32,ry:f32|{
             let points:Vec<_>=(0..=24).map(|n|{let angle=n as f32/24.0*std::f32::consts::TAU;(cx-0.8+angle.cos()*rx,20.7+y+angle.sin()*ry)}).collect();
-            c.path(&points,0.9,theme::WHITE);
+            c.path(&points,0.9,ink);
         };
         match pose {
             MusicPose::Microphone=>mouth(1.1,0.8+pulse*0.5),
             MusicPose::SideSing=>mouth(1.5,0.8+pulse*0.3),
             MusicPose::HighNote=>mouth(1.7,1.6+pulse*0.5),
-            MusicPose::Hum=>c.path(&[(cx-2.7,20.7+y),(cx-1.8,21.4+y),(cx-0.8,21.0+y),(cx+0.2,21.4+y),(cx+1.1,20.7+y)],0.9,theme::WHITE),
+            MusicPose::Hum=>c.path(&[(cx-2.7,20.7+y),(cx-1.8,21.4+y),(cx-0.8,21.0+y),(cx+0.2,21.4+y),(cx+1.1,20.7+y)],0.9,ink),
             MusicPose::Squint=>mouth(1.2,0.4+pulse*0.6),
-            MusicPose::Smile=>c.path(&[(cx-2.5,20.6+y),(cx-1.6,21.6+y),(cx-0.5,21.9+y),(cx+0.6,21.6+y),(cx+1.5,20.6+y)],1.0,theme::WHITE),
+            MusicPose::Smile=>c.path(&[(cx-2.5,20.6+y),(cx-1.6,21.6+y),(cx-0.5,21.9+y),(cx+0.6,21.6+y),(cx+1.5,20.6+y)],1.0,ink),
         }
         if matches!(pose,MusicPose::Microphone|MusicPose::SideSing|MusicPose::HighNote) {
             microphone(c,cx,y,self.music_age);
         } else {
             let y=8.5+(self.music_age*1.4).sin()*0.6;
-            c.seg((cx+16.0,y-3.0),(cx+16.0,y+3.0),1.1,theme::WHITE);
-            c.seg((cx+16.0,y-3.0),(cx+19.0,y-2.0),1.1,theme::WHITE);
-            c.circle(cx+14.8,y+3.0,1.5,theme::WHITE);
+            c.seg((cx+16.0,y-3.0),(cx+16.0,y+3.0),1.1,ink);
+            c.seg((cx+16.0,y-3.0),(cx+19.0,y-2.0),1.1,ink);
+            c.circle(cx+14.8,y+3.0,1.5,ink);
         }
     }
 }

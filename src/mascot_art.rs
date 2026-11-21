@@ -7,11 +7,10 @@ use eframe::egui::Color32;
 
 use crate::mascot::Mascot;
 use crate::paint::Card;
-use crate::theme;
 
 
 /// 目前形象在 48×30 槽位內的單線條待機動畫。
-pub(crate) fn draw(c: &Card, cx: f32, t: f64, state: crate::pet::PetState) {
+pub(crate) fn draw(c: &Card, cx: f32, t: f64, state: crate::pet::PetState, ink: Color32) {
     let species = crate::mascot::current();
     let (speed, amplitude) = match state {
         crate::pet::PetState::Awake => (3.0, 1.45),
@@ -27,7 +26,6 @@ pub(crate) fn draw(c: &Card, cx: f32, t: f64, state: crate::pet::PetState) {
     };
     let swing = (t * speed).sin() as f32 * amplitude;
     let ear = ear_twitch(t) * if matches!(state, crate::pet::PetState::Dozing | crate::pet::PetState::Sleeping) { 0.25 } else { 1.0 };
-    let ink = theme::WHITE;
 
     // 尾巴先畫，身體與頭再蓋上去，重疊處才不會多出一截。
     match species {

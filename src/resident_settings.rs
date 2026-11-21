@@ -82,7 +82,7 @@ impl crate::app::App {
                     paint::clock(&c,x-paint::clock_width(&c,&text,theme::size::PILL_CLOCK)/2.0,21.0,&text,theme::size::PILL_CLOCK);
                 },
                 WEATHER=>if let Some(snapshot)=weather_snapshot.as_ref(){self.paint_pill_weather(&c,x,&layout,snapshot);}else{crate::weather_ui::icon(&c,x,15.0,16.0,crate::weather::Kind::Partly);},
-                PET=>self.pet.draw(&c,x,self.t,self.skin_palette()),
+                PET=>self.pet.draw(&c,x,self.t,self.skin_palette(),self.mascot_ink()),
                 MUSIC=>paint::playback_bars(&c,x,15.0,self.t,self.media.playing,theme::WHITE),
                 FOCUS=>crate::focus_bar::draw(&c,x,15.0,self.t,&self.pomo,self.phase_secs(self.pomo.phase),false),
                 QUOTA if count>0=>self.draw_quota_bar(&c,cx,&layout),
