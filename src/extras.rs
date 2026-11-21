@@ -1624,6 +1624,17 @@ impl App {
                         });
                     }
                     0=>{
+                        settings_label(ui,"語言");
+                        settings_card(ui,|ui|{
+                            settings_control_row_right(ui,"介面語言",|ui|{
+                                // 目前只有繁體中文；英文名稱接在後面，之後新增語言直接加進同一份清單。
+                                let mut language="zh-TW";
+                                egui::ComboBox::from_id_salt("tw-language").selected_text("繁體中文  Traditional Chinese").width(220.0).show_ui(ui,|ui|{
+                                    ui.selectable_value(&mut language,"zh-TW","繁體中文  Traditional Chinese");
+                                });
+                            });
+                            settings_hint(ui,"目前提供繁體中文，後方保留英文名稱供辨識。");
+                        });
                         settings_label(ui,"設定頁外觀");
                         settings_card(ui,|ui|{
                             use crate::settings_theme::SettingsTheme;
