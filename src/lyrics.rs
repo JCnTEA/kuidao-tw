@@ -256,6 +256,11 @@ pub fn fetch_for_display_with(source:&str,track:&str,artist:&str,duration:f64,so
 
 /// 原生缓存优先；未缓存的新歌仍可使用已有在线来源。
 pub fn fetch_for_source(source:&str,track:&str,artist:&str,duration:f64,song_id:Option<u64>)->Result<Lyrics,FetchError> {
+    // 瀏覽器的系統媒體資訊常把「歌手 - 歌名」整串放在標題，歌手欄卻是頻道名或「歌手 - Topic」。
+    // 先依 YouTube 常見寫法拆出候選，再走一般歌詞來源；其他播放器不受影響。
+    if crate::smtc::is_browser_source(source) {
+        return fetch_browser(track,artist,duration);
+    }
     #[cfg(windows)]
     if source.eq_ignore_ascii_case("kwmusic.exe") {
         if let Some(lyrics)=crate::smtc::kuwo::read_lyrics(track,artist){trace(||"酷我本機:命中".into());return Ok(lyrics);}
@@ -346,6 +351,125 @@ fn parse_krc(raw:&str)->Lyrics {
         }
     }
     Lyrics{synced:lines.iter().any(|line|!line.text.is_empty()),lines}
+}
+
+/// 瀏覽器不會提供 YouTube 影片網址，Windows 播放卡只有歌名與頻道。
+/// 這裡先把 YouTube／YouTube Music 常見的標題格式拆成「歌名 + 歌手」候選：
+/// `歌手 - 歌名`、`歌名 - 歌手`、`歌手 '歌名' MV`、`歌手｜歌名｜專輯`，並去掉頻道綴字與影片標註。
+fn clean_youtube_title(title:&str)->String {
+    static SUFFIX:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    static NOISE:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    static PREFIX:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let suffix=SUFFIX.get_or_init(||regex::Regex::new(r"(?i)\s*[-–—|｜]\s*(?:youtube\s*music|youtube)\s*$").unwrap());
+    let noise=NOISE.get_or_init(||regex::Regex::new(r"(?i)[\(\[（【][^\)\]）】]*(?:official|video|music\s+video|\bmv\b|m/v|audio|lyric(?:s|\s+video)?|teaser|trailer|making|behind|hd|4k|1080p?|60fps|中字|字幕|歌詞|官方|高音質|完整版|搶先版|預告)[^\)\]）】]*[\)\]）】]").unwrap());
+    let prefix=PREFIX.get_or_init(||regex::Regex::new(r"(?i)^\s*(?:\[(?:mv|m/v|官方|中字|歌詞)\]|\((?:mv|m/v|official\s+video|lyric\s+video)\))\s*").unwrap());
+    let mut text=suffix.replace(title.trim(),"").into_owned();
+    loop {
+        let next=prefix.replace_all(&noise.replace_all(&text,""),"").trim().to_owned();
+        if next==text || next.is_empty(){break;}
+        text=next;
+    }
+    clean_title(&text)
+}
+
+fn clean_youtube_artist(artist:&str)->String {
+    static TAIL:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let tail=TAIL.get_or_init(||regex::Regex::new(r"(?i)\s*(?:[-–—|｜]\s*)?(?:topic|主題|vevo|official(?:\s+(?:channel|music))?|官方頻道)\s*$").unwrap());
+    let mut text=artist.trim().to_owned();
+    loop {
+        let next=tail.replace(&text,"").trim().to_owned();
+        if next==text || next.is_empty() {break;}
+        text=next;
+    }
+    if ["youtube","youtube music"].iter().any(|name|normalized(&text)==normalized(name)) {text.clear();}
+    text
+}
+
+fn youtube_channel_noise(artist:&str)->bool {
+    let name=normalized(artist);
+    ["youtube","youtubemusic","vevo","topic"].contains(&name.as_str())
+}
+
+fn youtube_part(text:&str)->String {
+    text.trim().trim_matches(|c:char| c.is_whitespace() || "'\"‘’“”「」『』[]()（）【】-–—|｜:：".contains(c)).trim().to_owned()
+}
+
+fn youtube_parts(title:&str)->Vec<String> {
+    static SEP:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let sep=SEP.get_or_init(||regex::Regex::new(r"\s*(?: - | – | — |\||｜|•|·)\s*").unwrap());
+    let mut parts=sep.split(title).map(youtube_part).filter(|part|!part.is_empty()).collect::<Vec<_>>();
+    parts.retain(|part|!["mv","officialvideo","officialmv","lyricvideo","lyrics","audio","hq","hd","4k"].contains(&normalized(part).as_str()));
+    parts
+}
+
+fn push_hint(hints:&mut Vec<(String,String)>, seen:&mut Vec<(String,String)>, track:&str, artist:&str) {
+    let (track,artist)=(youtube_part(track),youtube_part(artist));
+    if track.is_empty() || artist.is_empty() || youtube_channel_noise(&artist) {return;}
+    let mut variants=vec![artist.clone()];
+    // 頻道常用「英文名 韓文名」並列；資料庫可能只收其中一個名字。純英文的多字藝名不拆，避免拆出 Dua／Lipa 這種單詞亂比對。
+    let latin=artist.chars().any(|c|c.is_ascii_alphabetic());
+    let cjk=artist.chars().any(|c|!c.is_ascii() && (crate::zh::is_han(c) || ('\u{ac00}'..='\u{d7a3}').contains(&c) || ('\u{3040}'..='\u{30ff}').contains(&c)));
+    let tokens=artist.split_whitespace().filter(|token|token.chars().count()>=2).collect::<Vec<_>>();
+    if latin && cjk && tokens.len()>1 {for token in tokens {let token=youtube_part(token);if token!=artist && !youtube_channel_noise(&token){variants.push(token);}}}
+    for variant in variants {
+        let key=(normalized(&track),normalized(&variant));
+        if key.0.is_empty() || key.1.is_empty() || seen.contains(&key) {continue;}
+        seen.push(key);hints.push((track.clone(),variant));
+    }
+}
+
+/// 只產生少量、最可能的組合；每組仍會由歌名、歌手與長度嚴格比對，避免抓到翻唱或同歌手的別首歌。
+pub(crate) fn youtube_lyric_hints(track:&str,artist:&str)->Vec<(String,String)> {
+    let title=clean_youtube_title(track);
+    let channel=clean_youtube_artist(artist);
+    let mut hints=Vec::new();let mut seen=Vec::new();
+    static QUOTED:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let quoted=QUOTED.get_or_init(||regex::Regex::new(r#"(?s)^(.{2,80}?)\s*(?:[-–—|:：]\s*)?['"‘’“”『「]([^'"‘’“”』」]{2,100})['"‘’“”』」]"#).unwrap());
+    if let Some(caps)=quoted.captures(&title) {
+        push_hint(&mut hints,&mut seen,&caps[2],&caps[1]);
+    }
+    let parts=youtube_parts(&title);
+    let channel_matches=|part:&str|!channel.is_empty() && normalized(part)==normalized(&channel);
+    if parts.len()==1 && !channel.is_empty() {
+        if let Some((left,right))=title.split_once([':','：']) {
+            if channel_matches(&youtube_part(left)) {push_hint(&mut hints,&mut seen,&youtube_part(right),&youtube_part(left));}
+        }
+    }
+    if parts.len()>=2 {
+        // 常見的「歌手 - 歌名」：頻道就是左半時，歌名取右半最優先。
+        if channel_matches(&parts[0]) && parts.len()>1 {push_hint(&mut hints,&mut seen,&parts[1],&parts[0]);}
+        if channel_matches(&parts[1]) {push_hint(&mut hints,&mut seen,&parts[0],&parts[1]);}
+        if parts.len()>=3 {push_hint(&mut hints,&mut seen,&parts[1],&parts[0]);}
+        push_hint(&mut hints,&mut seen,&parts[0],&parts[1]);
+        push_hint(&mut hints,&mut seen,&parts[1],&parts[0]);
+        if parts.len()>=3 {
+            // 「歌手｜歌名｜專輯」或「歌手 - 歌名 | 官方 MV」
+            push_hint(&mut hints,&mut seen,&parts[1],&parts[2]);
+            push_hint(&mut hints,&mut seen,&parts[2],&parts[1]);
+        }
+        if !channel.is_empty() {push_hint(&mut hints,&mut seen,&parts[1],&channel);}
+    } else if !channel.is_empty() {
+        push_hint(&mut hints,&mut seen,&title,&channel);
+    }
+    hints
+}
+
+fn browser_cache_path(track:&str,artist:&str,duration:f64)->std::path::PathBuf {
+    let path=cache_path(track,artist,duration);
+    let name=path.file_name().map_or_else(||"lyrics.lrc".into(),|name|name.to_os_string());
+    path.parent().unwrap_or(std::path::Path::new(".")).join("browser").join(name)
+}
+
+fn fetch_browser(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError> {
+    let hints=youtube_lyric_hints(track,artist);
+    if hints.is_empty() {return Err(FetchError::IncompleteMetadata);}
+    let path=browser_cache_path(track,artist,duration);
+    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"瀏覽器本機快取:命中".into());return Ok(lyrics);}
+    let (result,_)=fetch_with_sources_detail_hints(
+        Some("https://music.163.com"),Some("https://c.y.qq.com"),Some("https://lrclib.net"),
+        track,artist,duration,&hints);
+    if let Ok(lyrics)=&result {if lyrics.synced && !romanized(track,lyrics){write_cache(&path,lyrics);}}
+    result
 }
 
 pub fn fetch(track: &str, artist: &str, duration_secs: f64) -> Result<Lyrics, FetchError> {
@@ -461,7 +585,19 @@ fn catalog_alias(track:&str,artist:&str,duration:f64)->Option<(String,String)> {
 /// 歌手为空时从标题里拆出歌手（两种顺序），以及去掉节目 / 版本标注（只在有时长时，靠时长校验避免套错版本）。
 /// 有来源断网或限流时不再追加尝试，免得一首歌放大成多倍请求。
 fn fetch_with_sources_detail(netease:Option<&str>,qq:Option<&str>,lrclib:Option<&str>,track:&str,artist:&str,duration:f64)->(Result<Lyrics,FetchError>,bool) {
-    let mut attempts=vec![(track.to_owned(),artist.to_owned())];
+    fetch_with_sources_detail_hints(netease,qq,lrclib,track,artist,duration,&[])
+}
+
+fn fetch_with_sources_detail_hints(netease:Option<&str>,qq:Option<&str>,lrclib:Option<&str>,track:&str,artist:&str,duration:f64,hints:&[(String,String)])->(Result<Lyrics,FetchError>,bool) {
+    let mut attempts:Vec<(String,String)>=Vec::new();
+    let mut seen=Vec::new();
+    for (title,singer) in hints {
+        let key=(normalized(title),normalized(singer));
+        if title.trim().is_empty() || singer.trim().is_empty() || seen.contains(&key) {continue;}
+        seen.push(key);attempts.push((title.clone(),singer.clone()));
+    }
+    let base=(track.to_owned(),artist.to_owned());
+    if !seen.contains(&(normalized(track),normalized(artist))) {attempts.push(base);}
     if artist.trim().is_empty() {
         if let Some((left,right))=split_title_artist(track) {attempts.push((left.clone(),right.clone()));attempts.push((right,left));}
     }
@@ -869,6 +1005,50 @@ mod tests {
         for (name,singers) in [("Track (Live)","Artist / Guest"),("Track","Cover / Guest"),("Track","Artist / Other"),("Track","Artist / Guest / Other")] {
             let items=serde_json::json!([{"id":1,"name":name,"artists":[{"name":singers}],"duration":120000}]);
             assert!(netease_candidates(items.as_array().unwrap(),"Track (feat. Guest)","Artist",120.0).is_empty());
+        }
+    }
+
+    #[test]
+    fn youtube_titles_are_reduced_to_song_and_artist_candidates() {
+        let hints=youtube_lyric_hints("Artist - Song (Official Video) - YouTube","Artist - Topic");
+        assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("Song","Artist")));
+        let hints=youtube_lyric_hints("TAEYEON 태연 'Weekend' MV","SMTOWN");
+        assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("Weekend","TAEYEON 태연")));
+        let hints=youtube_lyric_hints("Song (Official Video)","Artist");
+        assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("Song","Artist")));
+        let hints=youtube_lyric_hints("Artist | Song | Album - YouTube","Label Records");
+        assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("Song","Artist")));
+    }
+
+    #[test]
+    fn browser_hints_are_tried_before_the_raw_title() {
+        let rows=serde_json::json!([{
+            "trackName":"Song","artistName":"Artist","duration":120,
+            "syncedLyrics":"[00:01.00]正確歌詞"
+        }]).to_string();
+        let (base,worker)=serve(vec![("200 OK",rows)]);
+        let (result,_)=fetch_with_sources_detail_hints(
+            None,None,Some(&base),"Artist - Song - YouTube","Artist - Topic",120.0,
+            &[("Song".into(),"Artist".into())]
+        );
+        worker.join().unwrap();
+        assert!(result.unwrap().synced);
+    }
+
+    #[test]
+    #[ignore]
+    fn live_browser_youtube_lyrics_candidates() {
+        for (title,artist,duration) in [
+            ("TAEYEON 태연 'Weekend' MV","SMTOWN",201.0),
+            ("周杰倫 - 晴天 (Official Video) - YouTube","周杰倫",269.0),
+            ("Dua Lipa - Levitating (Official Video) - YouTube","Dua Lipa - Topic",203.0),
+        ] {
+            let hints = youtube_lyric_hints(title,artist);
+            println!("{title} / {artist} → {hints:?}");
+            match fetch_browser(title,artist,duration) {
+                Ok(lyrics)=>println!("  命中 {} 行 synced={} 首行={:?}",lyrics.lines.len(),lyrics.synced,lyrics.lines.first().map(|line|line.text.as_str())),
+                Err(error)=>println!("  失敗 {error:?}"),
+            }
         }
     }
 
