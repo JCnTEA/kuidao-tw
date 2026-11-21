@@ -4101,7 +4101,7 @@ fn export_mascot_theme_preview() {
 }
 
 #[test]
-fn tiger_mascot_uses_author_pixels_on_native_themes_and_vector_on_gradients(){
+fn tiger_mascot_stays_the_same_on_every_theme(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
     h.app.settings.pet=true;h.app.settings.mascot=crate::mascot::Mascot::Tiger;h.app.settings.minimal=false;
     h.app.settings.skin=crate::model::Skin::Classic;
@@ -4112,8 +4112,9 @@ fn tiger_mascot_uses_author_pixels_on_native_themes_and_vector_on_gradients(){
     assert!(h.app.uses_native_mascot());
     h.app.settings.skin=crate::model::Skin::GradAurora;h.app.pet.reload_mascot_pack();
     for _ in 0..30{h.frame(vec![]);}
-    assert!(!h.app.uses_native_mascot(),"漸層主題改用台灣版向量");
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Path(p) if (p.stroke.width-1.4).abs()<0.01)),"漸層主題要畫單線條島虎");
+    let packs:Vec<_>=h.ctx.tex_manager().read().allocated().filter_map(|(id,meta)|meta.name.starts_with("mascot-pack-tiger").then_some(*id)).collect();
+    assert!(h.app.uses_native_mascot(),"漸層主題也要使用同一隻原作者石虎");
+    assert!(!packs.is_empty(),"漸層主題要載入同一組石虎影格");
 }
 
 #[test]

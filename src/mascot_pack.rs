@@ -196,7 +196,7 @@ pub fn open_folder(key: &str) {
     let _ = std::fs::create_dir_all(&dir);
     let readme = dir.join("說明.txt");
     if !readme.exists() {
-        let _ = std::fs::write(&readme, "吉祥物動畫包\n\n把 pack.json 與你自己畫的影格 PNG 放在這個資料夾，重新載入後就會取代內建吉祥物。\n每格建議 144×90，透明背景。animations 可用的鍵：awake、curious、waking、happy、satisfied、music、worried、focused、dozing、sleeping。\n\n內建的經典、奶油、毛玻璃與懸浮雲主題會使用原作者石虎影格；懸浮漸層主題使用台灣版單線條島虎。這裡留空時就依主題自動選擇。\n");
+        let _ = std::fs::write(&readme, "吉祥物動畫包\n\n把 pack.json 與你自己畫的影格 PNG 放在這個資料夾，重新載入後就會取代內建吉祥物。\n每格建議 144×90，透明背景。animations 可用的鍵：awake、curious、waking、happy、satisfied、music、worried、focused、dozing、sleeping。\n\n內建的所有主題都會使用同一組原作者石虎影格；懸浮漸層只換島體底色，不會換成另一隻吉祥物。這裡留空時就使用內建影格。\n");
     }
     #[cfg(windows)]
     { let _ = std::process::Command::new("explorer").arg(&dir).spawn(); }
@@ -211,7 +211,7 @@ fn load_pack(key: &str, native: bool) -> Option<LoadedPack> {
         let text = std::fs::read_to_string(&manifest).ok()?;
         let parsed: Manifest = serde_json::from_str(&text).ok()?;
         // 舊版「開啟資料夾」會自動放一份只有 awake 的範例包；那不是使用者自製動畫，
-        // 直接忽略，讓原始主題改用內建原作者影格，漸層主題改用向量。
+        // 直接忽略，讓所有主題都改用內建原作者石虎影格。
         if parsed.name.contains("外掛範例") && parsed.animations.len() == 1 { return native_tiger(key, native); }
         let mut animations = HashMap::new();
         for (name, animation) in parsed.animations {
@@ -227,8 +227,8 @@ fn load_pack(key: &str, native: bool) -> Option<LoadedPack> {
     native_tiger(key, native)
 }
 
-/// 原始主題（經典、奶油、毛玻璃、懸浮雲）使用原作者石虎點陣影格；
-/// 懸浮漸層留給台灣版單線條島虎，兩者不互相影響。
+/// 所有主題共用原作者石虎點陣影格；漸層主題只改島體底色，
+/// 不另外換一套吉祥物線稿。
 fn native_tiger(key: &str, native: bool) -> Option<LoadedPack> {
     if native { builtin_tiger(key) } else { None }
 }
@@ -280,9 +280,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn native_themes_use_the_author_tiger_and_gradients_do_not() {
-        assert!(native_tiger("tiger", true).is_some(), "原始主題要使用原作者石虎");
-        assert!(native_tiger("tiger", false).is_none(), "漸層主題留給向量島虎");
+    fn all_themes_use_the_author_tiger() {
+        assert!(native_tiger("tiger", true).is_some(), "所有主題都要使用原作者石虎");
         assert!(native_tiger("shiba", true).is_none(), "其他形象仍走向量");
     }
 

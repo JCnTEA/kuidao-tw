@@ -2695,9 +2695,10 @@ impl App {
         match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Classic|model::Skin::Fluid|model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>None}
     }
 
-    /// 原始主題使用原作者石虎點陣圖；懸浮漸層才交給台灣版單線條島虎。
+    /// 所有主題都使用同一組原作者石虎影格；漸層只換島體底色，
+    /// 吉祥物本體、待機動畫與線條粗細維持一致。
     pub(crate) fn uses_native_mascot(&self)->bool {
-        !matches!(self.settings.skin,model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow)
+        true
     }
 
     /// 吉祥物實際會疊到的底色：毛玻璃把取樣到的桌面與玻璃層合成，
