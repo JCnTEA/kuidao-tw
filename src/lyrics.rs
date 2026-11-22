@@ -186,7 +186,7 @@ mod soda_cache;
 #[path="kugou_cache.rs"]
 pub(crate) mod kugou_cache;
 
-pub fn is_soda(source:&str)->bool {source=="汽水音乐" || source.to_ascii_lowercase().contains("sodamusic")}
+pub fn is_soda(source:&str)->bool {matches!(source,"汽水音乐"|"汽水音樂") || source.to_ascii_lowercase().contains("sodamusic")}
 
 /// 本地歌词缓存的「版本」：文件修改时间与大小都没变时不必再完整读取。目前只有汽水音乐的单文件缓存可靠适用。
 pub(crate) fn native_fingerprint(source:&str)->Option<(std::time::SystemTime,u64)> {
@@ -1531,6 +1531,14 @@ mod tests {
         }
     }
     use super::*;
+
+    #[test]
+    fn soda_source_accepts_traditional_name(){
+        assert!(is_soda("汽水音樂"));
+        assert!(is_soda("汽水音乐"));
+        assert!(is_soda("SodaMusic.exe"));
+        assert!(!is_soda("spotify"));
+    }
 
     #[test]
     #[ignore="需要本機酷狗已快取《誰伴我闖蕩》，校驗實際短停頓"]

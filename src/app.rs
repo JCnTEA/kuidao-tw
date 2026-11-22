@@ -2554,8 +2554,8 @@ impl App {
         for (i,(source,count)) in socials.iter().enumerate() {
             let cy=2.0+slot*((self.pending_messengers.len()+i) as f32+0.5)-self.messenger_scroll;
             if cy< -slot || cy>list_h+slot {continue;}
-            source.paint(&inner,x,cy);
-            crate::social::badge(&inner,x+10.0,cy+7.5,*count,6.0,8.0);
+            source.paint_sized(&inner,x,cy,26.0);
+            crate::social::badge(&inner,x+11.0,cy+8.5,*count,5.0,7.0);
             let button=inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,("social",source.key())).on_hover_text(format!("{} · {} 則訊息，點選開啟",source.name(),count));
             if button.clicked(){let target=self.social.target(*source);let launch=self.social.launch(*source);self.social.clear(*source);self.social.persist();cmds.push(Cmd::OpenSocial(*source,target,launch));}
         }
@@ -2602,7 +2602,7 @@ impl App {
         for (i,(source,n)) in socials.iter().enumerate(){
             let (x,y)=at(sources.len()+i);
             source.paint(c,x,y);
-            crate::social::badge(c,x+8.0,y-7.0,*n,6.0,7.0);
+            crate::social::badge(c,x+8.0,y-7.0,*n,5.0,7.0);
         }
         for (i,kind) in health.iter().enumerate(){let (x,y)=at(sources.len()+socials.len()+i);kind.icon(c,x,y,0.7);}
         // 原生聊天軟體與健康提醒仍是小紅點；社群圖示直接顯示則數。

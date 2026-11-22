@@ -60,8 +60,10 @@ impl Social {
         open_uri(self.url())
     }
     /// 以 (x,y) 為中心畫 20×20 的圓角標誌。
-    pub fn paint(self,c:&Card,x:f32,y:f32){
-        let rect=c.rect(x-10.0,y-10.0,20.0,20.0);
+    pub fn paint(self,c:&Card,x:f32,y:f32){self.paint_sized(c,x,y,20.0);}
+    /// 指定邊長的圓形圖示；未讀膠囊用較大的 26px，讓圖示與數字徽章比例一致。
+    pub fn paint_sized(self,c:&Card,x:f32,y:f32,size:f32){
+        let rect=c.rect(x-size/2.0,y-size/2.0,size,size);
         let icon=match self {
             Self::Line=>egui::Image::new(egui::include_image!("../assets/social/line.png")),
             Self::PhoneLink=>egui::Image::new(egui::include_image!("../assets/social/phonelink.png")),
@@ -70,8 +72,7 @@ impl Social {
             Self::Facebook=>egui::Image::new(egui::include_image!("../assets/social/facebook.png")),
             Self::Instagram=>egui::Image::new(egui::include_image!("../assets/social/instagram.png")),
         };
-        // 所有社群統一 20×20 圓形；通知數字由島上膠囊另外畫，不影響圖示半徑。
-        icon.corner_radius(10.0).paint_at(c.ui,rect);
+        icon.corner_radius(size/2.0).paint_at(c.ui,rect);
     }
     fn index(self)->usize{match self{Self::Line=>0,Self::PhoneLink=>1,Self::Threads=>2,Self::Messenger=>3,Self::Facebook=>4,Self::Instagram=>5}}
 }
@@ -274,8 +275,13 @@ pub fn badge(c:&Card,x:f32,y:f32,count:u16,radius:f32,font:f32){
     use crate::theme::W;
     let red=egui::Color32::from_rgb(255,59,48);
     if count==0{c.circle(x,y,radius*0.45,red);return;}
-    c.circle(x,y,radius,red);
     let text=if count>99{"99+".to_string()}else{count.to_string()};
+    // 兩位數以上改用短藥丸，避免「99+」撐破圓形徽章、看起來比圖示還大。
+    let tw=c.text_w(&text,font,W::Bold);
+    if tw>radius*1.7 {
+        let w=(tw+5.0).max(radius*2.0);let h=radius*1.8;
+        c.fill(x-w/2.0,y-h/2.0,w,h,h/2.0,red);
+    } else {c.circle(x,y,radius,red);}
     c.centered_text(x,y,&text,font,W::Bold,egui::Color32::WHITE,crate::paint::H::Center);
 }
 
