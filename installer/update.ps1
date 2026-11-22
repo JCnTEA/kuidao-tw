@@ -22,6 +22,10 @@ function Assert-PlainPath([string]$PathToCheck) {
         $ancestor = Split-Path $ancestor -Parent
     }
 }
+function Assert-ZipEntryPath([string]$EntryPath) {
+    $normalized = $EntryPath.Replace('\','/')
+    if ($normalized.StartsWith('/') -or $normalized -match '^[A-Za-z]:' -or (($normalized -split '/') -contains '..')) { throw '更新包內含無效路徑。' }
+}
 try {
     if (-not $workRoot.StartsWith($cacheRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw '更新快取目錄無效。' }
     Assert-PlainPath $workRoot
@@ -42,6 +46,7 @@ try {
         if ($entries.Count -ne 1 -or $entries[0].Length -gt 200MB) { throw '更新包中缺少唯一的鬼島程式。' }
         $entry = $entries[0]
         $entryPath = $entry.FullName.Replace('\','/')
+        Assert-ZipEntryPath $entryPath
         $prefix = $entryPath.Substring(0, $entryPath.Length - 'kuidao.exe'.Length)
         [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $staged, $true)
         $actual = [Diagnostics.FileVersionInfo]::GetVersionInfo($staged).FileVersion
@@ -52,6 +57,7 @@ try {
             New-Item -ItemType Directory -Force -Path $assetsStaged | Out-Null
             foreach ($item in $assetEntries) {
                 $relative = $item.FullName.Replace('\','/').Substring(($prefix + 'assets/').Length)
+                Assert-ZipEntryPath $relative
                 $destination = Join-Path $assetsStaged ($relative.Replace('/','\'))
                 $parent = Split-Path $destination -Parent
                 if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
