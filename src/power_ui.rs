@@ -9,7 +9,7 @@ use crate::paint::{Card, H};
 use crate::theme::{self, W};
 use eframe::egui::Color32;
 
-/// 一列最多放幾顆環；再多會擠在一起，剩下的靠頂欄圈與提示文字帶過。
+/// 一列最多放幾顆環；超過就只畫前六個，其餘在頁尾補一行數量，避免整排擠成一團。
 const MAX_RINGS: usize = 6;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -117,7 +117,6 @@ pub(crate) fn rings(battery: Option<(u8, bool)>, devices: &[Device]) -> Vec<Powe
         out.push(PowerRing { kind, name, level, charging: false });
     }
     out.sort_by_key(|ring| rank(ring.kind));
-    out.truncate(MAX_RINGS);
     out
 }
 
@@ -134,12 +133,14 @@ fn arc_band(c: &Card, cx: f32, cy: f32, r: f32, a0: f32, a1: f32, width: f32, co
 }
 
 impl App {
-    pub(crate) fn page_power(&mut self, c: &Card, env: &Env) {
-        let list = rings(env.battery.map(|level| (level, env.charging)), &env.bt);
+    pub(crate) fn page_power(&self, c: &Card, env: &Env) {
+        let all = rings(env.battery.map(|level| (level, env.charging)), &env.bt);
+        let total = all.len();
+        let list = &all[..total.min(MAX_RINGS)];
         let summary = if list.is_empty() {
             "沒有偵測到可回報電量的裝置".to_string()
         } else {
-            let mut parts = vec![format!("{} 個裝置", list.len())];
+            let mut parts = vec![format!("{total} 個裝置")];
             if let Some(lowest) = list.iter().min_by_key(|ring| ring.level) {
                 parts.push(format!("最低 {}% {}", lowest.level, lowest.name));
             }
@@ -161,15 +162,16 @@ impl App {
         if list.is_empty() {
             self.paint_power_empty(c);
         } else {
-            self.paint_power_rings(c, &list);
+            self.paint_power_rings(c, list);
         }
 
         // 底部說明：藍牙裝置要系統有回報電量才會出現，避免使用者以為壞了。
         let footer = POWER_H - 8.0;
+        let note = if total > MAX_RINGS { format!("另有 {} 個裝置未列出", total - MAX_RINGS) } else { "每分鐘更新".to_string() };
         c.text(
             15.0,
             footer,
-            &c.fit("每分鐘更新", 8.5, W::Regular, 150.0),
+            &c.fit(&note, 8.5, W::Regular, 150.0),
             8.5,
             W::Regular,
             theme::DIM,
@@ -179,7 +181,7 @@ impl App {
             .on_hover_text("系統電池優先；桌機顯示已連線手機與藍牙耳機、滑鼠、鍵盤的電量\n藍牙裝置要等系統回報電量才會出現");
     }
 
-    fn paint_power_empty(&mut self, c: &Card) {
+    fn paint_power_empty(&self, c: &Card) {
         // 空狀態：畫一個虛線圈示意「這裡會出現裝置電量」。
         let cx = PW * 0.5;
         let cy = 84.0;
@@ -198,7 +200,7 @@ impl App {
         );
     }
 
-    fn paint_power_rings(&mut self, c: &Card, list: &[PowerRing]) {
+    fn paint_power_rings(&self, c: &Card, list: &[PowerRing]) {
         let count = list.len() as f32;
         let spacing = if count <= 4.0 { 74.0 } else { 66.0 };
         let cx0 = PW * 0.5;
@@ -309,11 +311,12 @@ mod tests {
     }
 
     #[test]
-    fn rings_cap_the_row_at_six() {
+    fn rings_keep_every_device_so_the_page_can_count_them() {
         let devices = (0..9)
             .map(|i| device(&format!("裝置 {i}"), DeviceKind::Mouse, Some(40)))
             .collect::<Vec<_>>();
-        assert_eq!(rings(None, &devices).len(), MAX_RINGS);
+        assert_eq!(rings(None, &devices).len(), 9);
+        assert!(MAX_RINGS < 9);
     }
 
     #[test]
