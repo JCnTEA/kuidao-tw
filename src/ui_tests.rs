@@ -2659,7 +2659,7 @@ fn wheel_navigation_reaches_every_page_in_both_directions(){
     h.app.shelf.items.clear();h.app.todos.items.clear();
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
     h.hover(H::local(210.0,18.0),0.3);
-    for (delta,pages) in [(-40.0,[1,2,3,4,5,6,7,8,9,0]),(40.0,[9,8,7,6,5,4,3,2,1,0])] {
+    for (delta,pages) in [(-40.0,[1,2,3,4,5,6,7,8,9,10,0]),(40.0,[10,9,8,7,6,5,4,3,2,1,0])] {
         for page in pages {
             h.wheel(delta);
             assert_eq!(h.app.page,page,"滾輪翻頁不能被空的置物架或待辦卡住");
@@ -2848,10 +2848,12 @@ fn wheel_handles_small_deltas_without_skipping_pages_on_bursts(){
 }
 
 #[test]
-fn navigation_wraps_between_nine_pages_and_notification_settings_remain_accessible() {
+fn navigation_wraps_between_every_page_and_notification_settings_remain_accessible() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);h.click(H::local(21.0,68.0));assert_eq!(h.app.page,9);
-    h.hover(H::local(300.0,60.0),0.8);h.click(H::local(398.0,88.0));assert_eq!(h.app.page,0);
+    h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);h.click(H::local(21.0,68.0));
+    assert_eq!(h.app.page,crate::app::POWER_PAGE,"第一頁往左要繞到最後的電量頁");
+    h.hover(H::local(300.0,60.0),0.8);h.click(H::local(398.0,88.0));
+    assert_eq!(h.app.page,0,"電量頁的箭頭位置較低，往右要回到音樂頁");
     h.app.open_settings_category(3);assert!(h.app.settings_open);assert_eq!(h.app.settings_tab,6);
 }
 
@@ -3437,7 +3439,11 @@ fn power_page_draws_one_ring_per_reported_device() {
     for label in ["95%","12%","79%"] {assert!(texts.iter().any(|t|t==label),"電量頁缺少 {label}：{texts:?}");}
     assert!(!texts.iter().any(|t|t.contains("沒有電量的鍵盤")),"沒回報電量的裝置不該出現");
     // 低於 20% 的弧要轉紅。
-    let red=h.shapes.iter().any(|s|match &s.shape{egui::Shape::Path(path)=>path.stroke.color==egui::epaint::ColorMode::Solid(crate::theme::RED),_=>false});
+    let red=h.shapes.iter().any(|s|match &s.shape{
+        egui::Shape::Path(path)=>path.stroke.color==egui::epaint::ColorMode::Solid(crate::theme::RED),
+        egui::Shape::Circle(circle)=>circle.fill==crate::theme::RED,
+        _=>false,
+    });
     assert!(red,"12% 的環應畫成紅色");
 }
 
