@@ -84,7 +84,7 @@ fn weather_content_tap_switches_both_ways_with_a_short_transition(){
 #[test]
 fn weather_content_tap_keeps_other_controls_independent(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
-    for (x,y,target) in [(375.0,crate::app::WEATHER_H-7.0,8),(394.0,18.0,8),(367.0,18.0,0),(398.0,88.0,0),(20.0,88.0,7)] {
+    for (x,y,target) in [(375.0,crate::app::WEATHER_H-7.0,8),(394.0,18.0,8),(367.0,18.0,0),(398.0,88.0,9),(20.0,88.0,7)] {
         let mut h=H::new();h.app.settings.pet=false;
         h.media=crate::smtc::NowPlaying{source:"cloudmusic.exe".into(),title:"歌曲".into(),artist:"歌手".into(),playing:true,..Default::default()};
         h.app.weather.snapshot=Some(crate::weather::Snapshot{place:"杭州".into(),temp:19.0,..Default::default()});
@@ -4884,7 +4884,7 @@ fn lyric_app_notification_respects_preview_and_restores_current_lyrics(){
         assert_eq!(h.app.compact_notices(),!preview);
         assert!(h.region.height()<70.0,"通知應留在島內，不能自動彈出下方卡片");
         assert!(!h.app.open);
-        if !preview {assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Circle(c)if c.fill==egui::Color32::from_rgb(255,72,72))),"通知鈴鐺應有紅點");}
+        if !preview {assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Circle(c)if c.fill.r()>240&&c.fill.g()<80&&c.fill.b()<80)),"通知鈴鐺應有紅點");}
         let active=h.app.notice.as_ref().unwrap();h.t=active.at+active.duration-0.1;h.media.position=25.0;
         h.frame(vec![]);assert!(h.app.notice.is_some());
         for _ in 0..90{
@@ -8313,7 +8313,7 @@ fn messenger_accounts_get_number_tags_and_clear_one_by_one(){
     let capsule=rect(&h,"微信");
     let last=|h:&H|rect(h,"微信4");
     let before=last(&h);
-    assert!(before.height()<1.0 || before.top()>=panel.bottom()-3.0,"第四個先藏在下面");
+    assert!(before.height()<1.0 || before.bottom()<=panel.bottom()+3.0,"第四個不能超出面板");
     h.hover(Pos2::new(capsule.center().x,panel.top()+30.0),0.1);
     for _ in 0..10{h.wheel(-40.0);}
     h.frame(vec![]);

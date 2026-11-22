@@ -3,6 +3,10 @@ name: Build Windows (Taiwan)
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'hist/**'
+      - '*.md'
   workflow_dispatch:
 
 jobs:

@@ -113,7 +113,7 @@ impl NowPlaying {
             return MediaKind::Video;
         }
         let source=self.source.to_lowercase();
-        if (matches!(source.as_str(),"kugou"|"kugou.exe"|"cloudmusic.exe"|"汽水音乐"|"sodamusic.exe"|"spotify"|"spotify.exe"|"kwmusic.exe"|"bodian_pc.exe") || is_qqmusic(&source) || is_kkbox(&source) || apple_music::is_source(&source)) && self.playback_type==MediaKind::Music{return MediaKind::Music;}
+        if (matches!(source.as_str(),"kugou"|"kugou.exe"|"cloudmusic.exe"|"汽水音乐"|"汽水音樂"|"sodamusic.exe"|"spotify"|"spotify.exe"|"kwmusic.exe"|"bodian_pc.exe") || is_qqmusic(&source) || is_kkbox(&source) || apple_music::is_source(&source)) && self.playback_type==MediaKind::Music{return MediaKind::Music;}
         if ["chrome","msedge","firefox","brave","opera"].iter().any(|name|source.contains(name)) {
             let album=self.album.trim().to_lowercase();
             if ["youtube","bilibili","抖音","嗶哩嗶哩"].contains(&album.as_str()){return MediaKind::Video;}
