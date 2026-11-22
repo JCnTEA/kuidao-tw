@@ -93,6 +93,8 @@ const MINIMAL_HOVER_INTENT: f64 = 0.40;
 /// 移开后等待多久开始收起；这段时间内回来不会收。
 const LEAVE_DELAY: f64 = 0.12;
 const PAGE_EDGE_OVERLAP: f32 = 8.0;
+/// 頂欄時鐘組在額度／天氣頁允許的最右緣；再往右就是「重新整理」按鈕的命中區（約 x=303）。
+const HEADER_REFRESH_LIMIT: f32 = 296.0;
 const SWELL: (f32, f32) = (1.075, 1.13);
 // 展开：欠阻尼，末段约 5% 过冲后回落；高度略软于宽度，像「垂落」下来。
 const OPEN_W: (f32, f32) = (330.0, 0.70);
@@ -3200,6 +3202,11 @@ impl App {
         let gx = local_cx - group / 2.0 + if show_battery {6.0}else{0.0};
         // 日程页左侧还有新增按钮，顶栏从操作区右侧开始，避免较长的日期和时段文字挤到按钮上。
         let gx = if self.page==CALENDAR_PAGE {gx.max(155.0)}else{gx};
+        // 額度、天氣頁右上角有「重新整理」按鈕（命中區約從 x=303 開始）。開了時段與秒數後
+        // 時鐘會變寬，整組頂欄向右溢出而蓋到按鈕，故把整組向左收齊，右緣保留固定間距。
+        let gx = if matches!(self.page, QUOTA_PAGE | WEATHER_PAGE) {
+            gx.min(HEADER_REFRESH_LIMIT - group)
+        } else {gx};
         let hb = (gx + if bt_power.is_some(){22.5}else{8.5}, 18.6);
         let hd = gx + battery_space;
         let hc = hd + date_w + 8.0;

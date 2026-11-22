@@ -501,6 +501,33 @@ fn weather_refresh_keeps_music_and_settings_shortcuts_separate(){
 }
 
 #[test]
+fn header_clock_never_overlaps_page_refresh_with_period_and_seconds(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    for page in [crate::app::QUOTA_PAGE, crate::app::WEATHER_PAGE] {
+        let mut h=H::new();
+        h.app.settings.clock_period=2;   // 凌晨／上午…時段前綴
+        h.app.settings.clock_seconds=true;
+        h.power=(Some(64),false);        // 顯示電量環，頂欄群組因此更寬
+        let expected=h.app.settings.clock_text("09:41:00");
+        let (period,digits)=expected.split_once(' ').expect("時段時鐘應含前綴");
+        h.app.show_page(page);
+        h.hover(H::local(300.0,60.0),1.0);
+        // paint::clock 把時段與數字拆成兩個文字，各自取外框再併成整個時鐘的橫向範圍。
+        let text_rect=|want:&str|h.shapes.iter().find_map(|s|match &s.shape{
+            egui::Shape::Text(t) if t.galley.text()==want => Some(t.visual_bounding_rect()),
+            _=>None,
+        }).unwrap_or_else(||panic!("{page} 頁頂欄應顯示時鐘文字：{want}"));
+        let (pr,dr)=(text_rect(period),text_rect(digits));
+        let clock=pr.with_max_x(dr.right());
+        let refresh_name=if page==crate::app::WEATHER_PAGE{"weather-refresh"}else{"quota-refresh"};
+        let refresh=h.ctx.read_response(egui::Id::new(("card",true,refresh_name))).unwrap().rect;
+        assert!(clock.right()+4.0<=refresh.left(),
+            "{page} 頁時鐘右緣 {:.1} 應與重新整理左緣 {:.1} 保留間距，不可貼齊",clock.right(),refresh.left());
+        assert!(clock.left()>=H::local(14.0,0.0).x,"{page} 頁頂欄左移後不能超出面板左緣");
+    }
+}
+
+#[test]
 fn resized_font_atlases_stop_reuploading_and_release_unused_sizes(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let ctx=egui::Context::default();crate::theme::load_fonts(&ctx);
