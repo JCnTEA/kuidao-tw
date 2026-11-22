@@ -738,7 +738,7 @@ try {
   $root=[System.IO.Path]::GetFullPath($env:KUIDAO_STAGE)
   foreach($entry in $zip.Entries){
     $name=$entry.FullName.Replace('\','/')
-    if($name -match '(^/|^[A-Za-z]:|(^|/)\.\.(/|$)'){throw 'ZIP 內含異常路徑'}
+    if($name -match '(^/|^[A-Za-z]:|(^|/)\.\.(/|$))'){throw 'ZIP 內含異常路徑'}
     $dest=[System.IO.Path]::GetFullPath([System.IO.Path]::Combine($root,$name))
     if(-not $dest.StartsWith($root,[System.StringComparison]::OrdinalIgnoreCase)){throw 'ZIP 路徑超出解壓資料夾'}
     if($entry.Name -eq ''){
