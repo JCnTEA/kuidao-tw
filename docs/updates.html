@@ -150,6 +150,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <button data-f="chg">異動</button>
     </div>
     <div class="tl">
+      <div class="item" data-cat="chg"><time>最新</time><span class="cat chg">調整</span><h3>首屏說明與自動建置流程收斂</h3><p>首屏副標改成單一版本，行動版不再重複同一段文字，窄螢幕也不會留下單字孤行；倉庫內殘留的可攜式打包流程已移除，自動建置只上傳程式成品，對外仍以安裝檔為唯一入口。</p></div>
       <div class="item" data-cat="chg"><time>最新</time><span class="cat chg">調整</span><h3>官網改為安裝版定位與初始版本</h3><p>站點改採安裝版定位與初始版本用語，首頁、下載區與 FAQ 改稱安裝包的第一個版本；全站卡片與更新總覽卡片改為半透明，並統一補上可從「新增或移除程式」解除安裝的說明。全名加上英文 Kuidao Desktop Dynamic Island，主題演示下方註明畫面時間會依系統時間變動。</p></div>
       <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>第七張介面改成六頁主題動畫與主題演示 GIF</h3><p>官網介面第七張不再是一張靜態行程圖，改成音樂、遊戲庫、天氣、日出日落、行程與島上歌詞六頁淡入；截圖的桌面與藍底已去掉，只留透明島體。下方加入主題演示 GIF，集中看經典、奶油、毛玻璃與漸層切換；GIF 裁掉多餘黑邊並遮蔽信箱帳號，lazy 載入不拖慢首屏。</p></div>
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>遊戲庫改從本機多個啟動器自動載入</h3><p>原本只掃 Steam 收藏庫與 Riot 捷徑，現在加入 Epic manifest，以及 GOG、Ubisoft、EA、Battle.net、Amazon 的卸載登錄與安裝資料夾。清單依來源排序、同名去重，摘要顯示各平台款數；啟動先走平台協定，沒有協定才執行安裝資料夾主程式。仍只讀本機，不登入、不上傳。</p></div>
@@ -178,7 +179,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
 
       <div class="item" data-cat="del"><time>最新</time><span class="cat del">移除</span><h3>收掉勤務誌三款配色</h3><p>「外觀 → 主題」不再列出勤務誌·紙藍、勤務誌·印章、勤務誌·夜三款；原本停在這些配色的設定會自動回到經典，島體外觀只剩經典、奶油、毛玻璃·淺、毛玻璃·深、懸浮雲與七款懸浮漸層。</p></div>
 
-      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>地點層級改為「台灣 · 市 · 區」</h3><p>天氣地點不再出現「臺灣省／台灣省」，一律以「台灣 · 某某市 · 某某區」顯示，搜尋與顯示同步。</p></div>
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>地點層級改為「台灣 · 市 · 區」</h3><p>天氣地點不再帶有上層行政名稱，一律以「台灣 · 某某市 · 某某區」顯示，搜尋與顯示同步。</p></div>
       <div class="item" data-cat="fix"><time>最新</time><span class="cat fix">修正</span><h3>吉祥物播各自的序列圖</h3><p>切換貓、哈士奇、黃金獵犬時改用各自的圖集，不再一律播放石虎的表情；連帶修掉因此造成的建置失敗。</p></div>
 
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>異動紀錄改為分類標籤</h3><p>更新總覽改成跟勤務日誌一樣的分類寫法：每筆異動標上「新增／更新／修正／移除／異動」，上方可按標籤篩選，只看某一類做了什麼；仍不標版本號。</p></div>
@@ -196,7 +197,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>官網與島虎上線</h3><p>新增下載官網（單檔自包含，含功能介紹、雙版本下載、系統需求與常見問題）；品牌吉祥物定為台灣石虎「島虎」，官網與文宣共用同一素材。</p></div>
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>補入上游開發歷程</h3><p>依原始碼倉庫的提交紀錄，把原始作者從首次開源到目前的演進，按安裝鏈、音樂、額度、通訊、天氣、外觀、效能、設定與穩定性九個方向整理進本站。</p></div>
       <div class="item" data-cat="add"><time>工具</time><span class="cat add">新增</span><h3>解除封鎖工具納入倉庫</h3><p>倉庫根目錄新增「解除封鎖.bat」，一鍵清除下載標記（Zone.Identifier），解決 SmartScreen 攔截；隨原始碼一起版控。</p></div>
-      <div class="item" data-cat="add"><time>自動化</time><span class="cat add">新增</span><h3>上游同步程式與雲端流水線</h3><p>同步腳本：拉上游原始碼、轉換字串、修復比對鍵（歌詞來源、飛書標題、驗證碼詞表、天氣省會表）、品牌改名、版本對齊，並輸出未命中清單；雲端工作流程定時執行，變更即提交、編譯、發佈。</p></div>
+      <div class="item" data-cat="add"><time>自動化</time><span class="cat add">新增</span><h3>上游同步程式與雲端流水線</h3><p>同步腳本：拉上游原始碼、轉換字串、修復比對鍵（歌詞來源、飛書標題、驗證碼詞表、天氣行政區對照表）、品牌改名、版本對齊，並輸出未命中清單；雲端工作流程定時執行，變更即提交、編譯、發佈。</p></div>
       <div class="item" data-cat="add"><time>介面</time><span class="cat add">新增</span><h3>三套圖示與開發板角標</h3><p>方形卡片版、透明標誌版、開發板角標版，各自封裝多尺寸 ICO；正式版與開發板分別內嵌，檔案哈希不同可辨。</p></div>
       <div class="item" data-cat="upd"><time>權限</time><span class="cat upd">更新</span><h3>管理員清單與系統診斷修復</h3><p>嵌入 requireAdministrator 清單；修復流程偵測系統組建、DirectX、WebView2、正黑體、執行庫，並執行映像健檢、系統檔掃描、DNS 清除、圖示快取重建、資源管理器重啟。</p></div>
       <div class="item" data-cat="chg"><time>品牌</time><span class="cat chg">異動</span><h3>更名鬼島</h3><p>顯示名、視窗標題、安裝器、版本資源、執行檔名全面替換；保留上游授權全文與衍生聲明。</p></div>
