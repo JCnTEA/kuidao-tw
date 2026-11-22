@@ -7,16 +7,56 @@ public sealed class GitHubService
 {
   private const string Repo = "JCnTEA/kuidao-tw";
   private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(20) };
-  private readonly string? _token;
+  private string? _token;
+
+  public bool HasToken => !string.IsNullOrWhiteSpace(_token);
 
   public GitHubService()
   {
-    _token = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? Environment.GetEnvironmentVariable("GH_TOKEN") ?? ReadGhToken();
-    if (!string.IsNullOrWhiteSpace(_token))
-      _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+    _token = NonBlank(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
+      ?? NonBlank(Environment.GetEnvironmentVariable("GH_TOKEN"))
+      ?? ReadSavedToken()
+      ?? ReadGhToken();
+    ApplyHeader();
     _http.DefaultRequestHeaders.UserAgent.ParseAdd("KuidaoMonitor");
     _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
   }
+
+  /// <summary>更新執行階段權杖並寫入本機設定檔；傳入 null/空白則清除權杖。</summary>
+  public void SetToken(string? token)
+  {
+    var value = string.IsNullOrWhiteSpace(token) ? null : token.Trim();
+    try
+    {
+      var dir = ConfigDir();
+      Directory.CreateDirectory(dir);
+      var path = TokenFilePath();
+      if (value is null)
+      {
+        if (File.Exists(path)) File.Delete(path);
+      }
+      else
+      {
+        File.WriteAllText(path, value);
+      }
+    }
+    catch { }
+    _token = value;
+    ApplyHeader();
+  }
+
+  private void ApplyHeader()
+  {
+    if (!string.IsNullOrWhiteSpace(_token))
+      _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+    else
+      _http.DefaultRequestHeaders.Authorization = null;
+  }
+
+  public static string ConfigDir() =>
+    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KuidaoMonitor");
+
+  private static string TokenFilePath() => Path.Combine(ConfigDir(), "token.txt");
 
   public async Task<GitHubData> GetAsync(CancellationToken ct = default)
   {
@@ -104,6 +144,20 @@ public sealed class GitHubService
 
   private static int Int(JsonDocument doc, string name) => doc.RootElement.TryGetProperty(name, out var v) && v.TryGetInt32(out var i) ? i : 0;
   private static long Num(JsonDocument? doc, string name) => doc?.RootElement.TryGetProperty(name, out var v) == true && v.ValueKind == JsonValueKind.Number ? v.GetInt64() : 0;
+
+  private static string? NonBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+  private static string? ReadSavedToken()
+  {
+    try
+    {
+      var path = TokenFilePath();
+      if (!File.Exists(path)) return null;
+      var text = File.ReadAllText(path).Trim();
+      return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+    catch { return null; }
+  }
 
   private static string? ReadGhToken()
   {

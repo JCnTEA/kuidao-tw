@@ -88,6 +88,54 @@ public static class Ui
     Background = color, CornerRadius = new CornerRadius(999), Padding = new Thickness(9, 3),
     Child = Text(s, 10, color == Blue ? Brush.Parse("#DCE9FF") : Brush.Parse("#E8FFF6"))
   };
+
+  public static Button NavButton(string label)
+  {
+    var btn = new Button
+    {
+      Content = Text(label, 12, Muted, true, HorizontalAlignment.Center, VerticalAlignment.Center),
+      Width = 60,
+      Height = 38,
+      Padding = new Thickness(4),
+      Background = Brushes.Transparent,
+      BorderThickness = new Thickness(0),
+      CornerRadius = new CornerRadius(10),
+      HorizontalContentAlignment = HorizontalAlignment.Center,
+      VerticalContentAlignment = VerticalAlignment.Center,
+      Tag = label
+    };
+    return btn;
+  }
+
+  public static void SetNavActive(Button btn, bool active)
+  {
+    btn.Background = active ? Brush.Parse("#1B2A44") : Brushes.Transparent;
+    if (btn.Content is TextBlock t)
+      t.Foreground = active ? Brush.Parse("#DCE9FF") : Muted;
+  }
+
+  public static Button SmallButton(string label, IBrush? background = null, IBrush? foreground = null)
+  {
+    var btn = new Button
+    {
+      Content = Text(label, 10.5, foreground ?? Brushes.White, true, HorizontalAlignment.Center, VerticalAlignment.Center),
+      Padding = new Thickness(11, 6),
+      Background = background ?? Blue,
+      BorderThickness = new Thickness(0),
+      CornerRadius = new CornerRadius(9),
+      HorizontalContentAlignment = HorizontalAlignment.Center,
+      VerticalContentAlignment = VerticalAlignment.Center
+    };
+    return btn;
+  }
+
+  public static Button GhostButton(string label)
+  {
+    var btn = SmallButton(label, Brush.Parse("#1B2230"), TextBrush);
+    btn.BorderBrush = Line;
+    btn.BorderThickness = new Thickness(1);
+    return btn;
+  }
 }
 
 public sealed class DualSparkline : Control

@@ -12,6 +12,8 @@ public class App : Application
 {
   public override void OnFrameworkInitializationCompleted()
   {
+    Styles.Add(new Avalonia.Themes.Fluent.FluentTheme());
+    RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
     if (ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
       desktop.MainWindow = new MainWindow();
     base.OnFrameworkInitializationCompleted();

@@ -63,6 +63,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
+      <div class="card"><span class="badge">監控</span><h3>監控台導覽可點擊、版面分頁與 Token 設定</h3><p>左側監控、網路、發布、自檢、建議改成真正可點擊的導覽按鈕，點擊即切換對應內容，不再是單一長頁；目前選項會高亮固定。倉庫流量卡新增「設定 Token」入口，可直接貼上、清除並儲存到本機設定檔，儲存後自動重新整理 Views／Clones，未設定時維持「需 Token」提示。監控台圖示以鬼島主圖示為基底，右下角加上「監控台」徽章，視窗與 EXE 檔案圖示同步更換，並補上深色主題與輸入框預設焦點，支援 Enter 儲存、Esc 取消。</p></div>
       <div class="card"><span class="badge">安裝</span><h3>安裝前自動結束目前靈動島</h3><p>安裝與解除安裝流程會先主動關閉主程式與啟動器，再等待單一實例鎖釋放；若程序尚未退出，會自動重試，仍無法關閉才提示重新開機。升級時不必先手動從系統匣退出，也能避免檔案被執行中的程序鎖住。</p></div>
       <div class="card"><span class="badge">監控</span><h3>獨立監控台總覽程序、發布與網路</h3><p>新增獨立監控台，集中呈現鬼島相關程序、命令列、啟動／結束事件、CPU 與記憶體、GitHub 發布狀態、資產下載次數、自檢進度、修復建議、倉庫流量，以及鬼島程序的 TCP 連線；需要完整倉庫流量時可讀取本機 GitHub Token。</p></div>
       <div class="card"><span class="badge">安裝</span><h3>首次啟動下載不再卡在 94% 解壓失敗</h3><p>啟動器改用 PowerShell 5.1 載入 .NET 的 ZIP 元件逐筆解壓，保留中文檔名，並在寫入前檢查絕對路徑與「..」越界；不再呼叫會在新版 .NET 失效的 Expand-Archive，也不依賴對中文檔名會失敗的 tar。先前路徑檢查字串漏了一個括號，會讓 PowerShell 直接拋錯，已一併修正；下載與 SHA-256 校驗流程不變。</p></div>
