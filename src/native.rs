@@ -15,9 +15,10 @@ use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use crate::poll_clock::PollClock;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
-use windows::Win32::Graphics::Gdi::{CombineRgn, CreatePolygonRgn, CreateRectRgn, CreateRoundRectRgn, DeleteObject, SetWindowRgn, HRGN, RGN_OR, WINDING};
+use windows::Win32::Graphics::Gdi::{CombineRgn, CreatePolygonRgn, CreateRectRgn, CreateRoundRectRgn, DeleteObject, SetWindowRgn, HRGN, RGN_OR, WINDING, GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTONEAREST};
 use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK};
+use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState,VK_LBUTTON,VK_RBUTTON};
 use windows::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::*;
@@ -248,6 +249,33 @@ unsafe fn glass_region(key: &[i32]) -> Option<HRGN> {
     out
 }
 
+/// 視窗貼齊螢幕頂端時，標題列按鈕（關閉、最小化、最大化）只佔最上方一小段。
+/// 島體即使視覺上壓在按鈕上，也要讓這一段的點擊落到下面的應用程式，
+/// 否則瀏覽器或其他視窗會關不掉；島體下方的面板仍照常可操作。
+fn top_edge_title_band(window:&RECT, monitor_top:i32, point:(i32,i32), band:i32)->bool {
+    let (x,y)=point;
+    let top=window.top.max(monitor_top);
+    x>=window.left && x<window.right && y>=top && y<top+band
+}
+
+unsafe fn foreground_top_edge_at(hwnd:HWND,x:i32,y:i32)->bool {
+    let foreground=GetForegroundWindow();
+    if foreground.0.is_null() || foreground==hwnd {return false;}
+    if !IsWindowVisible(foreground).as_bool() || IsIconic(foreground).as_bool(){return false;}
+    let mut window=RECT::default();
+    if GetWindowRect(foreground,&mut window).is_err(){return false;}
+    let mut pid=0u32;
+    let _=GetWindowThreadProcessId(foreground,Some(&mut pid));
+    if pid==0{return false;}
+    let monitor=MonitorFromPoint(POINT{x,y},MONITOR_DEFAULTTONEAREST);
+    let mut info=MONITORINFO{cbSize:std::mem::size_of::<MONITORINFO>() as u32,..Default::default()};
+    if !GetMonitorInfoW(monitor,&mut info).as_bool(){return false;}
+    // 100% 縮放取 46 px；高 DPI 跟著放大，足以涵蓋標準標題列與自繪分頁列。
+    let dpi=GetDpiForWindow(hwnd).max(96);
+    let band=((46.0*dpi as f32/96.0).round() as i32).max(40);
+    top_edge_title_band(&window,info.rcMonitor.top,(x,y),band)
+}
+
 /// 命中区外 `HTTRANSPARENT`（鼠标投给下层窗口），命中区内 `HTCLIENT`。
 unsafe extern "system" fn subclass(
     hwnd: HWND,
@@ -279,11 +307,15 @@ unsafe extern "system" fn subclass(
         if GetWindowRect(hwnd, &mut rect).is_ok() {
             let px = x - rect.left;
             let py = y - rect.top;
-            return if inside_hit(px, py) {
-                LRESULT(HTCLIENT as isize)
-            } else {
-                LRESULT(HTTRANSPARENT as isize)
-            };
+            if inside_hit(px, py) {
+                // 頂端標題列優先交還給下面的應用程式，島體只保留下方內容區。
+                return if foreground_top_edge_at(hwnd, x, y) {
+                    LRESULT(HTTRANSPARENT as isize)
+                } else {
+                    LRESULT(HTCLIENT as isize)
+                };
+            }
+            return LRESULT(HTTRANSPARENT as isize);
         }
     }
     DefSubclassProc(hwnd, msg, wp, lp)
@@ -777,6 +809,18 @@ mod tests {
     use super::*;
     static NATIVE_STATE_LOCK:Mutex<()>=Mutex::new(());
 
+    #[test]
+    fn top_edge_title_buttons_are_left_to_the_window_below(){
+        let window=RECT{left:1200,top:0,right:3000,bottom:900};
+        // 標題列最上方一段要讓點擊穿透，島體下方仍保留給自己。
+        assert!(top_edge_title_band(&window,0,(1400,12),46));
+        assert!(top_edge_title_band(&window,0,(2500,30),46));
+        assert!(!top_edge_title_band(&window,0,(2500,60),46));
+        assert!(!top_edge_title_band(&window,0,(900,12),46),"視窗左右之外不穿透");
+        // 視窗沒有貼齊頂端時不影響島體。
+        let floating=RECT{left:1200,top:200,right:3000,bottom:900};
+        assert!(!top_edge_title_band(&floating,0,(1400,12),46));
+    }
     #[test]
     fn page_wheel_forwards_only_until_click_or_departure(){unsafe{
         let _guard=NATIVE_STATE_LOCK.lock().unwrap_or_else(|e|e.into_inner());
