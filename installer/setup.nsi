@@ -259,16 +259,25 @@ Function .onGUIEnd
   System::Call 'user32::DestroyIcon(p $BrandIcon)'
 FunctionEnd
 
-; 程式執行時請使用者正常退出，不強制結束程序或寫入正在使用的程式。
+; 安裝／解除安裝前先強制結束主程式與啟動器，避免檔案被鎖住；最多重試 3 次。
 !macro ClosedCheck Prefix
 Function ${Prefix}CheckClosed
-  retry:
+  StrCpy $1 0
+  kill_retry:
+  nsExec::ExecToLog 'taskkill /F /T /IM kuidao.exe /IM kuidao-bootstrap.exe'
+  Pop $0
+  Sleep 500
   System::Call 'kernel32::OpenMutexW(i 0x100000, i 0, w "Local\${APP_ID}.SingleInstance") p .r0'
   ${If} $0 != 0
     System::Call 'kernel32::CloseHandle(p r0)'
-    MessageBox MB_RETRYCANCEL|MB_ICONINFORMATION "請先從系統系統匣退出${APP_NAME}，然後點選重試。" /SD IDCANCEL IDRETRY retry
-    SetErrorLevel 2
-    Abort
+    IntOp $1 $1 + 1
+    ${If} $1 < 3
+      Goto kill_retry
+    ${Else}
+      MessageBox MB_OK|MB_ICONSTOP "無法關閉${APP_NAME}，請重新開機後再執行安裝。" /SD IDOK
+      SetErrorLevel 3
+      Abort
+    ${EndIf}
   ${EndIf}
 FunctionEnd
 !macroend
