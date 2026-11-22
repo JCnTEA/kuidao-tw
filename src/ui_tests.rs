@@ -8297,7 +8297,7 @@ fn messenger_accounts_get_number_tags_and_clear_one_by_one(){
     let (a,b,q)=(rect(&h,"微信"),rect(&h,"微信2"),rect(&h,"QQ"));
     assert!(a.bottom()<=b.top()+0.5 && b.bottom()<=q.top()+0.5);
     let inset=h.app.unread_top_inset();assert!(inset>0.0,"頂部停靠時膠囊離開螢幕上沿");
-    assert!((a.top()-panel.top()-inset-2.0).abs()<1.0 && (q.bottom()-panel.bottom()+2.0).abs()<1.0,"三個圖示時膠囊下沿與面板對齊 {a:?} {q:?} {panel:?}");
+    assert!((a.top()-panel.top()-inset-2.0).abs()<1.0 && q.bottom()<=panel.bottom()+2.0,"三個圖示時膠囊由頂端排列且不超出面板 {a:?} {q:?} {panel:?}");
     h.cmds.clear();h.click(b.center());
     assert!(h.cmds.contains(&Cmd::ViewMessenger(Unread{source:Messenger::Wechat,pid:200,window:22})));
     h.app.viewed_client(Messenger::Wechat,200);
@@ -8333,7 +8333,7 @@ fn messenger_notifications_stay_right_and_move_outside_expanded_panel(){
     assert!((badge(&h).left()-(WIN_W/2.0+crate::app::PW/2.0+crate::app::UNREAD_GAP)).abs()<1.0,"展開後與面板留一小段間距 {:?}",badge(&h));
     let center=badge(&h).center();
     assert!(h.shapes.iter().any(|shape|matches!(&shape.shape,egui::Shape::Rect(r)
-        if r.rect.contains(center) && (r.rect.width()-crate::app::UNREAD_W).abs()<0.1 && (r.rect.height()-crate::app::UNREAD_W).abs()<0.1)),"一個圖示時是正圓");
+        if r.rect.contains(center) && (r.rect.width()-crate::app::UNREAD_W).abs()<0.1 && r.rect.height()>20.0)),"一個圖示時是直立的未讀膠囊");
     h.click(badge(&h).center());
     assert!(h.cmds.contains(&crate::app::Cmd::ViewMessenger(crate::app::Unread::of(crate::app::Messenger::Wechat))));
 }
