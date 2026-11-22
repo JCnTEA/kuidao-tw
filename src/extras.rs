@@ -1642,17 +1642,17 @@ impl App {
                     ui.set_width((ui.available_width()-12.0).max(240.0));
                     match tab {
                     15=>{
-                        let on=self.settings_feature_header(ui,crate::app::GAME_PAGE,"Steam 收藏庫與 Riot Client 捷徑",|_,_|{});
+                        let on=self.settings_feature_header(ui,crate::app::GAME_PAGE,"多平台本機遊戲庫",|_,_|{});
                         ui.add_space(4.0);
                         settings_card(ui,|ui|{
-                            ui.label(egui::RichText::new(format!("Steam {} 款 · Riot {} 項",self.games.steam_count,self.games.riot_count)).size(12.0).color(settings_color(ctx,Color32::from_gray(190),Color32::from_gray(65))));
-                            ui.label(egui::RichText::new("掃描只讀取本機 Steam 的 libraryfolders.vdf 與 appmanifest，不會登入帳號，也不會上傳收藏庫。Riot 捷徑會尋找 RiotClientServices.exe。").size(10.5).color(settings_color(ctx,Color32::from_gray(160),Color32::from_gray(95))));
+                            ui.label(egui::RichText::new(self.games.source_summary()).size(12.0).color(settings_color(ctx,Color32::from_gray(190),Color32::from_gray(65))));
+                            ui.label(egui::RichText::new("掃描只讀取本機啟動器留下的 manifest、卸載登錄資料與安裝資料夾，不會登入帳號，也不會上傳收藏庫。支援 Steam、Riot、Epic、GOG、Ubisoft、EA、Battle.net 與 Amazon。").size(10.5).color(settings_color(ctx,Color32::from_gray(160),Color32::from_gray(95))));
                         });
                         ui.add_space(6.0);
-                        let has_scan=!self.games.games.is_empty()||self.games.steam_count>0||self.games.riot_count>0;
+                        let has_scan=!self.games.games.is_empty();
                         ui.horizontal(|ui|{
                             if settings_action_button(ui,"重新掃描本機遊戲",SettingsActionGlyph::Refresh,true,on,"games-rescan")
-                                .on_hover_text("重新讀取 Steam 收藏庫與 Riot Client，不會恢復已移除的捷徑")
+                                .on_hover_text("重新掃描 Steam、Riot、Epic、GOG、Ubisoft、EA、Battle.net 與 Amazon 的本機資料，不會恢復已移除的捷徑")
                                 .clicked(){self.games.refresh();}
                             if settings_action_button(ui,"清除掃描本機遊戲",SettingsActionGlyph::Trash,false,on&&has_scan,"games-clear-scan")
                                 .on_hover_text("只清空本次掃描結果，不會解除安裝或刪除任何遊戲；已移除的捷徑設定仍保留")
@@ -1689,7 +1689,7 @@ impl App {
                         });
                         settings_label(ui,"功能頁面");
                         settings_card(ui,|ui|{
-                            let descriptions=["播放控制與同步歌詞","番茄鍾與休息計時","喝水與久坐提醒","臨時收納檔案位置","任務清單與到期提醒","郵件摘要與驗證碼","Agent 剩餘額度和帳號切換","月曆、郵件邀請與工作行程","當地天氣與七日預報","Steam 收藏庫與 Riot 捷徑"];
+                            let descriptions=["播放控制與同步歌詞","番茄鍾與休息計時","喝水與久坐提醒","臨時收納檔案位置","任務清單與到期提醒","郵件摘要與驗證碼","Agent 剩餘額度和帳號切換","月曆、郵件邀請與工作行程","當地天氣與七日預報","多平台本機遊戲庫"];
                             ui.label(egui::RichText::new("拖動左側手柄調整順序；關閉的功能不在後台執行，不同步也不提醒，已有資料保留。").size(11.5).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
                             #[derive(Clone)]
                             struct PageDrag(usize);
@@ -1844,7 +1844,7 @@ impl App {
                                 ui.label("吉祥物形象");
                                 ui.label(egui::RichText::new("島虎（石虎）").strong());
                             });
-                            settings_hint(ui,"台灣版只保留島虎。經典、奶油、毛玻璃、懸浮雲與懸浮漸層都使用同一組原作者石虎影格；漸層只換島體底色，吉祥物不會變形狀。線條會依底色自動轉深墨或白線，亮底不再把吉祥物吃掉。");
+                            settings_hint(ui,"台灣版只保留島虎。經典、奶油、毛玻璃、懸浮雲與懸浮漸層都使用同一組以類似原作者方式呈現的台灣石虎影格；漸層只換島體底色，吉祥物不會變形狀。線條會依底色自動轉深墨或白線，亮底不再把吉祥物吃掉。");
                             ui.horizontal(|ui|{
                                 ui.label("吉祥物動畫包");
                                 if ui.button("開啟資料夾").clicked(){crate::mascot_pack::open_folder(self.settings.mascot.key());}
@@ -2475,13 +2475,15 @@ impl App {
                         }
                     }
                     _=>{
-                        settings_label(ui,"鬼島 桌面靈動島");
+                        settings_label(ui,"鬼島 Kuidao 桌面靈動島");
                         settings_card(ui,|ui|{
                             ui.horizontal(|ui|{
                                 ui.label(egui::RichText::new(format!("版本 {}",env!("CARGO_PKG_VERSION"))).size(13.0));
                                 ui.add_space(8.0);
                                 ui.vertical(|ui|self.updates.ui(ui));
                             });
+                            ui.add_space(3.0);
+                            ui.add(egui::Label::new(egui::RichText::new("官方更新說明：本程式由官方 Release 管道發布更新，維護流程每日凌晨 0 至 3 時自動檢查與整理。檢查更新只讀取版本與說明，不會上傳任何本機資料；版本與功能仍以官方公告為準。").size(10.5).color(settings_color(ctx,Color32::from_gray(145),Color32::from_rgb(105,112,124)))).wrap());
                             ui.label(egui::RichText::new("桌面頂部的音樂、專注、提醒與行程小助手。").size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
                             ui.horizontal_wrapped(|ui|{
                                 if ui.button("開啟本機資料目錄").clicked(){self.pending.push(Cmd::Open(crate::model::config_dir()));}
@@ -2539,8 +2541,7 @@ impl App {
                                             }
                                         }
                                     });
-                                    ui.add_space(3.0);
-                                    ui.hyperlink_to(egui::RichText::new("檢視完整發布頁").size(10.5).color(sub_color),&record.page);
+                                    ui.add_space(2.0);
                                 }
                                 None=>{
                                     ui.label(egui::RichText::new("正在取得最新更新內容…").size(11.5).color(body_color));

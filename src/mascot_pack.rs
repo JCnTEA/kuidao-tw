@@ -196,7 +196,7 @@ pub fn open_folder(key: &str) {
     let _ = std::fs::create_dir_all(&dir);
     let readme = dir.join("說明.txt");
     if !readme.exists() {
-        let _ = std::fs::write(&readme, "吉祥物動畫包\n\n把 pack.json 與你自己畫的影格 PNG 放在這個資料夾，重新載入後就會取代內建吉祥物。\n每格建議 144×90，透明背景。animations 可用的鍵：awake、curious、waking、happy、satisfied、music、worried、focused、dozing、sleeping。\n\n內建的所有主題都會使用同一組原作者石虎影格；懸浮漸層只換島體底色，不會換成另一隻吉祥物。這裡留空時就使用內建影格。\n");
+        let _ = std::fs::write(&readme, "吉祥物動畫包\n\n把 pack.json 與你自己畫的影格 PNG 放在這個資料夾，重新載入後就會取代內建吉祥物。\n每格建議 144×90，透明背景。animations 可用的鍵：awake、curious、waking、happy、satisfied、music、worried、focused、dozing、sleeping。\n\n內建的所有主題都會使用同一組以類似原作者方式呈現的台灣石虎影格；懸浮漸層只換島體底色，不會換成另一隻吉祥物。這裡留空時就使用內建影格。\n");
     }
     #[cfg(windows)]
     { let _ = std::process::Command::new("explorer").arg(&dir).spawn(); }

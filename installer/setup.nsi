@@ -10,10 +10,16 @@ Unicode true
   !define APP_ID "Kuidao"
 !endif
 !ifndef APP_NAME
-  !define APP_NAME "鬼島 桌面靈動島"
+  !define APP_NAME "鬼島 Kuidao 桌面靈動島"
 !endif
 !ifndef BOOTSTRAP_EXE
   !error "BOOTSTRAP_EXE is required"
+!endif
+!ifndef DISPLAY_VERSION
+  !define DISPLAY_VERSION "0.6.00"
+!endif
+!ifndef DISPLAY_VERSION_NUM
+  !define DISPLAY_VERSION_NUM "0.6.0.0"
 !endif
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
 Name "${APP_NAME}"
@@ -23,10 +29,10 @@ InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
 ManifestDPIAware true
 SetCompressor /SOLID lzma
-VIProductVersion "${APP_VERSION}.0"
+VIProductVersion "${DISPLAY_VERSION_NUM}"
 VIAddVersionKey /LANG=1028 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=1028 "FileDescription" "${APP_NAME}安裝程式"
-VIAddVersionKey /LANG=1028 "FileVersion" "${APP_VERSION}"
+VIAddVersionKey /LANG=1028 "FileVersion" "${DISPLAY_VERSION}"
 VIAddVersionKey /LANG=1028 "LegalCopyright" "鬼島貢獻者"
 !define MUI_ICON "${PROJECT_DIR}\assets\kuidao.ico"
 !define MUI_UNICON "${PROJECT_DIR}\assets\kuidao.ico"
@@ -109,7 +115,7 @@ Function InstallPage
   CreateFont $1 "Microsoft YaHei UI" 18 700
   SendMessage $0 ${WM_SETFONT} $1 0
   ; 版本與標題分開兩行，避免 18pt 標題和版本字疊在一起被截斷。
-  ${NSD_CreateLabel} 59u 31u 240u 12u "v${APP_VERSION} · 安裝後自動補齊主程式"
+  ${NSD_CreateLabel} 59u 31u 240u 12u "v${DISPLAY_VERSION} · 安裝後自動補齊主程式"
   Pop $0
   SetCtlColors $0 0x666666 0xF0F0F0
   ${NSD_CreateLabel} 58u 45u 240u 16u "先安裝極小啟動器，不一次下載完整安裝包。"
@@ -289,7 +295,7 @@ Section "安裝"
   ; 鬼島打不開、卡死時的備用入口；主程式補齊後由啟動器轉交診斷參數。
   CreateShortcut "$SMPROGRAMS\收集${APP_NAME}診斷.lnk" "$INSTDIR\kuidao-bootstrap.exe" "--collect-diagnostics" "$INSTDIR\kuidao-bootstrap.exe" 0
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayName" "${APP_NAME}（Kuidao）"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${APP_VERSION}"
+  WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${DISPLAY_VERSION}"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "Publisher" "鬼島"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "URLInfoAbout" "https://github.com/"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "HelpLink" "https://github.com/"

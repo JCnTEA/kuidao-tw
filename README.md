@@ -121,7 +121,7 @@ cargo test --locked --all-targets --features record -- --test-threads=1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package.ps1
 ```
 
-或直接雙擊 `一鍵編譯免安裝版.bat` 產出綠色版。
+或直接執行 `scripts\package.ps1` 產出安裝包。
 
 ## 授權條款與致謝
 

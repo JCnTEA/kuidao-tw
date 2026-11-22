@@ -70,7 +70,7 @@ kuidao.exe --license 授權碼
 ## 下載與更新
 
 - 安裝版：`Kuidao-Setup-TW-x64.exe`，固定檔名、不帶版本號；可選安裝路徑、桌面捷徑、開機自啟。
-- 免安裝版：解壓後執行 `kuidao.exe`，資料仍寫在 `%APPDATA%\Kuidao`。
+- 主程式：安裝器完成後下載 `kuidao.exe`，資料寫在 `%APPDATA%\Kuidao`。
 - 更新：設定 → 關於 → 檢查更新；升級保留設定與資料，卸載同樣保留。
 
 ## 常見問題
@@ -89,7 +89,7 @@ kuidao.exe --license 授權碼
 cargo build --locked --release --bin kuidao
 ```
 
-或雙擊 `一鍵編譯免安裝版.bat`。
+或使用 `scripts\package.ps1` 產出安裝包。
 
 ## 資料位置
 

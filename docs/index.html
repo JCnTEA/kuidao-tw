@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>鬼島 桌面靈動島 · 台灣版官網</title>
-<meta name="description" content="鬼島 桌面靈動島台灣版：把通知、天氣、行事曆、音樂與 AI 額度收進螢幕上緣的一顆島。Windows 10／11 64 位元，全繁體台灣用語。內測安裝檔可從本頁下載，固定檔名 Kuidao-Setup-TW-x64.exe。">
-<meta property="og:title" content="鬼島 桌面靈動島 · 台灣版">
-<meta property="og:description" content="螢幕上緣的一小條，換成整天的資訊層。Windows 桌面靈動島，繁體台灣版。目前內測中。">
+<title>鬼島 Kuidao 桌面靈動島 · 台灣版官網</title>
+<meta name="description" content="鬼島 Kuidao（Kuidao Desktop Dynamic Island）台灣版：把通知、天氣、行事曆、音樂與 AI 額度收進螢幕上緣的一顆島。Windows 10／11 64 位元，全繁體台灣用語。安裝包初始版本 0.6.00 可從本頁下載，固定檔名 Kuidao-Setup-TW-x64.exe。">
+<meta property="og:title" content="鬼島 Kuidao 桌面靈動島 · 台灣版">
+<meta property="og:description" content="鬼島 Kuidao Desktop Dynamic Island：螢幕上緣的一小條，換成整天的資訊層。Windows 桌面靈動島，繁體台灣版。安裝包初始版本 0.6.00 已開放下載。">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://jcntea.github.io/kuidao-tw/images/brand/logo.webp">
 <meta name="robots" content="index,follow">
@@ -126,6 +126,7 @@ section{scroll-margin-top:104px}
   color:#20222a;
 }
 .hero-sub{max-width:680px;margin:0 auto;color:#717580;font-size:15px;line-height:1.9}
+.hero-sub-mobile{display:none}
 .hero-cta{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin-top:26px}
 .btn-main{
   display:inline-flex;align-items:center;gap:9px;height:50px;padding:0 26px;border-radius:999px;
@@ -313,6 +314,42 @@ section{scroll-margin-top:104px}
   100%{transform:scale(1);opacity:1}
 }
 .island-note{margin-top:18px;text-align:center;font-size:10.5px;letter-spacing:.1em;color:#999ca6}
+.theme-demo-block{
+  margin-top:46px;padding:26px 26px 22px;border-radius:26px;
+  border:1px solid rgba(120,210,255,.14);
+  background:
+    radial-gradient(120% 90% at 18% 0%,rgba(63,224,240,.08),transparent 55%),
+    radial-gradient(110% 100% at 88% 10%,rgba(255,92,170,.09),transparent 58%),
+    linear-gradient(180deg,rgba(12,19,31,.68),rgba(5,8,14,.72));
+  box-shadow:0 26px 70px -34px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.045);
+  backdrop-filter:blur(18px);
+}
+.theme-demo-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.theme-demo-head h3{margin:8px 0 0;font-size:clamp(20px,2.3vw,27px);letter-spacing:.02em;color:#f2f7ff}
+.theme-demo-head p{margin:7px 0 0;max-width:620px;font-size:12px;line-height:1.85;color:#9fb0c4}
+.theme-demo-media{position:relative;max-width:820px;margin:18px auto 0;border-radius:18px;overflow:hidden;background:#05080e;border:1px solid rgba(120,210,255,.12);box-shadow:0 22px 50px -28px rgba(0,0,0,.9)}
+.theme-demo-media img{display:block;width:100%;height:auto}
+.theme-demo-cap{max-width:820px;margin:12px auto 0;text-align:center;font-size:10.5px;letter-spacing:.08em;color:#7f8da3}
+.theme-demo-note{max-width:760px;margin:8px auto 0;text-align:center;font-size:10px;line-height:1.75;letter-spacing:.04em;color:#6f8199}
+.theme-cycle-frame{position:relative;width:min(100%,calc(440px * 1.9));height:100%}
+.theme-cycle-frame img{position:absolute;top:50%;left:0;transform:translateY(-50%);width:100%;height:auto;border-radius:18px;opacity:0;animation:themeFade 24s linear infinite;object-fit:contain;object-position:center}
+.theme-cycle-frame img:nth-child(2){animation-delay:4s}
+.theme-cycle-frame img:nth-child(3){animation-delay:8s}
+.theme-cycle-frame img:nth-child(4){animation-delay:12s}
+.theme-cycle-frame img:nth-child(5){animation-delay:16s}
+.theme-cycle-frame img:nth-child(6){animation-delay:20s}
+@keyframes themeFade{
+  0%{opacity:0}
+  2%{opacity:1}
+  14%{opacity:1}
+  16.6%{opacity:0}
+  100%{opacity:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .theme-cycle-frame img{animation:none;opacity:0}
+  .theme-cycle-frame img:first-child{opacity:1}
+  .theme-demo-media img{visibility:visible}
+}
 .island-auto{
   appearance:none;border:1px solid rgba(125,211,252,.2);border-radius:99px;
   background:rgba(12,23,40,.72);color:#9fc0dd;cursor:pointer;
@@ -423,8 +460,12 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
   .brand-mark{width:34px;height:34px;border-radius:11px}
   .wrap{padding:0 18px}
   .hero{padding:58px 18px 18px}
+  .hero-kicker{font-size:9.5px;letter-spacing:.12em;line-height:1.7}
+  .hk-name{display:none}
   .hero h1{font-size:clamp(40px,11vw,56px);letter-spacing:-.04em}
   .hero-sub{font-size:13.5px;padding:0 4px}
+  .hero-sub-desktop{display:none}
+  .hero-sub-mobile{display:inline}
   .hero-cta{margin-top:22px}
   .btn-main,.btn-soft{height:46px;padding:0 20px;font-size:13px}
   .hero-island{height:54px;margin-top:28px;gap:8px;padding:0 12px}
@@ -454,6 +495,13 @@ footer{margin-top:112px;padding:44px 0 64px;border-top:1px solid rgba(30,32,38,.
   .island-slide{height:204px}
   .island-frame>img{border-radius:14px}
   .island-dots{margin-top:9px}
+  .theme-demo-block{margin-top:30px;padding:18px 14px 15px;border-radius:20px}
+  .theme-demo-head h3{font-size:19px}
+  .theme-demo-head p{font-size:11px;line-height:1.8}
+  .theme-demo-media{margin-top:14px;border-radius:14px}
+  .theme-demo-cap{font-size:9.5px;letter-spacing:.04em}
+  .theme-cycle-frame{width:100%;height:204px}
+  .theme-cycle-frame img{border-radius:14px}
   .mini-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;margin-top:9px;align-items:start}
   .visual-mini{left:auto;right:auto;top:auto;bottom:auto;width:auto;min-width:0}
   .visual-mini img{width:100%;height:auto}
@@ -531,8 +579,8 @@ body::before{
 .hi-wave b{background:linear-gradient(180deg,#8bf5ff,#2dd4bf)}
 .fcard{
   border-color:rgba(125,211,252,.14);
-  background:linear-gradient(160deg,rgba(16,31,53,.88),rgba(9,18,33,.78));
-  box-shadow:var(--shadow);backdrop-filter:blur(18px);
+  background:linear-gradient(160deg,rgba(16,31,53,.58),rgba(9,18,33,.44));
+  box-shadow:var(--shadow);backdrop-filter:blur(20px);
 }
 .fcard:hover,.fcard:focus-visible{box-shadow:0 36px 84px -40px #000,0 0 0 1px rgba(45,212,191,.24);border-color:rgba(94,234,212,.32)}
 .fcard::before{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.22);color:#7fe9f7}
@@ -542,7 +590,7 @@ body::before{
 .fc-summary{color:#a6bbd4}
 .fcard::after{background:linear-gradient(180deg,rgba(7,13,24,0),rgba(7,13,24,.72))}
 .fc-peek{color:#a9bfd8}
-.fc-detail{background:linear-gradient(165deg,#0e1d33 0%,#091324 100%)}
+.fc-detail{background:linear-gradient(165deg,rgba(14,29,51,.82) 0%,rgba(9,19,36,.7) 100%);backdrop-filter:blur(18px)}
 .fc-detail .fc-kicker{color:#67e8f9}
 .fc-detail p{color:#b8cbe2}
 .fc-hint{border-top-color:rgba(125,211,252,.14);color:#7389a6}
@@ -552,18 +600,18 @@ body::before{
 .visual-main{background:#0c192b;box-shadow:0 46px 96px -50px #000,0 0 0 1px rgba(125,211,252,.16)}
 .visual-mini{background:#0c192b;box-shadow:0 26px 56px -30px #000,0 0 0 1px rgba(125,211,252,.12)}
 .visual-cap{color:#7188a6}
-.local-item{background:rgba(12,24,42,.72);border-color:rgba(125,211,252,.13);box-shadow:var(--shadow-soft)}
+.local-item{background:rgba(12,24,42,.5);border-color:rgba(125,211,252,.13);box-shadow:var(--shadow-soft);backdrop-filter:blur(16px)}
 .local-item b{color:#eaf4ff}
 .local-item p{color:#9db2cc}
-.license-line{background:rgba(12,23,40,.6);border-color:rgba(125,211,252,.12);color:#8298b5}
+.license-line{background:rgba(12,23,40,.42);border-color:rgba(125,211,252,.12);color:#8298b5}
 .license-line b{color:#c4d7ee}
-.access-card{background:linear-gradient(155deg,rgba(17,33,56,.94),rgba(8,16,30,.82));border-color:rgba(125,211,252,.16);box-shadow:var(--shadow)}
+.access-card{background:linear-gradient(155deg,rgba(17,33,56,.68),rgba(8,16,30,.5));border-color:rgba(125,211,252,.16);box-shadow:var(--shadow);backdrop-filter:blur(22px)}
 .access-card::before{background:radial-gradient(circle,rgba(34,211,238,.22),transparent 68%)}
 .access-card p{color:#a6bbd4}
-.access-meta span{background:rgba(12,23,40,.72);border-color:rgba(125,211,252,.14);color:#9db2cc}
+.access-meta span{background:rgba(12,23,40,.5);border-color:rgba(125,211,252,.14);color:#9db2cc}
 .access-meta span::before{color:#5f7898}
-.faq details{background:rgba(12,24,42,.7);border-color:rgba(125,211,252,.13);box-shadow:var(--shadow-soft)}
-.faq details[open]{background:rgba(14,29,51,.9);box-shadow:0 28px 64px -38px #000}
+.faq details{background:rgba(12,24,42,.5);border-color:rgba(125,211,252,.13);box-shadow:var(--shadow-soft);backdrop-filter:blur(16px)}
+.faq details[open]{background:rgba(14,29,51,.72);box-shadow:0 28px 64px -38px #000}
 .faq summary{color:#e6f1ff}
 .faq summary .plus{background:linear-gradient(135deg,rgba(34,211,238,.16),rgba(251,146,60,.12));border-color:rgba(34,211,238,.2)}
 .faq summary .plus::before,.faq summary .plus::after{background:#67e8f9}
@@ -582,7 +630,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
   <div class="nav-inner">
     <a class="brand" href="#top" aria-label="鬼島 桌面靈動島 首頁">
       <span class="brand-mark"><img src="images/brand/logo.webp" alt="" width="40" height="40"></span>
-      <span>鬼島</span><small>GUIDAO</small>
+      <span>鬼島</span><small>KUDAO · 桌面靈動島</small>
     </a>
     <nav class="menu" aria-label="主要導覽">
       <a class="active" href="#features">特色功能</a>
@@ -591,7 +639,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
       <a href="#faq">常見問題</a>
     </nav>
     <div class="nav-right">
-      <span class="status-pill"><i aria-hidden="true"></i>內測中</span>
+      <span class="status-pill"><i aria-hidden="true"></i>初始版本 0.6.00</span>
       <a class="nav-cta" href="#access">取得方式 <span aria-hidden="true">›</span></a>
     </div>
   </div>
@@ -600,9 +648,9 @@ footer{border-top-color:rgba(125,211,252,.12)}
 <main>
 <!-- ===== 首屏 ===== -->
 <section class="hero" id="top">
-  <p class="hero-kicker">Windows 桌面靈動島 · 繁體台灣版</p>
+  <p class="hero-kicker"><span>KUDAO DESKTOP DYNAMIC ISLAND</span><span class="hk-name"> · 鬼島 Kuidao 桌面靈動島</span> · 繁體台灣版</p>
   <h1>不只是桌面靈動島</h1>
-  <p class="hero-sub">還是你每天都會看一眼的資訊層。通知、天氣、行程、音樂與 AI 額度收進螢幕上緣的一小條，抬眼就看得到，不必為了看一句話切走整個視窗。</p>
+  <p class="hero-sub"><span class="hero-sub-desktop">還是你每天都會看一眼的資訊層。<br>通知、天氣、行程、音樂與 AI 額度收進螢幕上緣的一小條，<br>抬眼就看得到，不必為了看一句話切走整個視窗。</span><span class="hero-sub-mobile">還是你每天都會看一眼的資訊層。<br>通知、天氣、行程、音樂與 AI 額度，<br>都收進螢幕上緣的一小條。<br>抬眼就看得到，不必切走整個視窗。</span></p>
   <div class="hero-cta">
     <a class="btn-main" href="#features">
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m0 0 4.5-4.5M12 15l-4.5-4.5M5 20h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -611,7 +659,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
     <a class="btn-soft" href="#access">取得安裝檔</a>
   </div>
   <div class="hero-facts" aria-label="產品重點">
-    <span>免安裝、不寫登錄檔</span><span>繁體台灣用語</span><span>資料留在本機</span><span>Windows 10／11 64 位元</span>
+    <span>安裝版・可從新增或移除程式移除</span><span>繁體台灣用語</span><span>資料留在本機</span><span>Windows 10／11 64 位元</span>
   </div>
 
   <div class="hero-island" aria-hidden="true">
@@ -757,13 +805,13 @@ footer{border-top-color:rgba(125,211,252,.12)}
         <div class="fc-copy">
           <span class="fc-kicker">GAMES · 07</span>
           <h3>本機遊戲庫</h3>
-          <p class="fc-summary">Steam 與 Riot 已安裝遊戲、最後遊玩與容量；可重新掃描，或清除本次結果。</p>
+          <p class="fc-summary">八個啟動器的本機遊戲、最後遊玩與容量，一鍵重新掃描。</p>
         </div>
-        <p class="fc-peek" aria-hidden="true">讀取本機 Steam 收藏庫與 Riot Client 安裝位置，列出已安裝遊戲、最後遊玩時間與容量，每一列都抓應用程式自己的圖示；按一下圖示或「啟動」就走 Steam 或 Riot 的正式協定開啟。按「重新掃描」更新清單；按「清除掃描」只清空本次結果與數量，不會解除安裝、刪除遊戲，也不會動到已移除的捷徑清單。長按圖示可把捷徑移除，按「顯示全部」恢復；不在背景登入、不上傳收藏庫，也不定時掃描。</p>
+        <p class="fc-peek" aria-hidden="true">只讀取本機啟動器留下的 manifest、卸載登錄資料與安裝資料夾，列出已安裝遊戲、最後遊玩時間與容量，每一列都抓應用程式自己的圖示；按一下圖示或「啟動」會用對應啟動器協定或本機執行檔開啟。按「重新掃描」更新清單；按「清除掃描」只清空本次結果與數量，不會解除安裝、刪除遊戲，也不會動到已移除的捷徑清單。長按圖示可把捷徑移除，按「顯示全部」恢復；不在背景登入、不上傳收藏庫，也不定時掃描。</p>
         <div class="fc-detail">
           <span class="fc-kicker">GAMES · 07</span>
           <h3>本機遊戲庫</h3>
-          <p>讀取本機 Steam 收藏庫與 Riot Client 安裝位置，列出已安裝遊戲、最後遊玩時間與容量，每一列都抓應用程式自己的圖示；按一下圖示或「啟動」就走 Steam 或 Riot 的正式協定開啟。按「重新掃描」更新清單；按「清除掃描」只清空本次結果與數量，不會解除安裝、刪除遊戲，也不會動到已移除的捷徑清單。長按圖示可把捷徑移除，按「顯示全部」恢復；不在背景登入、不上傳收藏庫，也不定時掃描。</p>
+          <p>只讀取本機啟動器留下的 manifest、卸載登錄資料與安裝資料夾，列出已安裝遊戲、最後遊玩時間與容量，每一列都抓應用程式自己的圖示；按一下圖示或「啟動」會用對應啟動器協定或本機執行檔開啟。按「重新掃描」更新清單；按「清除掃描」只清空本次結果與數量，不會解除安裝、刪除遊戲，也不會動到已移除的捷徑清單。長按圖示可把捷徑移除，按「顯示全部」恢復；不在背景登入、不上傳收藏庫，也不定時掃描。</p>
           <span class="fc-hint">移開或點外面即收起</span>
         </div>
       </article>
@@ -789,11 +837,11 @@ footer{border-top-color:rgba(125,211,252,.12)}
           <h3>本機優先</h3>
           <p class="fc-summary">設定、登入資料與紀錄留在本機，不經中繼伺服器。</p>
         </div>
-        <p class="fc-peek" aria-hidden="true">設定、憑證與紀錄都存在你自己的電腦；天氣、額度、信箱直接用你填的設定連到該服務，不經過本專案的中繼伺服器。免安裝版不寫登錄檔，換電腦或換資料夾直接搬走；安裝檔固定為 Kuidao-Setup-TW-x64.exe，下載位置不會因版本變動。</p>
+        <p class="fc-peek" aria-hidden="true">設定、憑證與紀錄都存在你自己的電腦；天氣、額度、信箱直接用你填的設定連到該服務，不經過本專案的中繼伺服器。安裝版可從 Windows「新增或移除程式」解除安裝；安裝檔固定為 Kuidao-Setup-TW-x64.exe，下載位置不會因版本變動。</p>
         <div class="fc-detail">
           <span class="fc-kicker">LOCAL · 09</span>
           <h3>本機優先</h3>
-          <p>設定、憑證與紀錄都存在你自己的電腦；天氣、額度、信箱直接用你填的設定連到該服務，不經過本專案的中繼伺服器。免安裝版不寫登錄檔，換電腦或換資料夾直接搬走；安裝檔固定為 Kuidao-Setup-TW-x64.exe，下載位置不會因版本變動。</p>
+          <p>設定、憑證與紀錄都存在你自己的電腦；天氣、額度、信箱直接用你填的設定連到該服務，不經過本專案的中繼伺服器。安裝版可從 Windows「新增或移除程式」解除安裝；安裝檔固定為 Kuidao-Setup-TW-x64.exe，下載位置不會因版本變動。</p>
           <span class="fc-hint">移開或點外面即收起</span>
         </div>
       </article>
@@ -892,8 +940,13 @@ footer{border-top-color:rgba(125,211,252,.12)}
               </div>
             </figure>
             <figure class="island-slide" data-counts="44,29,16,13">
-              <div class="island-frame" style="--ar:2.0746">
-                <img src="images/showcase/island-calendar.webp" alt="鬼島行程：2026 年 11 月月曆與當天暫無行程" loading="eager" decoding="async">
+              <div class="island-frame theme-cycle-frame">
+                <img src="images/showcase/theme-music.webp" alt="鬼島音樂頁：播放控制、歌詞與進度">
+                <img src="images/showcase/theme-games.webp" alt="" aria-hidden="true">
+                <img src="images/showcase/theme-weather.webp" alt="" aria-hidden="true">
+                <img src="images/showcase/theme-sunrise.webp" alt="" aria-hidden="true">
+                <img src="images/showcase/theme-calendar.webp" alt="" aria-hidden="true">
+                <img src="images/showcase/theme-lyrics.webp" alt="" aria-hidden="true">
                 <div class="slide-rail" aria-hidden="true">
                   <div class="rail-item" style="--i:0"><img src="images/showcase/notif-gmail.png" alt=""><span class="rail-badge">44</span></div>
                   <div class="rail-item" style="--i:1"><img src="images/showcase/notif-line.png" alt=""><span class="rail-badge">29</span></div>
@@ -922,12 +975,27 @@ footer{border-top-color:rgba(125,211,252,.12)}
           <button type="button" aria-label="番茄專注"></button>
           <button type="button" aria-label="剪貼簿"></button>
           <button type="button" aria-label="待辦清單"></button>
-          <button type="button" aria-label="行程"></button>
+          <button type="button" aria-label="主題演示"></button>
           <button type="button" aria-label="遊戲庫"></button>
         </div>
       </div>
     </div>
     <p class="island-note">八種展開模樣會自動輪播 · 滑鼠移入暫停 · 左右滑動可切換 <button type="button" class="island-auto" id="islandAuto" aria-label="暫停自動輪播" aria-pressed="false">暫停自動輪播</button></p>
+
+    <div class="theme-demo-block">
+      <div class="theme-demo-head">
+        <div>
+          <span class="eyebrow-pill">Theme demo</span>
+          <h3>同一條島，換上不同主題</h3>
+        <p>從經典、奶油、毛玻璃到多款懸浮漸層，島體和石虎都留在原位，只換底色與光線。這段演示把桌布拿掉、換成官網深色底，直接看主題切換時的樣子。</p>
+        </div>
+      </div>
+      <figure class="theme-demo-media">
+        <img src="images/showcase/theme-demo.gif" alt="鬼島主題演示：切換經典、奶油、毛玻璃與多款懸浮漸層，島體展開不同頁面" width="720" height="300" loading="lazy" decoding="async">
+      </figure>
+      <p class="theme-demo-cap">主題演示 · 只換島體與吉祥物的底色和光線，桌面背景已移除</p>
+      <p class="theme-demo-note">註：畫面中的時間會依系統時間即時變動，主題演示只固定切換節奏與版面。</p>
+    </div>
   </div>
 </section>
 
@@ -941,11 +1009,11 @@ footer{border-top-color:rgba(125,211,252,.12)}
     </div>
     <div class="local-grid">
       <div class="local-item"><b>台灣用語</b><p>設定、檔案、資料夾、記憶體、螢幕、系統匣、捷徑、行事曆，照台灣人實際講法，不是逐字轉換。</p></div>
-      <div class="local-item"><b>地名與時間</b><p>天氣顯示「台灣 · 市 · 區」，不會冒出「臺灣省」；時鐘可切 12／24 小時與秒數。</p></div>
-      <div class="local-item"><b>外觀與動畫</b><p>奶油、毛玻璃、懸浮與漸層主題；吉祥物固定島虎，所有主題使用同一組原作者石虎影格，漸層只換底色。</p></div>
-      <div class="local-item"><b>免安裝打包</b><p>解壓即用、不寫登錄檔；換電腦或換資料夾直接搬走，不留下安裝殘留。</p></div>
+      <div class="local-item"><b>地名與時間</b><p>天氣沿用原作者的地名與時間顯示方式，只把用語改成台灣習慣，行政區顯示已依台灣版調整；時鐘可切 12／24 小時與秒數。</p></div>
+      <div class="local-item"><b>外觀與動畫</b><p>奶油、毛玻璃、懸浮與漸層主題；吉祥物以類似原作者的呈現方式，目前皆以台灣石虎代表，所有主題共用同一組石虎影格，漸層只換底色。</p></div>
+      <div class="local-item"><b>安裝與移除</b><p>提供 Windows 安裝包，安裝後可從「設定 → 應用程式」或「新增或移除程式」解除安裝；不另外常駐背景服務，也不佔用多餘資源。</p></div>
     </div>
-    <p class="license-line"><b>授權</b>　鬼島台灣版衍生自 Renly1994／xiaotang-daozai（Windows 桌面靈動島），原專案以 MIT 授權釋出；依授權保留原作者版權聲明與條文，<b>LICENSE</b> 隨程式附上。</p>
+    <p class="license-line"><b>授權</b>　鬼島 Kuidao 桌面靈動島台灣版衍生自 Renly1994／xiaotang-daozai（Windows 桌面靈動島），原專案以 MIT 授權釋出；依授權保留原作者版權聲明與條文，<b>LICENSE</b> 隨程式附上。</p>
   </div>
 </section>
 
@@ -953,11 +1021,11 @@ footer{border-top-color:rgba(125,211,252,.12)}
 <section class="access" id="access">
   <div class="wrap">
     <div class="access-card">
-      <span class="status-pill"><i aria-hidden="true"></i>內測中</span>
-      <h2>內測安裝檔下載</h2>
-      <p>安裝檔固定為 <b>Kuidao-Setup-TW-x64.exe</b>，檔名不帶版本號。下載後開啟安裝器，第一次啟動才會下載主程式；測試期間版本與功能仍會調整。</p>
+      <span class="status-pill"><i aria-hidden="true"></i>初始版本 0.6.00</span>
+      <h2>安裝檔下載</h2>
+      <p>安裝包的第一個版本為 <b>0.6.00</b>，採 Windows 安裝形式。<br>安裝檔固定為 <b>Kuidao-Setup-TW-x64.exe</b>，檔名不帶版本號；下載後開啟安裝器，第一次啟動才會下載主程式。<br>後續版本與功能會透過程式內檢查更新調整。</p>
       <div class="access-meta">
-        <span>Windows 10／11</span><span>64 位元</span><span>免安裝</span><span>MIT 授權</span>
+        <span>初始版本 0.6.00</span><span>Windows 10／11</span><span>64 位元</span><span>安裝版</span><span>MIT 授權</span>
       </div>
       <a class="btn-main access-download" href="download/Kuidao-Setup-TW-x64.exe" download>下載 Windows 安裝檔</a>
     </div>
@@ -970,24 +1038,28 @@ footer{border-top-color:rgba(125,211,252,.12)}
     <div class="sec-head">
       <span class="eyebrow-pill">FAQ</span>
       <h2>常見問題</h2>
-      <p>關於內測、資料與支援</p>
+      <p>關於安裝、資料與支援</p>
     </div>
     <div class="faq">
       <details>
-        <summary>什麼時候開放？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>內測安裝檔已在本頁開放下載，檔名固定為 Kuidao-Setup-TW-x64.exe；正式版時程與授權方式仍由維護者公告。</p></div>
+        <summary>現在可以下載嗎？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>安裝包的第一個版本 0.6.00 已在本頁開放下載，檔名固定為 Kuidao-Setup-TW-x64.exe；後續版本會透過程式內檢查更新提供。</p></div>
       </details>
       <details>
         <summary>跟原版差在哪裡？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>功能面沿用上游開源專案，差異在語言與在地化：全繁體台灣用語、地名與時間格式、外觀與品牌識別、免安裝打包。程式架構與模組邏輯沒有重寫。</p></div>
+        <div class="answer"><p>功能面沿用上游開源專案，差異在語言與在地化：全繁體台灣用語、地名與時間格式、外觀與品牌識別，以及 Windows 安裝與移除流程。程式架構與模組邏輯沒有重寫。</p></div>
       </details>
       <details>
         <summary>更新內容資料庫是什麼？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>在「關於」頁版本資訊下方，只保留最新一筆更新說明。每次成功取得最新 Release 後整份覆寫本機 <b>update-notes.json</b>，不會累積上一筆；啟動約 5 秒先檢查，之後每 2 小時與手動檢查都會刷新，卡片會顯示版本、取得時間與完整發布頁連結。</p></div>
+        <div class="answer"><p>在「關於」頁版本資訊下方，只保留最新一筆更新說明。每次成功取得最新 Release 後整份覆寫本機 <b>update-notes.json</b>，不會累積上一筆；啟動約 5 秒先檢查，之後每 2 小時與手動檢查都會刷新，卡片會顯示版本與取得時間。</p></div>
       </details>
       <details>
         <summary>按「清除掃描」會刪掉遊戲嗎？<span class="plus" aria-hidden="true"></span></summary>
         <div class="answer"><p>不會。清除只清空本次掃描結果與數量，不會解除安裝、刪除遊戲，也不會動到「已移除捷徑」清單；按「重新掃描本機遊戲」就能重新列出已安裝項目。</p></div>
+      </details>
+      <details>
+        <summary>遊戲庫支援哪些平台？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>Steam、Riot、Epic、GOG、Ubisoft、EA、Battle.net 與 Amazon 八個來源。只看本機啟動器留下的 manifest、卸載登錄與安裝資料夾，不會登入啟動器、不上傳收藏庫，也不會背景掃描；沒抓到清單時按「重新掃描」即可。</p></div>
       </details>
       <details>
         <summary>安裝檔為什麼沒有版本號？<span class="plus" aria-hidden="true"></span></summary>
@@ -995,7 +1067,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
       </details>
       <details>
         <summary>需要管理員權限嗎？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>免安裝版解壓即用，一般權限就能跑；只有要讀取需要更高權限的系統資訊時，才會請你提權。</p></div>
+        <div class="answer"><p>安裝時需要系統管理員權限，因為安裝器會寫入程式目錄與「新增或移除程式」資訊；日常開啟與使用不需要管理員權限。</p></div>
       </details>
       <details>
         <summary>會不會把資料傳出去？<span class="plus" aria-hidden="true"></span></summary>
@@ -1011,7 +1083,7 @@ footer{border-top-color:rgba(125,211,252,.12)}
       </details>
       <details>
         <summary>可以換吉祥物嗎？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>可以。台灣版固定島虎（石虎），設定只保留這一種形象；尾巴、耳朵與眨眼會自己動，待機、開心、擔心、專注與沉睡各有不同節奏。</p></div>
+        <div class="answer"><p>台灣版固定以石虎代表，採用類似原作者的單一角色影格呈現方式，設定只保留這一種形象；尾巴、耳朵與眨眼會自己動，待機、開心、擔心、專注與沉睡各有不同節奏。</p></div>
       </details>
     </div>
   </div>
@@ -1022,8 +1094,8 @@ footer{border-top-color:rgba(125,211,252,.12)}
 <footer>
   <div class="foot-inner">
     <div>
-      <div class="foot-brand"><span class="brand-mark"><img src="images/brand/logo.webp" alt="" width="28" height="28"></span><strong>鬼島 桌面靈動島</strong></div>
-      <p class="foot-note">台灣版 · 內測中，安裝檔可從本頁下載。本站為個人專案頁面，非商業販售。<br>衍生自上游開源專案，依 MIT 授權保留原作者聲明。</p>
+      <div class="foot-brand"><span class="brand-mark"><img src="images/brand/logo.webp" alt="" width="28" height="28"></span><strong>鬼島 Kuidao 桌面靈動島</strong></div>
+      <p class="foot-note">台灣版 · 安裝包初始版本 0.6.00，安裝檔可從本頁下載。本站為個人專案頁面，非商業販售。<br>衍生自上游開源專案，依 MIT 授權保留原作者聲明。</p>
     </div>
     <div class="foot-links">
       <a href="#features">特色功能</a>

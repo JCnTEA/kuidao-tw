@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<title>鬼島 · 更新總覽</title>
+<title>鬼島 Kuidao 桌面靈動島 · 更新總覽</title>
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap">
 <style>
 :root{--bg:#060b12;--card:#0c1a26;--line:#183245;--cy:#3fe0f0;--cy2:#1ea7c4;--txt:#e6f7fb;--sub:#7fa3b5;--dim:#4f7186}
@@ -24,7 +24,7 @@ h1{font-size:clamp(34px,6vw,58px);font-weight:900;letter-spacing:.18em;color:#df
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px}
 .hero-shot{max-width:520px;margin:0 auto 20px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#070f17}
 .hero-shot img{display:block;width:100%;height:auto}
-.card{background:linear-gradient(160deg,var(--card) 0%,#0a1622 100%);border:1px solid var(--line);border-radius:14px;padding:18px;transition:.25s;position:relative;overflow:hidden}
+.card{background:linear-gradient(160deg,rgba(12,26,38,.62) 0%,rgba(10,22,34,.44) 100%);border:1px solid var(--line);border-radius:14px;padding:18px;transition:.25s;position:relative;overflow:hidden;backdrop-filter:blur(16px)}
 .card:hover{border-color:rgba(63,224,240,.42);transform:translateY(-2px);box-shadow:0 10px 30px -12px rgba(0,0,0,.7)}
 .card::after{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(63,224,240,.5),transparent)}
 .card h3{font-size:14px;font-weight:700;margin-bottom:8px;color:#d7f6fb}
@@ -58,7 +58,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
 <div class="wrap">
   <header>
     <h1>鬼島</h1>
-    <span class="en">GUIDAO · TAIWAN DIGITAL PLATFORM</span>
+    <span class="en">KUDAO · DESKTOP DYNAMIC ISLAND</span>
     <p class="tagline">Windows 桌面靈動島 · <b>台灣繁體版</b>　｜　衍生自上游開源專案（MIT）</p>
   </header>
 
@@ -66,7 +66,9 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="hero-shot"><img src="images/showcase/update.webp" alt="鬼島發現新版本時的更新視窗，列出本次更新重點與立即更新按鈕" loading="lazy"></div>
     <div class="grid">
-      <div class="card"><span class="badge">官網</span><h3>首頁常見說明與透明卡片更新，介面輪播改成自動播放</h3><p>常見問題補上更新內容資料庫、清除掃描與固定安裝檔名；透明功能卡新增「更新內容」與「本機優先」，遊戲卡補上重新／清除掃描，卡片數改為九張。介面輪播改成每 6 秒自動播放，滑鼠移入、鍵盤聚焦或切到背景會暫停，下方可手動暫停；首屏番茄倒數由 25 分鐘改為 5 分鐘。</p></div>
+      <div class="card"><span class="badge">官網</span><h3>第七張介面改成六頁主題動畫，新增主題演示 GIF</h3><p>介面輪播第七張換成六頁淡入動畫：音樂、遊戲庫、天氣、日出日落、行程與島上歌詞輪流出現，原本的桌面桌布與藍色底已去掉，只留島體透明邊。下方新增「主題演示」GIF，把經典、奶油、毛玻璃與懸浮漸層的切換收在同一段；GIF 已裁掉多餘黑邊並遮蔽信箱帳號，圖片用 lazy 載入，圓點與自動輪播照舊。</p></div>
+      <div class="card"><span class="badge">遊戲</span><h3>遊戲庫改從本機多個啟動器自動載入</h3><p>不再只認 Steam 與 Riot：現在一併讀取 Epic 的 manifest、GOG／Ubisoft／EA／Battle.net／Amazon 的卸載登錄資料與安裝資料夾，Riot 仍抓本機捷徑。清單會依來源分組、同名去重，摘要顯示各平台款數；啟動優先用該平台的正式協定，其次才是安裝資料夾裡的主程式。全部只讀本機、不登入、不上傳，重新掃描與清除掃描仍照舊。</p></div>
+      <div class="card"><span class="badge">官網</span><h3>首頁常見說明與透明卡片更新，介面輪播改成自動播放</h3><p>常見問題補上更新內容資料庫、清除掃描、固定安裝檔名與遊戲庫支援的八個平台；透明功能卡新增「更新內容」與「本機優先」，遊戲卡改成八個啟動器來源並保留重新／清除掃描，卡片數改為九張。介面輪播改成每 6 秒自動播放，滑鼠移入、鍵盤聚焦或切到背景會暫停，下方可手動暫停；首屏番茄倒數由 25 分鐘改為 5 分鐘。</p></div>
       <div class="card"><span class="badge">設定</span><h3>關於頁新增更新內容資料庫，只保留最新一筆</h3><p>「關於」頁在版本卡下方新增更新內容資料庫：每次向 GitHub 取得最新 Release 後，整份覆寫本機 update-notes.json，只存一筆版本、內容與時間，不累積上一筆。卡片以綠色「最新一筆」標籤、條列內容與更新時間呈現；連線失敗時保留目前快取，不會長出舊資料。</p></div>
       <div class="card"><span class="badge">設定</span><h3>遊戲設定新增清除掃描，兩顆動作按鈕改成一致膠囊</h3><p>「重新掃描本機遊戲」與「清除掃描本機遊戲」改成同尺寸 34px 膠囊：左側向量圖示、圓角描邊、hover 平滑變色與按下位移。重新掃描是綠色主要動作；清除是低調紅色描邊，只清空本次掃描結果與數量，不會解除安裝、刪除遊戲或清掉已移除的捷徑清單。沒有掃描結果時自動變灰不可按。</p></div>
       <div class="card"><span class="badge">安裝</span><h3>安裝檔固定叫 Kuidao-Setup-TW-x64，官網直接下載</h3><p>安裝檔不再把版本號塞進檔名，固定為 <b>Kuidao-Setup-TW-x64.exe</b>；每次發布會同時更新 GitHub Release 與官網 <b>download/Kuidao-Setup-TW-x64.exe</b>，分享同一個網址即可，不必每次換連結。安裝精靈內的版本資訊仍會顯示目前版本。</p></div>
@@ -80,7 +82,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <div class="card"><span class="badge">歌詞</span><h3>YouTube／YouTube Music 也能抓到同步歌詞</h3><p>瀏覽器回報的標題常把「歌手 - 歌名」「歌名（Official Video）」、頻道名與「- YouTube」混在同一串，過去拿整串去查幾乎對不上。現在抓詞前會先拆掉影片標註、頻道後綴與「- YouTube」，再從標題與頻道組出「歌名＋歌手」候選逐組比對，並要求歌名、歌手與長度相符；英文名與韓文名並列的頻道也會分別嘗試。Spotify 的乾淨資料維持原本路徑，不受影響。</p></div>
       <div class="card"><span class="badge">官網</span><h3>首頁島體時間與氣溫自動更新，番茄改成 5 分鐘倒數</h3><p>首屏那條島不再固定寫著 14:19:58 與 19°。時間改用瀏覽器本機時鐘，每秒跳一次；氣溫從 Open-Meteo 抓目前溫度並每 10 分鐘重抓，抓不到才保留原數字。番茄專注顯示 05:00 並依實際秒數倒數，歸零後重新開始，畫面不用手動更新。</p></div>
       <div class="card"><span class="badge">安裝</span><h3>安裝包只剩啟動器，完成後自動下載主程式</h3><p>系統「新增／移除」裡的安裝包不再塞入完整 22MB 主程式，只剩約 1.2MB 的啟動器與卸載資訊。按下完成後會自動跳出品牌下載視窗，查詢 GitHub 最新正式版、顯示下載進度與大小，驗證 SHA-256 後才解壓到安裝資料夾並開啟鬼島。日常從捷徑開啟時，主程式已存在就直接啟動，不會每次重新下載；主程式仍沿用原本的應用內自動更新。</p></div>
-      <div class="card"><span class="badge">吉祥物</span><h3>所有主題統一使用原作者石虎</h3><p>經典、奶油、毛玻璃、懸浮雲與七款懸浮漸層現在都使用同一組原作者石虎影格，漸層只換島體底色，不會另外換一隻吉祥物。原本使用者資料夾只剩說明文字，才會出現「吉祥物不見了」；現在內建影格會自動接手，不必把圖放回資料夾。線條會依實際玻璃與桌面底色選深墨或白線，白線遇到半透明亮底再加一層極淡深色底。</p></div>
+      <div class="card"><span class="badge">吉祥物</span><h3>所有主題以類似原作者的台灣石虎呈現</h3><p>經典、奶油、毛玻璃、懸浮雲與七款懸浮漸層現在都使用同一組以類似原作者方式呈現的台灣石虎影格，漸層只換島體底色，不會另外換一隻吉祥物。原本使用者資料夾只剩說明文字，才會出現「吉祥物不見了」；現在內建影格會自動接手，不必把圖放回資料夾。線條會依實際玻璃與桌面底色選深墨或白線，白線遇到半透明亮底再加一層極淡深色底。</p></div>
       <div class="card"><span class="badge">歌詞</span><h3>長歌詞不再被省略號截斷，當前句會自動折行</h3><p>右側歌詞區加寬，當前句原文最多折三行、譯文最多兩行；英文與韓文按單字換行，中文、日文按字換行，不會把英文單字拆成兩半。前後句在空間足夠時仍以淡出的一行保留上下文，長句不會再整句變成「…」；播放控制、進度條與專輯封面位置不變。</p></div>
       <div class="card"><span class="badge">官網</span><h3>訊息上島卡片補回六顆社群圖示</h3><p>特色功能第二張卡原本只有文字，現在補上 LINE、手機連結、Messenger、Threads、Facebook 與 Instagram 六顆圓形圖示，和島上使用的圖示一致；深色主題會加白底，黑色 Threads 圖示不會消失。</p></div>
       <div class="card"><span class="badge">訊息</span><h3>未讀膠囊新增「全部已讀」</h3><p>展開未讀後，膠囊底部多一顆「全部已讀」。按下去會清掉 LINE、手機連結、Messenger、Threads、Facebook、Instagram 的島上未讀，收起島體，不會開啟任何程式；健康提醒不會被誤清。</p></div>
@@ -89,7 +91,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <div class="card"><span class="badge">官網</span><h3>介面輪播補上遊戲庫，功能卡增至九張</h3><p>官網「介面」區的展開畫面新增第八張遊戲庫，Riot 四項與可滾動的 Steam 清單直接入鏡；右側通知列數字一樣在 10–50 間跟著切換。特色功能新增「本機遊戲庫」、「更新內容」與「本機優先」卡，現在共九張，說明只讀本機資料、啟動方式、單筆更新內容與隱私邊界。</p></div>
       <div class="card"><span class="badge">官網</span><h3>介面區加入八張展開畫面與通知列</h3><p>「介面」區多一組實機畫面：天氣、音樂、島上歌詞、番茄專注、剪貼簿、待辦清單、行程與遊戲庫，支援滑鼠拖曳、觸控滑動、鍵盤方向鍵與圓點切換，現在也會每 6 秒自動輪播；滑鼠移入、鍵盤聚焦或分頁切到背景時暫停。畫面旁同步亮起 Gmail、LINE、手機連結與系統通知四顆圓形圖示，未讀數字在 10–50 之間跟著畫面更換，切換時依序彈出。</p></div>
       <div class="card"><span class="badge">官網</span><h3>首頁島體換成圖二內容</h3><p>首頁主視覺的深色膠囊改成圖二的排列：左起綠圈電量、下午時間、雲加太陽與氣溫、AI 圓環、番茄、紅色倒數、四格訊號，最後是白色線稿石虎與音符。手機版隱藏訊號並縮小石虎，實際 390px 寬度沒有水平溢位；深色主題也改成同一套黑底白光，不再被青綠漸層蓋掉。</p></div>
-      <div class="card"><span class="badge">吉祥物</span><h3>資料夾不再自動放入十六張一樣的範例影格</h3><p>以前第一次開啟吉祥物資料夾會自動放入十六張幾乎相同的待機圖，看起來像動畫不會換。現在只建立資料夾與說明，所有主題直接使用程式內建的原作者石虎影格，懸浮漸層也不例外；外掛包仍可自己上傳影格覆蓋。舊範例已移到備份資料夾，沒有刪除。</p></div>
+      <div class="card"><span class="badge">吉祥物</span><h3>資料夾不再自動放入十六張一樣的範例影格</h3><p>以前第一次開啟吉祥物資料夾會自動放入十六張幾乎相同的待機圖，看起來像動畫不會換。現在只建立資料夾與說明，所有主題直接使用程式內建的台灣石虎影格（採類似原作者的呈現方式），懸浮漸層也不例外；外掛包仍可自己上傳影格覆蓋。舊範例已移到備份資料夾，沒有刪除。</p></div>
       <div class="card"><span class="badge">通知</span><h3>點社群未讀直接回到那個聊天</h3><p>以前點 LINE 只會把主視窗叫到前面，現在會先讀通知中心裡的原始 launch：LINE 的 line:// 會直接開到台新銀行那則對話，Messenger、Facebook、Threads、Instagram 與手機連結也比照同一套。沒有深層連結或協定失效時，才退回開啟原生程式，最後才開官網。</p></div>
       <div class="card"><span class="badge">通知</span><h3>啟動就補上通知中心既有的未讀</h3><p>不再只算啟動後新跳出的通知。第一次讀取 Windows 通知中心時，會把還留在裡面的社群通知計入島上未讀，並記住最新一則的深層連結；瀏覽器送進通知中心的網站通知則用標題判斷來源，例如 Threads 的愛心或私訊、Instagram 訊息，點下去也能開到對應內容。同一輪即時通知會先扣掉，避免重複計算。</p></div>
       <div class="card"><span class="badge">外觀</span><h3>六個社群圖示統一圓形與數字</h3><p>LINE、手機連結、Threads、Messenger、Facebook、Instagram 全部固定 20×20 圓形裁切，通知數字用同一顆小白圓、同字級畫在右下角；手機連結與 LINE 並排第一列，超過三個未讀自動往下刷，滑鼠移進膠囊就停住可手動滾輪。設定頁的標籤可左右拖曳，越左邊越先出現在島上。</p></div>
@@ -104,7 +106,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <div class="card"><span class="badge">社群</span><h3>點通知開桌面程式，不再只丟網頁</h3><p>社群圖示會記住實際發出通知的 Windows AppID，點下去優先喚起 LINE、Messenger、Threads、Instagram、Facebook 的原生程式或已安裝的桌面版；LINE 另外會還原被最小化或收進系統匣的主視窗並切到前景。只有找不到 AppID 或系統拒絕喚起時，才退回原本的官方網站。LINE 的 PC 版沒有第三方指定聊天室的介面，因此會停在 LINE 主視窗的聊天列表，不會直接跳到某位好友的對話。</p></div>
       <div class="card"><span class="badge">歌詞</span><h3>Spotify 譯名也能找到歌詞</h3><p>部分華語歌在 Spotify 會顯示英文譯名與縮短藝名（例如 No Reason／永彬），和網易雲的中文原名對不上而只顯示歌名。現在查不到時會先用 Shazam 所走的 Apple 目錄還原正式歌名與完整藝名，再拿這個名字抓同步歌詞；比對時要求歌手可辨識、長度幾乎相同且全場僅一個候選。舊版誤記的「近期無歌詞」快取也會失效一次，重新查詢。</p></div>
       <div class="card"><span class="badge">歌詞</span><h3>繁化與自動翻譯</h3><p>歌詞沿用自動搜尋（本機歌詞 → 網易雲 → QQ 音樂 → LRCLIB）；中文歌詞在顯示時一律轉成繁體、採台灣寫法（內建繁簡對照表，不改動原始歌詞檔）。設定新增「自動翻譯歌詞」：非中文歌詞（英、日、韓等）保留原文，譯文以小字顯示在原文正下方，中文歌不翻；譯文快取在本機，同一首歌不重複送翻，離線或失敗時照常顯示原文。</p></div>
-      <div class="card"><span class="badge">官網</span><h3>官網改為內測版</h3><p>島體示意預設只露出一半，點一下或再點一下切換展開與收起；取得方式與授權一併改為「內測中，暫不開放」的官方說法；頁面不再出現任何指向原始碼倉庫的網址，改以專案識別碼代替，避免被從連結回推倉庫位置。</p></div>
+      <div class="card"><span class="badge">官網</span><h3>官網改為首發版</h3><p>島體示意預設只露出一半，點一下或再點一下切換展開與收起；取得方式與授權一併改為「首發前，暫不開放」的官方說法；頁面不再出現任何指向原始碼倉庫的網址，改以專案識別碼代替，避免被從連結回推倉庫位置。</p></div>
       <div class="card"><span class="badge">更新</span><h3>更新檢查修好</h3><p>版本標籤帶台灣版後綴時，舊版解析會判定格式異常；改為只取數字段後可正常比對，有新版本才會提示下載。</p></div>
                               <div class="card"><span class="badge">官網</span><h3>首頁加入三組實機畫面</h3><p>介紹頁新增「實際樣子」區塊：音樂播放、漸層主題、訊息三個卡片；素材統一套成 640×64 透明畫布，去掉桌面底色與深色邊框，訊息卡改用五個 App 圖示。</p></div>
 <div class="card"><span class="badge">吉祥物</span><h3>動畫改成獨立外掛包</h3><p>每個形象有自己的動畫來源，不再拿原始版表情序列來跑；石虎改用依原稿製作的待機動畫，身體固定、尾巴擺動與眨眼。設定可開啟外掛資料夾，放入自製的 pack.json 與影格 PNG 後重新載入即可替換。</p></div>
@@ -115,7 +117,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <div class="card"><span class="badge">社群</span><h3>五個訊息來源的未讀則數</h3><p>Threads、Messenger、Facebook、LINE、Instagram 的通知會分別累計，圖示右上顯示目前有幾則，超過 99 顯示 99+；點圖示可清零並開啟發出通知的桌面程式，沒有可用 AppID 才開對應網站。</p></div><div class="card"><span class="badge">同步</span><h3>上游只更新沒動過的部分</h3><p>同步時比對台灣版現況：沒改過的原始檔照收上游新版，改過的（吉祥物、設定頁、更新來源等）一律保留，上游同檔新內容另存供比對；同時修好清單檔被版本號覆寫導致無法啟動的問題。</p></div>
       <div class="card"><span class="badge">更新</span><h3>自動更新已上線</h3><p>後台每 6 小時檢查上游初始檔案，繁中化後自動編譯並發布；程式啟動向本倉庫查最新版，確認後才下載替換。台灣版自身改動同樣走此流程出包，官網同步補上說明。</p></div>
       <div class="card"><span class="badge">核心</span><h3>可執行成品</h3><p>正式版與開發板兩支 exe，圖示各自內嵌，管理員權限啟動，介面全繁體台灣用語。</p></div>
-      <div class="card"><span class="badge">授權</span><h3>內測中，暫不開放</h3><p>目前為內部測試階段，對外不下載、不發放授權；測試名額由維護者邀請，正式開放時另行公告，屆時才提供授權方式與檔案雜湊。</p></div>
+      <div class="card"><span class="badge">授權</span><h3>首發前，暫不開放</h3><p>目前為首發準備階段，對外不下載、不發放授權；首發名額由維護者邀請，正式開放時另行公告，屆時才提供授權方式與檔案雜湊。</p></div>
       <div class="card"><span class="badge">自動化</span><h3>上游同步</h3><p>定時檢查上游原始碼，自動繁中化、台灣用語調整、品牌改名、版本對齊後編譯發布。</p></div>
     </div>
   </section>
@@ -124,7 +126,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
     <div class="sec-title"><span class="bar"></span><h2>上游開發歷程</h2><span class="line"></span></div>
     <p style="font-size:12.5px;color:var(--sub);margin:-6px 0 18px">原始作者自首次開源一路推進的過程，依功能域歸納，不列版本號。</p>
     <div class="grid">
-      <div class="card"><span class="badge">開源起步</span><h3>安裝、更新與發布鏈</h3><p>首次開源並附使用指南；建立安裝包與免安裝包、應用內更新、開機自啟、捷徑目標路徑與舊版覆蓋升級流程，同步修掉 CI 抓取安裝程式與更新快取替換的問題。</p></div>
+      <div class="card"><span class="badge">開源起步</span><h3>安裝、更新與發布鏈</h3><p>首次開源並附使用指南；建立安裝包與發佈包、應用內更新、開機自啟、捷徑目標路徑與舊版覆蓋升級流程，同步修掉 CI 抓取安裝程式與更新快取替換的問題。</p></div>
       <div class="card"><span class="badge">音樂</span><h3>播放控制與歌詞</h3><p>接上系統媒體資訊：播放／暫停、切歌、獨立音量、進度跳轉；陸續適配網易雲、酷狗、波點、酷我、Apple Music、汽水，處理大歌單補齊時長、歌詞按歌曲身份切換、合唱曲目與少數民族語歌詞排版。</p></div>
       <div class="card"><span class="badge">AI 額度</span><h3>多來源額度面板</h3><p>從豆包起步，陸續接入 Kimi、Claude、Gemini、Grok、DeepSeek、GLM、ZCode、Kiro 與中轉站餘額；加入額度環、常駐欄數字、按需啟停背景執行緒與錯誤提示。</p></div>
       <div class="card"><span class="badge">通訊</span><h3>訊息上島</h3><p>微信、QQ 提醒先行，接著接入飛書、釘釘、企業微信，統一任務欄提醒與帳號歸屬判定，修掉白屏、隱藏圖示辨識、退出清理與延遲通知歸錯人。</p></div>
@@ -148,14 +150,17 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
       <button data-f="chg">異動</button>
     </div>
     <div class="tl">
-      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>官網首頁常見說明、透明卡片與輪播更新</h3><p>常見問題補上更新內容資料庫、清除掃描與固定安裝檔名；透明功能卡新增「更新內容」與「本機優先」，遊戲卡補上重新／清除掃描，卡片數改為九張。介面輪播每 6 秒自動播放，滑鼠移入、鍵盤聚焦或切到背景暫停，下方可手動暫停；首屏番茄倒數改為 5 分鐘。</p></div>
+      <div class="item" data-cat="chg"><time>最新</time><span class="cat chg">調整</span><h3>官網改為安裝版定位與初始版本</h3><p>站點改採安裝版定位與初始版本用語，首頁、下載區與 FAQ 改稱安裝包的第一個版本；全站卡片與更新總覽卡片改為半透明，並統一補上可從「新增或移除程式」解除安裝的說明。全名加上英文 Kuidao Desktop Dynamic Island，主題演示下方註明畫面時間會依系統時間變動。</p></div>
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>第七張介面改成六頁主題動畫與主題演示 GIF</h3><p>官網介面第七張不再是一張靜態行程圖，改成音樂、遊戲庫、天氣、日出日落、行程與島上歌詞六頁淡入；截圖的桌面與藍底已去掉，只留透明島體。下方加入主題演示 GIF，集中看經典、奶油、毛玻璃與漸層切換；GIF 裁掉多餘黑邊並遮蔽信箱帳號，lazy 載入不拖慢首屏。</p></div>
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>遊戲庫改從本機多個啟動器自動載入</h3><p>原本只掃 Steam 收藏庫與 Riot 捷徑，現在加入 Epic manifest，以及 GOG、Ubisoft、EA、Battle.net、Amazon 的卸載登錄與安裝資料夾。清單依來源排序、同名去重，摘要顯示各平台款數；啟動先走平台協定，沒有協定才執行安裝資料夾主程式。仍只讀本機，不登入、不上傳。</p></div>
+      <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>官網首頁常見說明、透明卡片與輪播更新</h3><p>常見問題補上更新內容資料庫、清除掃描、固定安裝檔名與遊戲庫支援的八個平台；透明功能卡新增「更新內容」與「本機優先」，遊戲卡改成八個啟動器來源並保留重新／清除掃描，卡片數改為九張。介面輪播每 6 秒自動播放，滑鼠移入、鍵盤聚焦或切到背景暫停，下方可手動暫停；首屏番茄倒數改為 5 分鐘。</p></div>
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>關於頁新增「更新內容資料庫」</h3><p>每次取得最新 Release 後整份覆寫本機唯一一筆紀錄，只保留版本、內容與更新時間，不累積上一筆；連線失敗時保留目前快取。卡片放在版本資訊下方，可直接看最新更新內容。</p></div>
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>遊戲設定新增「清除掃描本機遊戲」</h3><p>設定頁的遊戲卡換成兩顆同尺寸膠囊按鈕：重新掃描是綠色主要動作，清除是低調紅色描邊。兩顆都有向量圖示、平滑 hover 與按下位移；清除只清空本次掃描結果與數量，不會解除安裝、刪除遊戲或清掉已移除的捷徑清單。</p></div>
       <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">更新</span><h3>遊戲庫顯示真實圖示，長按可移除捷徑</h3><p>Steam 改讀收藏庫快取圖示，Riot 抓執行檔圖示；列首不再全部是字母磚。長按圖示半秒出現「移除／取消」，右上角也有小 ×；移除清單存本機，重新掃描不恢復，按右上「顯示全部」才回來。Steamworks 共用元件不再列出。</p></div>
       <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>KKBOX 同步歌詞，瀏覽器播放也會後備查詢</h3><p>KKBOX 播放時自動用歌名與歌手搜尋，比對長度後抓官方逐句歌詞；瀏覽器 YouTube、Spotify 查不到原本來源時也會改查 KKBOX。台語歌與 MV 標題會拆出合唱署名、中文歌名與英文拼音再比對，作詞作曲不列入歌詞行。抓不到時照原順序往網易雲、QQ 音樂與 LRCLIB，歌詞快取在本機。</p></div>
       <div class="item" data-cat="fix"><time>最新</time><span class="cat fix">修正</span><h3>開著也能等到最新版</h3><p>更新檢查原本一天只看一次，剛發布的版本要等很久才跳提示；改成每次啟動先確認一次、之後每兩小時再確認，一有新版就顯示最新的更新說明與資源包。按「下載並安裝」會一併換掉程式與 assets，設定和紀錄保留，不需要另外下載檔案。</p></div>
 
-      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>歌詞繁化與自動翻譯已出包</h3><p>免安裝版可直接在程式內檢查更新取得這一版。歌詞照舊自動查詞，中文歌一律轉繁體（台灣寫法）顯示；設定「播放控制與同步歌詞」多一個「自動翻譯歌詞」開關，非中文歌詞會依原意翻成繁中，中文歌不翻。翻譯在背景完成、譯文快取本機，離線或翻譯失敗時照常顯示原文，播放不受影響。</p></div>
+      <div class="item" data-cat="add"><time>最新</time><span class="cat add">新增</span><h3>歌詞繁化與自動翻譯已出包</h3><p>可直接在程式內檢查更新取得這一版。歌詞照舊自動查詞，中文歌一律轉繁體（台灣寫法）顯示；設定「播放控制與同步歌詞」多一個「自動翻譯歌詞」開關，非中文歌詞會依原意翻成繁中，中文歌不翻。翻譯在背景完成、譯文快取本機，離線或翻譯失敗時照常顯示原文，播放不受影響。</p></div>
 
       <div class="item" data-cat="fix"><time>最新</time><span class="cat fix">修正</span><h3>短句中文歌被誤判成外語</h3><p>只有幾個字的短句（例如「我們都一樣」）原本字數不到門檻，會被當成外語歌送去翻譯；判定改為看漢字佔比後，短句中文歌也正確判成中文，只做繁體化、不送翻譯。</p></div>
 
@@ -163,7 +168,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
 
       <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">調整</span><h3>吉祥物在島內也看得清、動作看得出來</h3><p>島上顯示框只有 48×30，原本細線縮下去幾乎消失，看起來只剩兩道白弧擋在漸層上。現在改為先縮到顯示框再加粗線條，動物本體放到接近滿版高度，並加大上下彈跳、呼吸縮放與左右擺頭，五隻形象同步重出圖集；縮到劉海大小也能認出是動物，待機時看得到在呼吸擺動，掃視與探看也不再像原地發呆。</p></div>
 
-      <div class="item" data-cat="chg"><time>最新</time><span class="cat chg">調整</span><h3>免安裝版可在程式內直接線上更新</h3><p>更新腳本改成台灣版的路徑與檔名（暫存目錄、程式名、解除安裝機碼都對齊鬼島），並補上吉祥物圖集等 assets 一起換新，不再只換 exe。做法：設定頁按「檢查更新」，程式會抓發佈包、比對大小與 SHA-256、關閉自己後換檔並自動重開；免安裝版也能直接套用，不必再手動重新封裝。</p></div>
+      <div class="item" data-cat="chg"><time>最新</time><span class="cat chg">調整</span><h3>安裝版可在程式內直接線上更新</h3><p>更新腳本改成台灣版的路徑與檔名（暫存目錄、程式名、解除安裝機碼都對齊鬼島），並補上吉祥物圖集等 assets 一起換新，不再只換 exe。做法：設定頁按「檢查更新」，程式會抓發佈包、比對大小與 SHA-256、關閉自己後換檔並自動重開；安裝版也能直接套用，不必再手動重新封裝。</p></div>
 
       <div class="item" data-cat="upd"><time>最新</time><span class="cat upd">調整</span><h3>吉祥物掃視動作幅度加大</h3><p>線條版吉祥物的左右掃視三格（09 掃視、10 探看、11 尋找）原本縮到島內後只位移約 7 像素，看起來像原地發呆；現在把每幀的左右擺幅加大到 10 像素以上，五隻形象同步更新，縮到劉海大小也看得出在左右張望。</p></div>
 

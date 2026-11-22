@@ -2,7 +2,7 @@
 #![allow(unused_must_use)]
 //! 極小安裝啟動器：安裝包本體不含主程式。
 //!
-//! 第一次開啟時查詢 GitHub 最新 Release，下載免安裝 zip、驗證 SHA-256、
+//! 第一次開啟時查詢 GitHub 最新 Release，下載發佈 zip、驗證 SHA-256、
 //! 解壓到安裝目錄後啟動 `kuidao.exe`。主程式存在時直接啟動，日常開啟不經過網路。
 
 use std::io::{Read, Write};

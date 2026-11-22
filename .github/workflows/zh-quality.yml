@@ -2,7 +2,7 @@ name: 中文自檢與自動修正
 
 on:
   schedule:
-    - cron: '17 * * * *'   # 每小時檢查一次，避開整點的上游同步
+    - cron: '30 16 * * *'   # 每日台灣時間 00:30（UTC+8）自檢與自動修正
   workflow_dispatch:
 
 permissions:

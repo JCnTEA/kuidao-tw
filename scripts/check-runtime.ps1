@@ -48,7 +48,9 @@ try {
             $dependencies += $name
         }
     }
-    $runtime = @($dependencies | Where-Object { $_ -match '^(vcruntime|msvcp|msvcr|api-ms-win-crt-).*\.dll$' })
+    # msvcrt.dll 是 Windows 內建的系统组件（GNU toolchain 会链接它），
+    # 不属于需要随安装包分发的 VC++ 运行库；msvcr100/120、msvcp140 等仍要拦截。
+    $runtime = @($dependencies | Where-Object { $_ -match '^(vcruntime|msvcp|msvcr[0-9]|api-ms-win-crt-).*\.dll$' })
     if ($runtime.Count) { throw ('发布程序仍依赖外部 C/C++ 运行库：' + ($runtime -join ', ')) }
     Write-Output '运行库检查通过：Windows x64，无外部 C/C++ 运行库依赖。'
 } finally { $reader.Dispose(); $stream.Dispose() }
