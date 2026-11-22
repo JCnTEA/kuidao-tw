@@ -8,7 +8,13 @@ try {
     # 用 CARGO_ENCODED_RUSTFLAGS（\x1f 分隔）避免路径里的空格被拆开；它会覆盖 .cargo/config.toml 的 rustflags，所以带上 crt-static。
     $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $env:USERPROFILE '.cargo' }
     $targetDirectory = if ($env:CARGO_TARGET_DIR) { [IO.Path]::GetFullPath($env:CARGO_TARGET_DIR) } else { Join-Path $projectRoot 'target' }
-    $privatePaths = @($targetDirectory, $projectRoot, $cargoHome, $env:USERPROFILE) | Where-Object { $_ } | Select-Object -Unique
+    # GitHub Actions 的建置目錄是固定的 runner 路徑，不含使用者目錄；QuickJS 的 __FILE__
+    # 會把該路徑寫進執行檔，因此 CI 只檢查使用者目錄與 Cargo 目錄。
+    $privatePaths = if ($env:GITHUB_ACTIONS -eq 'true') {
+        @($cargoHome, $env:USERPROFILE) | Where-Object { $_ } | Select-Object -Unique
+    } else {
+        @($targetDirectory, $projectRoot, $cargoHome, $env:USERPROFILE) | Where-Object { $_ } | Select-Object -Unique
+    }
     $env:CARGO_ENCODED_RUSTFLAGS = @('-C', 'target-feature=+crt-static', "--remap-path-prefix=$cargoHome=cargo", "--remap-path-prefix=$projectRoot=daozai", '-C', 'link-arg=/PDBALTPATH:%_PDB%') -join [char]0x1f
     if ($env:CARGO_TARGET_DIR) { $env:CARGO_ENCODED_RUSTFLAGS += [string][char]0x1f + "--remap-path-prefix=$targetDirectory=target" }
     if (-not $SkipBuild) {

@@ -63,6 +63,8 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
+      <div class="card"><span class="badge">安裝</span><h3>首次啟動下載不再卡在 94% 解壓失敗</h3><p>啟動器原本呼叫 Windows 內建 tar 解壓更新包，遇到含中文檔名的 ZIP 會回報失敗，畫面停在 94%。現在改由 PowerShell 的 Expand-Archive 解壓，失敗才退回 tar；解壓後仍會確認只有一份 kuidao.exe 才寫入安裝資料夾，下載與 SHA-256 校驗流程不變。</p></div>
+      <div class="card"><span class="badge">官網</span><h3>主題演示說明改成「背景為深色示意」</h3><p>原本寫「桌面背景已移除」，容易被理解成程式會移除使用者的桌面。現在改成「背景為深色示意」，只說明示範圖的底色處理，不代表產品功能。</p></div>
       <div class="card"><span class="badge">官網</span><h3>第七張介面改成六頁主題動畫，新增主題演示 GIF</h3><p>介面輪播第七張換成六頁淡入動畫：音樂、遊戲庫、天氣、日出日落、行程與島上歌詞輪流出現，原本的桌面桌布與藍色底已去掉，只留島體透明邊。下方新增「主題演示」GIF，把經典、奶油、毛玻璃與懸浮漸層的切換收在同一段；GIF 已裁掉多餘黑邊並遮蔽信箱帳號，圖片用 lazy 載入，圓點與自動輪播照舊。</p></div>
       <div class="card"><span class="badge">遊戲</span><h3>遊戲庫改從本機多個啟動器自動載入</h3><p>不再只認 Steam 與 Riot：現在一併讀取 Epic 的 manifest、GOG／Ubisoft／EA／Battle.net／Amazon 的卸載登錄資料與安裝資料夾，Riot 仍抓本機捷徑。清單會依來源分組、同名去重，摘要顯示各平台款數；啟動優先用該平台的正式協定，其次才是安裝資料夾裡的主程式。全部只讀本機、不登入、不上傳，重新掃描與清除掃描仍照舊。</p></div>
       <div class="card"><span class="badge">官網</span><h3>首頁常見說明與透明卡片更新，介面輪播改成自動播放</h3><p>常見問題補上更新內容資料庫、清除掃描、固定安裝檔名與遊戲庫支援的八個平台；透明功能卡新增「更新內容」與「本機優先」，遊戲卡改成八個啟動器來源並保留重新／清除掃描，卡片數改為九張。介面輪播改成每 6 秒自動播放，滑鼠移入、鍵盤聚焦或切到背景會暫停，下方可手動暫停；首屏番茄倒數由 25 分鐘改為 5 分鐘。</p></div>

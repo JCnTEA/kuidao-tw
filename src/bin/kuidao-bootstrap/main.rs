@@ -710,13 +710,44 @@ fn verify(path: &Path, release: &Release) -> Result<(), String> {
     Ok(())
 }
 
+/// 背景解壓時不要閃出主控台視窗。
+fn hidden_command(program: &Path) -> std::process::Command {
+    let mut command = std::process::Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
+}
+
 fn extract(zip: &Path, stage: &Path) -> Result<(), String> {
     std::fs::create_dir_all(stage).map_err(|_| "無法建立解壓資料夾".to_owned())?;
-    let tar = std::env::var_os("SystemRoot")
+    let system_root = std::env::var_os("SystemRoot")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(r"C:\Windows"))
-        .join("System32/tar.exe");
-    let status = std::process::Command::new(tar)
+        .unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
+    // Windows 內建 tar 對部分 ZIP（尤其含中文檔名）會回報失敗；
+    // 先走 PowerShell 的 Expand-Archive（.NET ZipArchive），再保留 tar 後備。
+    let powershell = system_root.join("System32/WindowsPowerShell/v1.0/powershell.exe");
+    let status = hidden_command(&powershell)
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            "Expand-Archive -LiteralPath $env:KUIDAO_ZIP -DestinationPath $env:KUIDAO_STAGE -Force",
+        ])
+        .env("KUIDAO_ZIP", zip)
+        .env("KUIDAO_STAGE", stage)
+        .status()
+        .map_err(|_| "無法啟動 Windows 解壓工具".to_owned())?;
+    if status.success() {
+        return Ok(());
+    }
+    let tar = system_root.join("System32/tar.exe");
+    let status = hidden_command(&tar)
         .arg("-xf")
         .arg(zip)
         .arg("-C")
@@ -833,3 +864,54 @@ fn repaint() {
 
 #[cfg(not(windows))]
 fn repaint() {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+
+    #[test]
+    fn bootstrap_extracts_unicode_zip_without_tar() {
+        if !cfg!(windows) {
+            return;
+        }
+        let root = std::env::temp_dir().join(format!(
+            "kuidao-bootstrap-extract-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let payload = root.join("payload");
+        std::fs::create_dir_all(&payload).unwrap();
+        std::fs::write(payload.join(APP_EXE), b"app").unwrap();
+        std::fs::write(payload.join("收集岛仔诊断.cmd"), b"diag").unwrap();
+        let zip = root.join("update.zip");
+        let system_root = std::env::var_os("SystemRoot")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
+        let powershell = system_root.join("System32/WindowsPowerShell/v1.0/powershell.exe");
+        let status = Command::new(powershell)
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "Compress-Archive -Path \"$env:KUIDAO_SRC\\*\" -DestinationPath $env:KUIDAO_ZIP -Force",
+            ])
+            .env("KUIDAO_SRC", &payload)
+            .env("KUIDAO_ZIP", &zip)
+            .status()
+            .unwrap();
+        assert!(status.success(), "Compress-Archive 失敗");
+
+        let stage = root.join("stage");
+        extract(&zip, &stage).expect("ZIP 應該可以直接解壓");
+        assert_eq!(std::fs::read(stage.join(APP_EXE)).unwrap(), b"app".to_vec());
+        assert!(stage.join("收集岛仔诊断.cmd").is_file());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+}
