@@ -20,22 +20,8 @@ jobs:
       - name: Build release
         run: cargo build --release --bin kuidao
 
-      - name: Package (portable zip)
-        shell: pwsh
-        run: |
-          $v = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
-          $out = "GuiDao-DynamicIsland-Portable-v$v-x64"
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
-          Copy-Item "target\release\kuidao.exe" "$out\kuidao.exe"
-          Copy-Item "target\release\kuidao.exe" "$out\鬼島-桌面靈動島-免安裝.exe"
-          Copy-Item "assets" $out -Recurse
-          if (Test-Path "README.md") { Copy-Item "README.md" "$out\說明.md" }
-          if (Test-Path "LICENSE") { Copy-Item "LICENSE" "$out\LICENSE.txt" }
-          Compress-Archive -Path "$out\*" -DestinationPath "$out.zip" -Force
-          "ASSET=$out.zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-
-      - name: Upload artifact
+      - name: Upload program
         uses: actions/upload-artifact@v4
         with:
-          name: kuidao-tw-portable
-          path: ${{ env.ASSET }}
+          name: kuidao-tw-windows-x64
+          path: target\release\kuidao.exe
