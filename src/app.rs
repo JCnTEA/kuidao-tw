@@ -35,9 +35,12 @@ pub const QUOTA_PAGE: usize = 6;
 pub const CALENDAR_PAGE: usize = 7;
 pub const WEATHER_PAGE: usize = 8;
 pub const GAME_PAGE: usize = 9;
+/// 電量頁：手機、耳機、滑鼠、鍵盤等會回報電量的裝置，用一列環形進度顯示。
+pub const POWER_PAGE: usize = 10;
 pub(crate) const WEATHER_H: f32 = 232.0;
 pub(crate) const CALENDAR_H: f32 = 216.0;
 pub(crate) const GAME_H: f32 = 204.0;
+pub(crate) const POWER_H: f32 = 168.0;
 pub const BAR_W: f32 = 163.0; // 收起药丸宽
 pub const BAR_H: f32 = 30.0; // 收起药丸高
 pub(crate) const HUD_W: f32 = 260.0;
@@ -80,8 +83,8 @@ fn pill_shadow(painter:&egui::Painter,rect:Rect,radius:f32,strength:f32){
         painter.rect_filled(r,radius+grow*0.8,Color32::from_black_alpha((255.0*a*strength) as u8));
     }
 }
-pub(crate) const PAGE_NAMES: [&str; 10] = ["音樂", "專注", "健康", "置物架", "待辦", "信箱", "AI 額度", "行程", "天氣", "遊戲"];
-pub(crate) const PAGE_SETTINGS_TABS: [usize; 10] = [1,2,3,5,4,7,11,8,12,15];
+pub(crate) const PAGE_NAMES: [&str; 11] = ["音樂", "專注", "健康", "置物架", "待辦", "信箱", "AI 額度", "行程", "天氣", "遊戲", "電量"];
+pub(crate) const PAGE_SETTINGS_TABS: [usize; 11] = [1,2,3,5,4,7,11,8,12,15,16];
 
 // ---------- 动效参数 ----------
 /// 悬停意图缓冲：光标停留这么久才真正展开（期间药丸轻微胀大作为反馈），防误触。
@@ -801,7 +804,7 @@ pub struct App {
     page_dir: f32,
     page_t0: f64,
     slide: Spring,
-    dots: [Spring; 10],
+    dots: [Spring; 11],
     wheel_delta: f32,
     wheel_at: f64,
     wheel_page_at: f64,
@@ -1931,7 +1934,7 @@ impl App {
     }
 
     pub(crate) fn expanded_height(&self)->f32 {
-        if self.page==CALENDAR_PAGE {CALENDAR_H}else if self.page==WEATHER_PAGE {WEATHER_H}else if self.page==GAME_PAGE {GAME_H}else if self.page==6{176.0}else if self.page==5&&self.mail.open_uid.is_some(){236.0}else{PH}
+        if self.page==CALENDAR_PAGE {CALENDAR_H}else if self.page==WEATHER_PAGE {WEATHER_H}else if self.page==GAME_PAGE {GAME_H}else if self.page==POWER_PAGE {POWER_H}else if self.page==6{176.0}else if self.page==5&&self.mail.open_uid.is_some(){236.0}else{PH}
     }
 
     // ---------------------------------------------------------------
@@ -3217,14 +3220,16 @@ impl App {
             if let Some(kind)=bt_power {
                 crate::extras::device_icon(&base.faded(lerp(layout.clearance(bar::BATTERY),1.0,m)),kind,bpos.0-22.0*bk,bpos.1-4.25*bk,8.5*bk);
             }
-            // 滑過電量圈就看得到是哪一顆裝置，避免手機與耳機同時連線時只剩一個數字。
+            // 滑過電量圈就看得到是哪一顆裝置；點一下打開「電量」頁，列出所有回報電量的裝置。
             let label=match env.display_bluetooth() {
                 Some(device)=>device.summary(),
                 None=>level.map(|level|format!("系統電池 · 電量 {level}%")).unwrap_or_default(),
             };
+            let hit=Rect::from_min_size(Pos2::new(bpos.0-30.0*bk,bpos.1-10.0),Vec2::new(62.0*bk,28.0));
+            let response=base.ui.interact(hit,egui::Id::new("island-battery-device"),egui::Sense::click());
+            if response.clicked() { self.show_page(crate::app::POWER_PAGE); }
             if !label.is_empty() {
-                let hit=Rect::from_min_size(Pos2::new(bpos.0-30.0*bk,bpos.1-10.0),Vec2::new(62.0*bk,28.0));
-                base.ui.interact(hit,egui::Id::new("island-battery-device"),egui::Sense::hover()).on_hover_text(label);
+                response.on_hover_text(format!("{label}\n點一下查看全部裝置電量"));
             }
         }
 
@@ -3404,6 +3409,7 @@ impl App {
             8 if self.weather.solar_open => ("日出", "日落", theme::YELLOW),
             8 => ("當地", "天氣", theme::CYAN),
             9 => ("遊戲", "庫", theme::SOFT_GREEN),
+            POWER_PAGE => ("電量", "", theme::GREEN),
             _ => ("鬼島", "設定", theme::WHITE),
         };
         let wa = c.text(15.0, base, a, size::TITLE, W::Bold, theme::WHITE, H::Left);
@@ -3415,7 +3421,7 @@ impl App {
     fn nav(&mut self, c: &Card) {
         let pages: Vec<_>=self.settings.page_order.iter().copied().filter(|page|self.settings.visible_pages[*page]).collect();
         if pages.len()<2 { return; }
-        let arrow_y=if self.page==6||self.page==8||self.page==GAME_PAGE{88.0}else{68.0};
+        let arrow_y=if self.page==6||self.page==8||self.page==GAME_PAGE||self.page==POWER_PAGE{88.0}else{68.0};
         let l = c.hit(8.0, arrow_y-13.0, 26.0, 26.0, "nav-l");
         let r = c.hit(385.0, arrow_y-13.0, 26.0, 26.0, "nav-r");
         let (lh, lp) = c.hover_t(&l);
@@ -3454,6 +3460,7 @@ impl App {
 
     fn render_page(&mut self, page: usize, c: &Card, env: &Env, cmds: &mut Vec<Cmd>) {
         match page {
+            POWER_PAGE => self.page_power(c, env),
             0 => self.page_music(c, env, cmds),
             1 => self.page_focus(c, env),
             2 => self.page_water(c, env),

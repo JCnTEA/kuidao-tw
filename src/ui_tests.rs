@@ -802,8 +802,8 @@ fn v0649_settings_and_mail_accounts_survive_upgrade(){
         crate::model::Settings::load().save();
         let saved=std::fs::read_to_string(directory.join("settings.txt")).unwrap();
         for line in legacy.lines().filter(|line|!line.starts_with("visible_pages=")&&!line.starts_with("page_order=")){assert!(saved.lines().any(|value|value==line),"升級儲存不能改變舊設定：{line}");}
-        assert!(saved.lines().any(|value|value=="visible_pages=1011111111"),"舊頁面開關應保留，並預設開啟天氣與遊戲頁");
-        assert!(saved.lines().any(|value|value=="page_order=5,2,0,1,3,4,6,7,8,9"),"舊順序應保留，並把天氣與遊戲頁接在最後");
+        assert!(saved.lines().any(|value|value=="visible_pages=10111111111"),"舊頁面開關應保留，並預設開啟天氣、遊戲與電量頁");
+        assert!(saved.lines().any(|value|value=="page_order=5,2,0,1,3,4,6,7,8,9,10"),"舊順序應保留，並把天氣、遊戲與電量頁接在最後");
     }
     std::fs::write(directory.join("mail-accounts.json"),br#"[{"email":"OldUser@qq.com","provider":"qq","enabled":true},{"email":"old@icloud.com","provider":"icloud","enabled":false}]"#).unwrap();
     let accounts=crate::mail::load_accounts();
@@ -2604,7 +2604,7 @@ fn minimal_hover_does_not_catch_tabs_during_collapse() {
 fn music_header_shortcut_returns_from_every_page_without_controlling_playback() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     for playing in [true,false] {
-        let mut h=H::new();h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9];
+        let mut h=H::new();h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9,10];
         h.media=crate::smtc::NowPlaying{source:"spotify.exe".into(),title:"Track".into(),artist:"Artist".into(),playing,duration:120.0,..Default::default()};
         for page in 1..crate::app::PAGE_NAMES.len() {
             h.app.show_page(page);h.hover(H::local(300.0,60.0),0.8);h.cmds.clear();
@@ -3350,7 +3350,7 @@ fn quota_accounts_switch_independently_and_hide_with_the_page() {
 fn page_visibility_is_saved_and_sets_the_starting_page() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
-    assert_eq!(h.app.settings.visible_pages,[true;10]);
+    assert_eq!(h.app.settings.visible_pages,[true;11]);
     assert!(h.app.settings.show_battery);
     h.app.settings.show_battery=false;
     h.app.set_page_visible(0,false);
@@ -3358,17 +3358,17 @@ fn page_visibility_is_saved_and_sets_the_starting_page() {
     h.app.settings.save();
     let settings=crate::model::Settings::load();
     assert!(!settings.show_battery);
-    assert_eq!(settings.visible_pages,[false,true,true,false,true,true,true,true,true,true]);
+    assert_eq!(settings.visible_pages,[false,true,true,false,true,true,true,true,true,true,true]);
     let restarted=App::new(&h.ctx,Options{fetch_lyrics:false,pet_idle:1e9});
     assert_eq!(restarted.page(),1);
     assert_eq!(restarted.settings.visible_pages,settings.visible_pages);
     assert!(!restarted.settings.show_battery);
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=000000\n").unwrap();
-    assert_eq!(crate::model::Settings::load().visible_pages,[true,false,false,false,false,false,false,false,false,false]);
+    assert_eq!(crate::model::Settings::load().visible_pages,[true,false,false,false,false,false,false,false,false,false,false]);
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=1000000\n").unwrap();
-    assert_eq!(crate::model::Settings::load().visible_pages,[true,false,false,false,false,false,false,true,true,true],"舊版頁面開關應保留，並開啟新增的行程頁、天氣頁與遊戲頁");
+    assert_eq!(crate::model::Settings::load().visible_pages,[true,false,false,false,false,false,false,true,true,true,true],"舊版頁面開關應保留，並開啟新增的行程、天氣、遊戲與電量頁");
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=invalid\n").unwrap();
-    assert_eq!(crate::model::Settings::load().visible_pages,[true;10]);
+    assert_eq!(crate::model::Settings::load().visible_pages,[true;11]);
 }
 
 #[test]
@@ -3405,10 +3405,93 @@ fn battery_module_can_disable_only_the_power_warning() {
 }
 
 #[test]
+fn battery_ring_click_opens_the_power_page() {
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();
+    h.app.settings.pet=false;
+    h.power=(Some(70),false);
+    h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
+    h.frame(vec![]);
+    let rect=h.ctx.read_response(egui::Id::new("island-battery-device")).expect("展開後電量圈必須可互動").rect;
+    h.click(rect.center());
+    assert_eq!(h.app.page,crate::app::POWER_PAGE,"點電量圈要打開電量頁");
+    assert!(h.app.open);
+}
+
+#[test]
+fn power_page_draws_one_ring_per_reported_device() {
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();
+    h.app.settings.pet=false;
+    h.power=(None,false);
+    h.bt=vec![
+        crate::bt::Device{id:"4F".into(),name:"iPhone".into(),battery:Some(95),kind:crate::bt::DeviceKind::Phone},
+        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(12),kind:crate::bt::DeviceKind::Earbuds},
+        crate::bt::Device{id:"BB".into(),name:"MX Master".into(),battery:Some(79),kind:crate::bt::DeviceKind::Mouse},
+        crate::bt::Device{id:"CC".into(),name:"沒有電量的鍵盤".into(),battery:None,kind:crate::bt::DeviceKind::Keyboard},
+    ];
+    h.app.show_page(crate::app::POWER_PAGE);
+    h.hover(Pos2::new(WIN_W/2.0,90.0),1.2);
+    for _ in 0..30 {h.frame(vec![]);}
+    let texts=h.shapes.iter().filter_map(|s|match &s.shape{egui::Shape::Text(t)=>Some(t.galley.text().to_string()),_=>None}).collect::<Vec<_>>();
+    for label in ["95%","12%","79%"] {assert!(texts.iter().any(|t|t==label),"電量頁缺少 {label}：{texts:?}");}
+    assert!(!texts.iter().any(|t|t.contains("沒有電量的鍵盤")),"沒回報電量的裝置不該出現");
+    // 低於 20% 的弧要轉紅。
+    let red=h.shapes.iter().any(|s|match &s.shape{egui::Shape::Path(path)=>path.stroke.color==egui::epaint::ColorMode::Solid(crate::theme::RED),_=>false});
+    assert!(red,"12% 的環應畫成紅色");
+}
+
+#[test]
+fn power_page_explains_the_empty_state() {
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();
+    h.app.settings.pet=false;
+    h.power=(None,false);
+    h.app.show_page(crate::app::POWER_PAGE);
+    h.hover(Pos2::new(WIN_W/2.0,90.0),1.0);
+    for _ in 0..20 {h.frame(vec![]);}
+    let texts=h.shapes.iter().filter_map(|s|match &s.shape{egui::Shape::Text(t)=>Some(t.galley.text().to_string()),_=>None}).collect::<Vec<_>>();
+    assert!(texts.iter().any(|t|t=="尚無裝置電量"),"空狀態要有說明：{texts:?}");
+}
+
+#[test]
+#[ignore="按需匯出電量頁的島體畫面"]
+fn power_page_preview(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let dest=std::path::PathBuf::from(std::env::var_os("KUIDAO_BT_BATTERY_PREVIEW_DIR").expect("需指定預覽目錄"));std::fs::create_dir_all(&dest).unwrap();
+    let mut h=H::new();h.app.settings.show_battery=true;h.app.settings.pet=false;
+    h.power=(Some(85),true);
+    h.bt=vec![
+        crate::bt::Device{id:"4F".into(),name:"iPhone 15 Pro".into(),battery:Some(95),kind:crate::bt::DeviceKind::Phone},
+        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(100),kind:crate::bt::DeviceKind::Headphones},
+        crate::bt::Device{id:"BB".into(),name:"MX Keys".into(),battery:Some(58),kind:crate::bt::DeviceKind::Keyboard},
+        crate::bt::Device{id:"CC".into(),name:"MX Master 3S".into(),battery:Some(12),kind:crate::bt::DeviceKind::Mouse},
+    ];
+    h.app.show_page(crate::app::POWER_PAGE);
+    let (w,hgt)=(crate::app::CANVAS_W,WIN_H);let ppp=2.0;let mut raster=feature_raster_sized(w,hgt);
+    for frame in 0..90 {
+        h.t+=1.0/60.0;
+        let cursor=Some(H::local(180.0,150.0));
+        let env=Env{t:h.t,clock:"14:08:26".into(),today:"2026-11-23".into(),date:"11月23日 週一".into(),cursor,
+            battery:h.power.0,charging:h.power.1,bt:h.bt.clone(),bt_ready:true,..Default::default()};
+        let output=h.ctx.run(egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(w,hgt))),time:Some(h.t),focused:true,
+            events:vec![egui::Event::PointerMoved(cursor.unwrap())],viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(ppp),..Default::default()})).collect(),..Default::default()},
+            |ctx|{egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx,|ui|{h.app.frame(ui,Rect::from_min_size(ui.max_rect().min,Vec2::new(WIN_W,WIN_H)),&env);});});
+        raster.update_textures(&output.textures_delta);
+        if frame==89 {
+            raster.buf.fill([0.07,0.07,0.08,1.0]);raster.draw(&h.ctx.tessellate(output.shapes.clone(),ppp),ppp);
+            let mut rgba=Vec::new();raster.to_rgba8(&mut rgba);
+            image::save_buffer(dest.join("island-power-page.png"),&rgba,(w*ppp)as u32,(hgt*ppp)as u32,image::ColorType::Rgba8).unwrap();
+        }
+        raster.free_textures(&output.textures_delta);
+    }
+}
+
+#[test]
 fn page_visibility_skips_hidden_pages_in_every_navigation_control() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
-    for page in [1,3,4,6,7,8,9] {h.app.set_page_visible(page,false);}
+    for page in [1,3,4,6,7,8,9,crate::app::POWER_PAGE] {h.app.set_page_visible(page,false);}
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
     for expected in [2,5,0] {
         h.click(H::local(398.0,68.0));
@@ -3437,7 +3520,7 @@ fn page_visibility_moves_away_from_hidden_page_and_keeps_one_page() {
     h.app.set_page_visible(4,false);
     assert_eq!(h.app.page,0);
     assert!(!h.app.is_editing());
-    for page in [0,1,3,5,6,7,8,9] {h.app.set_page_visible(page,false);}
+    for page in [0,1,3,5,6,7,8,9,crate::app::POWER_PAGE] {h.app.set_page_visible(page,false);}
     assert_eq!(h.app.page,2);
     h.app.set_page_visible(2,false);
     assert!(h.app.settings.visible_pages[2],"不能關閉最後一個頁面");
@@ -6311,13 +6394,13 @@ fn calendar_sync_result_does_not_enqueue_another_sync() {
 fn page_order_persists_and_controls_navigation() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
-    h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9];
+    h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9,10];
     h.app.settings.save();
     let settings=crate::model::Settings::load();
-    assert_eq!(settings.page_order,[5,2,0,1,3,4,6,7,8,9]);
+    assert_eq!(settings.page_order,[5,2,0,1,3,4,6,7,8,9,10]);
     let restarted=App::new(&h.ctx,Options{fetch_lyrics:false,pet_idle:1e9});
     assert_eq!(restarted.page(),5);
-    for page in [1,3,4,6,7,8,9] {h.app.set_page_visible(page,false);}
+    for page in [1,3,4,6,7,8,9,crate::app::POWER_PAGE] {h.app.set_page_visible(page,false);}
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
     for expected in [5,2,0] {
         h.click(H::local(398.0,68.0));
@@ -6330,7 +6413,7 @@ fn page_order_persists_and_controls_navigation() {
     assert_eq!(h.app.page,5);
     for invalid in ["0,0,1,2,3,4,5,6","8,1,2,3,4,5,6,7","0,1","invalid"] {
         std::fs::write(crate::model::config_dir().join("settings.txt"),format!("page_order={invalid}\n")).unwrap();
-        assert_eq!(crate::model::Settings::load().page_order,[0,1,2,3,4,5,6,7,8,9]);
+        assert_eq!(crate::model::Settings::load().page_order,[0,1,2,3,4,5,6,7,8,9,10]);
     }
 }
 
@@ -6357,9 +6440,9 @@ fn page_order_drag_applies_on_release_and_saves() {
     draw(&mut h,vec![egui::Event::PointerMoved(from),button(from,true)]);
     draw(&mut h,vec![egui::Event::PointerMoved(from+egui::vec2(0.0,10.0))]);
     draw(&mut h,vec![egui::Event::PointerMoved(to)]);
-    assert_eq!(h.app.settings.page_order,[0,1,2,3,4,5,6,7,8,9]);
+    assert_eq!(h.app.settings.page_order,[0,1,2,3,4,5,6,7,8,9,10]);
     draw(&mut h,vec![button(to,false)]);
-    assert_eq!(h.app.settings.page_order,[1,2,0,3,4,5,6,7,8,9]);
+    assert_eq!(h.app.settings.page_order,[1,2,0,3,4,5,6,7,8,9,10]);
     assert_eq!(crate::model::Settings::load().page_order,h.app.settings.page_order);
 }
 
@@ -9371,7 +9454,7 @@ fn background_services_follow_the_module_switch(){
 
 #[test]
 fn every_module_settings_tab_maps_to_its_page(){
-    let titles=["通用","音樂","專注","健康","待辦","置物","訊息提醒","信箱","行程","關於","頁面管理","AI 額度","天氣","外觀","位置","遊戲"];
+    let titles=["通用","音樂","專注","健康","待辦","置物","訊息提醒","信箱","行程","關於","頁面管理","AI 額度","天氣","外觀","位置","遊戲","電量"];
     let mut pages:Vec<_>=(0..titles.len()).filter_map(crate::extras::settings_tab_module).collect();
     for tab in 0..titles.len() {
         if let Some(page)=crate::extras::settings_tab_module(tab) {assert!(crate::app::PAGE_NAMES[page].chars().next()==titles[tab].chars().next(),"{} ↔ {}",titles[tab],crate::app::PAGE_NAMES[page]);}

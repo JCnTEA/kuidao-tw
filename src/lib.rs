@@ -75,6 +75,7 @@ pub mod smtc;
 pub mod music_volume;
 pub mod theme;
 pub mod settings_theme;
+mod power_ui;
 mod updates;
 #[cfg(windows)]
 pub use updates::record_install_size;

@@ -72,7 +72,8 @@ fn bluetooth_notice_content(body:&str)->(&str,&str,Option<u8>){
 
 pub(crate) fn device_icon(c: &Card, kind: crate::bt::DeviceKind, x: f32, y: f32, size: f32) {
     let icon=match kind {
-        crate::bt::DeviceKind::Bone | crate::bt::DeviceKind::Earbuds | crate::bt::DeviceKind::Headphones=>egui::include_image!("../assets/device-icons/headphones-round-bold.svg"),
+        // 耳機沿用圖四的線稿（頭帶 + 兩側耳罩），在深色面板上與其他線稿圖示一致。
+        crate::bt::DeviceKind::Bone | crate::bt::DeviceKind::Earbuds | crate::bt::DeviceKind::Headphones=>egui::include_image!("../assets/device-icons/headphones-linear.svg"),
         crate::bt::DeviceKind::Speaker=>egui::include_image!("../assets/device-icons/speaker-bold.svg"),
         crate::bt::DeviceKind::Keyboard=>egui::include_image!("../assets/device-icons/keyboard-bold.svg"),
         crate::bt::DeviceKind::Mouse=>egui::include_image!("../assets/device-icons/mouse-bold.svg"),
@@ -1377,7 +1378,7 @@ fn settings_page_icon(page:usize)->egui::ImageSource<'static>{
 #[cfg_attr(not(test),allow(dead_code))]
 pub(crate) fn settings_tab_module(tab:usize)->Option<usize>{
     use crate::app::*;
-    match tab {1=>Some(MUSIC_PAGE),2=>Some(FOCUS_PAGE),3=>Some(WATER_PAGE),4=>Some(TODO_PAGE),5=>Some(SHELF_PAGE),7=>Some(MAIL_PAGE),8=>Some(CALENDAR_PAGE),11=>Some(QUOTA_PAGE),12=>Some(WEATHER_PAGE),15=>Some(GAME_PAGE),_=>None}
+    match tab {1=>Some(MUSIC_PAGE),2=>Some(FOCUS_PAGE),3=>Some(WATER_PAGE),4=>Some(TODO_PAGE),5=>Some(SHELF_PAGE),7=>Some(MAIL_PAGE),8=>Some(CALENDAR_PAGE),11=>Some(QUOTA_PAGE),12=>Some(WEATHER_PAGE),15=>Some(GAME_PAGE),SETTINGS_TAB_POWER=>Some(crate::app::POWER_PAGE),_=>None}
 }
 
 pub(crate) fn settings_label(ui:&mut egui::Ui,text:&str){
@@ -1512,9 +1513,10 @@ pub(crate) const SETTINGS_TAB_APPEARANCE: usize = 13;
 pub(crate) const SETTINGS_TAB_POSITION: usize = 14;
 /// 侧栏：一项就是一页，不再有页内子标签。专注与健康（2、3）、待办与置物（4、5）各合成一页；关于固定左下角。
 /// 第四列是这一项之前的分组标题。
-const SETTINGS_GROUPS: [(&str,usize,usize,&str);14] = [
+pub(crate) const SETTINGS_TAB_POWER: usize = 16;
+const SETTINGS_GROUPS: [(&str,usize,usize,&str);15] = [
     ("通用",0,0,"鬼島"), ("外觀",SETTINGS_TAB_APPEARANCE,SETTINGS_TAB_APPEARANCE,""), ("位置",SETTINGS_TAB_POSITION,SETTINGS_TAB_POSITION,""), ("頁面管理",10,10,""),
-    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("信箱",7,7,""), ("行程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("遊戲",15,15,""),
+    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("信箱",7,7,""), ("行程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("遊戲",15,15,""), ("電量",SETTINGS_TAB_POWER,SETTINGS_TAB_POWER,""),
     ("關於",9,9,""),
 ];
 /// 分页标题；合并页（3→2、5→4）显示合并后的名字。
@@ -1621,6 +1623,7 @@ impl App {
                         7=>egui::include_image!("../assets/settings-icons/system/mail.svg"),
                         8=>egui::include_image!("../assets/settings-icons/system/calendar.svg"),
                         15=>egui::include_image!("../assets/settings-icons/system/game.svg"),
+                        SETTINGS_TAB_POWER=>egui::include_image!("../assets/settings-icons/system/pages.svg"),
                         SETTINGS_TAB_APPEARANCE=>egui::include_image!("../assets/settings-icons/system/appearance.svg"),
                         SETTINGS_TAB_POSITION=>egui::include_image!("../assets/settings-icons/system/position.svg"),
                         _=>egui::include_image!("../assets/settings-icons/system/about.svg"),
@@ -1660,6 +1663,16 @@ impl App {
                         });
                         settings_hint(ui,"頁面只在使用者打開時掃描一次；按下「重新掃描本機遊戲」可立即更新。清除只會移除本次掃描結果，不會動到已安裝的遊戲或已移除的捷徑設定。");
                     }
+                    16=>{
+                        let on=self.settings_feature_header(ui,crate::app::POWER_PAGE,"手機、耳機、滑鼠與鍵盤的電量",|_,_|{});
+                        ui.add_space(4.0);
+                        ui.add_enabled_ui(on,|ui|{
+                            settings_card(ui,|ui|{
+                                settings_hint(ui,"開啟後頂欄電量圈可以點開，環形進度跟著百分比增減；低於 20% 整圈轉紅，充電時顯示充電綠與閃電。");
+                                settings_hint(ui,"藍牙裝置要等系統回報電量才會出現，藍牙耳機、滑鼠、鍵盤在連線後約一分鐘內補上。");
+                            });
+                        });
+                    }
                     12=>{
                         let on=self.settings_feature_header(ui,crate::app::WEATHER_PAGE,"當地天氣與七日預報",|_,_|{});
                         ui.add_space(4.0);
@@ -1689,7 +1702,7 @@ impl App {
                         });
                         settings_label(ui,"功能頁面");
                         settings_card(ui,|ui|{
-                            let descriptions=["播放控制與同步歌詞","番茄鍾與休息計時","喝水與久坐提醒","臨時收納檔案位置","任務清單與到期提醒","郵件摘要與驗證碼","Agent 剩餘額度和帳號切換","月曆、郵件邀請與工作行程","當地天氣與七日預報","多平台本機遊戲庫"];
+                            let descriptions=["播放控制與同步歌詞","番茄鍾與休息計時","喝水與久坐提醒","臨時收納檔案位置","任務清單與到期提醒","郵件摘要與驗證碼","Agent 剩餘額度和帳號切換","月曆、郵件邀請與工作行程","當地天氣與七日預報","多平台本機遊戲庫","手機與藍牙滑鼠、鍵盤、耳機的電量"];
                             ui.label(egui::RichText::new("拖動左側手柄調整順序；關閉的功能不在後台執行，不同步也不提醒，已有資料保留。").size(11.5).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
                             #[derive(Clone)]
                             struct PageDrag(usize);
