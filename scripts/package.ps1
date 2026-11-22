@@ -46,6 +46,8 @@ try {
             if ($content.IndexOf($private.Replace('/', '\'), [StringComparison]::OrdinalIgnoreCase) -ge 0) { throw "发布程序包含本机构建路径（$($encoding.WebName)）" }
         }
     }
+    # 在打包前簽署主程式與啟動器：啟動器會被 NSIS 嵌進安裝檔，主程式則進入 ZIP，故要先簽。
+    & (Join-Path $PSScriptRoot 'sign.ps1') -FilePath @($binary.FullName, $bootstrap)
     if (-not $NsisCompiler) {
         $compiler = Get-Command makensis.exe -ErrorAction SilentlyContinue
         if ($compiler) { $NsisCompiler = $compiler.Source }
@@ -71,6 +73,8 @@ try {
     $setup = Join-Path $outputDirectory "Kuidao-Setup-TW-x64.exe"
     & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DPROJECT_DIR=$projectRoot" "/DBOOTSTRAP_EXE=$bootstrap" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
+    # 安裝檔本身再補上一層 Authenticode 簽章（內嵌的啟動器已先簽過）。
+    & (Join-Path $PSScriptRoot 'sign.ps1') -FilePath @($setup)
     $archive = Join-Path $outputDirectory "$packageName.zip"
     Compress-Archive -LiteralPath $stagingDirectory -DestinationPath $archive
     @($setup, $archive) | ForEach-Object {

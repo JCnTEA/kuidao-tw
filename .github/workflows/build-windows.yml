@@ -27,6 +27,22 @@ jobs:
           $compiler = ./scripts/get-nsis.ps1 -Directory "$env:RUNNER_TEMP\nsis"
           "NSIS_COMPILER=$compiler" >> $env:GITHUB_ENV
 
+      - name: Prepare code signing certificate
+        shell: pwsh
+        env:
+          CODESIGN_PFX_B64: ${{ secrets.CODESIGN_PFX_B64 }}
+          CODESIGN_PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
+          CODESIGN_THUMBPRINT: ${{ secrets.CODESIGN_THUMBPRINT }}
+        run: |
+          if ($env:CODESIGN_PFX_B64) {
+            $pfx = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CODESIGN_PFX_B64))
+            $env:CODESIGN_PFX = $pfx
+            "CODESIGN_PFX=$pfx" >> $env:GITHUB_ENV
+          }
+          if ($env:CODESIGN_PFX_PASSWORD) { "CODESIGN_PFX_PASSWORD=$($env:CODESIGN_PFX_PASSWORD)" >> $env:GITHUB_ENV }
+          if ($env:CODESIGN_THUMBPRINT) { "CODESIGN_THUMBPRINT=$($env:CODESIGN_THUMBPRINT)" >> $env:GITHUB_ENV }
+
       - name: Build and package
         shell: pwsh
         run: |

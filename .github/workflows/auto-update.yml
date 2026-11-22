@@ -64,6 +64,20 @@ jobs:
       - name: 安裝 NSIS
         run: choco install nsis -y --no-progress
 
+      - name: Prepare code signing certificate
+        shell: pwsh
+        env:
+          CODESIGN_PFX_B64: ${{ secrets.CODESIGN_PFX_B64 }}
+          CODESIGN_PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
+        run: |
+          if ($env:CODESIGN_PFX_B64) {
+            $pfx = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CODESIGN_PFX_B64))
+            $env:CODESIGN_PFX = $pfx
+            "CODESIGN_PFX=$pfx" >> $env:GITHUB_ENV
+          }
+          if ($env:CODESIGN_PFX_PASSWORD) { "CODESIGN_PFX_PASSWORD=$($env:CODESIGN_PFX_PASSWORD)" >> $env:GITHUB_ENV }
+
       - name: 編譯
         run: cargo build --release --bin kuidao --bin kuidao-bootstrap
 
@@ -72,6 +86,8 @@ jobs:
         run: |
           $ver = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
           $name = "Kuidao-v$ver-tw-windows-x64.zip"
+          # 打包前先簽主程式與啟動器（啟動器會被嵌進安裝檔，主程式會進入 ZIP）。
+          ./scripts/sign.ps1 -FilePath @("target\release\kuidao.exe", "target\release\kuidao-bootstrap.exe")
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "target\release\kuidao.exe" dist
           if (Test-Path assets) { Copy-Item assets dist -Recurse -Force }
@@ -83,6 +99,8 @@ jobs:
           $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
           & $nsis /V2 /WX "/DAPP_VERSION=$ver" "/DPROJECT_DIR=$PWD" "/DBOOTSTRAP_EXE=$(Join-Path $PWD 'target\release\kuidao-bootstrap.exe')" "/DOUTPUT_FILE=$(Join-Path $PWD $setup)" installer\setup.nsi
           if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
+          # 安裝檔本身再補一層簽章。
+          ./scripts/sign.ps1 -FilePath @($setup)
           echo "ASSET=$name" >> $env:GITHUB_ENV
           echo "SETUP=$setup" >> $env:GITHUB_ENV
           echo "VER=$ver"    >> $env:GITHUB_ENV
