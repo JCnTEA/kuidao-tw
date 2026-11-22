@@ -71,6 +71,16 @@ Function .onInit
   ${EndIf}
   SetShellVarContext all
   SetRegView 64
+  ; 靜默升級沒有 /D 時，InstallDirRegKey 可能因登錄视图時機讀不到 64 位元路徑；
+  ; 這裡在設定 64 位元檢視後再讀一次，只有目前仍是預設目錄才沿用舊安裝位置。
+  ReadRegStr $0 HKLM "${UNINSTALL_KEY}" "InstallLocation"
+  ${If} $0 == ""
+    ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "InstallLocation"
+  ${EndIf}
+  ${If} $0 != ""
+  ${AndIf} $INSTDIR == "$PROGRAMFILES64\${APP_ID}"
+    StrCpy $INSTDIR $0
+  ${EndIf}
   StrCpy $DesktopChoice 1
   StrCpy $AutoStartChoice 0
   ReadRegStr $0 HKLM "${UNINSTALL_KEY}" "InstallLocation"
