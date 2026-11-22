@@ -728,8 +728,28 @@ fn extract(zip: &Path, stage: &Path) -> Result<(), String> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
     // Windows 內建 tar 對部分 ZIP（尤其含中文檔名）會回報失敗；
-    // 先走 PowerShell 的 Expand-Archive（.NET ZipArchive），再保留 tar 後備。
+    // Expand-Archive 在部分 .NET 版本會呼叫不存在的三參數多載。
+    // 因此直接用 .NET ZipArchive 逐筆解壓，保留 Unicode 檔名並自行檢查路徑。
     let powershell = system_root.join("System32/WindowsPowerShell/v1.0/powershell.exe");
+    let script = r#"$ErrorActionPreference='Stop'
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip=[System.IO.Compression.ZipFile]::OpenRead($env:KUIDAO_ZIP)
+try {
+  $root=[System.IO.Path]::GetFullPath($env:KUIDAO_STAGE)
+  foreach($entry in $zip.Entries){
+    $name=$entry.FullName.Replace('\','/')
+    if($name -match '(^/|^[A-Za-z]:|(^|/)\.\.(/|$)'){throw 'ZIP 內含異常路徑'}
+    $dest=[System.IO.Path]::GetFullPath([System.IO.Path]::Combine($root,$name))
+    if(-not $dest.StartsWith($root,[System.StringComparison]::OrdinalIgnoreCase)){throw 'ZIP 路徑超出解壓資料夾'}
+    if($entry.Name -eq ''){
+      New-Item -ItemType Directory -Force -Path $dest | Out-Null
+    } else {
+      New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
+      if(Test-Path -LiteralPath $dest){Remove-Item -LiteralPath $dest -Force}
+      [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry,$dest)
+    }
+  }
+} finally {$zip.Dispose()}"#;
     let status = hidden_command(&powershell)
         .args([
             "-NoProfile",
@@ -737,7 +757,7 @@ fn extract(zip: &Path, stage: &Path) -> Result<(), String> {
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            "Expand-Archive -LiteralPath $env:KUIDAO_ZIP -DestinationPath $env:KUIDAO_STAGE -Force",
+            script,
         ])
         .env("KUIDAO_ZIP", zip)
         .env("KUIDAO_STAGE", stage)
@@ -755,7 +775,7 @@ fn extract(zip: &Path, stage: &Path) -> Result<(), String> {
         .status()
         .map_err(|_| "無法啟動 Windows 解壓工具".to_owned())?;
     if !status.success() {
-        return Err("解壓失敗，下載檔可能損壞".into());
+        return Err("解壓失敗，下載檔可能損壞或系統解壓元件無法使用".into());
     }
     Ok(())
 }
