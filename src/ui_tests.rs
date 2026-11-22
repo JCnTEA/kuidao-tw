@@ -7144,7 +7144,7 @@ fn wechat_notifications_work_without_toast_permission_and_stop_when_disabled(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
     h.app.receive_wechat_reminder();assert!(h.app.alerts.is_empty());
     h.app.settings.wechat_notifications=true;
-    h.app.settings.save();assert!(!crate::model::Settings::load().wechat_notifications,"台灣版不保存微信通知開關");
+    h.app.settings.save();assert!(!crate::model::Settings::load().wechat_notifications,"台灣版不儲存微信通知開關");
     assert!(!h.app.settings.read_notifications);
     h.app.receive_wechat_reminder();h.app.tick_alerts();
     let notice=h.app.notice.as_ref().unwrap();
