@@ -455,7 +455,7 @@ fn day_label(index: usize, date: &str) -> String {
         0 => "今天".into(),
         1 => "明天".into(),
         _ => chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
-            .map(|d| format!("周{}", ["一", "二", "三", "四", "五", "六", "日"][d.weekday().num_days_from_monday() as usize]))
+            .map(|d| format!("週{}", ["一", "二", "三", "四", "五", "六", "日"][d.weekday().num_days_from_monday() as usize]))
             .unwrap_or_else(|_| date.get(5..).unwrap_or("").to_string()),
     }
 }

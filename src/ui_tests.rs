@@ -398,7 +398,7 @@ fn weather_city_draft_keeps_the_saved_location_until_confirmed(){
     assert_eq!(h.app.settings.weather_city,"杭州");
     let saved=crate::model::Settings::load();
     assert_eq!(saved.weather_city,"杭州");
-    assert!(saved.wecom_notifications && saved.feishu_notifications && saved.dingtalk_notifications);
+    assert!(!saved.wecom_notifications && !saved.feishu_notifications && !saved.dingtalk_notifications,"台灣版不啟用微信／企業微信／飛書／釘釘通知");
     h.app.set_page_visible(8,false);h.app.add_weather_city();
     assert_eq!(h.app.settings.weather_city,"杭州");assert!(!h.app.weather.loading);
 }
@@ -802,8 +802,8 @@ fn v0649_settings_and_mail_accounts_survive_upgrade(){
         crate::model::Settings::load().save();
         let saved=std::fs::read_to_string(directory.join("settings.txt")).unwrap();
         for line in legacy.lines().filter(|line|!line.starts_with("visible_pages=")&&!line.starts_with("page_order=")){assert!(saved.lines().any(|value|value==line),"升級儲存不能改變舊設定：{line}");}
-        assert!(saved.lines().any(|value|value=="visible_pages=101111111"),"舊頁面開關應保留，並預設開啟天氣頁");
-        assert!(saved.lines().any(|value|value=="page_order=5,2,0,1,3,4,6,7,8"),"舊順序應保留，並把天氣頁接在最後");
+        assert!(saved.lines().any(|value|value=="visible_pages=1011111111"),"舊頁面開關應保留，並預設開啟天氣與遊戲頁");
+        assert!(saved.lines().any(|value|value=="page_order=5,2,0,1,3,4,6,7,8,9"),"舊順序應保留，並把天氣與遊戲頁接在最後");
     }
     std::fs::write(directory.join("mail-accounts.json"),br#"[{"email":"OldUser@qq.com","provider":"qq","enabled":true},{"email":"old@icloud.com","provider":"icloud","enabled":false}]"#).unwrap();
     let accounts=crate::mail::load_accounts();
@@ -7055,7 +7055,7 @@ fn wechat_notifications_work_without_toast_permission_and_stop_when_disabled(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
     h.app.receive_wechat_reminder();assert!(h.app.alerts.is_empty());
     h.app.settings.wechat_notifications=true;
-    h.app.settings.save();assert!(crate::model::Settings::load().wechat_notifications);
+    h.app.settings.save();assert!(!crate::model::Settings::load().wechat_notifications,"台灣版不保存微信通知開關");
     assert!(!h.app.settings.read_notifications);
     h.app.receive_wechat_reminder();h.app.tick_alerts();
     let notice=h.app.notice.as_ref().unwrap();

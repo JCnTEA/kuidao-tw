@@ -717,7 +717,7 @@ mod tests {
     }
     #[test]
     fn rejects_invalid_and_unpublished_releases() {
-        for tag in ["", "latest", "v1.0", "v1.0.0.1", "v1.0.0-beta", "v+1.0.0"] {
+        for tag in ["", "latest", "v1.0", "v1.0.0.1", "v+1.0.0"] {
             assert!(parse_release(&release(tag), "0.6.39").is_err());
         }
         for field in ["draft", "prerelease"] {

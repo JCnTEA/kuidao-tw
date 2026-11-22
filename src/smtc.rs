@@ -79,6 +79,11 @@ fn is_cn_music_source(source: &str) -> bool {
         || is_qqmusic(source)
 }
 
+/// 是否允許這個播放器上島；關閉時仍保留底層辨識、時鐘與歌詞測試。
+fn source_enabled(source: &str) -> bool {
+    CN_MUSIC_SOURCES_ENABLED || !is_cn_music_source(&source.to_lowercase())
+}
+
 /// Chrome／Edge／Firefox／IE 等瀏覽器也會把分頁音訊註冊到 Windows 播放卡；
 /// 這裡只認來源，不要求使用者安裝擴充功能，也不看瀏覽器是否在前景。
 pub fn is_browser_source(source:&str)->bool{
@@ -108,7 +113,6 @@ impl NowPlaying {
             return MediaKind::Video;
         }
         let source=self.source.to_lowercase();
-        if !CN_MUSIC_SOURCES_ENABLED && is_cn_music_source(&source) {return MediaKind::Unknown;}
         if (matches!(source.as_str(),"kugou"|"kugou.exe"|"cloudmusic.exe"|"汽水音乐"|"sodamusic.exe"|"spotify"|"spotify.exe"|"kwmusic.exe"|"bodian_pc.exe") || is_qqmusic(&source) || is_kkbox(&source) || apple_music::is_source(&source)) && self.playback_type==MediaKind::Music{return MediaKind::Music;}
         if ["chrome","msedge","firefox","brave","opera"].iter().any(|name|source.contains(name)) {
             let album=self.album.trim().to_lowercase();
@@ -854,9 +858,10 @@ pub fn spawn_poller(state: Shared,ctx:eframe::egui::Context)->Poller {
                 if let Ok(mut current)=state.lock(){if !current.title.is_empty(){*current=NowPlaying::default();ctx.request_repaint();}}
                 std::thread::park_timeout(Duration::from_millis(250));continue;
             }
-            let system=query(&mut artwork);
+            let system=query(&mut artwork).filter(|media|source_enabled(&media.source));
             #[cfg(windows)]
-            let native=netease.poll().into_iter().chain(bodian.poll()).chain(kuwo.poll()).min_by_key(media_rank);
+            let native=netease.poll().into_iter().chain(bodian.poll()).chain(kuwo.poll()).min_by_key(media_rank)
+                .filter(|media|source_enabled(&media.source));
             #[cfg(windows)]
             let native_pending=netease.pending();
             #[cfg(not(windows))]

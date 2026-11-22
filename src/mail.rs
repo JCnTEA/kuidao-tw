@@ -1607,7 +1607,7 @@ Content-Type: multipart/alternative; boundary=\"b\"\r\n\r\n\
 
     #[test]
     fn provider_presets_cover_six_kinds() {
-        assert_eq!(Provider::ALL.len(), 8);
+        assert_eq!(Provider::ALL.len(), 5);
         assert_eq!(Provider::parse("gmail"), Provider::Gmail);
         assert_eq!(Provider::Gmail.host(), "imap.gmail.com");
         assert_eq!(Provider::Gmail.port(), 993);
@@ -1735,7 +1735,7 @@ mod custom_endpoint_tests {
   let a=Account{email:"test@hotmail.com".into(),provider:Provider::Microsoft,custom:None,enabled:true};
   let error=a.endpoint().expect_err("尚未支援的微軟信箱不能發起連線");
   assert!(error.contains("OAuth")&&error.contains("暫不支援"));
-  assert!(Provider::Microsoft.label().contains("暫不支援"));
+  assert!(Provider::Microsoft.hint().contains("暫不支援"));
   for host in ["outlook.office365.com"," IMAP-MAIL.OUTLOOK.COM ","outlook.live.com","imap.outlook.com"]{
    let b=Account{email:"student@example.edu".into(),provider:Provider::Custom,custom:Some(CustomImap{host:host.into(),port:993,username:String::new()}),..a.clone()};
    assert_eq!(b.endpoint().unwrap_err(),error,"微軟雲主機應顯示同一提示");

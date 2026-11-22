@@ -32,7 +32,7 @@ fn office_settings_are_independent_default_off_and_survive_restart(){
     for client in Messenger::OFFICE{assert!(!client.enabled(&h.app.settings));}
     h.app.settings.feishu_notifications=true;h.app.settings.dingtalk_notifications=true;h.app.settings.save();
     let saved=crate::model::Settings::load();
-    assert!(!saved.wecom_notifications && saved.feishu_notifications && saved.dingtalk_notifications);
+    assert!(!saved.wecom_notifications && !saved.feishu_notifications && !saved.dingtalk_notifications);
     h.app.settings=saved;h.app.settings.notifications=false;
     assert_ne!(crate::messenger::toast_suppression(&h.app.settings)&(1<<(Messenger::Feishu as u8)),0,"關閉總開關後也不能退回讀取該客戶端的系統通知正文");
     for client in Messenger::OFFICE{h.app.receive_messenger_reminder(Unread::of(client));}

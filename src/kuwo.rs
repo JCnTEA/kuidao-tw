@@ -151,7 +151,7 @@ fn lyric_directory()->Option<PathBuf>{
 fn parse_lyrics(bytes:&[u8])->Option<crate::lyrics::Lyrics>{
     if bytes.len()>1024*1024{return None;}let raw=decode(bytes)?;let mut lyrics=crate::lyrics::parse_lrc(&raw);
     let offset=raw.lines().find_map(|line|line.strip_prefix("[offset:")?.strip_suffix(']')?.parse::<i32>().ok()).unwrap_or_default() as f32/1000.0;
-    for line in &mut lyrics.lines{line.t=(line.t+offset).max(0.0);}
+    for line in &mut lyrics.lines{line.t=(line.t+offset).max(0.0);line.text=crate::zh::to_traditional(&line.text);}
     lyrics.synced.then_some(lyrics)
 }
 pub(crate) fn read_lyrics(title:&str,artist:&str)->Option<crate::lyrics::Lyrics>{

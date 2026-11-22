@@ -112,10 +112,10 @@ mod tests{
         let steps=take_wake_steps();
         let _=DestroyWindow(window);
         assert_eq!(result,Err(OpenError::Unavailable));
-        assert_eq!(steps,["没有可见的 QQ 主窗口".to_string(),"提醒窗口不是 QQ 托盘宿主（Static）".to_string()],"依次记录切前台和托盘两条路为什么都走不通");
+        assert_eq!(steps,["沒有可見的 QQ 主視窗".to_string(),"提醒視窗不是 QQ 系統匣宿主（Static）".to_string()],"依次记录切前台和托盘两条路为什么都走不通");
         take_wake_steps();
         let gone=open(Unread{source:Messenger::Qq,pid:std::process::id(),window:0},&paths,true);
-        assert_eq!((gone,take_wake_steps()),(Err(OpenError::Unavailable),vec!["提醒窗口已不属于该账号".to_string()]));
+        assert_eq!((gone,take_wake_steps()),(Err(OpenError::Unavailable),vec!["提醒視窗已不屬於該帳號".to_string()]));
     }}
     #[test]
     fn qq_single_tray_account_ignores_its_auxiliary_main_windows(){unsafe{

@@ -1849,7 +1849,7 @@ mod tests {
     #[test]
     fn basic_auth_is_rfc7617() {
         assert_eq!(basic_auth("Aladdin", "open sesame"), "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
-        assert_eq!(basic_auth("使用者", "密碼"), "Basic 55So5oi3OuWvhueggQ==");
+        assert_eq!(basic_auth("使用者", "密碼"), "Basic 5L2/55So6ICFOuWvhueivA==");
     }
 
     #[test]
