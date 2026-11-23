@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -35,6 +34,11 @@ public sealed class MainWindow : Window
   private readonly StackPanel _releasePanel = new() { Spacing = 8 };
   private readonly DualSparkline _spark = new() { Height = 130 };
 
+  // 分頁導覽
+  private readonly List<Button> _navButtons = new();
+  private readonly List<Control> _pages = new();
+  private readonly Grid _contentHost = new();
+
   public MainWindow()
   {
     _selfCheck = new SelfCheckService(_github);
@@ -57,14 +61,25 @@ public sealed class MainWindow : Window
     root.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
     root.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
 
-    var rail = new StackPanel { Width = 76, Background = Brush.Parse("#0F1218"), Spacing = 18, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) };
-    rail.Children.Add(new Border { Width = 42, Height = 42, CornerRadius = new CornerRadius(13), Background = Ui.Blue, Child = Ui.Text("鬼", 18, Brushes.White, true, HorizontalAlignment.Center, VerticalAlignment.Center) });
-    foreach (var s in new[] { "監控", "網路", "發布", "自檢", "建議" })
-      rail.Children.Add(Ui.Text(s, 11, Ui.Muted, horizontal: HorizontalAlignment.Center));
+    var rail = new StackPanel
+    {
+      Width = 76, Background = Brush.Parse("#0F1218"), Spacing = 10,
+      HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 16)
+    };
+    rail.Children.Add(new Border
+    {
+      Width = 42, Height = 42, CornerRadius = new CornerRadius(13), Background = Ui.Blue, Margin = new Thickness(0, 0, 0, 10),
+      Child = Ui.Text("鬼", 18, Brushes.White, true, HorizontalAlignment.Center, VerticalAlignment.Center)
+    });
+    var labels = new[] { "監控", "網路", "發布", "自檢", "建議" };
+    for (int i = 0; i < labels.Length; i++) rail.Children.Add(MakeNav(labels[i], i));
     Grid.SetColumn(rail, 0); root.Children.Add(rail);
 
-    var main = new StackPanel { Margin = new Thickness(24), Spacing = 16 };
-    var top = new Grid();
+    var main = new Grid { Margin = new Thickness(24) };
+    main.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+    main.RowDefinitions.Add(new RowDefinition(GridLength.Star));
+
+    var top = new Grid { Margin = new Thickness(0, 0, 0, 16) };
     top.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
     top.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
     var title = new StackPanel { Spacing = 3 };
@@ -74,52 +89,122 @@ public sealed class MainWindow : Window
     var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
     var refresh = new Button { Content = "立即自檢", Padding = new Thickness(14, 8), Background = Ui.Blue, Foreground = Brushes.White, CornerRadius = new CornerRadius(10) };
     refresh.Click += async (_, _) => await RefreshAllAsync();
-    // 狀態文字限制寬度並垂直置中，失敗時只顯示簡短狀態，詳細錯誤留給自檢卡，避免長串英文擠壓版面。
     _updated.MaxWidth = 320;
     _updated.VerticalAlignment = VerticalAlignment.Center;
     actions.Children.Add(refresh); actions.Children.Add(_updated);
     Grid.SetColumn(actions, 1); top.Children.Add(actions);
-    main.Children.Add(top);
+    Grid.SetRow(top, 0); main.Children.Add(top);
 
-    var stats = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*") };
+    _pages.Add(BuildMonitorPage());
+    _pages.Add(BuildNetworkPage());
+    _pages.Add(BuildReleasePage());
+    _pages.Add(BuildSelfCheckPage());
+    _pages.Add(BuildSuggestionsPage());
+    Grid.SetRow(_contentHost, 1); main.Children.Add(_contentHost);
+
+    // 首次載入前的佔位提示，避免一開起來就有空卡。
+    ShowRemoteEmptyStates();
+    _checkPanel.Children.Add(Ui.Empty("等待自檢結果…"));
+    _suggestionPanel.Children.Add(Ui.Empty("等待自檢結果…"));
+
+    Grid.SetColumn(main, 1); root.Children.Add(main);
+    SelectTab(0);
+    return root;
+  }
+
+  // ---------- 分頁 ----------
+
+  private Button MakeNav(string label, int index)
+  {
+    var b = new Button
+    {
+      Content = label,
+      Width = 62, MinHeight = 46,
+      Padding = new Thickness(0),
+      HorizontalContentAlignment = HorizontalAlignment.Center,
+      VerticalContentAlignment = VerticalAlignment.Center,
+      Background = Brushes.Transparent,
+      Foreground = Ui.Muted,
+      BorderThickness = new Thickness(0),
+      CornerRadius = new CornerRadius(12),
+      Tag = index
+    };
+    b.Click += (_, _) => SelectTab((int)b.Tag!);
+    _navButtons.Add(b);
+    return b;
+  }
+
+  private void SelectTab(int index)
+  {
+    for (int i = 0; i < _navButtons.Count; i++)
+    {
+      var b = _navButtons[i];
+      bool selected = i == index;
+      b.Background = selected ? Brush.Parse("#1B2A44") : Brushes.Transparent;
+      b.Foreground = selected ? Ui.TextBrush : Ui.Muted;
+      b.FontWeight = selected ? FontWeight.SemiBold : FontWeight.Normal;
+    }
+    _contentHost.Children.Clear();
+    _contentHost.Children.Add(_pages[index]);
+  }
+
+  private Control BuildMonitorPage()
+  {
+    var page = new Grid();
+    page.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+    page.RowDefinitions.Add(new RowDefinition(GridLength.Star));
+
+    var stats = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*"), Margin = new Thickness(0, 0, 0, 16) };
     AddStat(stats, 0, "執行程序", _statProcesses, "本機鬼島相關 PID");
     AddStat(stats, 1, "指令事件", _statCommands, "啟動／結束記錄");
     AddStat(stats, 2, "下載總數", _statDownloads, "Release 資產累計");
     AddStat(stats, 3, "倉庫流量", _statRepo, "Views / Clones");
-    main.Children.Add(stats);
-
-    var body = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,1.25*") };
-    var left = new StackPanel { Spacing = 14 };
-    var right = new StackPanel { Spacing = 14, Margin = new Thickness(14, 0, 0, 0) };
+    Grid.SetRow(stats, 0); page.Children.Add(stats);
 
     var command = Ui.Card("鬼島執行指令", out var cmdBody, "即時");
-    cmdBody.Children.Add(_commandPanel); left.Children.Add(command);
+    cmdBody.Children.Add(_commandPanel);
+    Grid.SetRow(command, 1); page.Children.Add(command);
+    return page;
+  }
 
+  private Control BuildNetworkPage()
+  {
     var net = Ui.Card("網路流量", out var netBody, "即時");
-    var netStats = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*") };
-    netStats.Children.Add(Labeled("全系統", _systemNet)); netStats.Children.Add(Labeled("鬼島程序", _kuidaoNet));
+    var netStats = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), Margin = new Thickness(0, 0, 0, 4) };
+    netStats.Children.Add(Labeled("全系統", _systemNet));
+    netStats.Children.Add(Labeled("鬼島程序", _kuidaoNet));
     Grid.SetColumn(netStats.Children[1], 1);
-    netBody.Children.Add(netStats); netBody.Children.Add(_spark); netBody.Children.Add(_connectionPanel);
-    left.Children.Add(net);
+    netBody.Children.Add(netStats);
+    netBody.Children.Add(_spark);
+    netBody.Children.Add(_connectionPanel);
+    return net;
+  }
 
-    var check = Ui.Card("自檢模式", out var checkBody, "進度");
-    checkBody.Children.Add(_checkPanel); left.Children.Add(check);
-
+  private Control BuildReleasePage()
+  {
+    var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*") };
     var release = Ui.Card("網站與發布", out var releaseBody, "GitHub");
     releaseBody.Children.Add(_releasePanel);
-    right.Children.Add(release);
+    g.Children.Add(release);
     var downloads = Ui.Card("下載次數", out var dlBody, "資產");
-    dlBody.Children.Add(_downloadPanel); right.Children.Add(downloads);
-    var suggest = Ui.Card("建議新增與修復", out var sugBody, "優先");
-    sugBody.Children.Add(_suggestionPanel); right.Children.Add(suggest);
-    // 首次載入完成前先放佔位提示，右欄不會一開起來就是空卡。
-    ShowRemoteEmptyStates();
-    _suggestionPanel.Children.Add(Ui.Empty("等待自檢結果…"));
+    dlBody.Children.Add(_downloadPanel);
+    downloads.Margin = new Thickness(14, 0, 0, 0);
+    Grid.SetColumn(downloads, 1); g.Children.Add(downloads);
+    return g;
+  }
 
-    Grid.SetColumn(left, 0); Grid.SetColumn(right, 1); body.Children.Add(left); body.Children.Add(right);
-    main.Children.Add(body);
-    Grid.SetColumn(main, 1); root.Children.Add(main);
-    return new ScrollViewer { Content = root, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+  private Control BuildSelfCheckPage()
+  {
+    var check = Ui.Card("自檢模式", out var checkBody, "進度");
+    checkBody.Children.Add(_checkPanel);
+    return check;
+  }
+
+  private Control BuildSuggestionsPage()
+  {
+    var suggest = Ui.Card("建議新增與修復", out var sugBody, "優先");
+    sugBody.Children.Add(_suggestionPanel);
+    return suggest;
   }
 
   private static void AddStat(Grid g, int col, string label, TextBlock value, string sub)
@@ -157,7 +242,6 @@ public sealed class MainWindow : Window
     }
     catch
     {
-      // 頂欄只留簡短狀態；完整錯誤訊息會顯示在「自檢模式」與「建議」卡。
       _githubFailed = true;
       _updated.Text = $"連線失敗 {DateTime.Now:HH:mm:ss}";
       _updated.Foreground = Ui.Red;
@@ -165,7 +249,6 @@ public sealed class MainWindow : Window
     }
   }
 
-  /// GitHub 無資料（尚未載入或連線失敗）時，在右欄卡內顯示對應的空狀態提示。
   private void ShowRemoteEmptyStates()
   {
     var hint = _githubFailed ? "連線失敗，請稍後重試或檢查網路、代理與 API 額度" : "等待 GitHub 資料…";
