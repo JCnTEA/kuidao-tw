@@ -14,3 +14,7 @@
 .DS_Store
 Thumbs.db
 /.upstream-incoming/
+
+# 監控台 .NET 建置殘留，不進版本庫
+/monitor/KuidaoMonitor/bin/
+/monitor/KuidaoMonitor/obj/
