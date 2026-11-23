@@ -147,6 +147,8 @@ pub struct Env {
     pub bt: Vec<crate::bt::Device>,
     /// 蓝牙服务是否已经完成首次扫描。
     pub bt_ready: bool,
+    /// BLE 鏈路暫時閒置時，仍在場 PnP 節點的最後已知電量（電量、裝置類型）。
+    pub bt_present: Option<(u8, crate::bt::DeviceKind)>,
     /// 岛所在屏幕（与 `win` 同一坐标系，逻辑点）；用于让通知详情留在屏幕内。
     pub screen: Option<Rect>,
     /// 毛玻璃皮肤：岛体四周采样得到的背景色（sRGB 0..1）。
@@ -168,9 +170,14 @@ impl Env {
     pub fn display_bluetooth(&self) -> Option<&crate::bt::Device> {
         if self.battery.is_some() {None} else {crate::bt::battery_with_fallback(&self.bt)}
     }
+    /// 連線中的藍牙裝置沒有回報電量時，若 BLE 鏈路閒置但 PnP 節點還在，退回最後已知電量。
+    pub fn present_kind(&self) -> Option<crate::bt::DeviceKind> {
+        if self.battery.is_some() {None} else {self.bt_present.map(|(_,kind)|kind)}
+    }
     pub fn display_power(&self) -> Option<(u8,bool)> {
         self.battery.map(|level|(level,self.charging))
             .or_else(||self.display_bluetooth().and_then(|device|device.battery).map(|level|(level,false)))
+            .or_else(||self.bt_present.map(|(level,_)|(level,false)))
     }
 }
 
@@ -209,6 +216,19 @@ mod env_power_tests {
     fn hides_when_neither_system_nor_headset_reports_a_level() {
         let env=Env{bt:vec![headset(None)],..Default::default()};
         assert_eq!(env.display_power(),None);
+    }
+
+    #[test]
+    fn idle_link_falls_back_to_the_last_known_present_phone_battery() {
+        use crate::bt::DeviceKind;
+        // 連線清單全空（BLE 閒置），但在場 PnP 節點保留最後已知手機電量 99。
+        let env=Env{bt_present:Some((99,DeviceKind::Phone)),..Default::default()};
+        assert_eq!(env.display_power(),Some((99,false)));
+        assert_eq!(env.present_kind(),Some(DeviceKind::Phone));
+        // 有系統電池時，最後已知藍牙電量不應介入。
+        let env=Env{battery:Some(40),bt_present:Some((99,DeviceKind::Phone)),..Default::default()};
+        assert_eq!(env.display_power(),Some((40,false)));
+        assert_eq!(env.present_kind(),None);
     }
 }
 
@@ -3197,7 +3217,8 @@ impl App {
         let m = anim::ease_in_out(smoothstep(0.0, 0.85, p));
         let clock = self.settings.clock_text(&env.clock);
         let power=env.display_power();
-        let bt_power=env.display_bluetooth().map(|device|device.kind);
+        // 連線裝置的類型優先；連線 AEP 沒回報時，改用在場 PnP 節點的裝置類型，讓手機圖示仍出現。
+        let bt_power=env.display_bluetooth().map(|device|device.kind).or_else(||env.present_kind());
         let show_battery=self.settings.show_battery && power.is_some();
 
         // 顶栏终点布局：[电池][日期][时钟] 作为一组整体居中；顯示手機或耳機電量時多留裝置圖示的位置。
@@ -3236,7 +3257,10 @@ impl App {
             // 滑過電量圈就看得到是哪一顆裝置；點一下打開「電量」頁，列出所有回報電量的裝置。
             let label=match env.display_bluetooth() {
                 Some(device)=>device.summary(),
-                None=>level.map(|level|format!("系統電池 · 電量 {level}%")).unwrap_or_default(),
+                None=>match env.bt_present {
+                    Some((present_level,_))=>format!("最後已知電量 {present_level}%"),
+                    None=>level.map(|level|format!("系統電池 · 電量 {level}%")).unwrap_or_default(),
+                },
             };
             let hit=Rect::from_min_size(Pos2::new(bpos.0-30.0*bk,bpos.1-10.0),Vec2::new(62.0*bk,28.0));
             let response=base.ui.interact(hit,egui::Id::new("island-battery-device"),egui::Sense::click());

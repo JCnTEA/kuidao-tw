@@ -13,6 +13,12 @@ pub struct Device {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DeviceKind { Bone, Earbuds, Headphones, Speaker, Keyboard, Mouse, Gamepad, Phone, Other }
 
+impl DeviceKind {
+    pub fn is_audio(self) -> bool {
+        matches!(self, DeviceKind::Bone|DeviceKind::Earbuds|DeviceKind::Headphones|DeviceKind::Speaker)
+    }
+}
+
 fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {
     use DeviceKind::*;
     let name = name.to_lowercase();
@@ -75,6 +81,39 @@ pub fn battery_with_fallback(devices: &[Device]) -> Option<&Device> {
         .or_else(|| audio_with_battery(devices))
 }
 
+/// 仍在場的藍牙 PnP 節點（BTHLE／BTHENUM）。BLE 鏈路暫時閒置時，連線 AEP 會消失，
+/// 但 PnP 節點還在，並保留最後一次回報的電量，用來讓頂欄電量不要整個不見。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PresentNode {
+    pub name: String,
+    pub address: String,
+    pub battery: u8,
+    pub classic: bool,
+}
+
+/// 連線中的 AEP 沒有回報電量時，從仍在場的藍牙節點挑最後已知電量。
+/// 優先順序與 `battery_with_fallback` 相同：手機先、再取音訊裝置裡電量最低的那顆。
+pub fn present_power(nodes: &[PresentNode]) -> Option<(u8, DeviceKind)> {
+    let kind_of = |node: &PresentNode| device_kind(&node.name, node.classic, None);
+    if let Some(node) = nodes.iter()
+        .filter(|node| node.battery <= 100 && kind_of(node) == DeviceKind::Phone)
+        .min_by_key(|node| node.address.clone())
+    {
+        return Some((node.battery, DeviceKind::Phone));
+    }
+    nodes.iter()
+        .filter(|node| node.battery <= 100 && kind_of(node).is_audio())
+        .min_by_key(|node| node.battery)
+        .map(|node| (node.battery, kind_of(node)))
+}
+
+/// 藍牙背景執行緒對外回報：連線裝置清單（給通知與即時電量），加上在場節點的最後已知電量。
+#[derive(Clone, Debug, Default)]
+pub struct Report {
+    pub devices: Vec<Device>,
+    pub present_power: Option<(u8, DeviceKind)>,
+}
+
 #[derive(Default)]
 struct Cache {devices:Vec<Device>,battery_at:Option<Instant>}
 impl Cache {
@@ -93,7 +132,7 @@ impl Cache {
 
 /// 释放服务时唤醒后台线程，停止后续扫描。
 pub struct Service {
-    pub rx: std::sync::mpsc::Receiver<Vec<Device>>,
+    pub rx: std::sync::mpsc::Receiver<Report>,
     stop: std::sync::mpsc::Sender<()>,
 }
 impl Drop for Service {
@@ -121,7 +160,7 @@ pub fn spawn() -> Service {
 }
 
 #[cfg(windows)]
-fn query(cache:&mut Cache) -> Result<Vec<Device>, ()> {
+fn query(cache:&mut Cache) -> Result<Report, ()> {
     use windows::Devices::Bluetooth::{BluetoothConnectionStatus, BluetoothDevice, BluetoothLEDevice};
     use windows::Devices::Enumeration::DeviceInformation;
     let selectors = [
@@ -155,7 +194,51 @@ fn query(cache:&mut Cache) -> Result<Vec<Device>, ()> {
         }
     }
     devices.sort_by(|a,b|a.id.cmp(&b.id));
-    Ok(cache.update(devices,Instant::now(),read_batteries))
+    let devices = cache.update(devices,Instant::now(),read_batteries);
+    // 連線 AEP 沒回報電量時（例如 iPhone 的 BLE 鏈路暫時閒置），再從仍在場的 PnP 節點補最後已知電量。
+    let present_nodes = scan_present_nodes();
+    let present_power = present_power(&present_nodes);
+    Ok(Report { devices, present_power })
+}
+
+/// 列舉仍在場的藍牙 PnP 節點，讀取名稱、位址與最後一次電量。
+#[cfg(windows)]
+fn scan_present_nodes() -> Vec<PresentNode> {
+    use windows::core::PCWSTR;
+    use windows::Win32::Devices::DeviceAndDriverInstallation::*;
+    use windows::Win32::Devices::Properties::DEVPROPKEY;
+    use windows::Win32::Foundation::HWND;
+
+    // DEVPKEY_Bluetooth_Battery {104EA319-6EE2-4701-BD47-8DDBF425BBE5}, 2
+    const BATTERY: DEVPROPKEY = DEVPROPKEY {
+        fmtid: windows::core::GUID::from_u128(0x104ea319_6ee2_4701_bd47_8ddbf425bbe5),
+        pid: 2,
+    };
+    let mut nodes = Vec::new();
+    unsafe {
+        let set = match SetupDiGetClassDevsW(
+            None, PCWSTR::null(), HWND::default(), DIGCF_PRESENT | DIGCF_ALLCLASSES)
+        { Ok(handle) => handle, Err(_) => return nodes };
+        for i in 0..u32::MAX {
+            let mut data = SP_DEVINFO_DATA {
+                cbSize: std::mem::size_of::<SP_DEVINFO_DATA>() as u32,
+                ..Default::default()
+            };
+            if SetupDiEnumDeviceInfo(set, i, &mut data).is_err() { break; }
+            let Some(instance) = instance_id(set, &data) else { continue };
+            let upper = instance.to_ascii_uppercase();
+            // 只看藍牙實體裝置節點（BTHLE\DEV_ 或 BTHENUM\DEV_），略過 GATT 服務與協定節點。
+            let classic = upper.starts_with("BTHENUM\\DEV_");
+            let is_le = upper.starts_with("BTHLE\\DEV_");
+            if !classic && !is_le { continue; }
+            let Some(address) = upper.split("DEV_").nth(1).map(|s| s.split('\\').next().unwrap_or(s)) else { continue };
+            let Some(level) = byte_prop(set, &data, &BATTERY).filter(|b| *b <= 100) else { continue };
+            let name = string_prop(set, &data, &DEVICE_FRIENDLY_NAME).unwrap_or_else(|| address.to_string());
+            nodes.push(PresentNode { name, address: address.to_string(), battery: level, classic });
+        }
+        let _ = SetupDiDestroyDeviceInfoList(set);
+    }
+    nodes
 }
 
 #[cfg(windows)]
@@ -224,6 +307,38 @@ unsafe fn byte_prop(
     (ty == BYTE && size == 1).then_some(buf[0])
 }
 
+/// DEVPKEY_Device_FriendlyName {A45C254E-DF1C-4EFD-8020-67D146A850E0}, 14
+#[cfg(windows)]
+const DEVICE_FRIENDLY_NAME: windows::Win32::Devices::Properties::DEVPROPKEY =
+    windows::Win32::Devices::Properties::DEVPROPKEY {
+        fmtid: windows::core::GUID::from_u128(0xa45c254e_df1c_4efd_8020_67d146a850e0),
+        pid: 14,
+    };
+
+#[cfg(windows)]
+unsafe fn string_prop(
+    set: windows::Win32::Devices::DeviceAndDriverInstallation::HDEVINFO,
+    data: &windows::Win32::Devices::DeviceAndDriverInstallation::SP_DEVINFO_DATA,
+    key: &windows::Win32::Devices::Properties::DEVPROPKEY,
+) -> Option<String> {
+    use windows::Win32::Devices::DeviceAndDriverInstallation::SetupDiGetDevicePropertyW;
+    use windows::Win32::Devices::Properties::DEVPROPTYPE;
+    // DEVPROP_TYPE_STRING (UTF-16, NUL-terminated)
+    const STRING: DEVPROPTYPE = DEVPROPTYPE(0x12);
+    let mut ty = DEVPROPTYPE::default();
+    let mut needed = 0u32;
+    // 先探大小
+    SetupDiGetDevicePropertyW(set, data, key, &mut ty, None, Some(&mut needed), 0).ok()?;
+    if ty != STRING || needed == 0 { return None; }
+    let mut buf = vec![0u16; (needed as usize) / 2];
+    let byte_slice = unsafe {
+        std::slice::from_raw_parts_mut(buf.as_mut_ptr() as *mut u8, buf.len() * std::mem::size_of::<u16>())
+    };
+    SetupDiGetDevicePropertyW(set, data, key, &mut ty, Some(byte_slice), Some(&mut needed), 0).ok()?;
+    let len = buf.iter().position(|c| *c == 0).unwrap_or(buf.len());
+    Some(String::from_utf16_lossy(&buf[..len]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -276,6 +391,19 @@ mod tests {
     }
 
     #[test]
+    fn present_node_power_keeps_last_known_phone_battery_when_link_idle() {
+        let phone = PresentNode { name: "iPhone 13 Por Max".into(), address: "4FA8446CAF75".into(), battery: 99, classic: false };
+        let headset = PresentNode { name: "耳機".into(), address: "AA".into(), battery: 80, classic: true };
+        // 手機優先，即使 BLE 鏈路閒置（不在連線 AEP 清單）也能顯示最後已知電量。
+        assert_eq!(present_power(&[headset.clone(), phone.clone()]), Some((99, DeviceKind::Phone)));
+        // 沒有手機時退回音訊裝置，並取電量最低的那顆。
+        let other = PresentNode { name: "Speaker".into(), address: "BB".into(), battery: 25, classic: true };
+        assert_eq!(present_power(&[headset, other]), Some((25, DeviceKind::Speaker)));
+        // 沒有任何在場節點回報電量時不硬顯示。
+        assert!(present_power(&[]).is_none());
+    }
+
+    #[test]
     fn summary_omits_missing_battery() {
         let d = Device { id: "1".into(), name: "Headset".into(), battery: None, kind: DeviceKind::Headphones };
         assert_eq!(d.summary(), "Headset");
@@ -298,9 +426,9 @@ mod tests {
     #[ignore]
     fn live_phone_battery_is_visible_to_the_app() {
         let service=spawn();
-        let devices=service.rx.recv_timeout(Duration::from_secs(10)).expect("藍牙掃描沒有回傳");
-        for device in &devices { println!("{:?} {}",device.kind,device.summary()); }
-        let phone=battery_with_fallback(&devices).filter(|device|device.kind==DeviceKind::Phone);
+        let report=service.rx.recv_timeout(Duration::from_secs(10)).expect("藍牙掃描沒有回傳");
+        for device in &report.devices { println!("{:?} {}",device.kind,device.summary()); }
+        let phone=battery_with_fallback(&report.devices).filter(|device|device.kind==DeviceKind::Phone);
         assert!(phone.is_some_and(|device|device.battery.is_some()),"已連線手機應該回報電量");
     }
 }

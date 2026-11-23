@@ -450,6 +450,7 @@ fn main() {
             volume: Some((62, false)),
             bt: Vec::new(),
             bt_ready: true,
+            bt_present: None,
             screen: None,
             backdrop: None,
             glass_blur: false,

@@ -77,6 +77,7 @@ struct Shell {
     bt_rx: Option<daozai::bt::Service>,
     bt: Vec<daozai::bt::Device>,
     bt_ready: bool,
+    bt_present: Option<(u8, daozai::bt::DeviceKind)>,
     volume_quiet: PollClock,
     /// v0.5.5：邮件收信服务（工作线程），以及上次同步给它的账号/开关快照。
     /// 邮箱模块开启时才存在；关闭后收信与整理线程随之退出。
@@ -223,6 +224,7 @@ impl Shell {
             bt_rx: None,
             bt: Vec::new(),
             bt_ready: false,
+            bt_present: None,
             volume_quiet: PollClock::default(),
             mail: None,
             mail_sig: None,
@@ -332,6 +334,7 @@ impl Shell {
             volume: self.system_state.volume,
             bt: self.bt.clone(),
             bt_ready: self.bt_ready,
+            bt_present: self.bt_present,
             screen,
             backdrop,
             glass_blur,
@@ -470,9 +473,14 @@ impl eframe::App for Shell {
                 self.bt_rx=None;
                 self.bt.clear();
                 self.bt_ready=false;
+                self.bt_present=None;
             }
             if let Some(service)=&self.bt_rx {
-                while let Ok(found)=service.rx.try_recv(){ self.bt=found; self.bt_ready=true; }
+                while let Ok(report)=service.rx.try_recv(){
+                    self.bt=report.devices;
+                    self.bt_present=report.present_power;
+                    self.bt_ready=true;
+                }
             }
             let previous_pending=self.app.pending_messengers.clone();
             for event in self.messengers.poll_taskbar(ctx,&self.app.settings){match event{

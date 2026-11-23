@@ -94,8 +94,13 @@ pub(crate) fn ring_color(level: u8, charging: bool) -> Color32 {
     }
 }
 
-/// 組出要顯示的環。`battery` 是系統電池（桌機多為 None），裝置取自藍牙輪詢結果。
-pub(crate) fn rings(battery: Option<(u8, bool)>, devices: &[Device]) -> Vec<PowerRing> {
+/// 組出要顯示的環。`battery` 是系統電池（桌機多為 None），裝置取自藍牙輪詢結果；
+/// 連線 AEP 沒回報時，再用在場 PnP 節點的最後已知電量補一環。
+pub(crate) fn rings(
+    battery: Option<(u8, bool)>,
+    devices: &[Device],
+    present: Option<(u8, DeviceKind)>,
+) -> Vec<PowerRing> {
     let mut out = Vec::new();
     if let Some((level, charging)) = battery.filter(|(level, _)| *level <= 100) {
         out.push(PowerRing { kind: RingKind::System, name: "系統電池".into(), level, charging });
@@ -116,6 +121,18 @@ pub(crate) fn rings(battery: Option<(u8, bool)>, devices: &[Device]) -> Vec<Powe
         seen.push(key);
         out.push(PowerRing { kind, name, level, charging: false });
     }
+    // BLE 鏈路閒置時，連線清單沒有該裝置，用在場節點的最後已知電量補上，並標示為最後已知。
+    if let Some((level, kind)) = present.filter(|(level, _)| *level <= 100) {
+        let rk = ring_kind(kind);
+        if !out.iter().any(|ring| ring.kind == rk) {
+            let name = match kind {
+                DeviceKind::Phone => "手機（最後已知）",
+                DeviceKind::Speaker => "音箱（最後已知）",
+                _ => "藍牙裝置（最後已知）",
+            }.to_string();
+            out.push(PowerRing { kind: rk, name, level, charging: false });
+        }
+    }
     out.sort_by_key(|ring| rank(ring.kind));
     out
 }
@@ -134,7 +151,7 @@ fn arc_band(c: &Card, cx: f32, cy: f32, r: f32, a0: f32, a1: f32, width: f32, co
 
 impl App {
     pub(crate) fn page_power(&self, c: &Card, env: &Env) {
-        let all = rings(env.battery.map(|level| (level, env.charging)), &env.bt);
+        let all = rings(env.battery.map(|level| (level, env.charging)), &env.bt, env.bt_present);
         let total = all.len();
         let list = &all[..total.min(MAX_RINGS)];
         let summary = if list.is_empty() {
@@ -288,7 +305,7 @@ mod tests {
             device("iPhone", DeviceKind::Phone, Some(95)),
             device("沒有電量的音箱", DeviceKind::Speaker, None),
         ];
-        let list = rings(Some((70, false)), &devices);
+        let list = rings(Some((70, false)), &devices, None);
         assert_eq!(list.len(), 3);
         assert_eq!(list[0].kind, RingKind::System);
         assert_eq!(list[0].level, 70);
@@ -304,7 +321,7 @@ mod tests {
             device("AirPods Pro", DeviceKind::Earbuds, Some(64)),
             device("AirPods Pro", DeviceKind::Headphones, Some(64)),
         ];
-        let list = rings(None, &devices);
+        let list = rings(None, &devices, None);
         assert_eq!(list.len(), 1);
         assert_eq!(list[0].kind, RingKind::Audio);
         assert_eq!(list[0].level, 64);
@@ -315,8 +332,22 @@ mod tests {
         let devices = (0..9)
             .map(|i| device(&format!("裝置 {i}"), DeviceKind::Mouse, Some(40)))
             .collect::<Vec<_>>();
-        assert_eq!(rings(None, &devices).len(), 9);
+        assert_eq!(rings(None, &devices, None).len(), 9);
         assert!(MAX_RINGS < 9);
+    }
+
+    #[test]
+    fn rings_add_last_known_phone_when_link_is_idle() {
+        // 連線清單沒有任何裝置（BLE 鏈路閒置），在場節點的最後已知手機電量仍要補一環。
+        let list = rings(None, &[], Some((99, DeviceKind::Phone)));
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].kind, RingKind::Phone);
+        assert_eq!(list[0].level, 99);
+        // 連線清單已有同類型裝置時，不重複補最後已知環。
+        let connected = vec![device("iPhone", DeviceKind::Phone, Some(98))];
+        let list = rings(None, &connected, Some((99, DeviceKind::Phone)));
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].level, 98);
     }
 
     #[test]
