@@ -65,6 +65,20 @@ fn settings_old_tab_numbers_open_merged_pages(){
     assert_eq!(names[support+1],"關於","贊助應排在關於上面");
 }
 
+/// 贊助頁能正常繪製，展開後的收款碼也能解碼顯示，不會讓設定視窗崩潰或跳頁。
+#[test]
+fn sponsor_tab_renders_collapsed_and_expanded_author_card(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();h.app.open_settings();h.ctx.set_embed_viewports(true);
+    h.app.settings_tab=crate::extras::SETTINGS_TAB_SUPPORT;
+    for open in [false,true] {
+        h.ctx.data_mut(|d|d.insert_temp(egui::Id::new("support-author-open"),open));
+        for _ in 0..2 {let _=h.ctx.run(egui::RawInput::default(),|ctx|h.app.settings_ui(ctx,false));}
+        assert_eq!(h.app.settings_tab,crate::extras::SETTINGS_TAB_SUPPORT,"贊助頁不應自行跳走");
+    }
+    assert_eq!(crate::extras::settings_tab_group_for_tests(crate::extras::SETTINGS_TAB_SUPPORT),"贊助");
+}
+
 /// 每个分页都能正常绘制（含功能关闭时的提示），不会因为挪动布局而崩溃。
 #[test]
 fn settings_every_tab_renders_with_modules_on_and_off(){
@@ -72,7 +86,7 @@ fn settings_every_tab_renders_with_modules_on_and_off(){
     for on in [true,false] {
         let mut h=H::new();h.app.open_settings();h.ctx.set_embed_viewports(true);
         if !on {for page in 0..9 {if page!=crate::app::MUSIC_PAGE {h.app.settings.visible_pages[page]=false;}}}
-        for tab in 0..=crate::extras::SETTINGS_TAB_POWER {
+        for tab in 0..=crate::extras::SETTINGS_TAB_SUPPORT {
             h.app.settings_tab=tab;
             for _ in 0..2 {let _=h.ctx.run(egui::RawInput::default(),|ctx|h.app.settings_ui(ctx,false));}
             assert_eq!(h.app.settings_tab,tab,"繪製分頁 {tab} 不應自行跳轉");
