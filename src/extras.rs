@@ -1671,7 +1671,8 @@ impl App {
                 // 16 項加兩個分組標題：視窗拉到最矮時按可用高度壓縮行高，「贊助」與「關於」始終留在底部可見。
                 // 每項佔 行高 + 控件間距(3) + 行後空隙；兩個分組標題和底部兩頁上方預留約 80。
                 let per=(ui.available_height()-80.0)/SETTINGS_GROUPS.len() as f32;
-                let row_h=(per-6.0).clamp(20.0,32.0);
+                // 多一頁後，最小視窗高度時 16 列要塞進側欄：行高下限跟著放寬到 17，兩列底部頁才不會被推出畫面。
+                let row_h=(per-6.0).clamp(17.0,32.0);
                 let row_gap=(per-3.0-row_h).clamp(0.0,3.0);
                 for (name,start,end,section) in SETTINGS_GROUPS {
                     if !section.is_empty() {
