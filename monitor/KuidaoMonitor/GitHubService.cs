@@ -11,11 +11,22 @@ public sealed class GitHubService
 
   public GitHubService()
   {
-    _token = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? Environment.GetEnvironmentVariable("GH_TOKEN") ?? ReadGhToken();
+    // 環境變數若存在但為空白（例如 GITHUB_TOKEN=），不可視為有效，要繼續往下一個來源找。
+    _token = FirstNonWhitespace(
+      Environment.GetEnvironmentVariable("GITHUB_TOKEN"),
+      Environment.GetEnvironmentVariable("GH_TOKEN"),
+      ReadGhToken());
     if (!string.IsNullOrWhiteSpace(_token))
       _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
     _http.DefaultRequestHeaders.UserAgent.ParseAdd("KuidaoMonitor");
     _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+  }
+
+  private static string? FirstNonWhitespace(params string?[] candidates)
+  {
+    foreach (var c in candidates)
+      if (!string.IsNullOrWhiteSpace(c)) return c;
+    return null;
   }
 
   public async Task<GitHubData> GetAsync(CancellationToken ct = default)

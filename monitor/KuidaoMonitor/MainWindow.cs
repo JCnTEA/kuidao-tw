@@ -26,6 +26,7 @@ public sealed class MainWindow : Window
   private readonly TextBlock _systemNet = Ui.Text("0.0 kbps", 18, Ui.Blue, true);
   private readonly TextBlock _kuidaoNet = Ui.Text("0.0 kbps", 18, Ui.Green, true);
   private readonly TextBlock _updated = Ui.Text("尚未更新");
+  private bool _githubFailed;
   private readonly StackPanel _commandPanel = new() { Spacing = 7 };
   private readonly StackPanel _connectionPanel = new() { Spacing = 7 };
   private readonly StackPanel _checkPanel = new() { Spacing = 9 };
@@ -70,9 +71,12 @@ public sealed class MainWindow : Window
     title.Children.Add(Ui.Text("鬼島 MONITOR", 24, Ui.TextBrush, true));
     title.Children.Add(Ui.Text("本機程序、網路、發布與自檢總覽", 11, Ui.Muted));
     top.Children.Add(title);
-    var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+    var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
     var refresh = new Button { Content = "立即自檢", Padding = new Thickness(14, 8), Background = Ui.Blue, Foreground = Brushes.White, CornerRadius = new CornerRadius(10) };
     refresh.Click += async (_, _) => await RefreshAllAsync();
+    // 狀態文字限制寬度並垂直置中，失敗時只顯示簡短狀態，詳細錯誤留給自檢卡，避免長串英文擠壓版面。
+    _updated.MaxWidth = 320;
+    _updated.VerticalAlignment = VerticalAlignment.Center;
     actions.Children.Add(refresh); actions.Children.Add(_updated);
     Grid.SetColumn(actions, 1); top.Children.Add(actions);
     main.Children.Add(top);
@@ -108,6 +112,9 @@ public sealed class MainWindow : Window
     dlBody.Children.Add(_downloadPanel); right.Children.Add(downloads);
     var suggest = Ui.Card("建議新增與修復", out var sugBody, "優先");
     sugBody.Children.Add(_suggestionPanel); right.Children.Add(suggest);
+    // 首次載入完成前先放佔位提示，右欄不會一開起來就是空卡。
+    ShowRemoteEmptyStates();
+    _suggestionPanel.Children.Add(Ui.Empty("等待自檢結果…"));
 
     Grid.SetColumn(left, 0); Grid.SetColumn(right, 1); body.Children.Add(left); body.Children.Add(right);
     main.Children.Add(body);
@@ -143,10 +150,29 @@ public sealed class MainWindow : Window
     try
     {
       _githubData = await _github.GetAsync();
+      _githubFailed = false;
       _updated.Text = $"更新於 {DateTime.Now:HH:mm:ss}";
+      _updated.Foreground = Ui.Muted;
       UpdateGitHubPanels();
     }
-    catch (Exception ex) { _updated.Text = ex.Message; }
+    catch
+    {
+      // 頂欄只留簡短狀態；完整錯誤訊息會顯示在「自檢模式」與「建議」卡。
+      _githubFailed = true;
+      _updated.Text = $"連線失敗 {DateTime.Now:HH:mm:ss}";
+      _updated.Foreground = Ui.Red;
+      ShowRemoteEmptyStates();
+    }
+  }
+
+  /// GitHub 無資料（尚未載入或連線失敗）時，在右欄卡內顯示對應的空狀態提示。
+  private void ShowRemoteEmptyStates()
+  {
+    var hint = _githubFailed ? "連線失敗，請稍後重試或檢查網路、代理與 API 額度" : "等待 GitHub 資料…";
+    _releasePanel.Children.Clear();
+    _releasePanel.Children.Add(Ui.Empty(hint));
+    _downloadPanel.Children.Clear();
+    _downloadPanel.Children.Add(Ui.Empty(hint));
   }
 
   private async Task RefreshAllAsync()

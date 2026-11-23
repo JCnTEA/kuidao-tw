@@ -83,6 +83,16 @@ public static class Ui
     return p;
   }
 
+  /// 空狀態提示：卡片暫時沒有資料時用，避免留下看起來像壞掉的空白區塊。
+  public static TextBlock Empty(string s) => new()
+  {
+    Text = s,
+    FontSize = 10.5,
+    Foreground = Muted,
+    TextWrapping = TextWrapping.Wrap,
+    Margin = new Thickness(0, 2, 0, 2)
+  };
+
   public static Border Pill(string s, IBrush color) => new()
   {
     Background = color, CornerRadius = new CornerRadius(999), Padding = new Thickness(9, 3),
