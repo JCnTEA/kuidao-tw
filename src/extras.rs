@@ -1668,7 +1668,7 @@ impl App {
             let before=format!("{:?}",self.settings);
             egui::SidePanel::left("settings-sidebar").resizable(false).exact_width(180.0).frame(egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(29,29,32),Color32::from_rgb(237,239,243))).stroke(egui::Stroke::NONE).inner_margin(egui::Margin::symmetric(10,12))).show(ctx,|ui|{
                 ui.add_space(2.0);
-                // 14 项加两个分组标题：窗口拉到最矮时按可用高度压缩行高，「贊助」與「關於」始終留在底部可見。
+                // 16 項加兩個分組標題：視窗拉到最矮時按可用高度壓縮行高，「贊助」與「關於」始終留在底部可見。
                 // 每項佔 行高 + 控件間距(3) + 行後空隙；兩個分組標題和底部兩頁上方預留約 80。
                 let per=(ui.available_height()-80.0)/SETTINGS_GROUPS.len() as f32;
                 let row_h=(per-6.0).clamp(20.0,32.0);
