@@ -36,6 +36,16 @@ fn read_kv(path: &Path) -> Vec<(String, String)> {
     out
 }
 
+/// 給其他模組（例如藍牙最後已知電量）重用的鍵值讀取，回傳 `(鍵, 值)` 清單。
+pub fn read_key_value(path: &Path) -> Vec<(String, String)> {
+    read_kv(path)
+}
+
+/// 給其他模組重用的原子鍵值寫入。
+pub fn write_key_value(path: &Path, pairs: &[(String, String)]) -> std::io::Result<()> {
+    write_kv(path, pairs)
+}
+
 fn write_kv(path: &Path, pairs: &[(String, String)]) -> std::io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -269,6 +279,10 @@ pub struct Settings {
     pub mascot:crate::mascot::Mascot,
     /// 社群圖示在島上的顯示順序；越左邊越優先。存 key，例如 line,phonelink。
     pub social_order:Vec<String>,
+    /// LINE Login Channel ID（數字）；Channel Secret 存在 Windows 憑據管理器。
+    pub line_channel_id:String,
+    /// 本機回呼網址，必須與 Console 的 Callback URL 完全一致。
+    pub line_redirect_uri:String,
     pub island_lyrics:bool,
     pub lyric_delay_ms:i32,
     /// 非中文歌詞自動翻成繁體中文（預設關閉；中文歌只做繁體化，不翻譯）。
@@ -326,7 +340,7 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { display_id: String::new(), skin: Skin::Classic, island_shape: IslandShape::Notch, glass_blur: true, gradient_brightness: 80, island_size: ISLAND_SIZE_DEFAULT, island_offset: 0, oled_shift: false, dock: Dock::Top, settings_theme: Default::default(), pet: true, minimal: false, browser_minimal: false, avoid_browsers: true, avoid_apps: Vec::new(), visible_pages: [true; 11], page_order: [0,1,2,3,4,5,6,7,8,9,10], show_clock: true, show_battery: true, show_weather: true, clock_12h: false, clock_period: 0, clock_seconds: false, resident_order: Vec::new(), system_hud: true, bluetooth_notifications: true, read_notifications:false, wechat_notifications:false, wecom_notifications:false, feishu_notifications:false, dingtalk_notifications:false, wechat_tray_open:false, qq_only:false, notification_preview:false, notifications: true, system_notify: true, sound: false, lyrics_enabled:true, mascot:crate::mascot::Mascot::default(), social_order:crate::social::Social::default_order(), island_lyrics:false, lyric_delay_ms:-350, lyrics_translate:false, lyric_gradient:false, lyric_gradient_preset:7, lyric_gradient_shift:0.0, lyric_gradient_hint:true, hide_fullscreen: true, avoid_top_bar: true, top_bar_on_top: false, focus_minutes: 25, rest_minutes: 5, water_minutes: 45, serving_ml: 250, water_start: 9, water_end: 22, sit_remind: true, sit_minutes: 60, lunch_rest: true, lunch_start: 720, lunch_end: 810, mail_enabled: true, mail_sync_operations:false, mail_code: true, mail_code_hide_seconds:60, mail_interval: 120, mail_ics: 15, ignored_mail_events: Vec::new(), calendar_prompt: true, calendar_auto_sync: true, clipboard_history: true, weather_city: String::new(), weather_position: None, weather_saved: Vec::new(), render_compat: false, render_compat_reason: String::new() }
+        Self { display_id: String::new(), skin: Skin::Classic, island_shape: IslandShape::Notch, glass_blur: true, gradient_brightness: 80, island_size: ISLAND_SIZE_DEFAULT, island_offset: 0, oled_shift: false, dock: Dock::Top, settings_theme: Default::default(), pet: true, minimal: false, browser_minimal: false, avoid_browsers: true, avoid_apps: Vec::new(), visible_pages: [true; 11], page_order: [0,1,2,3,4,5,6,7,8,9,10], show_clock: true, show_battery: true, show_weather: true, clock_12h: false, clock_period: 0, clock_seconds: false, resident_order: Vec::new(), system_hud: true, bluetooth_notifications: true, read_notifications:false, wechat_notifications:false, wecom_notifications:false, feishu_notifications:false, dingtalk_notifications:false, wechat_tray_open:false, qq_only:false, notification_preview:false, notifications: true, system_notify: true, sound: false, lyrics_enabled:true, mascot:crate::mascot::Mascot::default(), social_order:crate::social::Social::default_order(), line_channel_id:String::new(), line_redirect_uri:crate::line_login::DEFAULT_REDIRECT.into(), island_lyrics:false, lyric_delay_ms:-350, lyrics_translate:false, lyric_gradient:false, lyric_gradient_preset:7, lyric_gradient_shift:0.0, lyric_gradient_hint:true, hide_fullscreen: true, avoid_top_bar: true, top_bar_on_top: false, focus_minutes: 25, rest_minutes: 5, water_minutes: 45, serving_ml: 250, water_start: 9, water_end: 22, sit_remind: true, sit_minutes: 60, lunch_rest: true, lunch_start: 720, lunch_end: 810, mail_enabled: true, mail_sync_operations:false, mail_code: true, mail_code_hide_seconds:60, mail_interval: 120, mail_ics: 15, ignored_mail_events: Vec::new(), calendar_prompt: true, calendar_auto_sync: true, clipboard_history: true, weather_city: String::new(), weather_position: None, weather_saved: Vec::new(), render_compat: false, render_compat_reason: String::new() }
     }
 }
 
@@ -432,6 +446,8 @@ impl Settings {
                 "lyrics_enabled" => s.lyrics_enabled=v!="0",
                 "mascot" => s.mascot=crate::mascot::Mascot::from_key(&v),
                 "social_order" => s.social_order=crate::social::Social::parse_order(&v),
+                "line_channel_id" => s.line_channel_id=v,
+                "line_redirect_uri" => {if !v.trim().is_empty(){s.line_redirect_uri=v;}}
                 "island_lyrics" => s.island_lyrics=v=="1",
                 "lyric_delay_ms" => s.lyric_delay_ms=v.parse::<i32>().unwrap_or(-350).clamp(-5000,5000),
                 "lyrics_translate" => s.lyrics_translate=v=="1",
@@ -524,6 +540,8 @@ impl Settings {
                 ("lyrics_enabled".into(),(self.lyrics_enabled as u8).to_string()),
                 ("mascot".into(),self.mascot.key().into()),
                 ("social_order".into(),self.social_order.join(",")),
+                ("line_channel_id".into(),self.line_channel_id.clone()),
+                ("line_redirect_uri".into(),self.line_redirect_uri.clone()),
                 ("island_lyrics".into(),(self.island_lyrics as u8).to_string()),
                 ("lyric_delay_ms".into(),self.lyric_delay_ms.to_string()),
                 ("lyrics_translate".into(),(self.lyrics_translate as u8).to_string()),

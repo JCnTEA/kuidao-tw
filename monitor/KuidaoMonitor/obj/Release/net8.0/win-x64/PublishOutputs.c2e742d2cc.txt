@@ -1,0 +1,2 @@
+/home/user/Doubao/chats/38454778242595586/kuidao-review/monitor/KuidaoMonitor/bin/Release/net8.0/win-x64/publish/KuidaoMonitor.pdb
+/home/user/Doubao/chats/38454778242595586/kuidao-review/monitor/KuidaoMonitor/bin/Release/net8.0/win-x64/publish/KuidaoMonitor.exe

@@ -17,6 +17,15 @@ impl DeviceKind {
     pub fn is_audio(self) -> bool {
         matches!(self, DeviceKind::Bone|DeviceKind::Earbuds|DeviceKind::Headphones|DeviceKind::Speaker)
     }
+    /// 穩定的數值編號，用於把最後已知電量的裝置類型寫進本機檔案（不依賴 enum 記憶體布局）。
+    pub fn code(self) -> u8 {
+        use DeviceKind::*;
+        match self { Bone=>1, Earbuds=>2, Headphones=>3, Speaker=>4, Keyboard=>5, Mouse=>6, Gamepad=>7, Phone=>8, Other=>9 }
+    }
+    pub fn from_code(code: u8) -> Option<DeviceKind> {
+        use DeviceKind::*;
+        Some(match code { 1=>Bone, 2=>Earbuds, 3=>Headphones, 4=>Speaker, 5=>Keyboard, 6=>Mouse, 7=>Gamepad, 8=>Phone, 9=>Other, _=>return None })
+    }
 }
 
 fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {
@@ -107,6 +116,45 @@ pub fn present_power(nodes: &[PresentNode]) -> Option<(u8, DeviceKind)> {
         .map(|node| (node.battery, kind_of(node)))
 }
 
+/// 合併三個來源，決定這一輪要保留的最後已知電量。
+/// 即時連線的電量最準（優先），其次是 Windows 仍在場 PnP 節點的快取，
+/// 兩者都沒有時才沿用我們自己先前記住的值，讓頂欄電量不會因為斷鏈而整個消失。
+pub fn retain_last_known(
+    retained: Option<(u8, DeviceKind)>,
+    live: Option<(u8, DeviceKind)>,
+    present: Option<(u8, DeviceKind)>,
+) -> Option<(u8, DeviceKind)> {
+    live.or(present).or(retained)
+}
+
+/// 最後已知電量的本機檔案位置（與 settings.txt 同目錄）。
+fn last_battery_path() -> std::path::PathBuf {
+    crate::model::config_dir().join("last_battery.txt")
+}
+
+/// 啟動時讀回上次結束前保留的最後已知電量，斷線狀態下重開 App 也不會立刻空白。
+pub fn load_last_known() -> Option<(u8, DeviceKind)> {
+    let mut level = None;
+    let mut kind = None;
+    for (key, value) in crate::model::read_key_value(&last_battery_path()) {
+        match key.as_str() {
+            "level" => level = value.parse::<u8>().ok().filter(|n| *n <= 100),
+            "kind" => kind = DeviceKind::from_code(value.parse().unwrap_or(0)),
+            _ => {}
+        }
+    }
+    level.zip(kind)
+}
+
+/// 把新的最後已知電量寫回本機檔案；只在值真的改變時由呼叫端決定是否寫入。
+pub fn save_last_known(level: u8, kind: DeviceKind) {
+    let _ = crate::model::write_key_value(
+        &last_battery_path(),
+        &[("level".to_string(), level.to_string()),
+          ("kind".to_string(), kind.code().to_string())],
+    );
+}
+
 /// 藍牙背景執行緒對外回報：連線裝置清單（給通知與即時電量），加上在場節點的最後已知電量。
 #[derive(Clone, Debug, Default)]
 pub struct Report {
@@ -115,7 +163,12 @@ pub struct Report {
 }
 
 #[derive(Default)]
-struct Cache {devices:Vec<Device>,battery_at:Option<Instant>}
+struct Cache {
+    devices: Vec<Device>,
+    battery_at: Option<Instant>,
+    /// 跨輪次保留的最後已知電量；連線清單整個清空時也不會被一起清掉。
+    last_known: Option<(u8, DeviceKind)>,
+}
 impl Cache {
     fn update(&mut self,mut devices:Vec<Device>,now:Instant,read:impl FnOnce(&[Device])->Result<Vec<(String,u8)>,()>)->Vec<Device>{
         let changed=devices.len()!=self.devices.len() || devices.iter().any(|d|!self.devices.iter().any(|old|old.id==d.id));
@@ -144,7 +197,12 @@ pub fn spawn() -> Service {
     let (stop, stopped)=std::sync::mpsc::channel();
     std::thread::Builder::new().name("daozai-bluetooth".into()).spawn(move || {
         #[cfg(windows)]
-        let mut cache=Cache::default();
+        let mut cache = {
+            let mut cache = Cache::default();
+            // 啟動先讀回上次保留的最後已知電量，斷線狀態下重開也不會立刻空白。
+            cache.last_known = load_last_known();
+            cache
+        };
         loop {
             if stopped.try_recv()!=Err(std::sync::mpsc::TryRecvError::Empty) {return;}
             #[cfg(windows)]
@@ -195,10 +253,21 @@ fn query(cache:&mut Cache) -> Result<Report, ()> {
     }
     devices.sort_by(|a,b|a.id.cmp(&b.id));
     let devices = cache.update(devices,Instant::now(),read_batteries);
+    // 即時連線中、真的有回報電量的那顆（手機優先，再取音訊裝置最低電量）。
+    let live = battery_with_fallback(&devices)
+        .and_then(|device| device.battery.map(|level| (level, device.kind)));
     // 連線 AEP 沒回報電量時（例如 iPhone 的 BLE 鏈路暫時閒置），再從仍在場的 PnP 節點補最後已知電量。
     let present_nodes = scan_present_nodes();
     let present_power = present_power(&present_nodes);
-    Ok(Report { devices, present_power })
+    // 合併三個來源：即時優先、PnP 快取次之，都沒有就沿用先前記住的值，斷鏈也不讓電量消失。
+    let retained = retain_last_known(cache.last_known, live, present_power);
+    if retained != cache.last_known {
+        cache.last_known = retained;
+        if let Some((level, kind)) = retained {
+            save_last_known(level, kind);
+        }
+    }
+    Ok(Report { devices, present_power: retained })
 }
 
 /// 列舉仍在場的藍牙 PnP 節點，讀取名稱、位址與最後一次電量。
@@ -401,6 +470,31 @@ mod tests {
         assert_eq!(present_power(&[headset, other]), Some((25, DeviceKind::Speaker)));
         // 沒有任何在場節點回報電量時不硬顯示。
         assert!(present_power(&[]).is_none());
+    }
+
+    #[test]
+    fn retained_last_known_survives_a_full_link_drop() {
+        // 即時連線有電量時，以即時值為準。
+        assert_eq!(retain_last_known(Some((80, DeviceKind::Headphones)), Some((99, DeviceKind::Phone)), None),
+                   Some((99, DeviceKind::Phone)));
+        // 即時消失、PnP 快取還在時，退回 PnP 快取。
+        assert_eq!(retain_last_known(Some((99, DeviceKind::Phone)), None, Some((97, DeviceKind::Phone))),
+                   Some((97, DeviceKind::Phone)));
+        // 三個來源都沒有即時或快取時，沿用我們自己先前記住的值，斷鏈也不讓電量消失。
+        assert_eq!(retain_last_known(Some((99, DeviceKind::Phone)), None, None),
+                   Some((99, DeviceKind::Phone)));
+        // 從未看過任何電量時不硬顯示。
+        assert_eq!(retain_last_known(None, None, None), None);
+    }
+
+    #[test]
+    fn device_kind_codes_round_trip() {
+        let kinds = [DeviceKind::Bone, DeviceKind::Earbuds, DeviceKind::Headphones, DeviceKind::Speaker,
+                     DeviceKind::Keyboard, DeviceKind::Mouse, DeviceKind::Gamepad, DeviceKind::Phone, DeviceKind::Other];
+        for kind in kinds {
+            assert_eq!(DeviceKind::from_code(kind.code()), Some(kind));
+        }
+        assert_eq!(DeviceKind::from_code(0), None);
     }
 
     #[test]

@@ -927,6 +927,12 @@ pub struct App {
     pub(crate) mail_bell_account: String,
     /// Threads／Messenger／Facebook／LINE／Instagram 的未讀則數。
     pub(crate) social: crate::social::Badges,
+    /// LINE Login 背景登入與已綁定的本機帳號（只存 userId／名稱／頭像）。
+    pub(crate) line_login: crate::line_login::Login,
+    pub line_account: Option<crate::line_login::Account>,
+    /// 設定頁暫存的 Channel Secret（只在登入時寫進憑據管理器）與登入狀態文字。
+    pub(crate) line_secret_input: String,
+    pub(crate) line_message: String,
     pub(crate) notice: Option<Alert>,
     pub(crate) hud_notice: Option<Alert>,
     hud_alpha: f32,
@@ -1089,7 +1095,7 @@ impl App {
             media_anchor: (String::new(), 0.0, 0.0, false),
             media: NowPlaying::default(),
             music_artwork: None,
-            forced_open_until:0.0, settings_open:false, settings_window:std::sync::Arc::new(std::sync::Mutex::new(crate::settings_window::State::load())), displays:Vec::new(), browser_at_top:false, browser_minimal_active:false, glass_tint:0.0, backdrop:None, fluid:Default::default(), fluid_origin:Pos2::ZERO, fluid_art:None, fluid_title:String::new(), screen:None, settings_focus_requested:false, settings_tab:0, settings_category:0, messenger_statuses:Default::default(), notification_apps:model::NotificationApps::load(), subpage:None, task_dialog:None,
+            forced_open_until:0.0, settings_open:false, settings_window:std::sync::Arc::new(std::sync::Mutex::new(crate::settings_window::State::load())), displays:Vec::new(), browser_at_top:false, browser_minimal_active:false, glass_tint:0.0, backdrop:None, fluid:Default::default(), fluid_origin:Pos2::ZERO, fluid_art:None, fluid_title:String::new(), screen:None, settings_focus_requested:false, settings_tab:0, settings_category:0, line_login:Default::default(), line_account:crate::line_login::load_account(), line_secret_input:String::new(), line_message:String::new(), messenger_statuses:Default::default(), notification_apps:model::NotificationApps::load(), subpage:None, task_dialog:None,
             listener_status: "尚未連線".into(),
             notification_bell_until: 0.0, notification_bell_at: -10.0, mail_unread: 0, mail_bell_at: -10.0, mail_bell_account: String::new(), social: crate::social::Badges::load(), notice: None, hud_notice: None, hud_alpha: 0.0, notice_width:Spring::new(0.0,CLOSE.0,CLOSE.1), notice_details:false, pending_messengers:Vec::new(), messenger_scroll:0.0, alerts: Default::default(), history: Default::default(), pending: vec![],
             todo_first: 0, todo_choosing: false, pet: Default::default(), last_drink: None,
