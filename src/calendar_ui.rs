@@ -40,22 +40,40 @@ fn occurs_on(event:&mail::Meeting,day:NaiveDate)->bool {
 }
 
 #[derive(Clone,Copy,PartialEq,Eq)]
-pub(crate) enum Source<'a> { Calendar(Option<calendar::Provider>), Mail(&'a str), Local }
-impl Source<'_> {
-    fn icon_key(self)->&'static str {
-        match self {Self::Calendar(Some(provider))=>provider.key(),Self::Calendar(None)=>"calendar",Self::Mail(_)=>"mail",Self::Local=>"local"}
+pub(crate) enum Brand { Feishu, DingTalk, WeCom }
+impl Brand {
+    fn key(self)->&'static str {
+        match self {Brand::Feishu=>"feishu",Brand::DingTalk=>"dingtalk",Brand::WeCom=>"wecom"}
     }
-    fn label(self)->String {
-        match self {Self::Calendar(provider)=>provider.map(|p|p.label()).unwrap_or("工作行事曆").to_string(),Self::Mail(account)=>format!("郵件 · {account}"),Self::Local=>"本機行程".into()}
+    fn label(self)->&'static str {
+        match self {Brand::Feishu=>"飛書",Brand::DingTalk=>"釘釘",Brand::WeCom=>"企業微信"}
     }
     fn color(self)->Color32 {
         match self {
-            Self::Calendar(Some(calendar::Provider::WeCom))=>Color32::from_rgb(105,208,157),
-            Self::Calendar(Some(calendar::Provider::DingTalk))=>Color32::from_rgb(77,192,242),
+            Brand::WeCom=>Color32::from_rgb(105,208,157),
+            Brand::DingTalk=>Color32::from_rgb(77,192,242),
+            Brand::Feishu=>Color32::from_rgb(112,162,255),
+        }
+    }
+}
+
+#[derive(Clone,Copy,PartialEq,Eq)]
+pub(crate) enum Source<'a> { Calendar(Option<calendar::Provider>), Mail(&'a str), Local, Brand(Brand) }
+impl Source<'_> {
+    fn icon_key(self)->&'static str {
+        match self {Self::Calendar(Some(provider))=>provider.key(),Self::Calendar(None)=>"calendar",Self::Mail(_)=>"mail",Self::Local=>"local",Self::Brand(brand)=>brand.key()}
+    }
+    fn label(self)->String {
+        match self {Self::Calendar(provider)=>provider.map(|p|p.label()).unwrap_or("工作行事曆").to_string(),Self::Mail(account)=>format!("郵件 · {account}"),Self::Local=>"本機行程".into(),Self::Brand(brand)=>brand.label().to_string()}
+    }
+    fn color(self)->Color32 {
+        match self {
+            Self::Calendar(Some(calendar::Provider::Google))=>Color32::from_rgb(112,162,255),
             Self::Calendar(Some(calendar::Provider::ICloud))=>Color32::from_rgb(255,105,97),
             Self::Calendar(_)=>Color32::from_rgb(112,162,255),
             Self::Mail(_)=>Color32::from_rgb(199,168,255),
             Self::Local=>Color32::from_rgb(105,208,157),
+            Self::Brand(brand)=>brand.color(),
         }
     }
 }
@@ -103,23 +121,22 @@ fn event_status(event:&mail::Meeting,now:i64,today:NaiveDate)->String {
 }
 pub(crate) fn source_icon(c:&Card,source:Source<'_>,x:f32,y:f32,size:f32) {
     let rect=c.rect(x,y,size,size);
-    let ding=matches!(source,Source::Calendar(Some(calendar::Provider::DingTalk)));
-    let rect=if ding{
-        c.fill(x,y,size,size,size*5.0/24.0,Color32::from_rgb(0,127,255));
-        rect.shrink(rect.width()*0.1)
-    }else{rect};
     let icon=match source {
-        Source::Calendar(Some(calendar::Provider::DingTalk))=>egui::include_image!("../assets/calendar/dingtalk.svg"),
-        Source::Calendar(Some(calendar::Provider::WeCom))=>egui::include_image!("../assets/calendar/wecom.svg"),
+        Source::Calendar(Some(calendar::Provider::Google))=>egui::include_image!("../assets/calendar/google.svg"),
         Source::Mail(_)=>egui::include_image!("../assets/calendar/mail.svg"),
-        Source::Calendar(Some(calendar::Provider::Feishu))=>egui::include_image!("../assets/calendar/feishu.svg"),
+        Source::Brand(Brand::DingTalk)=>egui::include_image!("../assets/calendar/dingtalk.svg"),
+        Source::Brand(Brand::WeCom)=>egui::include_image!("../assets/calendar/wecom.svg"),
+        Source::Brand(Brand::Feishu)=>egui::include_image!("../assets/calendar/feishu.svg"),
         _=>egui::include_image!("../assets/settings-icons/calendar-days.svg"),
     };
     let egui::ImageSource::Bytes{uri,bytes}=icon else{return};
     let pixels=(rect.width()*c.ui.ctx().pixels_per_point()).ceil() as u32;
     let icon=egui::Image::from_bytes(format!("{uri}/{pixels}.svg"),bytes);
     if let Ok(egui::load::TexturePoll::Ready{texture})=icon.fit_to_exact_size(rect.size()).load_for_size(c.ui.ctx(),rect.size()) {
-        let tint=if matches!(source,Source::Calendar(None|Some(calendar::Provider::ICloud|calendar::Provider::Custom|calendar::Provider::Exchange))|Source::Local){source.color()}else{Color32::WHITE};
+        // Google 與品牌圖示保留原色不套色；其餘行事曆與本機行程套用來源色。
+        let tint=if matches!(source,Source::Calendar(Some(calendar::Provider::Google))|Source::Brand(_)){Color32::WHITE}
+            else if matches!(source,Source::Calendar(None|Some(calendar::Provider::ICloud|calendar::Provider::Custom|calendar::Provider::Exchange))|Source::Local){source.color()}
+            else{Color32::WHITE};
         c.painter.image(texture.id,rect,egui::Rect::from_min_max(egui::Pos2::ZERO,egui::pos2(1.0,1.0)),tint);
     }
 }
@@ -140,7 +157,7 @@ mod tests {
     }
     #[test]
     fn source_svg_rasterizes_at_notification_size_and_screen_scale() {
-        for source in [Source::Mail("test"),Source::Calendar(Some(calendar::Provider::Feishu)),Source::Calendar(Some(calendar::Provider::WeCom))] {
+        for source in [Source::Mail("test"),Source::Calendar(Some(calendar::Provider::Google)),Source::Calendar(Some(calendar::Provider::ICloud))] {
         let ctx=egui::Context::default();egui_extras::install_image_loaders(&ctx);
         let raw=egui::RawInput{viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(2.0),..Default::default()})).collect(),..Default::default()};
         let output=ctx.run(raw,|ctx|{
@@ -155,29 +172,29 @@ mod tests {
     }
 
     #[test]
-    fn dingtalk_logo_rasterizes_at_screen_size_and_reuses_textures(){
+    fn google_logo_rasterizes_at_screen_size_and_reuses_textures(){
         let ctx=egui::Context::default();egui_extras::install_image_loaders(&ctx);
         let frame=|ctx:&egui::Context|ctx.run(egui::RawInput{
             viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(2.0),..Default::default()})).collect(),..Default::default()
         },|ctx|{egui::CentralPanel::default().show(ctx,|ui|{
             let c=Card::new(ui,egui::Pos2::ZERO,ui.clip_rect());
-            source_icon(&c,Source::Calendar(Some(calendar::Provider::DingTalk)),0.0,0.0,20.0);
-            source_icon(&c.scaled(50.0,0.0,1.5),Source::Calendar(Some(calendar::Provider::DingTalk)),50.0,0.0,20.0);
+            source_icon(&c,Source::Calendar(Some(calendar::Provider::Google)),0.0,0.0,20.0);
+            source_icon(&c.scaled(50.0,0.0,1.5),Source::Calendar(Some(calendar::Provider::Google)),50.0,0.0,20.0);
         });});
         let first=frame(&ctx);let sizes=first.textures_delta.set.iter().map(|(_,delta)|delta.image.size()).collect::<Vec<_>>();
-        assert!(sizes.contains(&[32,32]) && sizes.contains(&[48,48]),"圖示應按實際物理畫素過濾，而非直接縮小原始大圖：{sizes:?}");
-        let logo=first.textures_delta.set.iter().find_map(|(_,delta)|match &delta.image{egui::ImageData::Color(image) if image.size==[32,32]=>Some(image),_=>None}).unwrap();
-        let rows=(0..32).filter(|y|logo.pixels[y*32..(y+1)*32].iter().any(|pixel|pixel.a()>=128)).collect::<Vec<_>>();
-        assert!(rows.last().unwrap()-rows.first().unwrap()+1>=30,"釘釘標記不能因重複留白而縮小到丟失翅膀和閃電細節");
+        assert!(sizes.contains(&[40,40]) && sizes.contains(&[60,60]),"圖示應按實際物理畫素過濾，而非直接縮小原始大圖：{sizes:?}");
+        let logo=first.textures_delta.set.iter().find_map(|(_,delta)|match &delta.image{egui::ImageData::Color(image) if image.size==[40,40]=>Some(image),_=>None}).unwrap();
+        let rows=(0..40).filter(|y|logo.pixels[y*40..(y+1)*40].iter().any(|pixel|pixel.a()>=128)).collect::<Vec<_>>();
+        assert!(rows.last().unwrap()-rows.first().unwrap()+1>=36,"Google 標記不能因重複留白而縮小到丟失四色細節");
         let next=frame(&ctx);
-        assert!(!next.textures_delta.set.iter().any(|(_,delta)|matches!(delta.image.size(),[32,32]|[48,48])),"不同顯示尺寸應各自複用貼圖，不能每幀重新上傳");
+        assert!(!next.textures_delta.set.iter().any(|(_,delta)|matches!(delta.image.size(),[40,40]|[60,60])),"不同顯示尺寸應各自複用貼圖，不能每幀重新上傳");
     }
     #[test]
     fn date_markers_merge_repeat_sources_and_show_at_most_three_colors() {
-        let feishu=Source::Calendar(Some(calendar::Provider::Feishu));
+        let google=Source::Calendar(Some(calendar::Provider::Google));
         let mail=Source::Mail("work@example.com");
-        assert_eq!(marker_colors(&[feishu,mail,Source::Mail("other@example.com"),feishu]),vec![feishu.color(),mail.color()]);
-        let colors=marker_colors(&[feishu,Source::Calendar(Some(calendar::Provider::DingTalk)),Source::Calendar(Some(calendar::Provider::WeCom)),mail]);
+        assert_eq!(marker_colors(&[google,mail,Source::Mail("other@example.com"),google]),vec![google.color(),mail.color()]);
+        let colors=marker_colors(&[google,Source::Calendar(Some(calendar::Provider::ICloud)),Source::Calendar(Some(calendar::Provider::Custom)),mail]);
         assert_eq!(colors.len(),3);
         assert!(colors.iter().enumerate().all(|(i,color)|!colors[..i].contains(color)));
     }

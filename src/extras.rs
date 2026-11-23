@@ -2526,7 +2526,7 @@ impl App {
                             egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(29,29,31),Color32::from_rgb(236,239,244))).corner_radius(8.0).inner_margin(3).show(ui,|ui|{
                                 ui.set_min_width(ui.available_width());
                                 ui.spacing_mut().item_spacing.x=2.0;
-                                // 六个平台分两行：飞书 / 钉钉 / 企业微信，iCloud / CalDAV / Exchange。
+                                // 四個平台：Google / iCloud / CalDAV，第二行 Exchange。
                                 let width=((ui.available_width()-4.0)/3.0).max(80.0);
                                 for row in crate::calendar::Provider::ALL.chunks(3){
                                     ui.horizontal(|ui|{
@@ -2537,10 +2537,10 @@ impl App {
                                                 .stroke(egui::Stroke::NONE).corner_radius(6.0);
                                             let button=ui.add_enabled_ui(!self.calendar.testing,|ui|ui.add_sized([width,30.0],button)).inner;
                                             let button=match p{
+                                                crate::calendar::Provider::Google=>button.on_hover_text("Google 日曆：Gmail 地址 + 應用程式密碼"),
                                                 crate::calendar::Provider::ICloud=>button.on_hover_text("蘋果行事曆：Apple ID + App 專用密碼"),
                                                 crate::calendar::Provider::Custom=>button.on_hover_text("任意 CalDAV 行事曆：Nextcloud、群暉、Fastmail 等"),
                                                 crate::calendar::Provider::Exchange=>button.on_hover_text("公司自建或第三方 Exchange 行事曆（ActiveSync），只讀同步"),
-                                                _=>button,
                                             };
                                             if button.clicked() && !selected{
                                                 self.select_calendar_provider(p);

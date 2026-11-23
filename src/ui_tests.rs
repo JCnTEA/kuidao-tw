@@ -959,9 +959,9 @@ fn ics_import_preserves_recurring_overnight_and_all_day_events_on_reimport() {
 #[test]
 fn local_calendar_editor_makes_storage_scope_visible_with_connected_accounts() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    let cfg=crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"test".into(),href:None,server:None};
+    let cfg=crate::calendar::Config{provider:crate::calendar::Provider::Google,username:"test".into(),href:None,server:None};
     crate::calendar::save_config(&cfg).unwrap();h.app.calendar=crate::app::CalendarState::load();
-    let remote=crate::mail::Meeting{all_day:false,title:"飛書會議".into(),start:chrono::Local::now().timestamp()+3600,end:None,at:String::new(),uid:"remote-event".into()};
+    let remote=crate::mail::Meeting{all_day:false,title:"Google 會議".into(),start:chrono::Local::now().timestamp()+3600,end:None,at:String::new(),uid:"remote-event".into()};
     h.app.calendar.events.push(remote.clone());
     h.app.open_calendar(None);h.hover(H::local(300.0,40.0),1.0);
     h.click(H::local(124.0,18.0));h.hover(H::local(300.0,40.0),0.3);
@@ -1010,7 +1010,7 @@ fn local_calendar_can_create_edit_reload_and_remind_without_accounts() {
 #[test]
 fn calendar_month_errors_remain_visible_until_retry_or_month_change(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    let cfg=crate::calendar::Config{provider:crate::calendar::Provider::WeCom,username:"test".into(),href:None,server:None};
+    let cfg=crate::calendar::Config{provider:crate::calendar::Provider::Custom,username:"test".into(),href:None,server:None};
     crate::calendar::save_config(&cfg).unwrap();h.app.calendar=crate::app::CalendarState::load();
     h.app.request_calendar_month(true);h.app.pending.clear();
     let month=h.app.calendar.view.month;
@@ -1026,43 +1026,43 @@ fn calendar_month_errors_remain_visible_until_retry_or_month_change(){
 fn calendar_combines_platforms_and_settings_tabs_do_not_filter_events() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
-    let feishu=crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"飛書帳號".into(),href:None,server:None};
-    let ding=crate::calendar::Config{provider:crate::calendar::Provider::DingTalk,username:"釘釘帳號".into(),..feishu.clone()};
-    crate::calendar::save_config(&feishu).unwrap();crate::calendar::save_config(&ding).unwrap();
+    let google=crate::calendar::Config{provider:crate::calendar::Provider::Google,username:"Google 帳號".into(),href:None,server:None};
+    let icloud=crate::calendar::Config{provider:crate::calendar::Provider::ICloud,username:"iCloud 帳號".into(),..google.clone()};
+    crate::calendar::save_config(&google).unwrap();crate::calendar::save_config(&icloud).unwrap();
     h.app.calendar=crate::app::CalendarState::load();
     let day=chrono::Local::now().date_naive();
     let event=|uid:&str|crate::mail::Meeting{all_day:false,end:None,title:uid.into(),start:chrono::Local::now().timestamp()+60,at:"18:00".into(),uid:uid.into()};
-    for (cfg,uid) in [(&feishu,"飛書會議"),(&ding,"釘釘會議")] {
+    for (cfg,uid) in [(&google,"Google 會議"),(&icloud,"iCloud 會議")] {
         h.app.calendar_event(crate::calendar::Event::Synced{config:cfg.clone(),events:vec![event(uid)],at:"17:00".into()});
     }
     assert_eq!(h.app.calendar_entries(day).len(),2);
     h.frame(vec![]);
-    for provider in [feishu.provider,ding.provider] {
+    for provider in [google.provider,icloud.provider] {
         assert!(h.app.history.iter().any(|alert|alert.meeting.as_ref().is_some_and(|(_,source)|source==provider.label())),"所有平臺都應提醒");
     }
-    h.app.select_calendar_provider(feishu.provider);
+    h.app.select_calendar_provider(google.provider);
     assert_eq!(h.app.calendar_entries(day).len(),2);
-    assert_eq!(h.app.calendar.form.username,feishu.username);
-    h.app.select_calendar_provider(crate::calendar::Provider::WeCom);
+    assert_eq!(h.app.calendar.form.username,google.username);
+    h.app.select_calendar_provider(crate::calendar::Provider::Custom);
     assert_eq!(h.app.calendar_entries(day).len(),2);
     assert!(h.app.calendar.form.username.is_empty());
     h.app.request_calendar_month(true);
-    h.app.calendar_event(crate::calendar::Event::MonthLoaded{config:feishu.clone(),month:crate::calendar::month_start(day),result:Ok(vec![event("飛書月曆")])});
+    h.app.calendar_event(crate::calendar::Event::MonthLoaded{config:google.clone(),month:crate::calendar::month_start(day),result:Ok(vec![event("Google 月曆")])});
     assert!(h.app.calendar.view.loading,"另一平臺尚未返回，仍應保持同步狀態");
-    h.app.calendar_event(crate::calendar::Event::MonthLoaded{config:ding.clone(),month:crate::calendar::month_start(day),result:Err("釘釘暫時不可用".into())});
+    h.app.calendar_event(crate::calendar::Event::MonthLoaded{config:icloud.clone(),month:crate::calendar::month_start(day),result:Err("iCloud 暫時不可用".into())});
     assert!(!h.app.calendar.view.loading);
     assert_eq!(h.app.calendar_entries(day).len(),2,"單平臺失敗不能清掉另一平臺或自己的提醒快取");
     let shared=event("同一個會議");
-    for config in [&feishu,&ding] {
+    for config in [&google,&icloud] {
         h.app.calendar_event(crate::calendar::Event::MonthLoaded{config:config.clone(),month:crate::calendar::month_start(day),result:Ok(vec![shared.clone()])});
     }
     let entries=h.app.calendar_entries(day);
     assert_eq!(entries.len(),1);
     assert_eq!(entries[0].sources.len(),2,"同一個會議只顯示一次，但保留兩個平臺的來源");
-    h.app.select_calendar_provider(feishu.provider);
+    h.app.select_calendar_provider(google.provider);
     h.app.forget_calendar();
     assert_eq!(h.app.calendar_entries(day).len(),1);
-    h.app.calendar_event(crate::calendar::Event::Synced{config:feishu,events:vec![event("舊連線結果")],at:"17:01".into()});
+    h.app.calendar_event(crate::calendar::Event::Synced{config:google,events:vec![event("舊連線結果")],at:"17:01".into()});
     assert_eq!(h.app.calendar_entries(day).len(),1);
 }
 
@@ -1129,7 +1129,7 @@ fn expanded_settings_routes_preserve_inline_controls(){
 #[test]
 fn quality_late_calendar_response_does_not_restore_disconnected_account() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    let config=crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"old".into(),href:None,server:None};
+    let config=crate::calendar::Config{provider:crate::calendar::Provider::Google,username:"old".into(),href:None,server:None};
     h.app.forget_calendar();
     h.app.calendar_event(crate::calendar::Event::Synced{config:config.clone(),events:vec![],at:"12:00".into()});
     assert!(!h.app.calendar.connected && h.app.calendar.last_sync.is_empty());
@@ -5354,7 +5354,7 @@ fn calendar_notice_opens_the_calendar_instead_of_mail() {
     h.app.settings.save();
     assert!(!crate::model::Settings::load().calendar_auto_sync,"自動同步選擇應持久儲存");
     let start=chrono::Local::now().timestamp()+600;
-    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"demo".into(),href:None,server:None});
+    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Google,username:"demo".into(),href:None,server:None});
     h.app.calendar_event(crate::calendar::Event::Synced{config:h.app.calendar.config.clone().unwrap(),events:vec![crate::mail::Meeting{ all_day:false, end:None,title:"產品評審".into(),start,at:"10-31 15:00".into(),uid:"calendar-review".into()}],at:"10-31 14:50".into()});
     for _ in 0..60 {h.frame(vec![]);}
     h.click_notice_badge();
@@ -5414,7 +5414,7 @@ fn calendar_dates_are_readable_and_source_labels_do_not_take_a_second_line() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
     let day=chrono::NaiveDate::from_ymd_opt(2026,11,15).unwrap();
     let event=crate::mail::Meeting{ all_day:false, end:None,title:"產品評審".into(),start:day.and_hms_opt(14,0,0).unwrap().and_local_timezone(chrono::Local).earliest().unwrap().timestamp(),at:"11-15 14:00".into(),uid:"readable-calendar".into()};
-    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"demo".into(),href:None,server:None});
+    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Google,username:"demo".into(),href:None,server:None});
     h.app.calendar.view.events=vec![event.clone()];
     h.app.mail.recent.push(crate::mail::Item {received_unix: None, account:"work@example.com".into(),from:"專案組".into(),subject:"會議邀請".into(),html: String::new().into(), summary:String::new().into(),links:vec![],code:None,time:String::new(),uid:1,meeting:Some(event.clone())});
     h.app.open_calendar(Some(event));h.hover(H::local(300.0,40.0),1.0);
@@ -5470,7 +5470,7 @@ fn calendar_month_navigation_and_today_select_the_right_day() {
 #[test]
 fn calendar_month_results_preserve_reminders_and_ignore_old_requests() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"demo".into(),href:None,server:None});
+    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Google,username:"demo".into(),href:None,server:None});
     let upcoming=crate::mail::Meeting{ all_day:false, end:None,title:"明天會議".into(),start:chrono::Local::now().timestamp()+3600,at:String::new(),uid:"upcoming".into()};
     h.app.calendar.events=vec![upcoming.clone()];
     let month=chrono::NaiveDate::from_ymd_opt(2024,2,1).unwrap();
@@ -5511,7 +5511,7 @@ fn calendar_layout_gallery() {
         let day=chrono::NaiveDate::from_ymd_opt(2026,11,2).unwrap();
         h.app.calendar.view.day=day;h.app.calendar.view.month=crate::calendar::month_start(day);
         h.app.open_calendar(None);
-        let provider=match mode{"dingtalk"=>crate::calendar::Provider::DingTalk,"wecom"=>crate::calendar::Provider::WeCom,_=>crate::calendar::Provider::Feishu};
+        let provider=match mode{"dingtalk"=>crate::calendar::Provider::ICloud,"wecom"=>crate::calendar::Provider::Custom,_=>crate::calendar::Provider::Google};
         if !["disconnected","local-editor","local","local-all-day"].contains(&mode){h.app.calendar.config=Some(crate::calendar::Config{provider,username:"demo".into(),href:None,server:None});h.app.calendar.connected=true;}
         h.app.calendar.view.loaded=Some(crate::calendar::month_start(day));
         if ["agenda","dingtalk","wecom","mixed"].contains(&mode) {
@@ -5563,7 +5563,7 @@ fn calendar_reminder_fires_once_and_dedupes_with_mail() {
     let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut h = H::new();
     h.app.mail.accounts=vec![crate::mail::Account {custom: None, email:"a@qq.com".into(),provider:crate::mail::Provider::Qq,enabled:true}];
-    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"demo".into(),href:None,server:None});
+    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Google,username:"demo".into(),href:None,server:None});
     h.app.settings.calendar_prompt = false;
     let start = chrono::Local::now().timestamp() + 600;
     let at = "10-30 10:00".to_string();
@@ -6479,7 +6479,7 @@ fn ignored_mail_event_hides_stops_reminders_persists_and_restores() {
 #[test]
 fn calendar_sync_result_does_not_enqueue_another_sync() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    let config=crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"test".into(),href:None,server:None};
+    let config=crate::calendar::Config{provider:crate::calendar::Provider::Google,username:"test".into(),href:None,server:None};
     h.app.calendar.config=Some(config.clone());h.app.open_calendar(None);h.app.pending.clear();
     h.app.calendar.view.loading=false;
     h.app.calendar_event(crate::calendar::Event::Synced{config,events:vec![],at:"12:00".into()});

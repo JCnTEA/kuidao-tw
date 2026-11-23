@@ -39,7 +39,7 @@ fn mock_fetch(provider:Provider,nested:bool,broken:bool)->Result<Fetched,Failure
 
 #[test]
 fn discovery_keeps_root_events_and_follows_calendar_home_for_every_caldav_provider(){
-    for provider in [Provider::DingTalk,Provider::Feishu,Provider::ICloud,Provider::Custom]{
+    for provider in [Provider::Google,Provider::ICloud,Provider::Custom]{
         let result=mock_fetch(provider,true,false).unwrap();
         assert_eq!(result.events.len(),2,"{provider:?} 不能因找到節氣行事曆而漏掉主目錄中的應用程式行事曆");
     }
@@ -61,7 +61,7 @@ fn external_ical_properties_and_components_are_case_insensitive(){
 
 #[test]
 fn partial_collection_failure_is_visible_for_every_caldav_provider(){
-    for provider in [Provider::DingTalk,Provider::Feishu,Provider::ICloud,Provider::Custom]{
+    for provider in [Provider::Google,Provider::ICloud,Provider::Custom]{
         let fetched=mock_fetch(provider,false,true).unwrap();
         assert_eq!(fetched.events.len(),1);assert_eq!(fetched.report.calendars,2);assert_eq!(fetched.report.failed,1);
         assert!(fetched.report.warning().contains("403"));assert!(fetched.report.warning().contains("讀取失敗"));
@@ -101,7 +101,7 @@ fn mixed_caldav_response_preserves_readable_events_and_reports_resource_errors()
         let xml="<d:multistatus><d:response><d:href>/good.ics</d:href><c:calendar-data>BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:good\nDTSTART:20261112T020000Z\nEND:VEVENT\nBEGIN:VEVENT\nUID:bad\nDTSTART;TZID=Unsupported/Zone:20261112T100000\nEND:VEVENT\nEND:VCALENDAR</c:calendar-data></d:response><d:response><d:href>/private.ics</d:href><d:status>HTTP/1.1 403 Forbidden</d:status></d:response></d:multistatus>";
         write!(socket,"HTTP/1.1 207 Result\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{xml}",xml.len()).unwrap();
     });
-    let config=Config{provider:Provider::DingTalk,username:"mock".into(),href:None,server:Some(base.clone())};
+    let config=Config{provider:Provider::Google,username:"mock".into(),href:None,server:Some(base.clone())};
     let result=fetch_collection(&agent().unwrap(),&config,"mock",&base,"2026-11-01T00:00:00Z".parse().unwrap(),"2026-12-01T00:00:00Z".parse().unwrap());worker.join().unwrap();
     let fetched=result.unwrap();assert_eq!(fetched.events.len(),1);assert_eq!(fetched.events[0].uid,"good");
     assert_eq!((fetched.report.failed,fetched.report.invalid,fetched.report.status),(1,1,Some(403)));

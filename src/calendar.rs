@@ -1,8 +1,8 @@
-//! 日历：飞书 / 钉钉 / iCloud / 自定义 CalDAV 与企业微信 Exchange ActiveSync 只读接入。
+//! 行事曆：Google / iCloud / 自訂 CalDAV 與 Exchange ActiveSync 只讀接入。
 //!
-//! `PROPFIND` 找日历（uuid），`REPORT calendar-query` 分别查询提醒窗口与所选月份，
-//! 企业微信使用 FolderSync / Sync；复用 VEVENT 解析与重复日程展开。认证使用 Basic Auth，
-//! 没有 OAuth、没有回调，用户在客户端自己生成账号密码即可。
+//! `PROPFIND` 找行事曆，`REPORT calendar-query` 分別查詢提醒窗口與所選月份，
+//! Exchange 使用 FolderSync / Sync；复用 VEVENT 解析與重複行程展開。認證使用 Basic Auth，
+//! 沒有 OAuth、沒有回呼，使用者在客戶端自己生成帳號密碼即可。
 //!
 //! 硬约束：只读；凭据只进 Windows 凭据管理器（`keyring`，和邮件同一套库），
 //! 配置文件里只有平台、用户名、日历地址；不落盘正文、不进日志。
@@ -28,26 +28,23 @@ const WINDOW_SECS: i64 = 24 * 3600;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Provider {
+    /// Google 日曆：Gmail 地址 + 應用程式密碼。
     #[default]
-    Feishu,
-    DingTalk,
-    WeCom,
-    /// 苹果 iCloud 日历：Apple ID + App 专用密码。
+    Google,
+    /// 蘋果 iCloud 日曆：Apple ID + App 專用密碼。
     ICloud,
-    /// 任意 CalDAV 服务（Nextcloud、群晖、Fastmail、Radicale 等），地址由用户填写。
+    /// 任意 CalDAV 服務（Nextcloud、群暉、Fastmail、Radicale 等），地址由使用者填寫。
     Custom,
-    /// 自建或第三方 Exchange（ActiveSync），地址由用户填写；与企业微信共用同一套只读客户端。
+    /// 自建或第三方 Exchange（ActiveSync），地址由使用者填寫。
     Exchange,
 }
 
 impl Provider {
-    pub const ALL: [Provider; 6] = [Provider::Feishu, Provider::DingTalk, Provider::WeCom, Provider::ICloud, Provider::Custom, Provider::Exchange];
+    pub const ALL: [Provider; 4] = [Provider::Google, Provider::ICloud, Provider::Custom, Provider::Exchange];
 
     pub fn key(self) -> &'static str {
         match self {
-            Provider::Feishu => "feishu",
-            Provider::DingTalk => "dingtalk",
-            Provider::WeCom => "wecom",
+            Provider::Google => "google",
             Provider::ICloud => "icloud",
             Provider::Custom => "custom",
             Provider::Exchange => "exchange",
@@ -56,57 +53,43 @@ impl Provider {
 
     pub fn label(self) -> &'static str {
         match self {
-            Provider::Feishu => "飛書",
-            Provider::DingTalk => "釘釘",
-            Provider::WeCom => "企業微信",
+            Provider::Google => "Google",
             Provider::ICloud => "iCloud",
             Provider::Custom => "CalDAV",
             Provider::Exchange => "Exchange",
         }
     }
 
-    /// 平台同步入口，界面上只读显示。
+    /// 平台同步入口，介面上只讀顯示。
     pub fn server(self) -> &'static str {
         match self {
-            Provider::Feishu => "https://caldav.feishu.cn/calendars/",
-            Provider::DingTalk => "https://calendar.dingtalk.com",
-            Provider::WeCom => "https://wecom.work",
+            Provider::Google => "https://apidata.googleusercontent.com/caldav/v2/",
             Provider::ICloud => "https://caldav.icloud.com/",
             Provider::Custom | Provider::Exchange => "",
         }
     }
 
-    /// 自定义 CalDAV、Exchange 需要用户填写服务器地址。
+    /// 自訂 CalDAV、Exchange 需要使用者填寫伺服器位址。
     pub fn custom_server(self) -> bool { matches!(self, Provider::Custom | Provider::Exchange) }
 
-    /// 走 Exchange ActiveSync 协议，而不是 CalDAV。
-    pub fn exchange(self) -> bool { matches!(self, Provider::WeCom | Provider::Exchange) }
+    /// 走 Exchange ActiveSync 協定，而不是 CalDAV。
+    pub fn exchange(self) -> bool { matches!(self, Provider::Exchange) }
 
-    /// 服务器地址输入框的示例。
+    /// 伺服器位址輸入框的範例。
     pub fn server_hint(self) -> &'static str {
         if self == Provider::Exchange { "mail.example.com" } else { "https://example.com/remote.php/dav" }
     }
 
-    /// 一个账号下有多个日历（iCloud 的「家庭」「工作」等）时全部同步。
-    pub fn all_calendars(self) -> bool { matches!(self, Provider::ICloud | Provider::Custom) }
+    /// 一個帳號下有多個行事曆時全部同步。
+    pub fn all_calendars(self) -> bool { matches!(self, Provider::Google | Provider::ICloud | Provider::Custom) }
 
-    /// 「在哪拿？」三步引导，直接对应客户端菜单。
+    /// 「在哪拿？」三步引導，直接對應客戶端選單。
     pub fn guide(self) -> [&'static str; 3] {
         match self {
-            Provider::Feishu => [
-                "桌面端右上角頭像 → 設定",
-                "行事曆 → CalDAV 同步配置 → 選「其它裝置」",
-                "點生成，複製使用者名稱和密碼填到上面",
-            ],
-            Provider::DingTalk => [
-                "開啟釘釘 → 行事曆",
-                "行事曆設定 → 同步至其他行事曆 / CalDAV",
-                "生成帳號，複製使用者名稱和密碼填到上面",
-            ],
-            Provider::WeCom => [
-                "手機端 工作臺 → 行程",
-                "右上角「三」→ 行程設定",
-                "同步至其他行事曆（Exchange）→ 複製完整使用者名稱及生成的密碼",
+            Provider::Google => [
+                "用瀏覽器開啟 myaccount.google.com，登入 Google 帳戶",
+                "安全性 → 兩步驟驗證 → 應用程式密碼，產生一組密碼（名稱可填「鬼島」）",
+                "使用者名稱填 Gmail 地址，密碼填剛產生的應用程式密碼",
             ],
             Provider::ICloud => [
                 "用瀏覽器開啟 account.apple.com，登入 Apple 帳戶",
@@ -114,26 +97,29 @@ impl Provider {
                 "使用者名稱填 Apple ID 信箱，密碼填剛生成的 App 專用密碼",
             ],
             Provider::Custom => [
-                "伺服器填行事曆服務的 CalDAV 地址，例如 https://example.com/remote.php/dav",
+                "伺服器填行事曆服務的 CalDAV 位址，例如 https://example.com/remote.php/dav",
                 "使用者名稱和密碼用該服務的帳號；支援「應用程式密碼」的建議單獨生成一個",
                 "只讀同步；鬼島會自動發現帳號下所有行事曆",
             ],
             Provider::Exchange => [
-                "伺服器填 Exchange 郵件伺服器地址，例如 mail.example.com，可向公司 IT 獲取",
+                "伺服器填 Exchange 郵件伺服器位址，例如 mail.example.com，可向公司 IT 獲取",
                 "使用者名稱一般是信箱，也可能是「域\\使用者名稱」；密碼用信箱密碼",
                 "只讀同步行事曆；Microsoft 365 / Outlook.com 已不支援密碼登入，暫不能連線",
             ],
         }
     }
 
+    /// 已移除的大陸平台鍵值，載入舊設定時用來過濾。
+    pub fn legacy_key(key: &str) -> bool {
+        matches!(key, "feishu" | "dingtalk" | "wecom")
+    }
+
     pub fn parse(key: &str) -> Self {
         match key {
-            "dingtalk" => Provider::DingTalk,
-            "wecom" => Provider::WeCom,
             "icloud" => Provider::ICloud,
             "custom" => Provider::Custom,
             "exchange" => Provider::Exchange,
-            _ => Provider::Feishu,
+            _ => Provider::Google,
         }
     }
 }
@@ -181,7 +167,9 @@ pub fn load_configs() -> Vec<Config> {
     let Ok(raw) = std::fs::read(config_path()) else { return vec![]; };
     let Ok(json) = serde_json::from_slice::<serde_json::Value>(&raw) else { return vec![]; };
     if let Some(accounts) = json.get("accounts").and_then(|v| v.as_array()) {
-        accounts.iter().filter_map(|v| decode_config(v.to_string().as_bytes())).collect()
+        accounts.iter()
+            .filter(|v| !v.get("provider").and_then(|p| p.as_str()).is_some_and(Provider::legacy_key))
+            .filter_map(|v| decode_config(v.to_string().as_bytes())).collect()
     } else {
         decode_config(&raw).into_iter().collect()
     }
@@ -207,7 +195,7 @@ pub fn decode_config(raw: &[u8]) -> Option<Config> {
         return None;
     }
     Some(Config {
-        provider: Provider::parse(json.get("provider").and_then(|p| p.as_str()).unwrap_or("feishu")),
+        provider: Provider::parse(json.get("provider").and_then(|p| p.as_str()).unwrap_or("google")),
         username,
         href: json.get("href").and_then(|h| h.as_str()).map(|s| s.to_string()),
         server: json.get("server").and_then(|h| h.as_str()).map(|s| s.to_string()),
@@ -1322,7 +1310,7 @@ mod tests {
                 write!(socket,"HTTP/1.1 207 Multi-Status\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
             }
         });
-        let cfg=Config{provider:Provider::DingTalk,username:"test".into(),href:Some(format!("{base}empty/")),server:Some(base)};
+        let cfg=Config{provider:Provider::Google,username:"test".into(),href:Some(format!("{base}empty/")),server:Some(base)};
         let result=fetch_month(&cfg,"test",NaiveDate::from_ymd_opt(2026,11,1).unwrap());
         stop.send(()).unwrap();worker.join().unwrap();
         assert_eq!(result.unwrap().events.len(),1,"已儲存的空行事曆不能遮蔽其他行事曆");
@@ -1338,14 +1326,14 @@ mod tests {
     }
 
     #[test]
-    fn wecom_uses_exchange_endpoint() {
-        assert_eq!(Provider::WeCom.server(), "https://wecom.work");
+    fn google_uses_caldav_endpoint() {
+        assert_eq!(Provider::Google.server(), "https://apidata.googleusercontent.com/caldav/v2/");
     }
     #[test]
     fn calendar_resource_refs_accept_object_slashes_and_skip_collection_metadata() {
         let xml=r#"<d:multistatus><d:response><d:href>/calendar/</d:href><d:resourcetype><d:collection/><c:calendar/></d:resourcetype></d:response><d:response><d:href>/calendar/event/?id=1&amp;version=2</d:href></d:response></d:multistatus>"#;
-        assert_eq!(report_resource_refs(xml,"https://caldav.wecom.work/calendar/").unwrap(),"<d:href>/calendar/event/?id=1&amp;version=2</d:href>");
-        assert!(report_resource_refs("<response><href>https://other.example/item.ics</href></response>","https://caldav.wecom.work/calendar/").is_err());
+        assert_eq!(report_resource_refs(xml,"https://calendar.example/calendar/").unwrap(),"<d:href>/calendar/event/?id=1&amp;version=2</d:href>");
+        assert!(report_resource_refs("<response><href>https://other.example/item.ics</href></response>","https://calendar.example/calendar/").is_err());
     }
     fn read_discovery_request(stream:&mut std::net::TcpStream)->String {
         use std::io::Read;
@@ -1368,7 +1356,7 @@ mod tests {
     fn discovery_root_errors_follow_well_known_principal_and_home() {
         use std::io::Write;
         use std::net::TcpListener;
-        for (provider, code) in [(Provider::DingTalk,405),(Provider::WeCom,403),(Provider::ICloud,400),(Provider::DingTalk,400),(Provider::Custom,400)] {
+        for (provider, code) in [(Provider::Google,405),(Provider::ICloud,403),(Provider::Custom,400),(Provider::Google,400)] {
             let listener=TcpListener::bind("127.0.0.1:0").unwrap();
             listener.set_nonblocking(true).unwrap();
             let base=format!("http://{}/",listener.local_addr().unwrap());
@@ -1498,7 +1486,7 @@ mod tests {
             write!(stream,"HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
             drop(stream);listener
         });
-        let cfg=Config{provider:Provider::DingTalk,username:"synthetic".into(),href:None,server:Some(base)};
+        let cfg=Config{provider:Provider::Google,username:"synthetic".into(),href:None,server:Some(base)};
         let client=ureq::AgentBuilder::new().timeout(Duration::from_millis(200)).build();
         assert_eq!(discover(&client,&cfg,"wrong").unwrap_err().status,Some(401));
         let listener=worker.join().unwrap();listener.set_nonblocking(true).unwrap();
@@ -1517,7 +1505,7 @@ mod tests {
             let body=format!("<d:current-user-principal xmlns:d=\"DAV:\"><d:href>{foreign_url}</d:href></d:current-user-principal>");
             write!(stream,"HTTP/1.1 207 Multi-Status\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
         });
-        let cfg=Config{provider:Provider::WeCom,username:"synthetic".into(),href:None,server:Some(base)};
+        let cfg=Config{provider:Provider::Google,username:"synthetic".into(),href:None,server:Some(base)};
         assert!(discover(&agent().unwrap(),&cfg,"synthetic-password").unwrap_err().message.contains("不可信"));
         worker.join().unwrap();foreign.set_nonblocking(true).unwrap();assert!(foreign.accept().is_err());
     }
@@ -1527,7 +1515,7 @@ mod tests {
         use std::net::TcpListener;
         let server=TcpListener::bind("127.0.0.1:0").unwrap();
         let url=format!("http://{}/calendar/",server.local_addr().unwrap());
-        let cfg=Config{provider:Provider::Feishu,username:"synthetic".into(),href:Some(url.clone()),server:None};
+        let cfg=Config{provider:Provider::Google,username:"synthetic".into(),href:Some(url.clone()),server:None};
         let client=ureq::AgentBuilder::new().timeout(Duration::from_millis(100)).build();
         assert!(dav(&client,"REPORT",&url,"1","",&cfg,"synthetic-secret").is_err());
         server.set_nonblocking(true).unwrap();
@@ -1551,7 +1539,7 @@ mod tests {
                 write!(stream,"HTTP/1.1 {status}\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
             }
         });
-        let cfg=Config{provider:Provider::Feishu,username:"synthetic".into(),href:None,server:Some(base.clone())};
+        let cfg=Config{provider:Provider::Google,username:"synthetic".into(),href:None,server:Some(base.clone())};
         assert!(dav(&agent().unwrap(),"REPORT",&base,"1","",&cfg,"secret").is_ok());
         assert!(dav(&agent().unwrap(),"REPORT",&base,"1","",&cfg,"secret").is_err());
         worker.join().unwrap();foreign.set_nonblocking(true).unwrap();assert!(foreign.accept().is_err());
@@ -1611,7 +1599,7 @@ mod tests {
     }
 
     #[test]
-    fn feishu_hex_entities_preserve_event_lines(){
+    fn hex_entities_preserve_event_lines(){
         let xml="<C:calendar-data>BEGIN:VCALENDAR&#xD;&#xA;BEGIN:VEVENT&#xD;&#xA;UID:test&#xD;&#xA;SUMMARY:測試&#xD;&#xA;DTSTART:20261103T032000Z&#xD;&#xA;END:VEVENT&#xD;&#xA;END:VCALENDAR</C:calendar-data>";
         assert_eq!(events_from_report(xml).len(),1);
         assert_eq!(unescape_xml("&amp;#xA;"),"&#xA;");
@@ -1641,7 +1629,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore="需要本輪建立的飛書個人測試行程"]
+    #[ignore="需要本輪建立的個人測試行程"]
     fn live_calendar_test_samples() {
         let cfg=load_config().unwrap();let password=secrets::load(&cfg).unwrap();
         let month=fetch_month(&cfg,&password,NaiveDate::from_ymd_opt(2026,11,3).unwrap()).unwrap();
@@ -1680,7 +1668,7 @@ mod tests {
                     }
                     let request=String::from_utf8(buf).unwrap();
                     assert!(request.contains(if index==0 {"calendar-query"} else {"calendar-multiget"}));
-                    assert!(request.contains("<d:getetag/>"),"釘釘要求查詢與批次讀取同時請求 ETag，否則返回 400");
+                    assert!(request.contains("<d:getetag/>"),"查詢與批次讀取應同時請求 ETag，否則伺服器可能返回 400");
                     if index==1 {assert!(request.contains("<d:href>/calendar/item.ics</d:href>"));}
                     let data=if index==1 && succeeds {"BEGIN:VCALENDAR&#xD;&#xA;BEGIN:VEVENT&#xD;&#xA;UID:test&#xD;&#xA;SUMMARY:測試&#xD;&#xA;DTSTART:20261103T032000Z&#xD;&#xA;RRULE:FREQ=DAILY;COUNT=2&#xD;&#xA;END:VEVENT&#xD;&#xA;END:VCALENDAR"} else {""};
                     let status=if data.is_empty(){404}else{200};
@@ -1688,7 +1676,7 @@ mod tests {
                     write!(socket,"HTTP/1.1 207 Multi-Status\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",xml.len(),xml).unwrap();
                 }
             });
-            let cfg=Config{provider:Provider::Feishu,username:"demo".into(),href:Some(format!("{base}calendar/")),server:Some(base)};
+            let cfg=Config{provider:Provider::Google,username:"demo".into(),href:Some(format!("{base}calendar/")),server:Some(base)};
             let result=fetch_month(&cfg,"test",NaiveDate::from_ymd_opt(2026,11,3).unwrap());
             if succeeds {assert_eq!(result.unwrap().events.len(),2);} else {assert!(result.is_err());}
             server.join().unwrap();
@@ -1727,7 +1715,7 @@ mod tests {
                     write!(socket,"HTTP/1.1 207 Multi-Status\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",xml.len(),xml).unwrap();
                 }
             });
-            let cfg=Config{provider:Provider::DingTalk,username:"demo".into(),href:Some(format!("{base}calendar/")),server:Some(base)};
+            let cfg=Config{provider:Provider::Google,username:"demo".into(),href:Some(format!("{base}calendar/")),server:Some(base)};
             let result=fetch_month(&cfg,"test",NaiveDate::from_ymd_opt(2026,11,3).unwrap());
             if succeeds {assert_eq!(result.unwrap().events.len(),2);} else {assert!(result.is_err());}
             server.join().unwrap();
@@ -1769,7 +1757,7 @@ mod tests {
             write!(socket,"HTTP/1.1 207 Multi-Status\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",xml.len(),xml).unwrap();
             String::from_utf8(buf).unwrap()
         });
-        let cfg=Config{provider:Provider::Feishu,username:"demo".into(),href:Some(format!("http://127.0.0.1:{port}/calendar/")),server:Some(format!("http://127.0.0.1:{port}/"))};
+        let cfg=Config{provider:Provider::Google,username:"demo".into(),href:Some(format!("http://127.0.0.1:{port}/calendar/")),server:Some(format!("http://127.0.0.1:{port}/"))};
         let events=fetch_month(&cfg,"demo-password",NaiveDate::from_ymd_opt(2024,2,12).unwrap()).unwrap().events;
         assert_eq!(events.iter().map(|m|m.uid.as_str()).collect::<Vec<_>>(),["month-first","leap-day"]);
         let request=server.join().unwrap();
@@ -1782,7 +1770,7 @@ mod tests {
         let worker=std::thread::spawn(move||run_with(rx,tx,Duration::from_millis(40),|cfg,_,ev|{
             ev.send(Event::Synced{config:cfg.clone(),events:vec![],at:String::new()}).unwrap();
         }));
-        let config=Config{provider:Provider::Feishu,username:"demo".into(),href:None,server:None};
+        let config=Config{provider:Provider::Google,username:"demo".into(),href:None,server:None};
         cmd.send(Cmd::Configure(vec![config.clone()],false)).unwrap();
         events.recv_timeout(Duration::from_secs(1)).expect("新連線應同步一次");
         assert!(matches!(events.recv_timeout(Duration::from_millis(120)),Err(RecvTimeoutError::Timeout)));
@@ -1805,15 +1793,15 @@ mod tests {
     fn multiple_calendars_sync_even_when_one_fails() {
         let (cmd,rx)=channel();let (tx,events)=channel();
         let worker=std::thread::spawn(move||run_with(rx,tx,Duration::from_secs(60),|cfg,_,ev|{
-            let event=if cfg.provider==Provider::Feishu {Event::Failed{config:cfg.clone(),message:"暫時不可用".into()}}
+            let event=if cfg.provider==Provider::Google {Event::Failed{config:cfg.clone(),message:"暫時不可用".into()}}
                 else {Event::Synced{config:cfg.clone(),events:vec![],at:String::new()}};
             ev.send(event).unwrap();
         }));
-        let feishu=Config{provider:Provider::Feishu,username:"demo".into(),href:None,server:None};
-        let ding=Config{provider:Provider::DingTalk,..feishu.clone()};
-        cmd.send(Cmd::Configure(vec![feishu,ding.clone()],false)).unwrap();
+        let first=Config{provider:Provider::Google,username:"demo".into(),href:None,server:None};
+        let other=Config{provider:Provider::ICloud,..first.clone()};
+        cmd.send(Cmd::Configure(vec![first,other.clone()],false)).unwrap();
         assert!(matches!(events.recv_timeout(Duration::from_secs(1)).unwrap(),Event::Failed{..}));
-        assert!(matches!(events.recv_timeout(Duration::from_secs(1)).unwrap(),Event::Synced{config,..} if config==ding));
+        assert!(matches!(events.recv_timeout(Duration::from_secs(1)).unwrap(),Event::Synced{config,..} if config==other));
         drop(cmd);worker.join().unwrap();
     }
 
@@ -1835,15 +1823,15 @@ mod tests {
  <d:response><d:href>/calendars/8f3c2d7a-1111-2222-3333-444455556666/</d:href>
   <d:propstat><d:prop><d:resourcetype><d:collection/><c:calendar/></d:resourcetype></d:prop></d:propstat></d:response>
 </d:multistatus>"#;
-        let cal = pick_calendar(xml, "https://caldav.feishu.cn/calendars/").unwrap();
-        assert_eq!(cal, "https://caldav.feishu.cn/calendars/8f3c2d7a-1111-2222-3333-444455556666/");
+        let cal = pick_calendar(xml, "https://calendar.example.com/").unwrap();
+        assert_eq!(cal, "https://calendar.example.com/calendars/8f3c2d7a-1111-2222-3333-444455556666/");
         assert_eq!(responses(xml).len(), 2);
     }
 
     #[test]
     fn calendar_home_set_is_followed() {
         let xml = r#"<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:response><d:href>/</d:href><d:propstat><d:prop><c:calendar-home-set><d:href>/dav/u1/</d:href></c:calendar-home-set></d:prop></d:propstat></d:response></d:multistatus>"#;
-        assert_eq!(calendar_home(xml, "https://calendar.dingtalk.com/").as_deref(), Some("https://calendar.dingtalk.com/dav/u1/"));
+        assert_eq!(calendar_home(xml, "https://calendar.example.com/").as_deref(), Some("https://calendar.example.com/dav/u1/"));
     }
 
     #[test]
@@ -1854,33 +1842,33 @@ mod tests {
 
     #[test]
     fn paste_splits_three_provider_formats() {
-        let feishu = "伺服器地址：https://caldav.feishu.cn/calendars/\n使用者名稱：u_abc@feishu\n密碼：p@ss:word1";
-        assert_eq!(parse_paste(feishu), Some(("u_abc@feishu".into(), "p@ss:word1".into())));
-        let ding = "帳號 ding_001 密碼 8f3k2j";
-        assert_eq!(parse_paste(ding), Some(("ding_001".into(), "8f3k2j".into())));
-        let wecom = "使用者名稱=wecom_user 密碼=Wx!2026";
-        assert_eq!(parse_paste(wecom), Some(("wecom_user".into(), "Wx!2026".into())));
+        let full = "伺服器地址：https://calendar.example.com/calendars/\n使用者名稱：u_abc\n密碼：p@ss:word1";
+        assert_eq!(parse_paste(full), Some(("u_abc".into(), "p@ss:word1".into())));
+        let spaced = "帳號 user_001 密碼 8f3k2j";
+        assert_eq!(parse_paste(spaced), Some(("user_001".into(), "8f3k2j".into())));
+        let equals = "使用者名稱=cal_user 密碼=Wx!2026";
+        assert_eq!(parse_paste(equals), Some(("cal_user".into(), "Wx!2026".into())));
         assert_eq!(parse_paste("就是一個使用者名稱"), None, "拆不出密碼就不猜");
     }
 
     #[test]
     fn error_messages_are_human() {
-        assert_eq!(Failure::status(Provider::Feishu, 401).message, "驗證帳號失敗（401），請核對使用者名稱和飛書提供的專用密碼");
-        assert_eq!(Failure::status(Provider::WeCom, 401).message, "驗證帳號失敗（401），請核對使用者名稱和企業微信提供的專用密碼");
+        assert_eq!(Failure::status(Provider::Google, 401).message, "驗證帳號失敗（401），請核對使用者名稱和Google提供的專用密碼");
+        assert_eq!(Failure::status(Provider::ICloud, 401).message, "驗證帳號失敗（401），請核對使用者名稱和iCloud提供的專用密碼");
         assert_eq!(Failure::status(Provider::Exchange, 401).message, "驗證帳號失敗（401），請核對使用者名稱和密碼");
         assert_eq!(Failure::status(Provider::Custom, 401).message, "驗證帳號失敗（401），請核對使用者名稱和密碼");
         for provider in Provider::ALL {assert_eq!(Provider::parse(provider.key()),provider);}
-        assert!(Provider::Exchange.exchange() && Provider::WeCom.exchange() && !Provider::Custom.exchange());
+        assert!(Provider::Exchange.exchange() && !Provider::Google.exchange() && !Provider::Custom.exchange());
         assert!(Provider::Exchange.custom_server() && Provider::Exchange.server().is_empty());
         let saved=Config{provider:Provider::Exchange,username:"me@example.com".into(),href:None,server:Some("https://mail.example.com/".into())};
         assert_eq!(decode_config(&encode_config(&saved)).unwrap(),saved,"Exchange 帳號的伺服器地址要能儲存和讀回");
         assert!(Failure::transport(&std::io::Error::from(std::io::ErrorKind::TimedOut)).message.contains("連線超時"));
-        assert_eq!(Failure::status(Provider::DingTalk, 404).message, "伺服器地址不對（404）");
+        assert_eq!(Failure::status(Provider::Google, 404).message, "伺服器地址不對（404）");
     }
 
     #[test]
     fn report_requests_expanded_recurring_events() {
-        let body = report_body(Provider::Feishu,"20261030T000000Z", "20261031T000000Z");
+        let body = report_body(Provider::Google,"20261030T000000Z", "20261031T000000Z");
         assert!(body.contains("<c:expand start=\"20261030T000000Z\" end=\"20261031T000000Z\"/>"));
     }
 
@@ -1995,7 +1983,7 @@ END:VCALENDAR</c:calendar-data></d:prop></d:propstat></d:response></d:multistatu
         });
 
         let cfg = Config {
-            provider: Provider::Feishu,
+            provider: Provider::Google,
             username: "u1".into(),
             href: None,
             server: Some(format!("http://127.0.0.1:{port}/calendars/")),
@@ -2020,7 +2008,7 @@ mod icloud_and_ics_tests {
     #[test]
     fn new_providers_round_trip_and_custom_server_is_validated() {
         for p in Provider::ALL { assert_eq!(Provider::parse(p.key()), p); }
-        assert!(Provider::ICloud.all_calendars() && !Provider::Feishu.all_calendars());
+        assert!(Provider::ICloud.all_calendars() && !Provider::Exchange.all_calendars());
         assert_eq!(normalize_server("cloud.example.com/remote.php/dav").as_deref(), Some("https://cloud.example.com/remote.php/dav"));
         assert_eq!(normalize_server("webcal://p01-caldav.icloud.com/x").as_deref(), Some("https://p01-caldav.icloud.com/x"));
         assert!(normalize_server("http://example.com/dav").is_none(), "非本機地址必須 https");

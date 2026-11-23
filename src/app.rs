@@ -1550,8 +1550,8 @@ impl App {
     pub fn calendar_demo(&mut self) {
         use calendar::Provider;
         let mode = std::env::var("KUIDAO_CAL_DEMO").unwrap_or_default();
-        self.calendar.form.provider = Provider::Feishu;
-        self.calendar.form.username = "demo***@feishu.example".into();
+        self.calendar.form.provider = Provider::Google;
+        self.calendar.form.username = "demo***@gmail.com".into();
         self.settings_tab = 8;
         self.open_settings();
         self.settings.calendar_prompt = false;
@@ -1562,15 +1562,15 @@ impl App {
                 .unwrap_or_default()
         };
         let demo_cfg = calendar::Config {
-            provider: Provider::Feishu,
-            username: "demo***@feishu.example".into(),
-            href: Some("https://caldav.feishu.cn/calendars/8f3c2d7a-1111-2222-3333-444455556666/".into()),
+            provider: Provider::Google,
+            username: "demo***@gmail.com".into(),
+            href: Some("https://apidata.googleusercontent.com/caldav/v2/demo%40gmail.com/events/".into()),
             server: None,
         };
         match mode.as_str() {
             "paste" => {
                 self.calendar.form.username =
-                    "伺服器地址：https://caldav.feishu.cn/calendars/\n使用者名稱：demo***@feishu.example\n密碼：demo-pass-123".into();
+                    "伺服器地址：https://apidata.googleusercontent.com/caldav/v2/\n使用者名稱：demo***@gmail.com\n密碼：demo-pass-123".into();
                 if let Some((u, p)) = calendar::parse_paste(&self.calendar.form.username) {
                     self.calendar.form.username = u;
                     self.calendar.form.password = p;
@@ -1579,7 +1579,7 @@ impl App {
             }
             "fail" => {
                 self.calendar.form.password = "demo-pass-123".into();
-                self.calendar.note = calendar::human_error(Provider::Feishu, Some(401));
+                self.calendar.note = calendar::human_error(Provider::Google, Some(401));
                 self.calendar.note_error = true;
             }
             "connected" => {
@@ -1599,7 +1599,7 @@ impl App {
             "alert" => {
                 let s = later(600);
                 self.calendar.events =
-                    vec![mail::Meeting { all_day:false, end:None, title: "飛書行程：產品評審".into(), start: s, at: label(s), uid: "demo-cal-alert".into() }];
+                    vec![mail::Meeting { all_day:false, end:None, title: "Google 行程：產品評審".into(), start: s, at: label(s), uid: "demo-cal-alert".into() }];
                 self.calendar.config = Some(demo_cfg.clone());
                 self.calendar.connected = true;
                 self.calendar.last_sync = calendar::now_label();

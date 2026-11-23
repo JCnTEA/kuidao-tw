@@ -58,7 +58,7 @@ const WECOM:Adapter=Adapter{
     client:Messenger::WeCom,name:"企業微信",capture:Capture::Taskbar,notification_id:"WXWork",
     aliases:&["WeCom","WeWork","Tencent.WeWork"],display_names:&["企業微信","WXWork"],process_names:&["WXWork.exe"],publishers:&["tencent"],
     keep_unidentified:true,dismiss_unread:true,icon_scale:1.0,collapsed_icon_scale:0.85,
-    enabled:|settings|settings.wecom_notifications,tray_enabled:|_|true,paint_icon:|c,x,y|crate::calendar_ui::source_icon(c,crate::calendar_ui::Source::Calendar(Some(crate::calendar::Provider::WeCom)),x-10.0,y-10.0,20.0),
+    enabled:|settings|settings.wecom_notifications,tray_enabled:|_|true,paint_icon:|c,x,y|crate::calendar_ui::source_icon(c,crate::calendar_ui::Source::Brand(crate::calendar_ui::Brand::WeCom),x-10.0,y-10.0,20.0),
     #[cfg(windows)] native:&desktop::WECOM,
 };
 
@@ -66,7 +66,7 @@ const FEISHU:Adapter=Adapter{
     client:Messenger::Feishu,name:"飛書",capture:Capture::Taskbar,notification_id:"Feishu",
     aliases:&["com.electron.Feishu"],display_names:&["飛書","Feishu"],process_names:&["Feishu.exe"],publishers:&["beijing feishu technology","bytedance"],
     keep_unidentified:true,dismiss_unread:true,icon_scale:1.0,collapsed_icon_scale:0.85,
-    enabled:|settings|settings.feishu_notifications,tray_enabled:|_|true,paint_icon:|c,x,y|crate::calendar_ui::source_icon(c,crate::calendar_ui::Source::Calendar(Some(crate::calendar::Provider::Feishu)),x-10.0,y-10.0,20.0),
+    enabled:|settings|settings.feishu_notifications,tray_enabled:|_|true,paint_icon:|c,x,y|crate::calendar_ui::source_icon(c,crate::calendar_ui::Source::Brand(crate::calendar_ui::Brand::Feishu),x-10.0,y-10.0,20.0),
     #[cfg(windows)] native:&desktop::FEISHU,
 };
 
@@ -74,7 +74,7 @@ const DINGTALK:Adapter=Adapter{
     client:Messenger::DingTalk,name:"釘釘",capture:Capture::Taskbar,notification_id:"DingTalk",
     aliases:&[],display_names:&["釘釘","DingTalk"],process_names:&["DingTalk.exe"],publishers:&["alibaba","dingtalk"],
     keep_unidentified:true,dismiss_unread:true,icon_scale:1.0,collapsed_icon_scale:0.85,
-    enabled:|settings|settings.dingtalk_notifications,tray_enabled:|_|true,paint_icon:|c,x,y|crate::calendar_ui::source_icon(c,crate::calendar_ui::Source::Calendar(Some(crate::calendar::Provider::DingTalk)),x-10.0,y-10.0,20.0),
+    enabled:|settings|settings.dingtalk_notifications,tray_enabled:|_|true,paint_icon:|c,x,y|crate::calendar_ui::source_icon(c,crate::calendar_ui::Source::Brand(crate::calendar_ui::Brand::DingTalk),x-10.0,y-10.0,20.0),
     #[cfg(windows)] native:&desktop::DINGTALK,
 };
 

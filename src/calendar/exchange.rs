@@ -254,7 +254,7 @@ pub(super) fn fetch(cfg: &Config, password: &str, lo: DateTime<Utc>, hi: DateTim
         let xml = format!("<calendar-data>{}</calendar-data>", ics.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;"));
         let parsed=super::parse_events_in_range(&xml,lo,hi);synced+=1;events.extend(parsed.events);report.merge(parsed.report);
     }
-    if report.calendars == 0 { return Err(Failure::text(if cfg.provider == Provider::WeCom {"企業微信未返回可同步的行事曆，請確認已開啟行程同步".to_string()}else{format!("{label}帳號下沒有可同步的行事曆")})); }
+    if report.calendars == 0 { return Err(Failure::text(format!("{label}帳號下沒有可同步的行事曆"))); }
     if synced == 0 { return Err(first_error.unwrap_or_else(invalid).with_report(report)); }
     if events.is_empty() && report.invalid>0{return Err(Failure::text(report.warning()).with_report(report));}
     events.sort_by_key(|m| m.start);
@@ -354,12 +354,12 @@ fn event_ics(item: &Node, fallback_uid: &str) -> Result<String, Failure> {
 mod tests {
     use super::*;
     #[test]
-    #[ignore="只讀檢查已連線企業微信返回的資料夾型別及行程數量，不輸出憑據或正文"]
-    fn live_wecom_folder_diagnosis(){
-        let cfg=super::super::load_configs().into_iter().find(|c|c.provider==Provider::WeCom).expect("需要已連線的企業微信");
+    #[ignore="只讀檢查已連線 Exchange 返回的資料夾型別及行程數量，不輸出憑據或正文"]
+    fn live_exchange_folder_diagnosis(){
+        let cfg=super::super::load_configs().into_iter().find(|c|c.provider==Provider::Exchange).expect("需要已連線的 Exchange");
         let password=super::super::secrets::load(&cfg).unwrap();let agent=super::super::agent().unwrap();
         let folders=command(&agent,&cfg,&password,"FolderSync",&node(FOLDER,0x16,"",vec![node(FOLDER,0x12,"0",vec![])]),None).unwrap();
-        check_status(&folders,FOLDER,0x0c,"企業微信").unwrap();
+        check_status(&folders,FOLDER,0x0c,"Exchange").unwrap();
         for (i,folder) in folders.child(FOLDER,0x0e).unwrap().children.iter().enumerate(){
             println!("folder={i} tag={} type={} selected={}",folder.tag,folder.text(FOLDER,0x0a),matches!(folder.text(FOLDER,0x0a),"8"|"13"));
             if !matches!(folder.text(FOLDER,0x0a),"8"|"13"){continue;}
@@ -367,7 +367,7 @@ mod tests {
             for page in 0..100{
                 let result=command(&agent,&cfg,&password,"Sync",&sync_request(id,&key),None).unwrap();
                 let collection=result.child(AIR,0x1c).and_then(|n|n.child(AIR,0x0f)).unwrap();
-                check_status(collection,AIR,0x0e,"企業微信").unwrap();
+                check_status(collection,AIR,0x0e,"Exchange").unwrap();
                 let count=collection.child(AIR,0x16).map_or(0,|n|n.children.len());
                 println!("folder={i} page={page} records={count} more={}",collection.child(AIR,0x14).is_some());
                 let initial=key=="0";key=collection.required(AIR,0x0b).unwrap().to_owned();
@@ -452,7 +452,7 @@ mod tests {
                 write!(stream, "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len()).unwrap(); stream.write_all(&body).unwrap();
             }
         });
-        let cfg = Config { provider: Provider::WeCom, username: "demo".into(), href: Some("https://caldav.wecom.work/obsolete".into()), server: Some(base) };
+        let cfg = Config { provider: Provider::Exchange, username: "demo".into(), href: Some("https://mail.example.com/obsolete".into()), server: Some(base) };
         let result = super::super::fetch_month(&cfg, "test", chrono::NaiveDate::from_ymd_opt(2026,11,1).unwrap()).unwrap();
         assert_eq!(result.events.len(), 1);
         server.join().unwrap();
@@ -576,7 +576,7 @@ mod tests {
         replies.push(Box::new(move |r| { assert_eq!(id(r), "deny"); (200, Some(node(AIR, 5, "", vec![node(AIR, 0x1c, "", vec![node(AIR, 0x0f, "", vec![node(AIR, 0x0e, "8", vec![]), node(AIR, 0x0b, "0", vec![])])])]))) }));
         for _ in 0..2 { replies.push(Box::new(move |r| { assert_eq!(id(r), "mine"); (200, Some(page(r, vec![event("d", "uid-mine", false)]))) })); }
         let (base, worker) = mock(replies);
-        let cfg = Config { provider: Provider::WeCom, username: "demo".into(), href: None, server: Some(base) };
+        let cfg = Config { provider: Provider::Exchange, username: "demo".into(), href: None, server: Some(base) };
         let result = super::super::fetch_month(&cfg, "pw", chrono::NaiveDate::from_ymd_opt(2026, 11, 1).unwrap()).unwrap();
         let synced: Vec<String> = worker.join().unwrap().iter().filter(|(c, _, _)| c == "Sync").map(|(_, _, r)| id(r)).collect();
         assert!(!synced.iter().any(|f| f == "inbox" || f == "loose"), "郵件和不在行事曆下的資料夾不能同步：{synced:?}");
@@ -598,7 +598,7 @@ mod tests {
     fn exchange_status_errors_and_unsafe_endpoints_are_rejected() {
         assert!(check_status(&node(FOLDER, 0x16, "", vec![node(FOLDER, 0x0c, "9", vec![])]), FOLDER, 0x0c, "Exchange").is_err());
         assert!(check_status(&Node::default(), AIR, 0x0e, "Exchange").is_err());
-        let cfg = Config { provider: Provider::WeCom, username: "demo".into(), href: None, server: Some("http://wecom.work".into()) };
+        let cfg = Config { provider: Provider::Exchange, username: "demo".into(), href: None, server: Some("http://exchange.example".into()) };
         assert!(endpoint(&cfg).is_err());
     }
     #[test]
@@ -616,14 +616,14 @@ mod tests {
         assert_eq!(events[1].start, date("20261109T170000Z").unwrap().timestamp());
     }
     #[test]
-    #[ignore = "顯式驗證企業微信帳號；僅輸出數量，成功後可按環境變數儲存連線"]
-    fn live_wecom_connection() {
-        let mut cfg = Config { provider: Provider::WeCom, username: std::env::var("KUIDAO_WECOM_USER").unwrap(), href: None, server: None };
-        let password = std::env::var("KUIDAO_WECOM_PASSWORD").unwrap();
+    #[ignore = "顯式驗證 Exchange 帳號；僅輸出數量，成功後可按環境變數儲存連線"]
+    fn live_exchange_connection() {
+        let mut cfg = Config { provider: Provider::Exchange, username: std::env::var("KUIDAO_EXCHANGE_USER").unwrap(), href: None, server: None };
+        let password = std::env::var("KUIDAO_EXCHANGE_PASSWORD").unwrap();
         let month = super::super::fetch_month(&cfg, &password, chrono::Local::now().date_naive()).unwrap();
         let upcoming = super::super::fetch(&cfg, &password).unwrap();
-        eprintln!("wecom month_events={} upcoming_events={}", month.events.len(), upcoming.events.len());
-        if std::env::var("KUIDAO_WECOM_SAVE").as_deref() == Ok("1") {
+        eprintln!("exchange month_events={} upcoming_events={}", month.events.len(), upcoming.events.len());
+        if std::env::var("KUIDAO_EXCHANGE_SAVE").as_deref() == Ok("1") {
             cfg.href = Some(month.href);
             super::super::save_connection(&cfg, &password, None).unwrap();
         }
