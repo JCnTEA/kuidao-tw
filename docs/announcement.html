@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://jcntea.github.io/kuidao-tw/images/brand/logo.webp">
+<meta name="robots" content="index,follow">
+<link rel="icon" type="image/png" href="images/brand/favicon.png">
+<link rel="apple-touch-icon" href="images/brand/apple-touch-icon.png">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap">
+<title>鬼島 Kuidao 桌面靈動島 · 更新公告</title>
+<style>
+:root{
+  --ink:#eaf4ff;
+  --ink-2:#b9cbe4;
+  --muted:#8298b5;
+  --accent:#22d3ee;
+  --teal:#2dd4bf;
+  --violet:#fb923c;
+  --line:rgba(125,211,252,.14);
+  --card:rgba(11,22,39,.76);
+  --shadow:0 30px 80px -40px rgba(0,0,0,.85);
+  --shadow-soft:0 20px 50px -34px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(900px 560px at 50% -120px,rgba(34,211,238,.16) 0%,rgba(34,211,238,0) 66%),
+    radial-gradient(760px 560px at -6% 34%,rgba(45,212,191,.10) 0%,rgba(45,212,191,0) 64%),
+    radial-gradient(780px 600px at 106% 52%,rgba(251,146,60,.12) 0%,rgba(251,146,60,0) 66%),
+    radial-gradient(820px 560px at 50% 96%,rgba(251,113,133,.10) 0%,rgba(251,113,133,0) 68%),
+    #070d18;
+  color:var(--ink);
+  font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+  line-height:1.7;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    linear-gradient(180deg,rgba(7,13,24,.2),transparent 42%),
+    radial-gradient(520px 320px at 18% 16%,rgba(34,211,238,.08),transparent 70%),
+    radial-gradient(540px 340px at 84% 24%,rgba(251,146,60,.07),transparent 72%);
+}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+button{font:inherit}
+::selection{background:rgba(34,211,238,.24)}
+.wrap{max-width:880px;margin:0 auto;padding:0 24px}
+
+/* ===== 導覽 ===== */
+.nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(7,13,24,.82);
+  border-bottom:1px solid rgba(125,211,252,.12);
+  backdrop-filter:blur(22px) saturate(1.2);
+}
+.nav-inner{
+  max-width:1200px;margin:0 auto;padding:0 28px;height:76px;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.brand{display:flex;align-items:center;gap:11px;font-size:22px;font-weight:900;letter-spacing:.04em;white-space:nowrap}
+.brand-mark{border-radius:12px;box-shadow:0 12px 30px -16px rgba(34,211,238,.62)}
+.brand small{color:#7f96b4;font-weight:500;font-size:12px}
+.menu{
+  display:flex;gap:4px;padding:5px;border-radius:999px;
+  background:rgba(12,23,40,.66);box-shadow:inset 0 0 0 1px rgba(125,211,252,.12),0 12px 30px -20px #000;
+}
+.menu a{color:#9fb3cd;padding:8px 16px;border-radius:999px;font-size:13.5px;transition:.18s}
+.menu a:hover{color:#fff;background:rgba(34,211,238,.12)}
+.menu a.active{color:#fff;background:linear-gradient(135deg,rgba(45,212,191,.22),rgba(251,146,60,.20));box-shadow:inset 0 0 0 1px rgba(125,211,252,.2)}
+.nav-right{display:flex;align-items:center;gap:12px}
+.status-pill{
+  display:inline-flex;align-items:center;gap:7px;font-size:12px;
+  padding:7px 13px;border-radius:999px;border:1px solid rgba(125,211,252,.16);
+  background:rgba(12,23,40,.7);color:#a9bcd4;
+}
+.status-pill i{width:7px;height:7px;border-radius:50%;background:#2dd4bf;box-shadow:0 0 0 4px rgba(45,212,191,.16)}
+.nav-cta{
+  padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,#06b6d4 0%,#2dd4bf 48%,#fb923c 100%);
+  box-shadow:0 14px 30px -16px rgba(34,211,238,.65);
+}
+
+/* ===== 頁首 ===== */
+.page-hero{position:relative;text-align:center;padding:74px 24px 40px}
+.hero-kicker{
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  padding:6px 16px;border-radius:999px;color:#9fc0dd;
+  background:rgba(12,23,40,.66);border:1px solid rgba(125,211,252,.16);box-shadow:0 8px 20px -16px #000;
+}
+.page-hero h1{
+  margin-top:20px;font-size:clamp(38px,7vw,62px);font-weight:900;letter-spacing:.02em;
+  background:linear-gradient(100deg,#8bf5ff 0%,#5eead4 34%,#fbbf24 68%,#fb7185 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 10px 30px rgba(34,211,238,.18));
+}
+.page-hero p{margin-top:14px;color:#9db2cc;font-size:14px}
+
+/* ===== 公告列表 ===== */
+.list{position:relative;display:flex;flex-direction:column;gap:20px;padding-bottom:40px}
+.acard{
+  position:relative;border-radius:22px;padding:26px 28px 24px;overflow:hidden;min-width:0;
+  border:1px solid var(--line);
+  background:linear-gradient(160deg,rgba(16,31,53,.58),rgba(9,18,33,.44));
+  box-shadow:var(--shadow);backdrop-filter:blur(20px);
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+}
+.acard:hover,.acard:focus-visible{transform:translateY(-3px);border-color:rgba(94,234,212,.32);box-shadow:0 36px 84px -40px #000,0 0 0 1px rgba(45,212,191,.24)}
+.acard:focus-visible{outline:2px solid rgba(34,211,238,.5);outline-offset:3px}
+
+.ac-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;min-width:0}
+.ac-date{font-size:12px;letter-spacing:.06em;color:#7f96b4}
+.ac-cat{
+  font-size:11px;font-weight:700;letter-spacing:.1em;padding:3px 11px;border-radius:999px;
+  color:#8bf5ff;background:rgba(34,211,238,.1);border:1px solid rgba(125,211,252,.22);
+}
+.ac-title{font-size:21px;font-weight:900;letter-spacing:-.01em;line-height:1.35;color:#f2f8ff;margin-bottom:10px;min-width:0;overflow-wrap:break-word;word-break:break-word}
+.ac-body{font-size:13.5px;line-height:1.85;color:#b8cbe2}
+.ac-body p + p{margin-top:8px}
+
+/* 新更新：全透明、完整可讀，並掛 NEW 標記 */
+.ac-new{
+  margin-left:auto;font-size:11px;font-weight:900;letter-spacing:.14em;padding:5px 12px;border-radius:999px;
+  color:#062a31;background:linear-gradient(135deg,#67e8f9,#5eead4);
+  box-shadow:0 8px 22px -10px rgba(94,234,212,.8);
+}
+.acard.is-new{border-color:rgba(94,234,212,.4)}
+
+/* 舊公告：平時只有標題清楚，內文霧化；展開後恢復 */
+.acard.is-old{cursor:pointer;outline:none}
+.acard.is-old .ac-body{
+  filter:blur(4.5px);opacity:.42;transform:scale(1.01);
+  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.7) 0%,rgba(0,0,0,.35) 26%,transparent 62%);
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.7) 0%,rgba(0,0,0,.35) 26%,transparent 62%);
+  transition:filter .24s ease,opacity .24s ease,transform .24s ease,-webkit-mask-image .24s ease;
+}
+.acard.is-old::after{
+  content:"";position:absolute;left:0;right:0;top:78px;bottom:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(7,13,24,0) 0%,rgba(7,13,24,.55) 40%,rgba(7,13,24,.92) 100%);
+  transition:opacity .24s ease;
+}
+.acard.is-old .ac-toggle{
+  position:absolute;right:22px;top:20px;z-index:3;width:28px;height:28px;border-radius:50%;
+  display:grid;place-items:center;font-size:14px;font-weight:700;line-height:1;color:#7fe9f7;
+  background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.22);
+  transition:transform .2s,background .2s;
+}
+.acard.is-old:hover .ac-toggle{transform:rotate(90deg);background:rgba(45,212,191,.24)}
+.acard.is-old .ac-hint{
+  position:relative;z-index:2;margin-top:14px;font-size:11.5px;letter-spacing:.06em;color:#8bf5ff;
+  opacity:.9;
+}
+.acard.is-old.open .ac-body{filter:none;opacity:1;transform:none;-webkit-mask-image:none;mask-image:none}
+.acard.is-old.open::after{opacity:0}
+.acard.is-old.open .ac-toggle{content:"×";transform:rotate(0)}
+.acard.is-old.open .ac-hint{display:none}
+
+/* ===== 頁尾 ===== */
+footer{border-top:1px solid rgba(125,211,252,.12);position:relative;margin-top:30px}
+.foot-inner{
+  max-width:1200px;margin:0 auto;padding:34px 28px;display:flex;justify-content:space-between;gap:28px;flex-wrap:wrap;
+}
+.foot-brand{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.foot-brand strong{font-size:16px}
+.foot-note{color:#8298b5;font-size:12px}
+.foot-links{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#9db2cc}
+.foot-links a:hover{color:#8bf5ff}
+
+@media(max-width:760px){
+  .nav-inner{height:66px;padding:0 18px}
+  .menu{display:none}
+  .status-pill{display:none}
+  .brand small{display:none}
+  .page-hero{padding:54px 18px 32px}
+  .acard{padding:22px 20px}
+  .ac-title{font-size:18px}
+  .acard.is-old::after{top:70px}
+  .ac-new{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 導覽 ===== -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html#top" aria-label="鬼島 桌面靈動島 首頁">
+      <span class="brand-mark"><img src="images/brand/logo.webp" alt="" width="40" height="40"></span>
+      <span>鬼島</span><small>KUIDA · 桌面靈動島</small>
+    </a>
+    <nav class="menu" aria-label="主要導覽">
+      <a href="index.html#features">特色功能</a>
+      <a href="index.html#interface">介面</a>
+      <a href="index.html#taiwan">台灣版</a>
+      <a class="active" href="announcement.html">更新公告</a>
+      <a href="index.html#faq">常見問題</a>
+    </nav>
+    <div class="nav-right">
+      <span class="status-pill"><i aria-hidden="true"></i>初始版本 0.6.00</span>
+      <a class="nav-cta" href="index.html#access">取得方式</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ===== 頁首 ===== -->
+  <section class="page-hero">
+    <span class="hero-kicker">Announcement</span>
+    <h1>更新公告</h1>
+    <p>每一版調整都會列在這裡；最新一筆標示 NEW，過往公告只留標題、點一下即可展開。</p>
+  </section>
+
+  <!-- ===== 公告列表 ===== -->
+  <div class="wrap">
+    <div class="list">
+
+      <!-- 最新更新：全透明可讀 -->
+      <article class="acard is-new">
+        <div class="ac-head">
+          <span class="ac-date">2026-11-23</span>
+          <span class="ac-cat">更新</span>
+          <span class="ac-new">NEW</span>
+        </div>
+        <h3 class="ac-title">行事曆改支援台灣常用平台，新增 Google 日曆</h3>
+        <div class="ac-body">
+          <p>「新增行事曆」彈窗原本列出飛書、釘釘、企業微信等大陸平台，台灣使用者多半用不到、也沒有帳號。現在這些平台已全部移除，清單改成台灣常用的四個：Google、iCloud、CalDAV、Exchange，預設就選 Google。</p>
+          <p>Google 走 CalDAV 同步，只要在 Google 帳戶開啟兩步驟驗證、產生一組「應用程式密碼」，使用者名稱填 Gmail、密碼填應用程式密碼即可，彈窗內的引導也改成對應 Google 的路徑；iCloud 同樣用 App 專用密碼，CalDAV 可自訂 Nextcloud、群暉、Fastmail 等伺服器。舊版若已連線飛書、釘釘、企業微信，更新後會自動略過這些過時帳號。密碼維持只存進 Windows 憑據管理員，全程只讀同步、不會改動線上行程。</p>
+        </div>
+      </article>
+
+      <!-- 舊公告：平時霧化，展開可讀 -->
+      <article class="acard is-old" tabindex="0" role="button" aria-expanded="false">
+        <span class="ac-toggle" aria-hidden="true">+</span>
+        <div class="ac-head">
+          <span class="ac-date">2026-11-23</span>
+          <span class="ac-cat">監控</span>
+        </div>
+        <h3 class="ac-title">左側選單改成可點擊分頁，所有資訊一頁看得到</h3>
+        <div class="ac-body">
+          <p>監控台左側的分頁原本只是不會動的文字，卡片全塞在同一個長頁面，視窗放不下時下方資訊會被切掉。現在改成真正可點擊的分頁按鈕，所在分頁藍底高亮，點一下主區就切換對應內容，每頁都落在視窗可視範圍，預設視窗大小不用捲動就能看完全部資訊。</p>
+        </div>
+        <p class="ac-hint">點一下或按 Enter 展開完整內容</p>
+      </article>
+
+      <article class="acard is-old" tabindex="0" role="button" aria-expanded="false">
+        <span class="ac-toggle" aria-hidden="true">+</span>
+        <div class="ac-head">
+          <span class="ac-date">2026-11-23</span>
+          <span class="ac-cat">音樂</span>
+        </div>
+        <h3 class="ac-title">歌詞顏色改成可拖曳的漸層</h3>
+        <div class="ac-body">
+          <p>設定「音樂」頁新增「歌詞顏色」區，開啟後歌詞沿著色盤漸變換色，一共 11 組色盤可選；下方色帶可左右拖動調整相位，並保留明暗可讀性，暗部不會壓成一片白。關閉開關後歌詞恢復單色。</p>
+        </div>
+        <p class="ac-hint">點一下或按 Enter 展開完整內容</p>
+      </article>
+
+      <article class="acard is-old" tabindex="0" role="button" aria-expanded="false">
+        <span class="ac-toggle" aria-hidden="true">+</span>
+        <div class="ac-head">
+          <span class="ac-date">2026-11-23</span>
+          <span class="ac-cat">電量</span>
+        </div>
+        <h3 class="ac-title">頂欄電量斷線、重開都不再消失</h3>
+        <div class="ac-body">
+          <p>手機藍牙鏈路閒置或斷線時，程式會讀取仍在場的藍牙節點，並記住最後一次看到的電量存到本機；即使系統清掉快取或重新啟動，頂欄電量環與手機圖示仍顯示最後已知值，鏈路恢復後自動回到最新數字。</p>
+        </div>
+        <p class="ac-hint">點一下或按 Enter 展開完整內容</p>
+      </article>
+
+    </div>
+  </div>
+</main>
+
+<!-- ===== 頁尾 ===== -->
+<footer>
+  <div class="foot-inner">
+    <div>
+      <div class="foot-brand"><span class="brand-mark"><img src="images/brand/logo.webp" alt="" width="28" height="28"></span><strong>鬼島 Kuidao 桌面靈動島</strong></div>
+      <p class="foot-note">台灣版 · 安裝包初始版本 0.6.00，安裝檔可從官網下載。本站為個人專案頁面，非商業販售。<br>衍生自上游開源專案，依 MIT 授權保留原作者聲明。</p>
+    </div>
+    <div class="foot-links">
+      <a href="index.html#features">特色功能</a>
+      <a href="index.html#interface">介面</a>
+      <a href="announcement.html">更新公告</a>
+      <a href="index.html#access">取得方式</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.acard.is-old'));
+
+  function setOpen(card, open){
+    card.classList.toggle('open', open);
+    card.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if(open){
+      var toggle = card.querySelector('.ac-toggle');
+      if(toggle) toggle.textContent = '×';
+    }else{
+      var t = card.querySelector('.ac-toggle');
+      if(t) t.textContent = '+';
+    }
+  }
+  function closeAll(except){
+    cards.forEach(function(card){ if(card !== except) setOpen(card, false); });
+  }
+
+  cards.forEach(function(card){
+    // 滑鼠：移入展開、移開收起
+    card.addEventListener('pointerenter', function(e){ if(e.pointerType === 'mouse'){ closeAll(card); setOpen(card, true); } });
+    card.addEventListener('pointerleave', function(e){ if(e.pointerType === 'mouse') setOpen(card, false); });
+    // 鍵盤與觸控：點一下或 Enter／Space 切換
+    card.addEventListener('click', function(){
+      var open = card.classList.contains('open');
+      closeAll(card);
+      setOpen(card, !open);
+    });
+    card.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        var open = card.classList.contains('open');
+        closeAll(card);
+        setOpen(card, !open);
+      }
+    });
+  });
+
+  window.addEventListener('pointerdown', function(e){
+    if(!e.target.closest('.acard.is-old')) closeAll(null);
+  }, true);
+})();
+</script>
+</body>
+</html>
