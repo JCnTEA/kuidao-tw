@@ -98,21 +98,91 @@ fn vertex(pos: Pos2, color: Color32) -> egui::epaint::Vertex {
     egui::epaint::Vertex { pos, uv: Pos2::ZERO, color }
 }
 
-/// 歌詞文字的最低亮度門檻；低於它的取色會往白色提，確保黑底藥丸上可讀。
-const TEXT_MIN_LUM: f32 = 140.0;
+/// 可讀文字的亮度（HSL L）區間：暗部提到 READ_L_MIN 確保黑底藥丸上看得清，
+/// 亮部保留在 READ_L_MAX；整段色盤的明暗差重新對應到這個區間，故漸層對比不會被洗掉。
+const READ_L_MIN: f32 = 0.66;
+const READ_L_MAX: f32 = 0.94;
 
-/// 歌詞文字取色：保留色盤色相與強調色，只把過暗的中性色往白色提。
-fn readable_text_color(preset: usize, t: f32) -> Color32 {
-    let c = sample(preset, t);
-    let lum = 0.2126 * c.r() as f32 + 0.7152 * c.g() as f32 + 0.0722 * c.b() as f32;
-    if lum >= TEXT_MIN_LUM {
-        return c;
+/// RGB（0..1）轉 HSL（h、s、l 皆 0..1）。
+fn rgb_to_hsl(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let l = (max + min) / 2.0;
+    let d = max - min;
+    if d <= 1e-6 {
+        return (0.0, 0.0, l);
     }
-    let lift = (TEXT_MIN_LUM - lum) / TEXT_MIN_LUM;
+    let s = d / (1.0 - (2.0 * l - 1.0).abs());
+    let h = if (max - r).abs() <= 1e-6 {
+        (g - b) / d + if g < b { 6.0 } else { 0.0 }
+    } else if (max - g).abs() <= 1e-6 {
+        (b - r) / d + 2.0
+    } else {
+        (r - g) / d + 4.0
+    } / 6.0;
+    (h.rem_euclid(1.0), s.clamp(0.0, 1.0), l)
+}
+
+/// HSL 轉 RGB（0..1）。
+fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (f32, f32, f32) {
+    if s <= 1e-6 {
+        return (l, l, l);
+    }
+    let q = if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
+    let p = 2.0 * l - q;
+    let hue = |mut x: f32| {
+        x = x.rem_euclid(1.0);
+        if x < 1.0 / 6.0 {
+            p + (q - p) * 6.0 * x
+        } else if x < 0.5 {
+            q
+        } else if x < 2.0 / 3.0 {
+            p + (q - p) * (2.0 / 3.0 - x) * 6.0
+        } else {
+            p
+        }
+    };
+    (hue(h + 1.0 / 3.0), hue(h), hue(h - 1.0 / 3.0))
+}
+
+/// 色盤各停點的 HSL 亮度（L）最小／最大值。
+fn palette_lightness_range(preset: usize) -> (f32, f32) {
+    let mut lmin = f32::INFINITY;
+    let mut lmax = f32::NEG_INFINITY;
+    for stop in &PALETTES[preset] {
+        let (_, _, l) = rgb_to_hsl(
+            stop[0] as f32 / 255.0,
+            stop[1] as f32 / 255.0,
+            stop[2] as f32 / 255.0,
+        );
+        lmin = lmin.min(l);
+        lmax = lmax.max(l);
+    }
+    (lmin, lmax)
+}
+
+/// 歌詞文字取色：保留色盤色相與飽和度，把整段明暗重新對應到可讀亮度區間，
+/// 暗部不再被壓成一片白，漸層在黑底藥丸上仍清楚可見。
+fn readable_text_color(preset: usize, t: f32) -> Color32 {
+    let preset = clamp_preset(preset);
+    let raw = sample(preset, t);
+    let (h, s, l) = rgb_to_hsl(
+        raw.r() as f32 / 255.0,
+        raw.g() as f32 / 255.0,
+        raw.b() as f32 / 255.0,
+    );
+    let (lmin, lmax) = palette_lightness_range(preset);
+    let mapped = if lmax - lmin <= 1e-4 {
+        READ_L_MIN
+    } else {
+        let frac = ((l - lmin) / (lmax - lmin)).clamp(0.0, 1.0);
+        READ_L_MIN + frac * (READ_L_MAX - READ_L_MIN)
+    };
+    let (r, g, b) = hsl_to_rgb(h, s, mapped);
     Color32::from_rgb(
-        lerp_u8(c.r(), 255, lift),
-        lerp_u8(c.g(), 255, lift),
-        lerp_u8(c.b(), 255, lift),
+        (r * 255.0).round().clamp(0.0, 255.0) as u8,
+        (g * 255.0).round().clamp(0.0, 255.0) as u8,
+        (b * 255.0).round().clamp(0.0, 255.0) as u8,
     )
 }
 
@@ -232,5 +302,49 @@ mod tests {
         assert_eq!(corner_inset(8.0, 8.0), 0.0);
         assert!((corner_inset(0.0, 8.0) - 8.0).abs() < 1e-5);
         assert!(corner_inset(4.0, 8.0) > 0.0 && corner_inset(4.0, 8.0) < 8.0);
+    }
+
+    fn luminance(c: Color32) -> f32 {
+        0.2126 * c.r() as f32 + 0.7152 * c.g() as f32 + 0.0722 * c.b() as f32
+    }
+
+    #[test]
+    fn readable_text_stays_above_readable_floor() {
+        // 所有色盤、所有相位的文字取色都要夠亮，黑底上看得清。
+        for preset in 0..PALETTE_COUNT {
+            for k in 0..=40 {
+                let c = readable_text_color(preset, k as f32 / 40.0);
+                assert!(luminance(c) >= 135.0, "preset {preset} 出現過暗文字 {c:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn readable_text_keeps_a_visible_gradient_spread() {
+        // 同一色盤最暗與最亮的可讀色必須保留明顯差距（看整段相位，而非只比兩端點），
+        // 否則看起來就像沒有漸層。
+        for preset in 0..PALETTE_COUNT {
+            let mut dark = f32::INFINITY;
+            let mut bright = f32::NEG_INFINITY;
+            for k in 0..=40 {
+                let l = luminance(readable_text_color(preset, k as f32 / 40.0));
+                dark = dark.min(l);
+                bright = bright.max(l);
+            }
+            assert!(
+                bright - dark >= 45.0,
+                "preset {preset} 漸層對比被洗掉 ({dark}..{bright})"
+            );
+        }
+    }
+
+    #[test]
+    fn hsl_roundtrip_for_neutral_grays() {
+        for v in [0.0f32, 0.25, 0.5, 0.75, 1.0] {
+            let (h, s, l) = rgb_to_hsl(v, v, v);
+            assert_eq!(s, 0.0);
+            let (r, g, b) = hsl_to_rgb(h, s, l);
+            assert!((r - v).abs() < 1e-4 && (g - v).abs() < 1e-4 && (b - v).abs() < 1e-4);
+        }
     }
 }
