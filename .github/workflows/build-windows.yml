@@ -73,5 +73,5 @@ jobs:
           name: kuidao-tw-release
           path: |
             dist\Kuidao-Setup-TW-x64.exe
-            dist\Kuidao-v0.6.108-tw-windows-x64.zip
+            dist\Kuidao-v*-tw-windows-x64.zip
             dist\SHA256SUMS.txt
