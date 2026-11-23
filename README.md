@@ -12,7 +12,7 @@ Windows 桌面靈動島，把通知、音樂、日程、天氣與信箱放到手
 [![系統](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-0078D4)](#下載安裝)
 [![技術](https://img.shields.io/badge/Rust-egui-8b6ca8)](#從原始碼建置)
 
-**[下載 Windows 版](https://github.com/JCnTEA/kuidao-tw/releases/latest)** · [使用說明](docs/USAGE.md) · [更新總覽](hist/更新總覽.html) · [官方網站](docs/index.html)
+**[下載 Windows 版]([https://github.com/JCnTEA/kuidao-tw/releases/lates](https://github.com/JCnTEA/kuidao-tw/releases/latest/download/Kuidao-Setup-TW-x64.exe)t)** · [使用說明](docs/USAGE.md) · [更新總覽]([hist/更新總覽.html](https://www.doubao.com/docx/Nc92dEwJVoQM4nxQRYacorFI6Dl)) · [官方網站](https://jcntea.github.io/kuidao-tw/)
 
 </div>
 
