@@ -3177,7 +3177,13 @@ impl App {
             } else {center_y-galley.size().y/2.0+shift};
             let position=c.pos(left+content_width-LYRIC_BAR_W/2.0,origin_y);
             let sub_y=origin_y+galley.size().y+1.0;
-            c.painter.galley(position,galley,if lyric.is_some(){theme::WHITE}else{theme::GRAY});
+            if self.settings.lyric_gradient {
+                let font_tex_size=c.painter.ctx().fonts(|f|{let img=f.image();[img.width() as f32,img.height() as f32]});
+                let mesh=crate::lyric_gradient::gradient_text_mesh(position,&galley,self.settings.lyric_gradient_preset,self.settings.lyric_gradient_shift,font_tex_size);
+                c.painter.add(egui::Shape::Mesh(std::sync::Arc::new(mesh)));
+            } else {
+                c.painter.galley(position,galley,if lyric.is_some(){theme::WHITE}else{theme::GRAY});
+            }
             if let Some(sub)=sub{c.painter.galley(c.pos(left+content_width-LYRIC_BAR_W/2.0,sub_y),sub,Color32::from_white_alpha(175));}
             paint::playback_bars(&c,left+content_width-21.0,center_y,self.t,self.media.playing,theme::WHITE);
             if self.pomo.running {

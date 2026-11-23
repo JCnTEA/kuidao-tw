@@ -31,6 +31,7 @@ pub mod icons;
 pub mod input;
 pub mod lyrics;
 pub mod lyrics_zh;
+pub mod lyric_gradient;
 pub mod zh;
 pub mod mail;
 pub mod mail_format;

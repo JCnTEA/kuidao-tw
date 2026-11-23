@@ -1094,6 +1094,52 @@ impl App {
     }
 }
 
+/// 歌詞顏色：開關、色盤選取與可拖曳的漸層色帶（含一次性拖曳引導）。
+pub(crate) fn lyric_gradient_editor(ui:&mut egui::Ui, settings:&mut crate::model::Settings) {
+    setting_row(ui,"歌詞漸層","以拖曳方式讓島上歌詞在色盤上漸變換色",&mut settings.lyric_gradient);
+    if settings.lyric_gradient {
+        ui.separator();
+        // 11 個色盤色塊，點擊選取；選中項加白色外框。
+        let swatch=28.0;
+        ui.horizontal_wrapped(|ui|{
+            ui.spacing_mut().item_spacing=egui::vec2(6.0,6.0);
+            for p in 0..crate::lyric_gradient::PALETTE_COUNT {
+                let (rect,resp)=ui.allocate_exact_size(egui::vec2(swatch,swatch),egui::Sense::click());
+                ui.painter().add(egui::Shape::Mesh(std::sync::Arc::new(
+                    crate::lyric_gradient::strip_mesh(rect,p,6.0))));
+                if resp.clicked() {
+                    settings.lyric_gradient_preset=p;
+                    settings.lyric_gradient_hint=false;
+                }
+                if settings.lyric_gradient_preset==p {
+                    ui.painter().rect_stroke(rect.expand(2.0),7.0,egui::Stroke::new(1.8,Color32::WHITE),egui::StrokeKind::Middle);
+                }
+            }
+        });
+        ui.add_space(4.0);
+        // 可拖曳漸層色帶：拖曳控制漸層相位。
+        let (rect,resp)=ui.allocate_exact_size(
+            egui::vec2(ui.available_width(),18.0),egui::Sense::drag());
+        ui.painter().add(egui::Shape::Mesh(std::sync::Arc::new(
+            crate::lyric_gradient::strip_mesh(rect,settings.lyric_gradient_preset,9.0))));
+        let hx=rect.left()+rect.width()*settings.lyric_gradient_shift;
+        ui.painter().circle_filled(egui::pos2(hx,rect.center().y),8.0,Color32::from_black_alpha(60));
+        ui.painter().circle_filled(egui::pos2(hx,rect.center().y),7.0,Color32::WHITE);
+        if resp.drag_started() || resp.dragged() {
+            if let Some(pointer)=resp.interact_pointer_pos() {
+                settings.lyric_gradient_shift=
+                    ((pointer.x-rect.left())/rect.width()).clamp(0.0,1.0);
+            }
+            settings.lyric_gradient_hint=false;
+        }
+        // 引導：首次使用提示一次，開始拖曳或選色後自動關閉。
+        if settings.lyric_gradient_hint {
+            settings_hint(ui,"按住色帶左右拖動，即可捲動歌詞的漸層位置；點上方色塊可更換色盤。");
+        }
+        settings_hint(ui,"漸層套用於島上目前歌詞；關閉開關後恢復單色。");
+    }
+}
+
 fn switch(ui:&mut egui::Ui,value:&mut bool)->bool {
     let (rect,response)=ui.allocate_exact_size(egui::vec2(34.0,20.0),egui::Sense::click());
     if response.clicked(){*value=!*value;}
@@ -1945,6 +1991,11 @@ impl App {
                                 setting_row(ui,"自動翻譯歌詞","非中文歌詞保留原文，譯文顯示在原文下方；中文歌本身就是繁體，不做翻譯",&mut self.settings.lyrics_translate);
                                 settings_hint(ui,"日文、韓文原文也會翻譯；譯文快取在本機，同一首歌不重複送翻。翻譯需連網，歌詞文字會送到 Google 翻譯，失敗時照常顯示原文。");
                                 if translate!=self.settings.lyrics_translate {self.refresh_translation();}
+                            });
+                            ui.add_space(10.0);
+                            settings_label(ui,"歌詞顏色");
+                            settings_card(ui,|ui|{
+                                lyric_gradient_editor(ui,&mut self.settings);
                             });
                         });
                     }

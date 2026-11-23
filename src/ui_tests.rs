@@ -2246,6 +2246,69 @@ fn music_lyric_timing_controls_match_focus_save_and_fit_the_small_settings_windo
 }
 
 #[test]
+fn lyric_gradient_editor_paints_draggable_strip_and_dismisses_guide(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let ctx=egui::Context::default();
+    let mut settings=crate::model::Settings::default();
+    let frame=|settings:&mut crate::model::Settings,events:Vec<egui::Event>|->Vec<egui::epaint::ClippedShape>{
+        let raw=egui::RawInput{
+            screen_rect:Some(Rect::from_min_size(Pos2::ZERO,egui::vec2(420.0,900.0))),
+            events,focused:true,..Default::default()};
+        let out=ctx.run(raw,|ctx|{
+            egui::CentralPanel::default().show(ctx,|ui|{
+                crate::extras::lyric_gradient_editor(ui,settings);
+            });
+        });
+        out.shapes
+    };
+    let find_text=|shapes:&[egui::epaint::ClippedShape],text:&str|shapes.iter().find_map(|shape|match &shape.shape{
+        egui::Shape::Text(t)if t.galley.text()==text=>Some(t.visual_bounding_rect()),_=>None});
+    let mesh_bounds=|m:&std::sync::Arc<egui::Mesh>|{
+        let mut r=Rect::NOTHING;
+        for v in &m.vertices {r.extend_with(v.pos);}
+        r
+    };
+    // 關閉時不應出現引導文字。
+    settings.lyric_gradient=false;
+    assert!(find_text(&frame(&mut settings,vec![]),"按住色帶左右拖動，即可捲動歌詞的漸層位置；點上方色塊可更換色盤。").is_none());
+    // 開啟後出現引導與漸層網格。
+    settings.lyric_gradient=true;settings.lyric_gradient_hint=true;
+    let open=frame(&mut settings,vec![]);
+    find_text(&open,"按住色帶左右拖動，即可捲動歌詞的漸層位置；點上方色塊可更換色盤。").expect("首次開啟應顯示拖曳引導");
+    let meshes:Vec<_>=open.iter().filter_map(|s|match &s.shape{egui::Shape::Mesh(m)=>Some(m),_=>None}).collect();
+    assert!(meshes.len()>=12,"應繪製 11 個色盤色塊與一條漸層色帶");
+    // 找最寬的網格＝可拖曳色帶，模擬拖到 70% 位置。
+    let strip=meshes.iter().map(|m|mesh_bounds(m)).max_by(|a,b|a.width().partial_cmp(&b.width()).unwrap()).unwrap();
+    let start=egui::pos2(strip.left()+2.0,strip.center().y);
+    let end=egui::pos2(strip.left()+strip.width()*0.7,strip.center().y);
+    frame(&mut settings,vec![egui::Event::PointerMoved(start),egui::Event::PointerButton{pos:start,button:egui::PointerButton::Primary,pressed:true,modifiers:Default::default()}]);
+    frame(&mut settings,vec![egui::Event::PointerMoved(end)]);
+    frame(&mut settings,vec![egui::Event::PointerButton{pos:end,button:egui::PointerButton::Primary,pressed:false,modifiers:Default::default()}]);
+    assert!((settings.lyric_gradient_shift-0.7).abs()<0.05,"拖曳應更新漸層相位");
+    assert!(!settings.lyric_gradient_hint,"拖曳後應關閉引導");
+}
+
+#[test]
+fn lyric_gradient_settings_round_trip_and_clamp_on_load(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let _h=H::new();
+    let directory=crate::model::config_dir();
+    std::fs::create_dir_all(&directory).unwrap();
+    std::fs::write(directory.join("settings.txt"),concat!(
+        "lyric_gradient=1\nlyric_gradient_preset=9\nlyric_gradient_shift=0.35\nlyric_gradient_hint=0\n")).unwrap();
+    let loaded=crate::model::Settings::load();
+    assert!(loaded.lyric_gradient);
+    assert_eq!(loaded.lyric_gradient_preset,9);
+    assert!((loaded.lyric_gradient_shift-0.35).abs()<1e-6);
+    assert!(!loaded.lyric_gradient_hint);
+    // 非法值夾緊：色盤超出範圍、shift 超出 0..1。
+    std::fs::write(directory.join("settings.txt"),concat!(
+        "lyric_gradient_preset=999\nlyric_gradient_shift=1.6\n")).unwrap();
+    let bad=crate::model::Settings::load();
+    assert_eq!(bad.lyric_gradient_preset,10);
+    assert!((bad.lyric_gradient_shift-0.6).abs()<1e-6,"shift 應取模回 0..1");
+}
+
+#[test]
 fn island_lyrics_arrive_just_before_vocals_and_finish_fading_before_the_timestamp(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();h.app.settings.island_lyrics=true;
