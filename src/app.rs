@@ -94,7 +94,11 @@ const MINIMAL_HOVER_INTENT: f64 = 0.40;
 const LEAVE_DELAY: f64 = 0.12;
 const PAGE_EDGE_OVERLAP: f32 = 8.0;
 /// 頂欄時鐘組在額度／天氣頁允許的最右緣；再往右就是「重新整理」按鈕的命中區（約 x=303）。
-const HEADER_REFRESH_LIMIT: f32 = 296.0;
+const HEADER_REFRESH_LIMIT: f32 = 290.0;
+// 頂欄整組左移時的左緣下限，不讓日期、時鐘超出面板左邊界。
+const HEADER_LEFT_LIMIT: f32 = 14.0;
+// 額度／天氣頁右側有重新整理按鈕，頂欄可用寬度較小，日期與時鐘字級略縮，避免貼到按鈕。
+const HEADER_CROWDED_FONT: f32 = 0.9;
 const SWELL: (f32, f32) = (1.075, 1.13);
 // 展开：欠阻尼，末段约 5% 过冲后回落；高度略软于宽度，像「垂落」下来。
 const OPEN_W: (f32, f32) = (330.0, 0.70);
@@ -3228,17 +3232,22 @@ impl App {
         let show_battery=self.settings.show_battery && power.is_some();
 
         // 顶栏终点布局：[电池][日期][时钟] 作为一组整体居中；顯示手機或耳機電量時多留裝置圖示的位置。
-        let date_w = base.text_w(&env.date, size::DATE, W::Regular);
-        let clock_w = paint::clock_width(base,&clock,size::CLOCK);
+        // 額度、天氣頁右側有重新整理按鈕，頂欄空間較小，日期與時鐘字級略縮，並把整組向左收齊。
+        let crowded = matches!(self.page, QUOTA_PAGE | WEATHER_PAGE);
+        let date_size = size::DATE * if crowded {HEADER_CROWDED_FONT}else{1.0};
+        let clock_size = size::CLOCK * if crowded {HEADER_CROWDED_FONT}else{1.0};
+        let date_w = base.text_w(&env.date, date_size, W::Regular);
+        let clock_w = paint::clock_width(base,&clock,clock_size);
         let battery_space=if show_battery {if bt_power.is_some(){34.0}else{24.0}}else{0.0};
         let group = battery_space + date_w + 8.0 + clock_w;
         let gx = local_cx - group / 2.0 + if show_battery {6.0}else{0.0};
         // 日程页左侧还有新增按钮，顶栏从操作区右侧开始，避免较长的日期和时段文字挤到按钮上。
         let gx = if self.page==CALENDAR_PAGE {gx.max(155.0)}else{gx};
-        // 額度、天氣頁右上角有「重新整理」按鈕（命中區約從 x=303 開始）。開了時段與秒數後
-        // 時鐘會變寬，整組頂欄向右溢出而蓋到按鈕，故把整組向左收齊，右緣保留固定間距。
-        let gx = if matches!(self.page, QUOTA_PAGE | WEATHER_PAGE) {
-            gx.min(HEADER_REFRESH_LIMIT - group)
+        // 額度、天氣頁右上角有「重新整理」按鈕（命中區約從 x=304 開始，最長的「稍後重新整理」
+        // 文字左緣約在 x=300）。開了時段與秒數後時鐘會變寬，整組頂欄向右溢出而蓋到按鈕，故把整組
+        // 向左收齊，右緣保留固定間距；同時左緣不超過面板邊界，避免縮字後仍被推到畫面外。
+        let gx = if crowded {
+            gx.min(HEADER_REFRESH_LIMIT - group).max(HEADER_LEFT_LIMIT)
         } else {gx};
         let hb = (gx + if bt_power.is_some(){22.5}else{8.5}, 18.6);
         let hd = gx + battery_space;
@@ -3284,15 +3293,15 @@ impl App {
             paint::clock(&base.faded(a_pill),cpos.0,cpos.1,&clock,size::PILL_CLOCK);
         }
         if a_head > 0.0 {
-            paint::clock(&base.faded(a_head),cpos.0,cpos.1-0.5,&clock,size::CLOCK);
+            paint::clock(&base.faded(a_head),cpos.0,cpos.1-0.5,&clock,clock_size);
         }
         // 日期随内容淡入，从药丸方向轻轻滑出。漸層皮膚底色較亮，日期改用近白字避免灰字被吃掉。
         if reveal > 0.0 {
             let date_color=if self.settings.skin.is_gradient(){Color32::from_rgb(246,246,248)}else{Color32::from_rgb(210,210,214)};
             if self.settings.skin.is_gradient() {
-                base.faded(reveal).text(hd + (1.0 - reveal) * 10.0, 23.2, &env.date, size::DATE, W::Regular, Color32::from_black_alpha(80), H::Left);
+                base.faded(reveal).text(hd + (1.0 - reveal) * 10.0, 23.2, &env.date, date_size, W::Regular, Color32::from_black_alpha(80), H::Left);
             }
-            base.faded(reveal).text(hd + (1.0 - reveal) * 10.0, 22.5, &env.date, size::DATE, W::Regular, date_color, H::Left);
+            base.faded(reveal).text(hd + (1.0 - reveal) * 10.0, 22.5, &env.date, date_size, W::Regular, date_color, H::Left);
         }
         if self.open && reveal>0.95 && p>0.98 && !self.is_editing() && !self.drag_hot {
             if let Some(screen)=env.screen {

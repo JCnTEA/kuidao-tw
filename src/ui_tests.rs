@@ -503,27 +503,47 @@ fn weather_refresh_keeps_music_and_settings_shortcuts_separate(){
 #[test]
 fn header_clock_never_overlaps_page_refresh_with_period_and_seconds(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    // 實機擷圖的真實字串：日期含星期、時鐘含時段與秒數，是頂欄最寬的組合。
+    let date="11月23日 週一";
+    let raw_time="23:17:59";
+    let phone=crate::bt::Device{id:"P".into(),name:"Phone".into(),battery:Some(71),kind:crate::bt::DeviceKind::Phone};
     for page in [crate::app::QUOTA_PAGE, crate::app::WEATHER_PAGE] {
-        let mut h=H::new();
-        h.app.settings.clock_period=2;   // 凌晨／上午…時段前綴
-        h.app.settings.clock_seconds=true;
-        h.power=(Some(64),false);        // 顯示電量環，頂欄群組因此更寬
-        let expected=h.app.settings.clock_text("09:41:00");
-        let (period,digits)=expected.split_once(' ').expect("時段時鐘應含前綴");
-        h.app.show_page(page);
-        h.hover(H::local(300.0,60.0),1.0);
-        // paint::clock 把時段與數字拆成兩個文字，各自取外框再併成整個時鐘的橫向範圍。
-        let text_rect=|want:&str|h.shapes.iter().find_map(|s|match &s.shape{
-            egui::Shape::Text(t) if t.galley.text()==want => Some(t.visual_bounding_rect()),
-            _=>None,
-        }).unwrap_or_else(||panic!("{page} 頁頂欄應顯示時鐘文字：{want}"));
-        let (pr,dr)=(text_rect(period),text_rect(digits));
-        let clock=pr.with_max_x(dr.right());
         let refresh_name=if page==crate::app::WEATHER_PAGE{"weather-refresh"}else{"quota-refresh"};
-        let refresh=h.ctx.read_response(egui::Id::new(("card",true,refresh_name))).unwrap().rect;
-        assert!(clock.right()+4.0<=refresh.left(),
-            "{page} 頁時鐘右緣 {:.1} 應與重新整理左緣 {:.1} 保留間距，不可貼齊",clock.right(),refresh.left());
-        assert!(clock.left()>=H::local(14.0,0.0).x,"{page} 頁頂欄左移後不能超出面板左緣");
+        // 系統電池與連線手機（藍牙）電量兩種來源都要驗證。
+        for use_phone in [false,true] {
+            let mut h=H::new();
+            h.app.settings.clock_period=2;   // 凌晨／上午…時段前綴
+            h.app.settings.clock_seconds=true;
+            let expected=h.app.settings.clock_text(raw_time);
+            let (period,digits)=expected.split_once(' ').expect("時段時鐘應含前綴");
+            h.app.show_page(page);
+            for _ in 0..150 {
+                h.t+=1.0/60.0;
+                let cursor=Some(H::local(180.0,185.0));
+                let env=if use_phone {
+                    Env{t:h.t,clock:raw_time.into(),today:"2026-11-23".into(),date:date.into(),
+                        cursor,bt:vec![phone.clone()],bt_ready:true,..Default::default()}
+                } else {
+                    Env{t:h.t,clock:raw_time.into(),today:"2026-11-23".into(),date:date.into(),
+                        cursor,battery:Some(64),bt_ready:true,..Default::default()}
+                };
+                h.frame_env(env,vec![]);
+            }
+            // paint::clock 把時段與數字拆成兩個文字，各自取外框再併成整個時鐘的橫向範圍。
+            let text_rect=|want:&str|h.shapes.iter().find_map(|s|match &s.shape{
+                egui::Shape::Text(t) if t.galley.text()==want => Some(t.visual_bounding_rect()),
+                _=>None,
+            }).unwrap_or_else(||panic!("{page} 頁頂欄應顯示文字：{want}（手機電量來源：{use_phone}）"));
+            let (pr,dr)=(text_rect(period),text_rect(digits));
+            let clock=pr.with_max_x(dr.right());
+            let refresh=h.ctx.read_response(egui::Id::new(("card",true,refresh_name))).unwrap().rect;
+            let refresh_text=text_rect("重新整理");
+            assert!(clock.right()+4.0<=refresh.left(),
+                "{page} 頁時鐘右緣 {:.1} 與重新整理命中左緣 {:.1} 重疊（手機來源：{use_phone}）",clock.right(),refresh.left());
+            assert!(clock.right()+2.0<=refresh_text.left(),
+                "{page} 頁時鐘右緣 {:.1} 與重新整理文字左緣 {:.1} 重疊（手機來源：{use_phone}）",clock.right(),refresh_text.left());
+            assert!(clock.left()>=H::local(14.0,0.0).x,"{page} 頁頂欄左移後不能超出面板左緣（手機來源：{use_phone}）");
+        }
     }
 }
 
@@ -1334,6 +1354,21 @@ impl H {
             });
         });
         self.shapes=output.shapes;
+    }
+    /// 以自訂 Env 跑一幀，供頂欄排版類測試注入真實的長日期／時鐘字串。
+    fn frame_env(&mut self, env: Env, events: Vec<egui::Event>) {
+        let raw = egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(crate::app::CANVAS_W, WIN_H))),
+            time: Some(self.t), events, focused: true, ..Default::default()
+        };
+        let app = &mut self.app;
+        let output = self.ctx.run(raw, |ctx| {
+            egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx, |ui| {
+                let win = Rect::from_min_size(ui.max_rect().min, Vec2::new(WIN_W, WIN_H));
+                app.frame(ui, win, &env);
+            });
+        });
+        self.shapes = output.shapes;
     }
     fn hover(&mut self, p: Pos2, secs: f64) {
         self.cursor = Some(p);
