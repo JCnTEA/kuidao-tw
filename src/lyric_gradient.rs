@@ -163,7 +163,7 @@ fn palette_lightness_range(preset: usize) -> (f32, f32) {
 
 /// 歌詞文字取色：保留色盤色相與飽和度，把整段明暗重新對應到可讀亮度區間，
 /// 暗部不再被壓成一片白，漸層在黑底藥丸上仍清楚可見。
-fn readable_text_color(preset: usize, t: f32) -> Color32 {
+pub(crate) fn readable_text_color(preset: usize, t: f32) -> Color32 {
     let preset = clamp_preset(preset);
     let raw = sample(preset, t);
     let (h, s, l) = rgb_to_hsl(

@@ -33,6 +33,7 @@ pub mod input;
 pub mod lyrics;
 pub mod lyrics_zh;
 pub mod lyric_gradient;
+pub mod lyric_karaoke;
 pub mod zh;
 pub mod mail;
 pub mod mail_format;

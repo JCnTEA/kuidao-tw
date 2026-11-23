@@ -105,6 +105,24 @@ impl Lyrics {
     pub fn index_at(&self, secs: f32) -> Option<usize> {
         self.lines.iter().rposition(|line|line.t<=secs)
     }
+
+    /// 某一句的起讫时间；最后一句没有下一条时，用歌曲总时长收尾，总时长未知则保留 4 秒。
+    pub fn line_span(&self, index: usize, duration: f32) -> Option<(f32, f32)> {
+        let start = self.lines.get(index)?.t;
+        let end = self
+            .lines
+            .get(index + 1)
+            .map(|line| line.t)
+            .filter(|end| *end > start)
+            .unwrap_or_else(|| if duration > start { duration } else { start + 4.0 });
+        (end > start).then_some((start, end))
+    }
+
+    /// 導唱用：這一句已經唱到幾成（0..1）。暫停、跳轉都直接跟播放位置。
+    pub fn line_progress(&self, index: usize, position: f32, duration: f32) -> Option<f32> {
+        let (start, end) = self.line_span(index, duration)?;
+        Some(((position - start) / (end - start)).clamp(0.0, 1.0))
+    }
 }
 
 /// 這首歌是不是中文歌：用漢字占比判斷，出現假名或韓文就不算（日韓原文交給翻譯處理）。
@@ -370,7 +388,7 @@ fn clean_youtube_title(title:&str)->String {
     static NOISE:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
     static PREFIX:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
     let suffix=SUFFIX.get_or_init(||regex::Regex::new(r"(?i)\s*[-–—|｜]\s*(?:youtube\s*music|youtube)\s*$").unwrap());
-    let noise=NOISE.get_or_init(||regex::Regex::new(r"(?i)[\(\[（【][^\)\]）】]*(?:official|video|music\s+video|\bmv\b|m/v|audio|lyric(?:s|\s+video)?|teaser|trailer|making|behind|hd|4k|1080p?|60fps|中字|字幕|歌詞|官方|高音質|完整版|搶先版|預告)[^\)\]）】]*[\)\]）】]").unwrap());
+    let noise=NOISE.get_or_init(||regex::Regex::new(r"(?i)[\(\[（【][^\)\]）】]*(?:official|video|music\s+video|\bmv\b|m/v|\bpv\b|audio|lyric(?:s|\s+video)?|teaser|trailer|making|behind|hd|hq|4k|1080p?|60fps|1\s*hour|loop|full\s+album|performance|live(?:\s+ver(?:sion)?)?|cover|short\s+ver(?:sion)?|color\s*coded|nightcore|sped\s*up|remix|dance\s+practice|中字|字幕|歌詞|官方|高音質|完整版|搶先版|預告|現場|翻唱)[^\)\]）】]*[\)\]）】]").unwrap());
     let prefix=PREFIX.get_or_init(||regex::Regex::new(r"(?i)^\s*(?:\[(?:mv|m/v|官方|中字|歌詞)\]|\((?:mv|m/v|official\s+video|lyric\s+video)\))\s*").unwrap());
     let mut text=suffix.replace(title.trim(),"").into_owned();
     loop {
@@ -405,9 +423,10 @@ fn youtube_part(text:&str)->String {
 
 fn youtube_parts(title:&str)->Vec<String> {
     static SEP:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
-    let sep=SEP.get_or_init(||regex::Regex::new(r"\s*(?: - | – | — |\||｜|•|·)\s*").unwrap());
+    let sep=SEP.get_or_init(||regex::Regex::new(r"\s*(?: - | – | — |\||｜|／|•|·)\s*").unwrap());
     let mut parts=sep.split(title).map(youtube_part).filter(|part|!part.is_empty()).collect::<Vec<_>>();
-    parts.retain(|part|!["mv","officialvideo","officialmv","lyricvideo","lyrics","audio","hq","hd","4k"].contains(&normalized(part).as_str()));
+    parts.retain(|part|!["mv","officialvideo","officialmv","lyricvideo","lyrics","audio","hq","hd","4k",
+        "1hour","loop","fullalbum","performance","live","cover","shortver","pv","colorcoded","nightcore"].contains(&normalized(part).as_str()));
     parts
 }
 
@@ -432,6 +451,9 @@ pub(crate) fn youtube_lyric_hints(track:&str,artist:&str)->Vec<(String,String)> 
     let title=clean_youtube_title(track);
     let channel=clean_youtube_artist(artist);
     let mut hints=Vec::new();let mut seen=Vec::new();
+    static BY:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
+    let by=BY.get_or_init(||regex::Regex::new(r"(?i)^(.{2,90}?)\s+by\s+(.{2,60})$").unwrap());
+    if let Some(caps)=by.captures(&title) {push_hint(&mut hints,&mut seen,&caps[1],&caps[2]);}
     static QUOTED:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
     let quoted=QUOTED.get_or_init(||regex::Regex::new(r#"(?s)^(.{2,80}?)\s*(?:[-–—|:：]\s*)?['"‘’“”『「]([^'"‘’“”』」]{2,100})['"‘’“”』」]"#).unwrap());
     if let Some(caps)=quoted.captures(&title) {
@@ -471,24 +493,49 @@ fn browser_cache_path(track:&str,artist:&str,duration:f64)->std::path::PathBuf {
 
 fn fetch_browser(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError> {
     let hints=youtube_lyric_hints(track,artist);
-    if hints.is_empty() {return Err(FetchError::IncompleteMetadata);}
+    // 頻道空白或只寫「YouTube」時，候選可能整組為空；這時不能直接判定資訊不足，
+    // 仍要用清洗後的歌名本體查一輪，否則單段標題的影片會完全抓不到歌詞。
+    if track.trim().is_empty() && hints.is_empty() {return Err(FetchError::IncompleteMetadata);}
     let path=browser_cache_path(track,artist,duration);
     if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"瀏覽器本機快取:命中".into());return Ok(lyrics);}
-    let (result,_)=fetch_with_sources_detail_hints(
+    let search_track=clean_youtube_title(track);
+    let search_track=if search_track.trim().is_empty(){track.to_owned()}else{search_track};
+    let search_artist=clean_youtube_artist(artist);
+    let search_artist=if search_artist.trim().is_empty(){artist.to_owned()}else{search_artist};
+    let (strict,failed)=fetch_with_sources_detail_hints(
         Some("https://music.163.com"),Some("https://c.y.qq.com"),Some("https://lrclib.net"),
-        track,artist,duration,&hints);
-    if !result.as_ref().is_ok_and(|lyrics|lyrics.synced) {
-        match fetch_kkbox_only(track,artist,duration,&hints) {
-            Ok(lyrics)=>{
-                trace(||format!("瀏覽器改用KKBOX:{}行",lyrics.lines.len()));
-                if lyrics.synced && !romanized(track,&lyrics){write_cache(&path,&lyrics);}
+        &search_track,&search_artist,duration,&hints);
+    if failed {trace(||"瀏覽器:有來源失敗，結果可能不完整".into());}
+    // 只有純文字先留住，後面若有同步版本就換掉。
+    let mut plain:Option<Lyrics>=strict.as_ref().ok().filter(|lyrics|!lyrics.synced).cloned();
+    if let Ok(lyrics)=&strict {
+        if lyrics.synced && !romanized(track,lyrics) {write_cache(&path,lyrics);return Ok(lyrics.clone());}
+    }
+    match fetch_kkbox_only(track,artist,duration,&hints) {
+        Ok(lyrics)=>{
+            trace(||format!("瀏覽器改用KKBOX:{}行",lyrics.lines.len()));
+            if lyrics.synced && !romanized(track,&lyrics){write_cache(&path,&lyrics);return Ok(lyrics);}
+            if plain.is_none(){plain=Some(lyrics);}
+        }
+        Err(error)=>trace(||format!("瀏覽器KKBOX:{}",error.label())),
+    }
+    // YouTube 影片常有前奏、片尾或剪輯，時長和唱片版差超過門檻就整首落空。
+    // 嚴格比對失敗後放寬時長再試一輪；歌名與歌手仍嚴格核對，避免抓到同歌手的別首歌。
+    if duration>0.0 {
+        trace(||"瀏覽器:放寬時長再比對".into());
+        let (relaxed,_)=fetch_with_sources_detail_hints(
+            Some("https://music.163.com"),Some("https://c.y.qq.com"),Some("https://lrclib.net"),
+            &search_track,&search_artist,0.0,&hints);
+        match relaxed {
+            Ok(lyrics) if lyrics.synced=>{
+                if !romanized(track,&lyrics){write_cache(&path,&lyrics);}
                 return Ok(lyrics);
             }
-            Err(error)=>trace(||format!("瀏覽器KKBOX:{}",error.label())),
+            Ok(lyrics)=>{if plain.is_none(){plain=Some(lyrics);}}
+            Err(_)=>{}
         }
     }
-    if let Ok(lyrics)=&result {if lyrics.synced && !romanized(track,lyrics){write_cache(&path,lyrics);}}
-    result
+    match plain {Some(lyrics)=>Ok(lyrics),None=>strict}
 }
 
 /// KKBOX：先用公開搜尋頁找到歌曲 crypt id，再從嵌入播放器取得短期 access token，
@@ -1353,6 +1400,30 @@ mod tests {
     }
 
     #[test]
+    fn line_progress_follows_playback_position() {
+        let lyrics=Lyrics{synced:true,lines:vec![
+            LyricsLine{t:10.0,text:"一".into()},
+            LyricsLine{t:14.0,text:"二".into()},
+            LyricsLine{t:20.0,text:"三".into()},
+        ]};
+        assert_eq!(lyrics.line_progress(0,10.0,30.0),Some(0.0));
+        assert_eq!(lyrics.line_progress(0,12.0,30.0),Some(0.5));
+        assert_eq!(lyrics.line_progress(1,14.0,30.0),Some(0.0));
+        assert_eq!(lyrics.line_progress(1,20.0,30.0),Some(1.0));
+        // 最後一句用總時長收尾；提前跳到後面也不會超過 1。
+        assert_eq!(lyrics.line_progress(2,25.0,30.0),Some(0.5));
+        assert_eq!(lyrics.line_progress(2,99.0,30.0),Some(1.0));
+        assert_eq!(lyrics.line_progress(9,1.0,30.0),None);
+    }
+
+    #[test]
+    fn last_line_without_duration_keeps_a_four_second_window() {
+        let lyrics=Lyrics{synced:true,lines:vec![LyricsLine{t:60.0,text:"尾".into()}]};
+        assert_eq!(lyrics.line_span(0,0.0),Some((60.0,64.0)));
+        assert_eq!(lyrics.line_progress(0,62.0,0.0),Some(0.5));
+    }
+
+    #[test]
     fn youtube_titles_are_reduced_to_song_and_artist_candidates() {
         let hints=youtube_lyric_hints("Artist - Song (Official Video) - YouTube","Artist - Topic");
         assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("Song","Artist")));
@@ -1362,6 +1433,37 @@ mod tests {
         assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("Song","Artist")));
         let hints=youtube_lyric_hints("Artist | Song | Album - YouTube","Label Records");
         assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("Song","Artist")));
+    }
+
+    #[test]
+    fn youtube_noise_and_separators_are_handled() {
+        // 長版、循環、直播、翻唱等標註不該被當成歌名的一部分。
+        for (title,artist,expect) in [
+            ("Artist - Song (1 Hour Loop) - YouTube","Artist - Topic",("Song","Artist")),
+            ("Artist - Song [Live Performance]","YouTube",("Song","Artist")),
+            ("Artist／Song｜Album - YouTube","Label Records",("Song","Artist")),
+        ] {
+            let hints=youtube_lyric_hints(title,artist);
+            assert!(hints.iter().any(|pair|(pair.0.as_str(),pair.1.as_str())==expect),"{title} 應有 {expect:?}，實際 {hints:?}");
+            // 標註詞不該殘留在歌名或歌手裡。
+            assert!(hints.iter().all(|(track,artist)|{
+                let text=format!("{} {}",track,artist).to_lowercase();
+                !text.contains("hour") && !text.contains("loop") && !text.contains("performance") && !text.contains("official")
+            }),"{title} 清洗後仍殘留標註：{hints:?}");
+        }
+    }
+
+    #[test]
+    fn song_by_artist_titles_are_split() {
+        let hints=youtube_lyric_hints("Song by Artist","YouTube Music");
+        assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("Song","Artist")));
+    }
+
+    #[test]
+    fn single_part_titles_still_get_a_hint_with_known_channel() {
+        // 只有歌名、沒有分隔符時，頻道名就是歌手。
+        let hints=youtube_lyric_hints("晴天 (Official Video)","周杰倫");
+        assert_eq!(hints.first().map(|(track,artist)|(track.as_str(),artist.as_str())),Some(("晴天","周杰倫")));
     }
 
     #[test]

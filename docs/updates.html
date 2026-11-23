@@ -66,6 +66,7 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="hero-shot"><img src="images/showcase/update.webp" alt="鬼島發現新版本時的更新視窗，列出本次更新重點與立即更新按鈕" loading="lazy"></div>
     <div class="grid">
+      <div class="card"><span class="badge">歌詞</span><h3>歌詞導唱外掛：跟著播放進度逐字亮起</h3><p>設定「音樂」→「歌詞顏色」新增「歌詞導唱」開關（外掛式、預設關閉），可與整句漸層各自開關。開啟後，島上當前句與播放器右側歌詞欄的當前句會隨播放進度由左至右逐字亮起：唱過的字走色盤漸層，未唱的字轉暗灰，前緣柔和過渡；暫停停在原位、跳轉直接跟播放位置，長句不再切段。導唱只作用在目前句、不顯示譯文，自動翻譯維持關閉。樣式可選內建，或把 JSON 樣式包放進 %APPDATA%\Kuidao\lyric-karaoke\ 後重新啟動選用。同時強化瀏覽器播 YouTube／YouTube Music 的抓詞：頻道空白時不再直接判定資訊不足，改用清洗後歌名查詢；嚴格時長比對落空後放寬時長再試一輪，歌名與歌手仍嚴格核對；標題清洗新增 1 Hour、Loop、Live、Cover、Full Album、全形斜線與「Song by Artist」等格式。</p></div>
       <div class="card"><span class="badge">電量</span><h3>「電量」頁把每個裝置畫成一圈環形電量</h3><p>頂欄的電量圈現在可以點開「電量」頁：手機、藍牙耳機、滑鼠、鍵盤、手把與音箱各佔一個環，環內放對應的線稿圖示、環下是百分比；綠色弧線跟著電量長短變化，低於 20% 整圈轉紅，充電中會在環頂多一顆閃電。系統電池排在最前，桌機沒有系統電池時只列已回報電量的週邊，全都沒有才顯示引導文字。耳機圖示換成頭帶加左右耳罩的線稿；電量頁也能在設定裡個別隱藏，舊設定檔的頁面順序與開關升級後照舊保留。</p></div>
       <div class="card"><span class="badge">安裝</span><h3>安裝前自動結束目前靈動島</h3><p>安裝與解除安裝流程會先主動關閉主程式與啟動器，再等待單一實例鎖釋放；若程序尚未退出，會自動重試，仍無法關閉才提示重新開機。升級時不必先手動從系統匣退出，也能避免檔案被執行中的程序鎖住。</p></div>
       <div class="card"><span class="badge">監控</span><h3>獨立監控台總覽程序、發布與網路</h3><p>新增獨立監控台，集中呈現鬼島相關程序、命令列、啟動／結束事件、CPU 與記憶體、GitHub 發布狀態、資產下載次數、自檢進度、修復建議、倉庫流量，以及鬼島程序的 TCP 連線；需要完整倉庫流量時可讀取本機 GitHub Token。</p></div>

@@ -287,9 +287,24 @@ impl App {
             }
             let Some(focus)=blocks.iter().position(|b|b.index==target) else{return;};
             let active_y=64.0-blocks[focus].total/2.0+(target as f32-position)*26.0;
+            // 導唱外掛：目前這一句跟著播放進度逐字亮起；沒有時軸或關閉外掛時維持單色。
+            let karaoke=if self.settings.lyric_karaoke && lyrics.synced {
+                Some((crate::lyric_karaoke::resolve(&self.settings.lyric_karaoke_style,self.settings.lyric_gradient_preset,self.settings.lyric_gradient_shift),
+                    lyrics.line_progress(target,self.lyric_position(),self.media.duration as f32).unwrap_or(0.0)))
+            } else {None};
             let paint=|block:&Block,y:f32,alpha:f32| {
                 let row=col.faded(alpha);
-                row.painter.galley(row.pos(X+3.0,y),block.galley.clone(),block.ink);
+                let at=row.pos(X+3.0,y);
+                let mut drawn_as_mesh=false;
+                if block.active {
+                    if let Some((style,progress))=&karaoke {
+                        let font_tex_size=row.painter.ctx().fonts(|f|{let img=f.image();[img.width() as f32,img.height() as f32]});
+                        let mesh=crate::lyric_karaoke::sweep_mesh(at,&block.galley,style,*progress,font_tex_size);
+                        row.painter.add(egui::Shape::Mesh(std::sync::Arc::new(mesh)));
+                        drawn_as_mesh=true;
+                    }
+                }
+                if !drawn_as_mesh {row.painter.galley(at,block.galley.clone(),block.ink);}
                 if let Some((sub,tink))=&block.sub {
                     row.painter.galley(row.pos(X+3.0,y+block.galley.size().y/c.s+1.0),sub.clone(),*tink);
                 }

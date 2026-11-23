@@ -1140,6 +1140,32 @@ pub(crate) fn lyric_gradient_editor(ui:&mut egui::Ui, settings:&mut crate::model
     }
 }
 
+/// 歌詞導唱外掛：開關與樣式（內建或 `%APPDATA%\Kuidao\lyric-karaoke` 的樣式包）。
+pub(crate) fn lyric_karaoke_editor(ui:&mut egui::Ui, settings:&mut crate::model::Settings) {
+    ui.separator();
+    setting_row(ui,"歌詞導唱","跟播放進度逐字亮起：已唱的字走漸層色，未唱的字變暗，前緣柔和過渡",&mut settings.lyric_karaoke);
+    if settings.lyric_karaoke {
+        let names=crate::lyric_karaoke::style_names();
+        if !names.iter().any(|name|*name==settings.lyric_karaoke_style) {
+            settings.lyric_karaoke_style=crate::lyric_karaoke::BUILTIN.into();
+        }
+        let ctx=&ui.ctx().clone();
+        ui.horizontal(|ui|{
+            ui.add(egui::Label::new(egui::RichText::new("導唱樣式").size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41)))));
+            egui::ComboBox::from_id_salt("lyric-karaoke-style")
+                .selected_text(settings.lyric_karaoke_style.clone())
+                .width(180.0)
+                .show_ui(ui,|ui|{
+                    for name in &names {
+                        ui.selectable_value(&mut settings.lyric_karaoke_style,name.clone(),name.clone());
+                    }
+                });
+        });
+        settings_hint(ui,"導唱與上面的整句漸層可各自開關；導唱只作用在目前這一句，不會顯示譯文。");
+        settings_hint(ui,"自訂樣式包：把 JSON 放進 %APPDATA%\\Kuidao\\lyric-karaoke\\ 後重新啟動，名稱就會出現在上面；格式錯誤會被忽略，不影響內建樣式。");
+    }
+}
+
 fn switch(ui:&mut egui::Ui,value:&mut bool)->bool {
     let (rect,response)=ui.allocate_exact_size(egui::vec2(34.0,20.0),egui::Sense::click());
     if response.clicked(){*value=!*value;}
@@ -1996,6 +2022,7 @@ impl App {
                             settings_label(ui,"歌詞顏色");
                             settings_card(ui,|ui|{
                                 lyric_gradient_editor(ui,&mut self.settings);
+                                lyric_karaoke_editor(ui,&mut self.settings);
                             });
                         });
                     }
