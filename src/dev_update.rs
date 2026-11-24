@@ -20,7 +20,7 @@ pub(crate) fn enabled() -> bool {
 }
 
 /// 啟動後延遲一次檢查；有新版就下載、換版、自動重開。
-pub(crate) fn tick(ctx: &eframe::egui::Context) {
+pub fn tick(ctx: &eframe::egui::Context) {
     if !enabled() || STARTED.swap(true, Ordering::Relaxed) { return; }
     let ctx = ctx.clone();
     std::thread::spawn(move || {
