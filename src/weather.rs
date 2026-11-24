@@ -173,18 +173,29 @@ impl Position {
     }
 }
 
-/// 地點層級字串整理：台灣不帶「省」，開頭固定「台灣」，重複的層級只留一次。
+/// 單一行政層級清理：去掉「省」「縣」後綴、把「臺灣」統一成「台灣」，
+/// 並丟掉地理庫回傳的別名串（例如「臺灣省 or 台灣省」）與國家名本身。
+fn clean_area(part: &str) -> Option<String> {
+    let trimmed = part.trim();
+    if trimmed.is_empty() { return None; }
+    if trimmed.to_ascii_lowercase().contains(" or ") { return None; }
+    // 省、縣這種上層行政區整個丟掉，不做「去掉字尾留名字」的勉強縮寫。
+    if trimmed.ends_with('省') || trimmed.ends_with('縣') { return None; }
+    let name = trimmed.replace("臺灣", "台灣").replace("台湾", "台灣");
+    if name.is_empty() || name == "台灣" || name.eq_ignore_ascii_case("taiwan") { return None; }
+    Some(name)
+}
+
+/// 地點層級字串整理：台灣不帶「省」「縣」，開頭固定「台灣」，重複的層級只留一次。
 pub fn tidy_region(region: &str) -> String {
     let parts: Vec<&str> = region.split(" · ").map(str::trim).filter(|s| !s.is_empty()).collect();
-    let taiwan = parts.iter().any(|s| s.contains("台灣") || s.contains("臺灣"));
+    let taiwan = parts.iter().any(|s| s.contains("台灣") || s.contains("臺灣") || s.contains("台湾") || s.eq_ignore_ascii_case("taiwan"));
     let mut out: Vec<String> = Vec::new();
     if taiwan { out.push("台灣".to_string()); }
     for part in parts {
-        if part.contains('省') || part.contains("台灣") || part.contains("臺灣") {
-            continue;
+        if let Some(owned) = clean_area(part) {
+            if !out.contains(&owned) { out.push(owned); }
         }
-        let owned = part.to_string();
-        if !out.contains(&owned) { out.push(owned); }
     }
     out.join(" · ")
 }
@@ -353,25 +364,17 @@ fn city_candidates(value: &Value) -> Vec<(Position, u64)> {
         if skip_feature(item["feature_code"].as_str().unwrap_or_default()) {return None;}
         let label=item["name"].as_str()?.trim().to_string();
         let country=item["country"].as_str().unwrap_or_default();
-        let taiwan=country.contains("台灣")||country.contains("臺灣")||country.eq_ignore_ascii_case("taiwan");
-        let mut areas=Vec::new();
-        if taiwan {
-            areas.push("台灣".to_string());
-            for key in ["admin2","admin1"] {
-                if let Some(area)=item[key].as_str().filter(|s|!s.is_empty() && *s!=label && !s.contains('省') && !s.contains("台灣") && !s.contains("臺灣")) {
-                    let owned=area.to_string();
-                    if !areas.contains(&owned) {areas.push(owned);}
-                }
-            }
-        } else {
-            for key in ["admin2","admin1","country"] {
-                if let Some(area)=item[key].as_str().filter(|s|!s.is_empty() && *s!=label) {
-                    let owned=area.to_string();
-                    if !areas.contains(&owned) {areas.push(owned);}
-                }
+        let taiwan=country.contains("台灣")||country.contains("臺灣")||country.contains("台湾")||country.eq_ignore_ascii_case("taiwan");
+        let mut areas=if taiwan {vec!["台灣".to_string()]} else {Vec::new()};
+        for key in ["admin2","admin1","country"] {
+            if let Some(area)=item[key].as_str().filter(|s|!s.is_empty() && *s!=label) {
+                let owned=area.to_string();
+                if !areas.contains(&owned) {areas.push(owned);}
             }
         }
-        let position=Position{lat:item["latitude"].as_f64()?,lon:item["longitude"].as_f64()?,label,region:areas.join(" · ")};
+        // 搜尋結果一律走同一套層級整理，清單就不會出現「臺灣省 or 台灣省」這種別名串。
+        let region=tidy_region(&areas.join(" · "));
+        let position=Position{lat:item["latitude"].as_f64()?,lon:item["longitude"].as_f64()?,label,region};
         position.valid().then_some((position,item["population"].as_u64().unwrap_or(0)))
     }).collect()
 }
@@ -1045,6 +1048,24 @@ mod tests {
         let city=Position{lat:23.13,lon:113.26,label:"廣州".into(),region:"廣東".into()};
         let ranked=rank_cities("廣州市",vec![(town.clone(),900_000),(city.clone(),13_000_000),(city.clone(),13_000_000)]);
         assert_eq!(ranked,vec![city,town]);
+    }
+
+    #[test]
+    fn weather_taiwan_regions_never_show_province_or_alias_strings(){
+        // 地理庫把「臺灣省 / 台灣省」寫成一串別名時，不能原樣落到清單或「已選擇」提示。
+        assert_eq!(tidy_region("臺北市 · 臺灣省 or 台灣省 · 台湾"),"台灣 · 臺北市");
+        assert_eq!(tidy_region("台灣 · 臺北市 · 台湾"),"台灣 · 臺北市");
+        assert_eq!(tidy_region("臺灣省"),"台灣");
+        assert_eq!(tidy_region("新竹縣"),"","縣級不上畫");
+        assert_eq!(tidy_region(""),"");
+        let candidates:Vec<Position>=city_candidates(&json!({"results":[
+            {"name":"士林","latitude":25.09071,"longitude":121.52259,"admin1":"臺灣省 or 台灣省","admin2":"臺北市","country":"台灣"},
+            {"name":"竹北","latitude":24.838,"longitude":121.008,"admin1":"新竹縣","admin2":"竹北市","country":"臺灣"}
+        ]})).into_iter().map(|(p,_)|p).collect();
+        assert_eq!(candidates.len(),2);
+        assert_eq!(candidates[0].region,"台灣 · 臺北市");
+        assert!(!candidates[0].region.contains('省') && !candidates[0].region.contains(" or "));
+        assert_eq!(candidates[1].region,"台灣 · 竹北市");
     }
 
     #[test]
