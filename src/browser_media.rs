@@ -27,10 +27,11 @@ pub(crate) fn browser_for_exe(exe: &str) -> Option<(&'static str, &'static str)>
 /// 把瀏覽器視窗標題清成「歌手／歌名」。
 /// 常見樣式：`周杰倫 Jay Chou【稻香 Rice Field】-Official Music Video - YouTube - Google Chrome`。
 pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, String)> {
-    let mut title = raw.trim().to_string();
-    if let Some(stripped) = title.strip_suffix(browser_suffix) {
-        title = stripped.trim().to_string();
-    }
+    let raw = raw.trim_end();
+    let mut title = match raw.strip_suffix(browser_suffix) {
+        Some(stripped) => stripped.trim().to_string(),
+        None => raw.trim_start().to_string(),
+    };
     let mut album = String::new();
     for (suffix, name) in [(" - YouTube Music", "YouTube Music"), (" - YouTube", "YouTube")] {
         if let Some(stripped) = title.strip_suffix(suffix) {
