@@ -1473,13 +1473,13 @@ fn support_author(ui:&mut egui::Ui){
         .corner_radius(10.0).show(ui,|ui|{
             ui.set_min_width(ui.available_width());
             ui.vertical_centered(|ui|{
-                ui.add(egui::Image::new(egui::include_image!("../assets/support/daozai-coffee.svg")).fit_to_exact_size(egui::vec2(211.0,110.0)));
+                ui.add(egui::Image::new(egui::include_image!("../assets/support/kuidao-coffee.png")).fit_to_exact_size(egui::vec2(211.0,110.0)));
             });
         });
     ui.add_space(9.0);
-    ui.label(egui::RichText::new("小唐維護 · 鬼島陪伴").size(10.5).color(accent));
-    ui.label(egui::RichText::new("請小唐喝杯咖啡").size(19.0).strong());
-    ui.label("鬼島陪你認真生活，\n你的支援，陪小唐把它慢慢做好。");
+    ui.label(egui::RichText::new("鬼島維護 · 陪你生活").size(10.5).color(accent));
+    ui.label(egui::RichText::new("請作者喝杯咖啡").size(19.0).strong());
+    ui.label("鬼島陪你認真生活，\n你的支援，讓它慢慢變好。");
     } else {
         let ctx=ui.ctx().clone();
         // 只解码一次并裁出二维码区域，按实际显示像素缩小：原图解码后两张合计约 17MB，缩小后不到 1MB。
@@ -2667,7 +2667,7 @@ impl App {
                         settings_card(ui,|ui|{
                             ui.label(egui::RichText::new("鬼島沒有訂閱制，也沒有廣告").size(13.0).strong());
                             ui.add_space(2.0);
-                            ui.add(egui::Label::new(egui::RichText::new("下載、更新與全部功能都免費。如果它真的幫到你，可以用下面的收款碼請小唐喝杯咖啡；完全自願，不影響任何功能。").size(11.0).color(settings_color(ctx,Color32::from_gray(175),Color32::from_gray(85)))).wrap());
+                            ui.add(egui::Label::new(egui::RichText::new("下載、更新與全部功能都免費。如果它真的幫到你，可以用下面的收款碼請作者喝杯咖啡；完全自願，不影響任何功能。").size(11.0).color(settings_color(ctx,Color32::from_gray(175),Color32::from_gray(85)))).wrap());
                         });
                         settings_card(ui,support_author);
                     }
