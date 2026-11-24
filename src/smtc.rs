@@ -91,6 +91,10 @@ fn source_enabled(source: &str) -> bool {
 /// 這裡只認來源，不要求使用者安裝擴充功能，也不看瀏覽器是否在前景。
 pub fn is_browser_source(source:&str)->bool{
     let source=source.to_ascii_lowercase();
+    // 瀏覽器自報的 SMTC 來源有時不是 exe 名稱，而是「www.youtube.com-<hash>!App」這種
+    // AppUserModelId；它同樣是分頁音樂，必須走瀏覽器那條標題正規化，否則整串影片標題
+    // 會被當成歌名送去比對，永遠對不到。
+    if source.contains("youtube.com") || source.contains("youtube music") {return true;}
     ["chrome","msedge","firefox","brave","opera","vivaldi","iexplore","internet explorer"]
         .iter().any(|name|source.contains(name))
 }
@@ -933,6 +937,17 @@ pub fn spawn_poller(state: Shared,ctx:eframe::egui::Context)->Poller {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn youtube_app_id_counts_as_browser(){
+        // Chrome 對 YouTube 分頁自報的是 AppUserModelId，不是 chrome.exe。
+        assert!(is_browser_source("www.youtube.com-54E21B02_pd8mbgmqs65xy!App"));
+        assert!(is_browser_source("chrome.exe"));
+        assert!(is_browser_source("msedge.exe"));
+        // 播放器自報的 App ID 不能被當成瀏覽器，否則會走錯正規化。
+        assert!(!is_browser_source("SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify"));
+        assert!(!is_browser_source("cloudmusic.exe"));
+    }
+
     use super::*;
     #[test]
     fn qqmusic_is_recognised_by_old_and_new_session_names(){

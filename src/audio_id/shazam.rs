@@ -59,31 +59,63 @@ pub fn identify(signature: &super::fingerprint::Signature) -> Result<Option<Matc
         "geolocation": {},
     });
 
-    let url = format!(
-        "{HOST}/discovery/v5/zh/ZH/iphone/-/tag/{a}/{b}?sync=true&webv3=true&sampling=true&connected=&shazamapiversion=v3&sharehub=true&hubv5minorversion=v5.1&hidelb=true&video=v3",
-        a = uuid(),
-        b = uuid()
-    );
+    let url = tag_url("zh/TW", &uuid(), &uuid());
     let payload = serde_json::to_vec(&body).map_err(|error| format!("打包失敗:{error}"))?;
     let agent = agent().ok_or_else(|| "代理設定無效".to_string())?;
+    // 「zh/ZH」這種語系不是合法地區，Shazam 直接回 400；用 zh/TW，失敗再退 en/US。
+    let mut text = match post(&agent, &url, &payload) {
+        Ok(text) => text,
+        Err(Failure::Status(code, body)) if code == 400 => {
+            let fallback = tag_url("en/US", &uuid(), &uuid());
+            match post(&agent, &fallback, &payload) {
+                Ok(text) => text,
+                Err(Failure::Status(code, body)) => return Err(format!("HTTP {code}{body}")),
+                Err(Failure::Other(reason)) => return Err(reason),
+            }
+        }
+        Err(Failure::Status(code, body)) => return Err(format!("HTTP {code}{body}")),
+        Err(Failure::Other(reason)) => return Err(reason),
+    };
+    // 回應可能是壓縮或空字串；認不出歌時 body 會是空的 matches 陣列。
+    if text.trim().is_empty() {
+        return Err("回應為空".to_string());
+    }
+    text.shrink_to_fit();
+    Ok(parse(&text))
+}
+
+/// 組出辨識用的網址；`locale` 必須是「語言/地區」且地區存在（zh/ZH 會 400）。
+fn tag_url(locale: &str, a: &str, b: &str) -> String {
+    format!(
+        "{HOST}/discovery/v5/{locale}/iphone/-/tag/{a}/{b}?sync=true&webv3=true&sampling=true&connected=&shazamapiversion=v3&sharehub=true&hubv5minorversion=v5.1&hidelb=true&video=v3"
+    )
+}
+
+enum Failure {
+    /// 伺服器回的狀態碼，附上縮短的錯誤內容，診斷檔才看得出原因。
+    Status(u16, String),
+    Other(String),
+}
+
+fn post(agent: &ureq::Agent, url: &str, payload: &[u8]) -> Result<String, Failure> {
     let response = agent
-        .post(&url)
+        .post(url)
         .set("X-Shazam-Platform", "IPHONE")
         .set("X-Shazam-AppVersion", "14.1.0")
         .set("Accept", "*/*")
         .set("Accept-Language", "zh")
         .set("User-Agent", "Shazam/3685 CFNetwork/1197 Darwin/20.0.0")
         .set("Content-Type", "application/json")
-        .send_bytes(&payload);
-    let response = match response {
-        Ok(response) => response,
-        Err(ureq::Error::Status(code, _)) => return Err(format!("HTTP {code}")),
-        Err(error) => return Err(format!("連線失敗:{error}")),
-    };
-    let text = response
-        .into_string()
-        .map_err(|error| format!("讀取回應失敗:{error}"))?;
-    Ok(parse(&text))
+        .send_bytes(payload);
+    match response {
+        Ok(response) => response.into_string().map_err(|error| Failure::Other(format!("讀取回應失敗:{error}"))),
+        Err(ureq::Error::Status(code, response)) => {
+            let body = response.into_string().unwrap_or_default();
+            let excerpt = body.replace('\n', " ").trim().chars().take(120).collect::<String>();
+            Err(Failure::Status(code, if excerpt.is_empty() { String::new() } else { format!(":{excerpt}") }))
+        }
+        Err(error) => Err(Failure::Other(format!("連線失敗:{error}"))),
+    }
 }
 
 /// 解析 Shazam 回應；沒有 track 時視為未辨識。
@@ -158,6 +190,15 @@ mod tests {
     fn no_track_means_no_match() {
         assert!(parse(r#"{"matches":[]}"#).is_none());
         assert!(parse("not json").is_none());
+    }
+
+    #[test]
+    fn tag_url_uses_a_real_locale() {
+        let url = tag_url("zh/TW", "A", "B");
+        assert!(url.contains("/discovery/v5/zh/TW/iphone/-/tag/A/B"));
+        assert!(url.contains("sync=true"));
+        // zh/ZH 不是合法地區，Shazam 會回 400；任何改動都不能再寫回這個值。
+        assert!(!tag_url("zh/TW", "A", "B").contains("zh/ZH"));
     }
 
     #[test]
