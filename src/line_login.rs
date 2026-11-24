@@ -395,7 +395,7 @@ fn token_slot(slot: &str, action: TokenAction) -> Result<Option<String>, String>
     let entry = Entry::new("Kuidao.Line", slot).map_err(|_| "無法開啟 Windows 憑據管理器".to_string())?;
     match action {
         TokenAction::Read => Ok(entry.get_password().ok()),
-        TokenAction::Write(value) => entry.set_password(&value).map(|_| None).map_err(|_| "無法保存 LINE token".to_string()),
+        TokenAction::Write(value) => entry.set_password(&value).map(|_| None).map_err(|_| "無法儲存 LINE token".to_string()),
         TokenAction::Delete => {
             let _ = entry.delete_credential();
             Ok(None)
