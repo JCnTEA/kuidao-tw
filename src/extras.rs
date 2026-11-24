@@ -1,8 +1,15 @@
 //! 设置、通知队列与鬼島表情。
 use crate::settings_theme::color as settings_color;
 
-/// 台灣版開關：支援作者（贊助／收款碼）區塊是否顯示。
-const SUPPORT_SECTION_ENABLED: bool = false;
+/// 贊助頁：原本放在「關於」最底下的支援作者（收款碼）區塊，獨立成一頁，排在「關於」上面。
+/// 這一版先只掛在開發板，正式版先不上。
+pub(crate) const SETTINGS_TAB_SUPPORT: usize = 17;
+/// 贊助頁目前只掛開發版（建置時帶 KUIDAO_CHANNEL=dev）；正式版側欄先不出現這一頁。
+/// 測試環境一律視為開啟，才能驗證頁面本身畫得出來。
+pub(crate) fn support_page_enabled() -> bool {
+    if cfg!(test) { return true; }
+    matches!(option_env!("KUIDAO_CHANNEL"), Some("dev"))
+}
 use crate::app::{App, Cmd, Env, NotificationSound, Phase, HUD_TRACK_W, HUD_TRACK_X, HUD_W, PAGE_NAMES};
 use crate::paint::{Card, H};
 use crate::theme::{self, size, W};
@@ -763,7 +770,7 @@ mod tests {
 
     #[test]
     fn settings_groups_keep_every_page_reachable() {
-        let groups = ["通用", "音樂", "專注與健康", "專注與健康", "待辦與置物", "待辦與置物", "訊息提醒", "信箱", "行程", "關於", "頁面管理", "AI 額度", "天氣", "外觀", "位置", "遊戲"];
+        let groups = ["通用", "音樂", "專注與健康", "專注與健康", "待辦與置物", "待辦與置物", "訊息提醒", "信箱", "行程", "關於", "頁面管理", "AI 額度", "天氣", "外觀", "位置", "遊戲", "電量", "贊助"];
         for (tab, expected) in groups.iter().enumerate() {
             let matches: Vec<_> = SETTINGS_GROUPS.iter().filter(|(_,start,end,_)| (*start..=*end).contains(&tab)).collect();
             assert_eq!(matches.len(), 1, "頁面 {tab} 必須且只能屬於一個分組");
@@ -1472,13 +1479,13 @@ fn support_author(ui:&mut egui::Ui){
         .corner_radius(10.0).show(ui,|ui|{
             ui.set_min_width(ui.available_width());
             ui.vertical_centered(|ui|{
-                ui.add(egui::Image::new(egui::include_image!("../assets/support/daozai-coffee.svg")).fit_to_exact_size(egui::vec2(211.0,110.0)));
+                ui.add(egui::Image::new(egui::include_image!("../assets/support/kuidao-coffee.png")).fit_to_exact_size(egui::vec2(211.0,110.0)));
             });
         });
     ui.add_space(9.0);
-    ui.label(egui::RichText::new("小唐維護 · 鬼島陪伴").size(10.5).color(accent));
-    ui.label(egui::RichText::new("請小唐喝杯咖啡").size(19.0).strong());
-    ui.label("鬼島陪你認真生活，\n你的支援，陪小唐把它慢慢做好。");
+    ui.label(egui::RichText::new("鬼島維護 · 陪你生活").size(10.5).color(accent));
+    ui.label(egui::RichText::new("請作者喝杯咖啡").size(19.0).strong());
+    ui.label("鬼島陪你認真生活，\n你的支援，讓它慢慢變好。");
     } else {
         let ctx=ui.ctx().clone();
         // 只解码一次并裁出二维码区域，按实际显示像素缩小：原图解码后两张合计约 17MB，缩小后不到 1MB。
@@ -1586,10 +1593,10 @@ pub(crate) const SETTINGS_TAB_POSITION: usize = 14;
 /// 侧栏：一项就是一页，不再有页内子标签。专注与健康（2、3）、待办与置物（4、5）各合成一页；关于固定左下角。
 /// 第四列是这一项之前的分组标题。
 pub(crate) const SETTINGS_TAB_POWER: usize = 16;
-const SETTINGS_GROUPS: [(&str,usize,usize,&str);15] = [
+const SETTINGS_GROUPS: [(&str,usize,usize,&str);16] = [
     ("通用",0,0,"鬼島"), ("外觀",SETTINGS_TAB_APPEARANCE,SETTINGS_TAB_APPEARANCE,""), ("位置",SETTINGS_TAB_POSITION,SETTINGS_TAB_POSITION,""), ("頁面管理",10,10,""),
     ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("信箱",7,7,""), ("行程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("遊戲",15,15,""), ("電量",SETTINGS_TAB_POWER,SETTINGS_TAB_POWER,""),
-    ("關於",9,9,""),
+    ("贊助",SETTINGS_TAB_SUPPORT,SETTINGS_TAB_SUPPORT,""), ("關於",9,9,""),
 ];
 /// 分页标题；合并页（3→2、5→4）显示合并后的名字。
 fn settings_tab_title(tab:usize)->&'static str{
@@ -1597,6 +1604,8 @@ fn settings_tab_title(tab:usize)->&'static str{
 }
 #[cfg(test)]
 pub(crate) fn settings_tab_group_for_tests(tab:usize)->&'static str{settings_tab_title(tab)}
+#[cfg(test)]
+pub(crate) fn settings_group_names_for_tests()->Vec<&'static str>{SETTINGS_GROUPS.iter().map(|g|g.0).collect()}
 
 impl App {
     /// 功能页顶部卡片：名称、说明和开启状态。开关统一在「页面管理」；关闭时这里给出「开启」入口。
@@ -1663,20 +1672,27 @@ impl App {
             }
             if ctx.input(|i|i.viewport().close_requested()){self.settings_open=false;self.quota_close_connection();}
             let before=format!("{:?}",self.settings);
+            // 正式版沒有贊助頁：若上一次停在該頁（例如開發版留下的狀態），退回通用頁。
+            if self.settings_tab==SETTINGS_TAB_SUPPORT && !support_page_enabled() {self.settings_tab=0;}
             egui::SidePanel::left("settings-sidebar").resizable(false).exact_width(180.0).frame(egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(29,29,32),Color32::from_rgb(237,239,243))).stroke(egui::Stroke::NONE).inner_margin(egui::Margin::symmetric(10,12))).show(ctx,|ui|{
                 ui.add_space(2.0);
-                // 13 项加两个分组标题：窗口拉到最矮时按可用高度压缩行高，「关于」始终留在底部可见。
-                // 每项占 行高 + 控件间距(3) + 行后空隙；两个分组标题和「关于」上方预留约 80。
-                let per=(ui.available_height()-80.0)/SETTINGS_GROUPS.len() as f32;
-                let row_h=(per-6.0).clamp(20.0,32.0);
+                // 16 項加兩個分組標題：視窗拉到最矮時按可用高度壓縮行高，「贊助」與「關於」始終留在底部可見。
+                // 每項佔 行高 + 控件間距(3) + 行後空隙；兩個分組標題和底部兩頁上方預留約 80。
+                let rows=if support_page_enabled() {SETTINGS_GROUPS.len()} else {SETTINGS_GROUPS.len()-1};
+                let per=(ui.available_height()-80.0)/rows as f32;
+                // 多一頁後，最小視窗高度時 16 列要塞進側欄：行高下限跟著放寬到 17，兩列底部頁才不會被推出畫面。
+                let row_h=(per-6.0).clamp(17.0,32.0);
                 let row_gap=(per-3.0-row_h).clamp(0.0,3.0);
+                let bottom=if support_page_enabled() {SETTINGS_TAB_SUPPORT} else {9};
                 for (name,start,end,section) in SETTINGS_GROUPS {
+                    if start==SETTINGS_TAB_SUPPORT && !support_page_enabled() {continue;}
                     if !section.is_empty() {
                         ui.add_space(if start==0{2.0}else{8.0});
                         ui.label(egui::RichText::new(section).size(11.0).color(settings_color(ctx,Color32::from_gray(150),Color32::from_gray(105))));
                         ui.add_space(3.0);
                     }
-                    if start==9 {ui.add_space((ui.available_height()-row_h-4.0).max(4.0));}
+                    // 底部兩頁（贊助、關於）靠下對齊，中間留白全部吃掉。
+                    if start==bottom {ui.add_space((ui.available_height()-row_h*2.0-8.0).max(4.0));}
                     let selected=(start..=end).contains(&self.settings_tab);
                     let (rect,response)=ui.allocate_exact_size(egui::vec2(ui.available_width(),row_h),egui::Sense::click());
                     if response.clicked() && !selected{self.settings_tab=start;}
@@ -1698,6 +1714,7 @@ impl App {
                         SETTINGS_TAB_POWER=>egui::include_image!("../assets/settings-icons/system/pages.svg"),
                         SETTINGS_TAB_APPEARANCE=>egui::include_image!("../assets/settings-icons/system/appearance.svg"),
                         SETTINGS_TAB_POSITION=>egui::include_image!("../assets/settings-icons/system/position.svg"),
+                        SETTINGS_TAB_SUPPORT=>egui::include_image!("../assets/settings-icons/system/support.svg"),
                         _=>egui::include_image!("../assets/settings-icons/system/about.svg"),
                     };
                     let icon_bg=egui::Rect::from_center_size(egui::pos2(rect.left()+21.0,rect.center().y),egui::vec2(23.0,23.0));
@@ -2656,6 +2673,15 @@ impl App {
                             if close || modal.should_close() {self.calendar.form.open=false;}
                         }
                     }
+                    SETTINGS_TAB_SUPPORT=>{
+                        settings_label(ui,"贊助鬼島");
+                        settings_card(ui,|ui|{
+                            ui.label(egui::RichText::new("鬼島沒有訂閱制，也沒有廣告").size(13.0).strong());
+                            ui.add_space(2.0);
+                            ui.add(egui::Label::new(egui::RichText::new("下載、更新與全部功能都免費。如果它真的幫到你，可以用下面的收款碼請作者喝杯咖啡；完全自願，不影響任何功能。").size(11.0).color(settings_color(ctx,Color32::from_gray(175),Color32::from_gray(85)))).wrap());
+                        });
+                        settings_card(ui,support_author);
+                    }
                     _=>{
                         settings_label(ui,"鬼島 Kuidao 桌面靈動島");
                         settings_card(ui,|ui|{
@@ -2731,11 +2757,6 @@ impl App {
                                 }
                             }
                         });
-                        // 台灣版：不顯示「支援作者」與收款碼區塊
-                        if SUPPORT_SECTION_ENABLED{
-                            settings_label(ui,"支援作者");
-                            settings_card(ui,support_author);
-                        }
                     }
                     }
                 });

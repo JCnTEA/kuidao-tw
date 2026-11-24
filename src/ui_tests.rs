@@ -9612,7 +9612,7 @@ fn background_services_follow_the_module_switch(){
 
 #[test]
 fn every_module_settings_tab_maps_to_its_page(){
-    let titles=["通用","音樂","專注","健康","待辦","置物","訊息提醒","信箱","行程","關於","頁面管理","AI 額度","天氣","外觀","位置","遊戲","電量"];
+    let titles=["通用","音樂","專注","健康","待辦","置物","訊息提醒","信箱","行程","關於","頁面管理","AI 額度","天氣","外觀","位置","遊戲","電量","贊助"];
     let mut pages:Vec<_>=(0..titles.len()).filter_map(crate::extras::settings_tab_module).collect();
     for tab in 0..titles.len() {
         if let Some(page)=crate::extras::settings_tab_module(tab) {assert!(crate::app::PAGE_NAMES[page].chars().next()==titles[tab].chars().next(),"{} ↔ {}",titles[tab],crate::app::PAGE_NAMES[page]);}
