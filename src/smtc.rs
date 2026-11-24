@@ -338,7 +338,13 @@ fn choose_media_for_source(system:Option<NowPlaying>,native:Option<NowPlaying>,p
 
 #[cfg(windows)]
 fn query(artwork:&mut ArtworkCache) -> Option<NowPlaying> {
-    let result=query_system(artwork);artwork.system_result(result,std::time::Instant::now())
+    let result=query_system(artwork);
+    let system=artwork.system_result(result,std::time::Instant::now());
+    // 播放卡有「正在播放」的工作階段就直接用，時間軸與控制都最準。
+    if system.as_ref().is_some_and(|media|media.playing) {return system;}
+    // Windows 播放卡沒有登記瀏覽器分頁時（部分 Chrome／Edge 版本不註冊 SMTC），
+    // 改用音量混音器正在出聲的瀏覽器 + 視窗標題當後備來源。
+    crate::browser_media::probe().or(system)
 }
 
 #[cfg(windows)]

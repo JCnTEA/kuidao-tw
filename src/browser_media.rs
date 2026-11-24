@@ -1,0 +1,255 @@
+//! 瀏覽器分頁播放的後備來源。
+//!
+//! 有些 Windows 環境不會把 Chrome／Edge 的分頁音訊登記成 SMTC 媒體工作階段，
+//! 島因此只顯示「暫無音樂」。這裡改用「音量混音器裡正在出聲的瀏覽器程序 +
+//! 該程序視窗標題」推回歌名，讓瀏覽器播放也能上島。
+
+#[cfg(windows)]
+use crate::smtc::{MediaKind, NowPlaying};
+
+/// 支援的瀏覽器：程序檔名、視窗標題後綴、島上顯示的來源名稱。
+const BROWSERS: [(&str, &str, &str); 5] = [
+    ("chrome.exe", " - Google Chrome", "chrome.exe"),
+    ("msedge.exe", " - Microsoft Edge", "msedge.exe"),
+    ("firefox.exe", " - Mozilla Firefox", "firefox.exe"),
+    ("brave.exe", " - Brave", "brave.exe"),
+    ("opera.exe", " - Opera", "opera.exe"),
+];
+
+pub(crate) fn browser_for_exe(exe: &str) -> Option<(&'static str, &'static str)> {
+    let exe = exe.to_ascii_lowercase();
+    BROWSERS
+        .iter()
+        .find(|(name, _, _)| *name == exe)
+        .map(|(_, suffix, source)| (*suffix, *source))
+}
+
+/// 把瀏覽器視窗標題清成「歌手／歌名」。
+/// 常見樣式：`周杰倫 Jay Chou【稻香 Rice Field】-Official Music Video - YouTube - Google Chrome`。
+pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, String)> {
+    let mut title = raw.trim().to_string();
+    if let Some(stripped) = title.strip_suffix(browser_suffix) {
+        title = stripped.trim().to_string();
+    }
+    let mut album = String::new();
+    for (suffix, name) in [(" - YouTube Music", "YouTube Music"), (" - YouTube", "YouTube")] {
+        if let Some(stripped) = title.strip_suffix(suffix) {
+            title = stripped.trim().to_string();
+            album = name.to_string();
+            break;
+        }
+    }
+    for suffix in [
+        "-Official Music Video",
+        "- Official Music Video",
+        " - Official Music Video",
+        "-Official Audio",
+        " - Official Audio",
+        " - Official Video",
+    ] {
+        if let Some(stripped) = title.strip_suffix(suffix) {
+            title = stripped.trim().to_string();
+        }
+    }
+    title = title
+        .trim_matches(|c: char| c == '-' || c == '|' || c == '｜' || c.is_whitespace())
+        .to_string();
+    if title.is_empty() || title.contains("chrome://") || title.contains("edge://") {
+        return None;
+    }
+    // 「歌手【歌名】」是台灣 MV 常見格式；拆開後歌詞比對才不會被整串雜訊干擾。
+    if let (Some(open), Some(close)) = (title.find('【'), title.find('】')) {
+        if open < close {
+            let artist = title[..open].trim().to_string();
+            let song = title[open + '【'.len_utf8()..close].trim().to_string();
+            if !song.is_empty() {
+                return Some((song, artist, album));
+            }
+        }
+    }
+    Some((title, String::new(), album))
+}
+
+#[cfg(windows)]
+fn now_playing(source: &str, title: String, artist: String, album: String) -> NowPlaying {
+    NowPlaying {
+        title,
+        artist,
+        album,
+        source: source.to_string(),
+        song_id: None,
+        playing: true,
+        position: 0.0,
+        sampled_at: Some(std::time::Instant::now()),
+        event_time_ms: None,
+        duration: 0.0,
+        artwork: None,
+        playback_type: MediaKind::Music,
+        volume: None,
+    }
+}
+
+#[cfg(windows)]
+mod platform {
+    use super::*;
+    use windows::Win32::Foundation::{BOOL, CloseHandle, HWND, LPARAM};
+    use windows::Win32::Media::Audio::{
+        AudioSessionStateActive, IAudioSessionControl2, IAudioSessionManager2, IMMDeviceEnumerator,
+        ISimpleAudioVolume, MMDeviceEnumerator, DEVICE_STATE_ACTIVE, eRender,
+    };
+    use windows::Win32::System::Com::{CLSCTX_ALL, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx};
+    use windows::Win32::System::Threading::{
+        OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        EnumWindows, GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible,
+    };
+    use windows::core::PWSTR;
+
+    fn process_exe(pid: u32) -> Option<String> {
+        unsafe {
+            let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
+            let mut buffer = [0u16; 1024];
+            let mut size = buffer.len() as u32;
+            let result = QueryFullProcessImageNameW(handle, PROCESS_NAME_WIN32, PWSTR(buffer.as_mut_ptr()), &mut size);
+            let _ = CloseHandle(handle);
+            result.ok()?;
+            let full = String::from_utf16_lossy(&buffer[..size as usize]);
+            full.rsplit(['\\', '/']).next().map(str::to_string)
+        }
+    }
+
+    /// 音量混音器裡正在出聲、且沒靜音的瀏覽器來源名稱。
+    fn audible_browsers() -> Vec<&'static str> {
+        let mut found: Vec<&'static str> = Vec::new();
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let enumerator: IMMDeviceEnumerator = match CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) {
+                Ok(enumerator) => enumerator,
+                Err(_) => return found,
+            };
+            let Ok(devices) = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) else {
+                return found;
+            };
+            for d in 0..devices.GetCount().unwrap_or(0) {
+                let Ok(device) = devices.Item(d) else { continue };
+                let Ok(manager) = device.Activate::<IAudioSessionManager2>(CLSCTX_ALL, None) else { continue };
+                let Ok(sessions) = manager.GetSessionEnumerator() else { continue };
+                for s in 0..sessions.GetCount().unwrap_or(0) {
+                    let Ok(session) = sessions.GetSession(s) else { continue };
+                    if session.GetState().ok() != Some(AudioSessionStateActive) {
+                        continue;
+                    }
+                    let Ok(volume) = session.cast::<ISimpleAudioVolume>() else { continue };
+                    if volume.GetMute().ok().is_some_and(|muted| muted.as_bool()) {
+                        continue;
+                    }
+                    let Ok(control) = session.cast::<IAudioSessionControl2>() else { continue };
+                    let Ok(pid) = control.GetProcessId() else { continue };
+                    if pid == 0 {
+                        continue;
+                    }
+                    let Some(exe) = process_exe(pid) else { continue };
+                    if let Some((_, source)) = browser_for_exe(&exe) {
+                        if !found.contains(&source) {
+                            found.push(source);
+                        }
+                    }
+                }
+            }
+        }
+        found
+    }
+
+    #[derive(Default)]
+    struct Pick {
+        browsers: Vec<&'static str>,
+        best: Option<(String, &'static str, &'static str)>,
+    }
+
+    unsafe extern "system" fn visit(hwnd: HWND, param: LPARAM) -> BOOL {
+        let pick = unsafe { &mut *(param.0 as *mut Pick) };
+        if !unsafe { IsWindowVisible(hwnd) }.as_bool() {
+            return BOOL(1);
+        }
+        let mut pid = 0u32;
+        unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
+        if pid == 0 {
+            return BOOL(1);
+        }
+        let Some(exe) = process_exe(pid) else { return BOOL(1) };
+        let Some((suffix, source)) = browser_for_exe(&exe) else { return BOOL(1) };
+        if !pick.browsers.contains(&source) {
+            return BOOL(1);
+        }
+        let mut text = [0u16; 1024];
+        let len = unsafe { GetWindowTextW(hwnd, &mut text) };
+        if len <= 0 {
+            return BOOL(1);
+        }
+        let title = String::from_utf16_lossy(&text[..len as usize]);
+        if parse_title(&title, suffix).is_none() {
+            return BOOL(1);
+        }
+        let youtube = title.contains("YouTube");
+        let preferred = pick.best.as_ref().is_none_or(|(known, _, _)| !known.contains("YouTube"));
+        if youtube || preferred {
+            pick.best = Some((title, suffix, source));
+        }
+        BOOL(1)
+    }
+
+    pub fn probe() -> Option<NowPlaying> {
+        let browsers = audible_browsers();
+        if browsers.is_empty() {
+            return None;
+        }
+        let mut pick = Pick { browsers, best: None };
+        unsafe {
+            let _ = EnumWindows(Some(visit), LPARAM(&mut pick as *mut Pick as isize));
+        }
+        let (raw, suffix, source) = pick.best?;
+        let (title, artist, album) = parse_title(&raw, suffix)?;
+        Some(now_playing(source, title, artist, album))
+    }
+}
+
+#[cfg(not(windows))]
+mod platform {
+    pub fn probe() -> Option<crate::smtc::NowPlaying> {
+        None
+    }
+}
+
+pub use platform::probe;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_taiwan_mv_title() {
+        let (title, artist, album) = parse_title(
+            "周杰倫 Jay Chou【稻香 Rice Field】-Official Music Video - YouTube - Google Chrome",
+            " - Google Chrome",
+        )
+        .unwrap();
+        assert_eq!(title, "稻香 Rice Field");
+        assert_eq!(artist, "周杰倫 Jay Chou");
+        assert_eq!(album, "YouTube");
+    }
+
+    #[test]
+    fn parses_plain_youtube_title() {
+        let (title, artist, album) =
+            parse_title("A2O LITE 'NEON' Official Video - YouTube - Google Chrome", " - Google Chrome").unwrap();
+        assert_eq!(title, "A2O LITE 'NEON' Official Video");
+        assert!(artist.is_empty());
+        assert_eq!(album, "YouTube");
+    }
+
+    #[test]
+    fn ignores_empty_title() {
+        assert!(parse_title(" - Google Chrome", " - Google Chrome").is_none());
+    }
+}
