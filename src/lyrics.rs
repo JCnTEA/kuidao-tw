@@ -492,10 +492,19 @@ fn browser_cache_path(track:&str,artist:&str,duration:f64)->std::path::PathBuf {
 }
 
 fn fetch_browser(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError> {
-    let hints=youtube_lyric_hints(track,artist);
+    let mut hints=youtube_lyric_hints(track,artist);
     // 頻道空白或只寫「YouTube」時，候選可能整組為空；這時不能直接判定資訊不足，
     // 仍要用清洗後的歌名本體查一輪，否則單段標題的影片會完全抓不到歌詞。
     if track.trim().is_empty() && hints.is_empty() {return Err(FetchError::IncompleteMetadata);}
+    // 先用目錄正規名稱開路：YouTube 的頻道名、標題裝飾字常讓三家來源都對不上。
+    if !cfg!(test) {
+        if let Some((title,singer))=catalog_track(track,artist,duration) {
+            if (title!=track.trim() || singer!=artist.trim()) && !hints.contains(&(title.clone(),singer.clone())) {
+                trace(||format!("瀏覽器目錄正規化:{title} - {singer}"));
+                hints.insert(0,(title,singer));
+            }
+        }
+    }
     let path=browser_cache_path(track,artist,duration);
     if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"瀏覽器本機快取:命中".into());return Ok(lyrics);}
     let search_track=clean_youtube_title(track);
@@ -654,8 +663,17 @@ fn fetch_kkbox_impl(track:&str,artist:&str,duration:f64,hints:&[(String,String)]
     if !allow_fallback {
         return Err(last_error.unwrap_or(FetchError::NotFound));
     }
-    // KKBOX 沒有這首歌或取詞失敗時，仍走網易雲、QQ 音樂與 LRCLIB，避免整個來源直接空白。
-    let fallback=fetch(track,artist,duration);
+    // KKBOX 沒有這首歌、或權杖／API 被擋下時，仍走網易雲、QQ 音樂與 LRCLIB。
+    // 用 KKBOX 自己比對到的正式歌名與署名當提示，避免在地化譯名在別家資料庫查不到。
+    let mut fallback_hints=hints.to_vec();
+    for candidate in candidates.iter().take(2) {
+        if candidate.title.trim().is_empty(){continue;}
+        let pair=(candidate.title.clone(),candidate.artist.clone());
+        if !fallback_hints.contains(&pair){fallback_hints.push(pair);}
+    }
+    let fallback=fetch_with_sources_detail_hints(
+        Some("https://music.163.com"),Some("https://c.y.qq.com"),Some("https://lrclib.net"),
+        track,artist,duration,&fallback_hints).0;
     if matches!(&fallback,Err(FetchError::NotFound)){write_negative(&path,None);}
     match (&fallback,&last_error) {
         (Ok(lyrics),_)=>Ok(lyrics.clone()),
@@ -972,6 +990,55 @@ fn catalog_alias(track:&str,artist:&str,duration:f64)->Option<(String,String)> {
     catalog_alias_from_items(result.get("results")?.as_array()?,track,artist,duration)
 }
 
+/// 把播放器给的字串對回 Apple／Shazam 目錄的正式條目，當作查詞的「正規名稱」提示。
+/// 與 `catalog_alias` 不同：不要求譯名成對、歌手也不要求完全一致，只要歌名對得上、
+/// 時長接近、歌手互為別名即可；這樣 YouTube 頻道名、KKBOX 的「歌手／專輯」後綴、
+/// Spotify 的縮寫藝名都能被還原，交给 LRCLIB 等來源精準命中。
+fn catalog_track(track:&str,artist:&str,duration:f64)->Option<(String,String)> {
+    if track.trim().is_empty(){return None;}
+    static CACHE:std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String,Option<(String,String)>>>>=std::sync::OnceLock::new();
+    let key=format!("{}|{}|{}",normalized(track),normalized(artist),(duration*10.0).round()as i64);
+    let cache=CACHE.get_or_init(||std::sync::Mutex::new(std::collections::HashMap::new()));
+    if let Ok(guard)=cache.lock() {if let Some(hit)=guard.get(&key){return hit.clone();}}
+    let answer=catalog_track_lookup(track,artist,duration);
+    if let Ok(mut guard)=cache.lock() {if guard.len()<200{guard.insert(key,answer.clone());}}
+    answer
+}
+
+fn catalog_track_lookup(track:&str,artist:&str,duration:f64)->Option<(String,String)> {
+    let term=if artist.trim().is_empty(){track.to_owned()}else{format!("{track} {artist}")};
+    let url=format!("https://itunes.apple.com/search?term={}&entity=song&country=TW&limit=25",urlencode(&term));
+    let result=request_json(&url,"https://itunes.apple.com").ok()?;
+    catalog_track_from_items(result.get("results")?.as_array()?,track,artist,duration)
+}
+
+fn catalog_track_from_items(items:&[serde_json::Value],track:&str,artist:&str,duration:f64)->Option<(String,String)> {
+    let played=song_identity(track,artist);
+    let mut best:Option<(f64,String,String)>=None;
+    for item in items {
+        let (Some(name),Some(singer))=(item.get("trackName").and_then(|v|v.as_str()),item.get("artistName").and_then(|v|v.as_str())) else{continue;};
+        let millis=item.get("trackTimeMillis").and_then(|v|v.as_f64()).unwrap_or_default();
+        let candidate=song_identity(name,singer);
+        if candidate.0.is_empty(){continue;}
+        let title_matches=candidate.0==played.0
+            || (candidate.0.chars().count()>=2 && played.0.chars().count()>=2
+                && (candidate.0.contains(&played.0) || played.0.contains(&candidate.0)))
+            || translated_title_pair(&played.0,&candidate.0);
+        if !title_matches {continue;}
+        if !played.1.is_empty() && !artist_alias_match(&played,&candidate) {
+            // 目錄可能用英文名收中文歌（周杰倫→Jay Chou），這時只靠時長把關。
+            let cross_script=!played.1.is_empty() && artist_script_pair(&played,&candidate)
+                && duration>0.0 && millis>0.0 && (millis/1000.0-duration).abs()<=6.0;
+            if !cross_script {continue;}
+        }
+        let delta=if duration>0.0 && millis>0.0 {(millis/1000.0-duration).abs()} else {0.0};
+        // 目錄有精確秒數時要求接近，避免把同一歌手的另一首歌當成別名。
+        if duration>0.0 && millis>0.0 && delta>(duration*0.05).max(6.0){continue;}
+        if best.as_ref().is_none_or(|(kept,_,_)|delta<*kept) {best=Some((delta,name.to_owned(),singer.to_owned()));}
+    }
+    best.map(|(_,name,singer)|(name,singer))
+}
+
 /// 在线找词：先按播放器给的歌名、歌手找；落空时再按两种兜底各试一次——
 /// 歌手为空时从标题里拆出歌手（两种顺序），以及去掉节目 / 版本标注（只在有时长时，靠时长校验避免套错版本）。
 /// 有来源断网或限流时不再追加尝试，免得一首歌放大成多倍请求。
@@ -1113,6 +1180,15 @@ fn translated_title_pair(played:&str,candidate:&str)->bool {
     let han=|text:&str|text.chars().any(crate::zh::is_han);
     let latin=|text:&str|text.chars().any(|c|c.is_ascii_alphabetic());
     han(played)!=han(candidate) && (han(played)&&latin(candidate) || latin(played)&&han(candidate))
+}
+
+/// 兩邊歌手一個是漢字名、一個是拉丁名（例如「周杰倫」與「Jay Chou」）。
+/// 只拿來判斷目錄是否有另一種語言的寫法，呼叫端仍需用時長嚴格把關。
+fn artist_script_pair(played:&(String,Vec<String>),candidate:&(String,Vec<String>))->bool {
+    let han=|text:&str|text.chars().any(crate::zh::is_han);
+    let latin=|text:&str|text.chars().any(|c|c.is_ascii_alphabetic());
+    let (a,b)=(played.1.join(""),candidate.1.join(""));
+    (han(&a)&&latin(&b)&&!latin(&a)) || (latin(&a)&&han(&b)&&!latin(&b))
 }
 
 fn netease_candidates(items:&[serde_json::Value],track:&str,artist:&str,duration:f64)->Vec<u64> {
@@ -1299,17 +1375,47 @@ fn lrclib_matches(items:Vec<serde_json::Value>,track:&str,identity:&(String,Vec<
         credit_match(identity,track,&song_identity(name,singer),lead_only)
     }).cloned().collect::<Vec<_>>();
     let strict=pick(false);
-    if strict.is_empty(){pick(true)}else{strict}
+    if !strict.is_empty(){return strict;}
+    let lead=pick(true);
+    if !lead.is_empty(){return lead;}
+    // 最後一輪：別名（「周杰倫 Official」對「周杰倫」）與跨語言藝名（「周杰倫」對「JAY CHOU」）。
+    // 這一輪不再要求歌手字串相同，改由 `lyrics_from_items` 的時長容差把關。
+    let identity_owned=identity.clone();
+    items.into_iter().filter(|item|{
+        let name=item.get("trackName").and_then(|v|v.as_str()).unwrap_or_default();
+        let singer=item.get("artistName").and_then(|v|v.as_str()).unwrap_or_default();
+        let candidate=song_identity(name,singer);
+        let title_matches=candidate.0==identity_owned.0 || translated_title_pair(&identity_owned.0,&candidate.0);
+        title_matches && (artist_alias_match(&identity_owned,&candidate) || artist_script_pair(&identity_owned,&candidate))
+    }).collect()
 }
 
 fn search(base:&str,track:&str,artist:&str)->Result<Vec<serde_json::Value>,FetchError> {
-    let url = format!(
+    let strict=format!(
         "{base}/api/search?track_name={}&artist_name={}",
         urlencode(track),
         urlencode(artist)
     );
-    let arr=request_json(&url,base)?;
-    arr.as_array().cloned().ok_or_else(||FetchError::InvalidResponse("預期歌詞列表".into()))
+    // 歌手欄常和資料庫寫法不同（譯名、YouTube 頻道名、feat 署名、唱片公司後綴），
+    // 精準查詢落空時改用 LRCLIB 的自由關鍵字檢索，才不會明明有詞卻回「找不到」。
+    let keyword=format!("{base}/api/search?q={}",urlencode(&format!("{track} {artist}")));
+    let title_only=format!("{base}/api/search?q={}",urlencode(track));
+    let mut failure=None;
+    let mut saw_empty=false;
+    for url in [strict,keyword,title_only] {
+        match request_json(&url,base) {
+            Ok(arr)=>match arr.as_array() {
+                Some(items) if !items.is_empty()=>return Ok(items.clone()),
+                Some(_)=>{saw_empty=true;}
+                None=>{failure.get_or_insert(FetchError::InvalidResponse("預期歌詞列表".into()));}
+            },
+            Err(error)=>{failure.get_or_insert(error);}
+        }
+    }
+    // 後備查詢斷線不代表沒有歌詞：只要有一次查詢成功但結果為空，就照「未找到」處理，
+    // 避免把可快取的缺詞變成每次重試的網路錯誤。
+    if saw_empty {return Err(FetchError::NotFound);}
+    match failure {Some(error)=>Err(error),None=>Err(FetchError::NotFound)}
 }
 
 fn lyrics_from_items(items:&[serde_json::Value],track:&str,duration_secs:f64)->Result<Lyrics,FetchError> {
@@ -1999,6 +2105,33 @@ mod tests {
         let lyrics=fetch("Loop","雄之助",0.0).expect("應能找到 Loop - 雄之助、WaMi 的歌詞");
         println!("找到 {} 行，同步={}",lyrics.lines.len(),lyrics.synced);
         assert!(lyrics.synced && !lyrics.lines.is_empty());
+    }
+
+    #[test]
+    fn catalog_track_normalizes_channel_and_localized_names(){
+        let items=serde_json::json!([
+            {"trackName":"晴天","artistName":"周杰倫","trackTimeMillis":269000},
+            {"trackName":"晴天 (Live)","artistName":"周杰倫","trackTimeMillis":300000},
+            {"trackName":"晴天","artistName":"其他歌手","trackTimeMillis":269000}
+        ]);
+        // 播放器只給 YouTube 風格的頻道名：仍能對回正式條目。
+        assert_eq!(catalog_track_from_items(items.as_array().unwrap(),"晴天【官方MV】","周杰倫 Official",270.0),Some(("晴天".into(),"周杰倫".into())));
+        // 時長差太多時不採用，避免把演唱會版套進來。
+        assert_eq!(catalog_track_from_items(items.as_array().unwrap(),"晴天","周杰倫",330.0),None);
+        // 歌手不同不採用。
+        assert_eq!(catalog_track_from_items(items.as_array().unwrap(),"晴天","五月天",270.0),None);
+        // 譯名成對（中文歌名／英文藝名）也能還原。
+        let translated=serde_json::json!([{"trackName":"晴天","artistName":"Jay Chou","trackTimeMillis":269000}]);
+        assert_eq!(catalog_track_from_items(translated.as_array().unwrap(),"晴天","周杰倫",270.0),Some(("晴天".into(),"Jay Chou".into())));
+    }
+
+    #[test]
+    fn lrclib_search_falls_back_to_keywords_when_artist_differs(){
+        // 精準查詢（track_name／artist_name）沒有結果時，改用整串關鍵字才找得到。
+        let items=r#"[{"trackName":"晴天","artistName":"周杰倫","duration":269,"syncedLyrics":"[00:01.00]first"}]"#;
+        let (base,worker)=serve(vec![("200 OK","[]".into()),("200 OK",items.into())]);
+        assert!(fetch_from(&base,"晴天","周杰倫 Official",269.0).unwrap().synced);
+        worker.join().unwrap();
     }
 
     #[test]
