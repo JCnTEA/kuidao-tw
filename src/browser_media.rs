@@ -33,7 +33,12 @@ pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, S
         None => raw.trim_start().to_string(),
     };
     let mut album = String::new();
-    for (suffix, name) in [(" - YouTube Music", "YouTube Music"), (" - YouTube", "YouTube")] {
+    for (suffix, name) in [
+        (" - YouTube Music", "YouTube Music"),
+        (" - YouTube", "YouTube"),
+        (" - KKBOX", "KKBOX"),
+        (" | KKBOX", "KKBOX"),
+    ] {
         if let Some(stripped) = title.strip_suffix(suffix) {
             title = stripped.trim().to_string();
             album = name.to_string();

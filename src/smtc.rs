@@ -117,6 +117,8 @@ impl NowPlaying {
         if ["chrome","msedge","firefox","brave","opera"].iter().any(|name|source.contains(name)) {
             let album=self.album.trim().to_lowercase();
             if ["youtube","bilibili","抖音","嗶哩嗶哩"].contains(&album.as_str()){return MediaKind::Video;}
+            // 網頁版 KKBOX／Spotify 的歌名就在視窗標題裡，專輯欄被填成服務名，仍要當成歌曲。
+            if ["kkbox","spotify","spotify web"].contains(&album.as_str()){return MediaKind::Music;}
             // 视频作者也可能被放进 Artist；浏览器缺少专辑信息时不自动认作歌曲。
             if album.is_empty(){return MediaKind::Unknown;}
         }
@@ -341,7 +343,7 @@ fn query(artwork:&mut ArtworkCache) -> Option<NowPlaying> {
     let result=query_system(artwork);
     let system=artwork.system_result(result,std::time::Instant::now());
     // 播放卡有「正在播放」的工作階段就直接用，時間軸與控制都最準。
-    if system.as_ref().is_some_and(|media|media.playing) {return system;}
+    if system.as_ref().is_some_and(|media|media.playing && !media.title.trim().is_empty()) {return system;}
     // Windows 播放卡沒有登記瀏覽器分頁時（部分 Chrome／Edge 版本不註冊 SMTC），
     // 改用音量混音器正在出聲的瀏覽器 + 視窗標題當後備來源。
     crate::browser_media::probe().or(system)
