@@ -3,7 +3,7 @@ name: Build Windows Dev (Taiwan)
 on:
   workflow_dispatch:
   push:
-    branches: [feat/dev-icon]
+    branches: [main, feat/dev-icon]
 
 jobs:
   build:
