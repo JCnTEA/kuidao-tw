@@ -1492,8 +1492,8 @@ fn support_author(ui:&mut egui::Ui){
         let pixels=((180.0*ctx.pixels_per_point()).ceil() as u32).clamp(180,600);
         ui.columns(2,|columns|{
             for (i,(name,bytes,crop,color)) in [
-                ("微信支付",include_bytes!("../assets/support/support-wechat-original.jpg").as_slice(),[330.0,370.0,600.0],Color32::from_rgb(5,160,80)),
-                ("支付寶",include_bytes!("../assets/support/support-alipay-original.jpg").as_slice(),[200.0,660.0,860.0],Color32::from_rgb(22,120,255)),
+                ("綠界贊助",include_bytes!("../assets/support/support-ecpay-qr.png").as_slice(),[0.0,0.0,200.0],Color32::from_rgb(0,150,105)),
+                ("支付寶",include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),[0.0,0.0,600.0],Color32::from_rgb(22,120,255)),
             ].into_iter().enumerate(){
                 let texture_id=egui::Id::new(("support-author-qr",i));
                 let texture=ctx.data_mut(|data|data.get_temp::<egui::TextureHandle>(texture_id)).filter(|texture|texture.size()==[pixels as usize;2]).unwrap_or_else(||{
@@ -1506,7 +1506,7 @@ fn support_author(ui:&mut egui::Ui){
                     ui.label(egui::RichText::new(name).color(color).strong());
                     let side=ui.available_width().min(180.0);
                     ui.add(egui::Image::new((texture.id(),egui::vec2(side,side))).uv(uv));
-                    ui.label(egui::RichText::new(if i==0{"開啟微信掃一掃"}else{"開啟支付寶掃一掃"}).size(11.0));
+                    ui.label(egui::RichText::new(if i==0{"掃碼前往綠界贊助頁"}else{"打開支付寶掃一掃"}).size(11.0));
                 });
             }
         });
@@ -2645,19 +2645,24 @@ impl App {
                                 .fill(if busy{settings_color(ctx,Color32::from_rgb(70,70,76),Color32::from_rgb(213,219,227))}else{Color32::from_rgb(45,105,165)})
                                 .corner_radius(7.0);
                             if ui.add_enabled_ui(!busy,|ui|ui.add_sized([130.0,32.0],btn)).inner.clicked(){
-                                let user=self.calendar.form.username.trim().to_string();
+                                // Google 的 CalDAV 只認完整信箱：只填名稱時自動補上 @gmail.com，並回填欄位讓使用者看到。
+                                let user=crate::calendar::normalize_username(self.calendar.form.provider,&self.calendar.form.username);
+                                self.calendar.form.username=user.clone();
                                 let custom=self.calendar.form.provider.custom_server();
                                 let server=crate::calendar::normalize_server(&self.calendar.form.server);
                                 if custom && server.is_none(){self.calendar.note="請填寫以 https:// 開頭的 CalDAV 伺服器地址".into();self.calendar.note_error=true;}
                                 else if user.is_empty(){self.calendar.note="請先填使用者名稱".into();self.calendar.note_error=true;}
                                 else if self.calendar.form.password.is_empty(){self.calendar.note="請先填密碼".into();self.calendar.note_error=true;}
                                 else{
+                                    // Google／iCloud 的 16 碼應用程式密碼常被複製成四組、夾著空白，清掉才驗得過。
+                                    let password=crate::calendar::normalize_password(self.calendar.form.provider,&self.calendar.form.password);
+                                    self.calendar.form.password=password.clone();
                                     let cfg=crate::calendar::Config{provider:self.calendar.form.provider,username:user,href:None,server:if custom{server}else{None}};
                                     self.calendar.testing=true;
-                                    self.calendar.test_password=self.calendar.form.password.clone();
+                                    self.calendar.test_password=password.clone();
                                     self.calendar.note="正在連線行事曆…".into();
                                     self.calendar.note_error=false;
-                                    self.pending.push(Cmd::CalendarTest(cfg,self.calendar.form.password.clone()));
+                                    self.pending.push(Cmd::CalendarTest(cfg,password));
                                 }
                             }
                             ui.add_space(5.0);
@@ -2784,7 +2789,7 @@ fn support_code_image(bytes:&[u8],crop:[f32;3],pixels:u32)->egui::ColorImage {
 
 #[test]
 fn support_codes_are_cropped_small_and_released_when_hidden(){
-    for (bytes,crop) in [(include_bytes!("../assets/support/support-wechat-original.jpg").as_slice(),[330.0,370.0,600.0]),(include_bytes!("../assets/support/support-alipay-original.jpg").as_slice(),[200.0,660.0,860.0])] {
+    for (bytes,crop) in [(include_bytes!("../assets/support/support-ecpay-qr.png").as_slice(),[0.0,0.0,200.0]),(include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),[0.0,0.0,600.0])] {
         let image=support_code_image(bytes,crop,360);
         assert_eq!(image.size,[360,360]);
         assert!(image.pixels.len()*4<=600*1024,"每張收款碼貼圖應小於 0.6MB");

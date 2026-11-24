@@ -118,7 +118,7 @@ impl NowPlaying {
             let album=self.album.trim().to_lowercase();
             if ["youtube","bilibili","抖音","嗶哩嗶哩"].contains(&album.as_str()){return MediaKind::Video;}
             // 網頁版 KKBOX／Spotify 的歌名就在視窗標題裡，專輯欄被填成服務名，仍要當成歌曲。
-            if ["kkbox","spotify","spotify web"].contains(&album.as_str()){return MediaKind::Music;}
+            if ["kkbox","spotify","spotify web","網頁播放"].contains(&album.as_str()){return MediaKind::Music;}
             // 视频作者也可能被放进 Artist；浏览器缺少专辑信息时不自动认作歌曲。
             if album.is_empty(){return MediaKind::Unknown;}
         }
