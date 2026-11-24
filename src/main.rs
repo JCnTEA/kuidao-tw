@@ -1,6 +1,7 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
 //! Windows 外壳：无边框透明窗口 + 托盘 + 系统数据，界面全部交给 `daozai::app::App`。
 
+mod guard;
 use eframe::egui::{self, Color32, Pos2};
 use daozai::app::{self, App, Cmd, Env, Options};
 use daozai::smtc;
@@ -1084,6 +1085,8 @@ fn run() -> eframe::Result<()> {
     }
     #[cfg(windows)]
     std::thread::spawn(daozai::record_install_size);
+    #[cfg(windows)]
+    if option_env!("KUIDAO_CHANNEL")==Some("dev") && !guard::require_code() { return Ok(()); }
     diagnostics::startup("初始化圖形視窗");
     let viewport = egui::ViewportBuilder::default()
         .with_title("鬼島").with_icon(daozai::theme::app_icon())
