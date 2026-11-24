@@ -4,6 +4,12 @@ use crate::settings_theme::color as settings_color;
 /// 贊助頁：原本放在「關於」最底下的支援作者（收款碼）區塊，獨立成一頁，排在「關於」上面。
 /// 這一版先只掛在開發板，正式版先不上。
 pub(crate) const SETTINGS_TAB_SUPPORT: usize = 17;
+/// 贊助頁目前只掛開發版（建置時帶 KUIDAO_CHANNEL=dev）；正式版側欄先不出現這一頁。
+/// 測試環境一律視為開啟，才能驗證頁面本身畫得出來。
+pub(crate) fn support_page_enabled() -> bool {
+    if cfg!(test) { return true; }
+    matches!(option_env!("KUIDAO_CHANNEL"), Some("dev"))
+}
 use crate::app::{App, Cmd, Env, NotificationSound, Phase, HUD_TRACK_W, HUD_TRACK_X, HUD_W, PAGE_NAMES};
 use crate::paint::{Card, H};
 use crate::theme::{self, size, W};
@@ -1666,22 +1672,27 @@ impl App {
             }
             if ctx.input(|i|i.viewport().close_requested()){self.settings_open=false;self.quota_close_connection();}
             let before=format!("{:?}",self.settings);
+            // 正式版沒有贊助頁：若上一次停在該頁（例如開發版留下的狀態），退回通用頁。
+            if self.settings_tab==SETTINGS_TAB_SUPPORT && !support_page_enabled() {self.settings_tab=0;}
             egui::SidePanel::left("settings-sidebar").resizable(false).exact_width(180.0).frame(egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(29,29,32),Color32::from_rgb(237,239,243))).stroke(egui::Stroke::NONE).inner_margin(egui::Margin::symmetric(10,12))).show(ctx,|ui|{
                 ui.add_space(2.0);
                 // 16 項加兩個分組標題：視窗拉到最矮時按可用高度壓縮行高，「贊助」與「關於」始終留在底部可見。
                 // 每項佔 行高 + 控件間距(3) + 行後空隙；兩個分組標題和底部兩頁上方預留約 80。
-                let per=(ui.available_height()-80.0)/SETTINGS_GROUPS.len() as f32;
+                let rows=if support_page_enabled() {SETTINGS_GROUPS.len()} else {SETTINGS_GROUPS.len()-1};
+                let per=(ui.available_height()-80.0)/rows as f32;
                 // 多一頁後，最小視窗高度時 16 列要塞進側欄：行高下限跟著放寬到 17，兩列底部頁才不會被推出畫面。
                 let row_h=(per-6.0).clamp(17.0,32.0);
                 let row_gap=(per-3.0-row_h).clamp(0.0,3.0);
+                let bottom=if support_page_enabled() {SETTINGS_TAB_SUPPORT} else {9};
                 for (name,start,end,section) in SETTINGS_GROUPS {
+                    if start==SETTINGS_TAB_SUPPORT && !support_page_enabled() {continue;}
                     if !section.is_empty() {
                         ui.add_space(if start==0{2.0}else{8.0});
                         ui.label(egui::RichText::new(section).size(11.0).color(settings_color(ctx,Color32::from_gray(150),Color32::from_gray(105))));
                         ui.add_space(3.0);
                     }
                     // 底部兩頁（贊助、關於）靠下對齊，中間留白全部吃掉。
-                    if start==SETTINGS_TAB_SUPPORT {ui.add_space((ui.available_height()-row_h*2.0-8.0).max(4.0));}
+                    if start==bottom {ui.add_space((ui.available_height()-row_h*2.0-8.0).max(4.0));}
                     let selected=(start..=end).contains(&self.settings_tab);
                     let (rect,response)=ui.allocate_exact_size(egui::vec2(ui.available_width(),row_h),egui::Sense::click());
                     if response.clicked() && !selected{self.settings_tab=start;}
