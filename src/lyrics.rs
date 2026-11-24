@@ -1354,16 +1354,20 @@ fn search(base:&str,track:&str,artist:&str)->Result<Vec<serde_json::Value>,Fetch
     let keyword=format!("{base}/api/search?q={}",urlencode(&format!("{track} {artist}")));
     let title_only=format!("{base}/api/search?q={}",urlencode(track));
     let mut failure=None;
+    let mut saw_empty=false;
     for url in [strict,keyword,title_only] {
         match request_json(&url,base) {
             Ok(arr)=>match arr.as_array() {
                 Some(items) if !items.is_empty()=>return Ok(items.clone()),
-                Some(_)=>{}
+                Some(_)=>{saw_empty=true;}
                 None=>{failure.get_or_insert(FetchError::InvalidResponse("預期歌詞列表".into()));}
             },
             Err(error)=>{failure.get_or_insert(error);}
         }
     }
+    // 後備查詢斷線不代表沒有歌詞：只要有一次查詢成功但結果為空，就照「未找到」處理，
+    // 避免把可快取的缺詞變成每次重試的網路錯誤。
+    if saw_empty {return Err(FetchError::NotFound);}
     match failure {Some(error)=>Err(error),None=>Err(FetchError::NotFound)}
 }
 
