@@ -2645,7 +2645,9 @@ impl App {
                                 .fill(if busy{settings_color(ctx,Color32::from_rgb(70,70,76),Color32::from_rgb(213,219,227))}else{Color32::from_rgb(45,105,165)})
                                 .corner_radius(7.0);
                             if ui.add_enabled_ui(!busy,|ui|ui.add_sized([130.0,32.0],btn)).inner.clicked(){
-                                let user=self.calendar.form.username.trim().to_string();
+                                // Google 的 CalDAV 只認完整信箱：只填名稱時自動補上 @gmail.com，並回填欄位讓使用者看到。
+                                let user=crate::calendar::normalize_username(self.calendar.form.provider,&self.calendar.form.username);
+                                self.calendar.form.username=user.clone();
                                 let custom=self.calendar.form.provider.custom_server();
                                 let server=crate::calendar::normalize_server(&self.calendar.form.server);
                                 if custom && server.is_none(){self.calendar.note="請填寫以 https:// 開頭的 CalDAV 伺服器地址".into();self.calendar.note_error=true;}

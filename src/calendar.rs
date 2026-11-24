@@ -89,7 +89,7 @@ impl Provider {
             Provider::Google => [
                 "用瀏覽器開啟 myaccount.google.com，登入 Google 帳戶",
                 "安全性 → 兩步驟驗證 → 應用程式密碼，產生一組密碼（名稱可填「鬼島」）",
-                "使用者名稱填 Gmail 地址，密碼填剛產生的應用程式密碼",
+                "使用者名稱要填完整 Gmail 地址（name@gmail.com），密碼填剛產生的 16 碼應用程式密碼",
             ],
             Provider::ICloud => [
                 "用瀏覽器開啟 account.apple.com，登入 Apple 帳戶",
@@ -140,6 +140,15 @@ impl Config {
     pub fn base(&self) -> String {
         self.server.clone().unwrap_or_else(|| self.provider.server().to_string())
     }
+}
+
+/// 使用者名稱正規化：Google 的 CalDAV 只認完整信箱，只填 `名稱` 會回 401。
+/// 貼上一整段帳號資訊時也順便清掉全形＠與多餘空白。
+pub fn normalize_username(provider: Provider, raw: &str) -> String {
+    let user = raw.trim().replace('＠', "@").replace(' ', "");
+    if user.is_empty() { return user; }
+    if provider == Provider::Google && !user.contains('@') { return format!("{user}@gmail.com"); }
+    user
 }
 
 /// 自定义 CalDAV 地址：去掉空白，补全 https://；只接受 https（本机回环地址允许 http）。
@@ -398,6 +407,7 @@ impl Failure {
     fn status(provider: Provider, code: u16) -> Self {
         let message = match code {
             401 if provider.custom_server() => "驗證帳號失敗（401），請核對使用者名稱和密碼".to_string(),
+            401 if provider == Provider::Google => "驗證帳號失敗（401），請核對使用者名稱和Google提供的專用密碼（使用者名稱要填完整 Gmail 地址，例如 name@gmail.com）".to_string(),
             401 => format!("驗證帳號失敗（401），請核對使用者名稱和{}提供的專用密碼", provider.label()),
             403 => "行事曆伺服器拒絕訪問（403），請核對同步地址、專用密碼及行事曆授權".to_string(),
             404 => "伺服器地址不對（404）".to_string(),
@@ -1282,6 +1292,16 @@ pub fn human_error(provider: Provider, status: Option<u16>) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn google_username_gains_full_address() {
+        use super::{normalize_username, Provider};
+        assert_eq!(normalize_username(Provider::Google, " love126957 "), "love126957@gmail.com");
+        assert_eq!(normalize_username(Provider::Google, "love126957＠gmail.com"), "love126957@gmail.com");
+        assert_eq!(normalize_username(Provider::Google, "name@gmail.com"), "name@gmail.com");
+        assert_eq!(normalize_username(Provider::ICloud, "someone"), "someone");
+        assert_eq!(normalize_username(Provider::Custom, ""), "");
+    }
+
     fn serve_calendar_discovery(listener:&std::net::TcpListener){
         use std::io::Write;
         let (mut socket,_)=listener.accept().unwrap();
@@ -1853,7 +1873,8 @@ mod tests {
 
     #[test]
     fn error_messages_are_human() {
-        assert_eq!(Failure::status(Provider::Google, 401).message, "驗證帳號失敗（401），請核對使用者名稱和Google提供的專用密碼");
+        assert!(Failure::status(Provider::Google, 401).message.starts_with("驗證帳號失敗（401），請核對使用者名稱和Google提供的專用密碼"));
+        assert!(Failure::status(Provider::Google, 401).message.contains("完整 Gmail 地址"));
         assert_eq!(Failure::status(Provider::ICloud, 401).message, "驗證帳號失敗（401），請核對使用者名稱和iCloud提供的專用密碼");
         assert_eq!(Failure::status(Provider::Exchange, 401).message, "驗證帳號失敗（401），請核對使用者名稱和密碼");
         assert_eq!(Failure::status(Provider::Custom, 401).message, "驗證帳號失敗（401），請核對使用者名稱和密碼");
