@@ -30,7 +30,10 @@ fn find_rc() -> Option<PathBuf> {
 }
 
 fn main() {
+    let rc_source = env::var("KUIDAO_RC").unwrap_or_else(|_| "app.rc".into());
     println!("cargo:rerun-if-changed=app.rc");
+    println!("cargo:rerun-if-changed=app.dev.rc");
+    println!("cargo:rerun-if-env-changed=KUIDAO_RC");
     println!("cargo:rerun-if-changed=assets/kuidao.ico");
     println!("cargo:rerun-if-changed=assets/kuidao_logo.ico");
     println!("cargo:rerun-if-changed=assets/kuidao_dev.ico");
@@ -47,7 +50,7 @@ fn main() {
             let status = Command::new(&windres)
                 .arg("-I").arg(".")
                 .arg("--codepage=65001")
-                .arg("app.rc").arg("-O").arg("coff").arg("-o").arg(&obj)
+                .arg(&rc_source).arg("-O").arg("coff").arg("-o").arg(&obj)
                 .status();
             if status.map(|s| s.success()).unwrap_or(false) {
                 println!("cargo:rustc-link-arg={}", obj.display());
@@ -63,7 +66,7 @@ fn main() {
         .arg("/nologo")
         .arg("/fo")
         .arg(&out)
-        .arg("app.rc")
+        .arg(&rc_source)
         .status();
     if !status.map(|s| s.success()).unwrap_or(false) {
         println!("cargo:warning=rc.exe 编译 app.rc 失败");

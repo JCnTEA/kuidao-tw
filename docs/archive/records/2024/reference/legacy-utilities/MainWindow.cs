@@ -2,12 +2,20 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Threading;
 
 namespace KuidaoMonitor;
 
 public sealed class MainWindow : Window
 {
+  private const bool DevBuild =
+#if DEV_BUILD
+    true;
+#else
+    false;
+#endif
+
   private readonly ProcessService _process = new();
   private readonly NetworkService _network = new();
   private readonly GitHubService _github = new();
@@ -34,6 +42,15 @@ public sealed class MainWindow : Window
   private readonly StackPanel _releasePanel = new() { Spacing = 8 };
   private readonly DualSparkline _spark = new() { Height = 130 };
 
+  // 自檢排程：全自動（時間到自動跑）與手動介入（按鈕立即跑）兩條路。
+  private readonly ScheduleSettings _schedule = ScheduleSettings.Load();
+  private readonly CheckBox _autoToggle = new() { Content = "啟用自動排程" };
+  private readonly TextBox _selfTime = new() { Width = 84 };
+  private readonly TextBox _updateTime = new() { Width = 84 };
+  private readonly TextBlock _scheduleStatus = Ui.Text("尚未執行");
+  private readonly TextBlock _nextRun = Ui.Text("—");
+  private bool _selfCheckRunning;
+
   // 分頁導覽
   private readonly List<Button> _navButtons = new();
   private readonly List<Control> _pages = new();
@@ -42,7 +59,8 @@ public sealed class MainWindow : Window
   public MainWindow()
   {
     _selfCheck = new SelfCheckService(_github);
-    Title = "鬼島監控台";
+    Title = DevBuild ? "鬼島監控台（開發版）" : "鬼島監控台";
+    Icon = new WindowIcon(AssetLoader.Open(new Uri(DevBuild ? "avares://KuidaoMonitor/Assets/kuidao_dev.ico" : "avares://KuidaoMonitor/Assets/kuidao.ico")));
     Width = 1440; Height = 900; MinWidth = 1200; MinHeight = 760;
     Background = Ui.Bg;
     Content = Build();
@@ -51,6 +69,10 @@ public sealed class MainWindow : Window
     local.Start();
     var remote = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
     remote.Tick += async (_, _) => await RefreshGitHubAsync();
+    var schedule = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+    schedule.Tick += async (_, _) => await TickScheduleAsync();
+    schedule.Start();
+    UpdateScheduleLabels();
     DispatcherTimer.RunOnce(async () => await RefreshAllAsync(), TimeSpan.FromMilliseconds(800));
     remote.Start();
   }
@@ -71,7 +93,7 @@ public sealed class MainWindow : Window
       Width = 42, Height = 42, CornerRadius = new CornerRadius(13), Background = Ui.Blue, Margin = new Thickness(0, 0, 0, 10),
       Child = Ui.Text("鬼", 18, Brushes.White, true, HorizontalAlignment.Center, VerticalAlignment.Center)
     });
-    var labels = new[] { "監控", "網路", "發布", "自檢", "建議" };
+    var labels = new[] { "監控", "網路", "發布", "自檢", "排程", "建議" };
     for (int i = 0; i < labels.Length; i++) rail.Children.Add(MakeNav(labels[i], i));
     Grid.SetColumn(rail, 0); root.Children.Add(rail);
 
@@ -99,6 +121,7 @@ public sealed class MainWindow : Window
     _pages.Add(BuildNetworkPage());
     _pages.Add(BuildReleasePage());
     _pages.Add(BuildSelfCheckPage());
+    _pages.Add(BuildSchedulePage());
     _pages.Add(BuildSuggestionsPage());
     Grid.SetRow(_contentHost, 1); main.Children.Add(_contentHost);
 
@@ -198,6 +221,163 @@ public sealed class MainWindow : Window
     var check = Ui.Card("自檢模式", out var checkBody, "進度");
     checkBody.Children.Add(_checkPanel);
     return check;
+  }
+
+  private Control BuildSchedulePage()
+  {
+    var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*") };
+
+    var auto = Ui.Card("全自動排程", out var autoBody, "時間到自動執行");
+    autoBody.Children.Add(Ui.Text("關閉後不會自動執行，只能用右側按鈕手動介入。", 10, Ui.Muted));
+    _autoToggle.IsChecked = _schedule.AutoEnabled;
+    _autoToggle.Foreground = Ui.TextBrush;
+    _autoToggle.Checked += (_, _) => { _schedule.AutoEnabled = true; _schedule.Save(); UpdateScheduleLabels(); };
+    _autoToggle.Unchecked += (_, _) => { _schedule.AutoEnabled = false; _schedule.Save(); UpdateScheduleLabels(); };
+    autoBody.Children.Add(_autoToggle);
+
+    var selfRow = new Grid { ColumnDefinitions = new ColumnDefinitions("140,*") };
+    selfRow.Children.Add(Ui.Text("自檢時間（HH:mm）", 10.5, Ui.TextBrush));
+    StyleTimeBox(_selfTime, _schedule.SelfCheckTime);
+    Grid.SetColumn(_selfTime, 1); selfRow.Children.Add(_selfTime);
+    autoBody.Children.Add(selfRow);
+
+    var updateRow = new Grid { ColumnDefinitions = new ColumnDefinitions("140,*") };
+    updateRow.Children.Add(Ui.Text("更新檢查時間（HH:mm）", 10.5, Ui.TextBrush));
+    StyleTimeBox(_updateTime, _schedule.UpdateTime);
+    Grid.SetColumn(_updateTime, 1); updateRow.Children.Add(_updateTime);
+    autoBody.Children.Add(updateRow);
+
+    _selfTime.LostFocus += (_, _) => CommitTimes();
+    _updateTime.LostFocus += (_, _) => CommitTimes();
+    _selfTime.KeyDown += (_, e) => { if (e.Key == Avalonia.Input.Key.Enter) CommitTimes(); };
+    _updateTime.KeyDown += (_, e) => { if (e.Key == Avalonia.Input.Key.Enter) CommitTimes(); };
+
+    autoBody.Children.Add(Ui.Text("格式 00:30，也可輸入 0030；只看本機時間。", 9.5, Ui.Muted));
+    autoBody.Children.Add(_nextRun);
+    g.Children.Add(auto);
+
+    var manual = Ui.Card("手動介入", out var manualBody, "立即執行");
+    manualBody.Children.Add(Ui.Text("不用等排程，按下去就立刻跑一輪。", 10, Ui.Muted));
+    var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+    var runSelf = new Button { Content = "立即自檢", Padding = new Thickness(14, 8), Background = Ui.Blue, Foreground = Brushes.White, CornerRadius = new CornerRadius(10) };
+    runSelf.Click += async (_, _) => await RunSelfCheckNowAsync();
+    var runUpdate = new Button { Content = "立即檢查更新", Padding = new Thickness(14, 8), Background = Ui.Green, Foreground = Brushes.White, CornerRadius = new CornerRadius(10) };
+    runUpdate.Click += async (_, _) => await RunUpdateNowAsync();
+    buttons.Children.Add(runSelf); buttons.Children.Add(runUpdate);
+    manualBody.Children.Add(buttons);
+    manualBody.Children.Add(Ui.Text("最近執行", 10, Ui.Muted));
+    manualBody.Children.Add(_scheduleStatus);
+    manualBody.Children.Add(Ui.Text("自動排程關閉時，這裡仍可隨時手動跑；跑完會更新自檢與發布兩頁。", 9.5, Ui.Muted));
+    manual.Margin = new Thickness(14, 0, 0, 0);
+    Grid.SetColumn(manual, 1); g.Children.Add(manual);
+    return g;
+  }
+
+  private static void StyleTimeBox(TextBox box, string value)
+  {
+    box.Text = value;
+    box.Padding = new Thickness(10, 6);
+    box.CornerRadius = new CornerRadius(8);
+    box.Background = Brush.Parse("#10141B");
+    box.Foreground = Ui.TextBrush;
+    box.BorderBrush = Ui.Line;
+  }
+
+  private void CommitTimes()
+  {
+    var selfOk = ScheduleSettings.TryParseTime(_selfTime.Text, out var sh, out var sm);
+    var updateOk = ScheduleSettings.TryParseTime(_updateTime.Text, out var uh, out var um);
+    if (selfOk) _schedule.SelfCheckTime = $"{sh:00}:{sm:00}";
+    else _selfTime.Text = _schedule.SelfCheckTime;
+    if (updateOk) _schedule.UpdateTime = $"{uh:00}:{um:00}";
+    else _updateTime.Text = _schedule.UpdateTime;
+    _schedule.Save();
+    UpdateScheduleLabels();
+  }
+
+  private void UpdateScheduleLabels()
+  {
+    var now = DateTime.Now;
+    _nextRun.Text = _schedule.AutoEnabled
+      ? $"下次自檢：{ScheduleSettings.Describe(_schedule.NextSelfCheck(now))}｜下次更新檢查：{ScheduleSettings.Describe(_schedule.NextUpdate(now))}"
+      : "自動排程已關閉，請用手動按鈕執行";
+    var parts = new List<string>();
+    if (!string.IsNullOrEmpty(_schedule.LastSelfCheckAt)) parts.Add($"自檢 {_schedule.LastSelfCheckAt}");
+    if (!string.IsNullOrEmpty(_schedule.LastUpdateAt)) parts.Add($"更新檢查 {_schedule.LastUpdateAt}");
+    _scheduleStatus.Text = parts.Count == 0 ? "尚未執行" : string.Join("｜", parts);
+    _scheduleStatus.Foreground = parts.Count == 0 ? Ui.Muted : Ui.TextBrush;
+  }
+
+  private async Task TickScheduleAsync()
+  {
+    var now = DateTime.Now;
+    var today = now.ToString("yyyy-MM-dd");
+    if (_schedule.AutoEnabled && _schedule.SelfCheckValid
+        && ScheduleSettings.TryParseTime(_schedule.SelfCheckTime, out var sh, out var sm)
+        && now.Hour == sh && now.Minute == sm && _schedule.LastSelfCheckDate != today)
+    {
+      _schedule.LastSelfCheckDate = today;
+      _schedule.Save();
+      await RunSelfCheckNowAsync();
+    }
+    if (_schedule.AutoEnabled && _schedule.UpdateValid
+        && ScheduleSettings.TryParseTime(_schedule.UpdateTime, out var uh, out var um)
+        && now.Hour == uh && now.Minute == um && _schedule.LastUpdateDate != today)
+    {
+      _schedule.LastUpdateDate = today;
+      _schedule.Save();
+      await RunUpdateNowAsync();
+    }
+    UpdateScheduleLabels();
+  }
+
+  private async Task RunSelfCheckNowAsync()
+  {
+    if (_selfCheckRunning) return;
+    _selfCheckRunning = true;
+    _scheduleStatus.Text = "自檢執行中…";
+    _scheduleStatus.Foreground = Ui.Blue;
+    try
+    {
+      await RefreshAllAsync();
+      _schedule.LastSelfCheckAt = DateTime.Now.ToString("MM-dd HH:mm");
+      _schedule.Save();
+      _scheduleStatus.Text = $"自檢完成 {DateTime.Now:HH:mm:ss}";
+      _scheduleStatus.Foreground = Ui.Green;
+    }
+    catch (Exception ex)
+    {
+      _scheduleStatus.Text = $"自檢失敗：{ex.Message}";
+      _scheduleStatus.Foreground = Ui.Red;
+    }
+    finally
+    {
+      _selfCheckRunning = false;
+      UpdateScheduleLabels();
+    }
+  }
+
+  private async Task RunUpdateNowAsync()
+  {
+    _scheduleStatus.Text = "更新檢查執行中…";
+    _scheduleStatus.Foreground = Ui.Blue;
+    try
+    {
+      await RefreshGitHubAsync();
+      _schedule.LastUpdateAt = DateTime.Now.ToString("MM-dd HH:mm");
+      _schedule.Save();
+      _scheduleStatus.Text = $"更新檢查完成 {DateTime.Now:HH:mm:ss}";
+      _scheduleStatus.Foreground = Ui.Green;
+    }
+    catch (Exception ex)
+    {
+      _scheduleStatus.Text = $"更新檢查失敗：{ex.Message}";
+      _scheduleStatus.Foreground = Ui.Red;
+    }
+    finally
+    {
+      UpdateScheduleLabels();
+    }
   }
 
   private Control BuildSuggestionsPage()

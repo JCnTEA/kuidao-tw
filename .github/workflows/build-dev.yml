@@ -1,0 +1,55 @@
+name: Build Windows Dev (Taiwan)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/dev-icon]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build dev binary
+        shell: pwsh
+        env:
+          KUIDAO_RC: app.dev.rc
+          KUIDAO_CHANNEL: dev
+        run: |
+          cargo build --locked --release --bin kuidao
+          if ($LASTEXITCODE -ne 0) { throw 'Dev build failed' }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item 'target\release\kuidao.exe' 'dist\鬼島 Kuidao 開發版.exe' -Force
+          if (Test-Path assets) { Copy-Item assets 'dist\assets' -Recurse -Force }
+          if (Test-Path README.md) { Copy-Item README.md dist }
+          if (Test-Path NOTICE) { Copy-Item NOTICE dist }
+          if (Test-Path LICENSE) { Copy-Item LICENSE dist }
+
+      - name: Verify dev icon resource
+        shell: pwsh
+        run: |
+          $exe = 'dist\鬼島 Kuidao 開發版.exe'
+          $info = (Get-Item $exe).VersionInfo
+          if ($info.FileDescription -notlike '*開發版*') { throw "版本資源不是開發版：$($info.FileDescription)" }
+          Write-Host $info.FileDescription
+
+      - name: Package dev zip
+        shell: pwsh
+        run: |
+          $ver = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          Compress-Archive -Path 'dist\*' -DestinationPath "Kuidao-Dev-v$ver-tw-windows-x64.zip" -Force
+
+      - name: Upload dev artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuidao-tw-dev
+          path: |
+            dist\鬼島 Kuidao 開發版.exe
+            Kuidao-Dev-v*-tw-windows-x64.zip
