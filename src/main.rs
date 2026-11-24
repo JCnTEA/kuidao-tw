@@ -357,6 +357,7 @@ impl eframe::App for Shell {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        daozai::dev_update::tick(ctx);
         daozai::resources::FRAMES.fetch_add(1,std::sync::atomic::Ordering::Relaxed);
         let frame_start=Instant::now();
         if self.resource_at.ready(Duration::from_secs(30)){
