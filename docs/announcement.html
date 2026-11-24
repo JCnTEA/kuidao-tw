@@ -49,7 +49,7 @@ a{color:inherit;text-decoration:none}
 img{max-width:100%;display:block}
 button{font:inherit}
 ::selection{background:rgba(34,211,238,.24)}
-.wrap{max-width:880px;margin:0 auto;padding:0 24px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
 
 /* ===== 導覽 ===== */
 .nav{
@@ -86,100 +86,74 @@ button{font:inherit}
 }
 
 /* ===== 頁首 ===== */
-.page-hero{position:relative;text-align:center;padding:74px 24px 40px}
+.page-hero{position:relative;text-align:center;padding:56px 24px 26px}
 .hero-kicker{
-  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
-  padding:6px 16px;border-radius:999px;color:#9fc0dd;
+  display:inline-block;font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  padding:5px 14px;border-radius:999px;color:#9fc0dd;
   background:rgba(12,23,40,.66);border:1px solid rgba(125,211,252,.16);box-shadow:0 8px 20px -16px #000;
 }
 .page-hero h1{
-  margin-top:20px;font-size:clamp(38px,7vw,62px);font-weight:900;letter-spacing:.02em;
+  margin-top:14px;font-size:clamp(28px,4.6vw,42px);font-weight:900;letter-spacing:.02em;
   background:linear-gradient(100deg,#8bf5ff 0%,#5eead4 34%,#fbbf24 68%,#fb7185 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 10px 30px rgba(34,211,238,.18));
 }
-.page-hero p{margin-top:14px;color:#9db2cc;font-size:14px}
+.page-hero p{margin-top:10px;color:#93a9c4;font-size:12.5px}
 
-/* ===== 公告列表 ===== */
-.list{position:relative;display:flex;flex-direction:column;gap:20px;padding-bottom:40px}
+/* ===== 公告：三欄小卡，依版本分區 ===== */
+.list{padding:6px 0 30px}
+.version{margin-bottom:22px}
+.ver-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:0 2px 9px}
+.ver-no{font-size:13.5px;font-weight:800;letter-spacing:.03em;color:#8bf5ff}
+.ver-sub{font-size:11.5px;color:#8ba3c0}
+.ver-date{margin-left:auto;font-size:10.5px;letter-spacing:.04em;color:#6f87a5}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .acard{
-  position:relative;border-radius:22px;padding:26px 28px 24px;overflow:hidden;min-width:0;
+  position:relative;min-width:0;border-radius:14px;padding:13px 14px 12px;
   border:1px solid var(--line);
   background:linear-gradient(160deg,rgba(16,31,53,.58),rgba(9,18,33,.44));
-  box-shadow:var(--shadow);backdrop-filter:blur(20px);
-  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+  box-shadow:var(--shadow-soft);backdrop-filter:blur(16px);
+  transition:transform .18s ease,border-color .18s ease;
 }
-.acard:hover,.acard:focus-visible{transform:translateY(-3px);border-color:rgba(94,234,212,.32);box-shadow:0 36px 84px -40px #000,0 0 0 1px rgba(45,212,191,.24)}
-.acard:focus-visible{outline:2px solid rgba(34,211,238,.5);outline-offset:3px}
-
-.ac-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;min-width:0}
-.ac-date{font-size:12px;letter-spacing:.06em;color:#7f96b4}
+.acard:hover{transform:translateY(-2px);border-color:rgba(94,234,212,.32)}
+.acard.is-new{border-color:rgba(94,234,212,.38);box-shadow:0 18px 44px -30px rgba(45,212,191,.5)}
+.ac-head{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap;min-width:0}
+.ac-date{font-size:10.5px;letter-spacing:.04em;color:#7f96b4}
 .ac-cat{
-  font-size:11px;font-weight:700;letter-spacing:.1em;padding:3px 11px;border-radius:999px;
+  font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:999px;
   color:#8bf5ff;background:rgba(34,211,238,.1);border:1px solid rgba(125,211,252,.22);
 }
-.ac-title{font-size:21px;font-weight:900;letter-spacing:-.01em;line-height:1.35;color:#f2f8ff;margin-bottom:10px;min-width:0;overflow-wrap:break-word;word-break:break-word}
-.ac-body{font-size:13.5px;line-height:1.85;color:#b8cbe2}
-.ac-body p + p{margin-top:8px}
-
-/* 新更新：全透明、完整可讀，並掛 NEW 標記 */
 .ac-new{
-  margin-left:auto;font-size:11px;font-weight:900;letter-spacing:.14em;padding:5px 12px;border-radius:999px;
+  margin-left:auto;font-size:9px;font-weight:900;letter-spacing:.12em;padding:3px 9px;border-radius:999px;
   color:#062a31;background:linear-gradient(135deg,#67e8f9,#5eead4);
-  box-shadow:0 8px 22px -10px rgba(94,234,212,.8);
+  box-shadow:0 8px 22px -12px rgba(94,234,212,.8);
 }
-.acard.is-new{border-color:rgba(94,234,212,.4)}
-
-/* 舊公告：平時只有標題清楚，內文霧化；展開後恢復 */
-.acard.is-old{cursor:pointer;outline:none}
-.acard.is-old .ac-body{
-  filter:blur(4.5px);opacity:.42;transform:scale(1.01);
-  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.7) 0%,rgba(0,0,0,.35) 26%,transparent 62%);
-  mask-image:linear-gradient(180deg,rgba(0,0,0,.7) 0%,rgba(0,0,0,.35) 26%,transparent 62%);
-  transition:filter .24s ease,opacity .24s ease,transform .24s ease,-webkit-mask-image .24s ease;
-}
-.acard.is-old::after{
-  content:"";position:absolute;left:0;right:0;top:78px;bottom:0;pointer-events:none;
-  background:linear-gradient(180deg,rgba(7,13,24,0) 0%,rgba(7,13,24,.55) 40%,rgba(7,13,24,.92) 100%);
-  transition:opacity .24s ease;
-}
-.acard.is-old .ac-toggle{
-  position:absolute;right:22px;top:20px;z-index:3;width:28px;height:28px;border-radius:50%;
-  display:grid;place-items:center;font-size:14px;font-weight:700;line-height:1;color:#7fe9f7;
-  background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.22);
-  transition:transform .2s,background .2s;
-}
-.acard.is-old:hover .ac-toggle{transform:rotate(90deg);background:rgba(45,212,191,.24)}
-.acard.is-old .ac-hint{
-  position:relative;z-index:2;margin-top:14px;font-size:11.5px;letter-spacing:.06em;color:#8bf5ff;
-  opacity:.9;
-}
-.acard.is-old.open .ac-body{filter:none;opacity:1;transform:none;-webkit-mask-image:none;mask-image:none}
-.acard.is-old.open::after{opacity:0}
-.acard.is-old.open .ac-toggle{content:"×";transform:rotate(0)}
-.acard.is-old.open .ac-hint{display:none}
+.ac-title{font-size:14px;font-weight:800;letter-spacing:-.005em;line-height:1.45;color:#f2f8ff;margin-bottom:6px;overflow-wrap:break-word}
+.ac-body{font-size:11.5px;line-height:1.7;color:#b0c4dc;overflow-wrap:break-word}
+.ac-body b{color:#dff3ff;font-weight:700}
 
 /* ===== 頁尾 ===== */
-footer{border-top:1px solid rgba(125,211,252,.12);position:relative;margin-top:30px}
+footer{border-top:1px solid rgba(125,211,252,.12);position:relative;margin-top:20px}
 .foot-inner{
-  max-width:1200px;margin:0 auto;padding:34px 28px;display:flex;justify-content:space-between;gap:28px;flex-wrap:wrap;
+  max-width:1200px;margin:0 auto;padding:28px;display:flex;justify-content:space-between;gap:28px;flex-wrap:wrap;
 }
-.foot-brand{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.foot-brand strong{font-size:16px}
-.foot-note{color:#8298b5;font-size:12px}
-.foot-links{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#9db2cc}
+.foot-brand{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.foot-brand strong{font-size:15px}
+.foot-note{color:#8298b5;font-size:11.5px}
+.foot-links{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#9db2cc}
 .foot-links a:hover{color:#8bf5ff}
 
-@media(max-width:760px){
-  .nav-inner{height:66px;padding:0 18px}
+@media(max-width:1040px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  .nav-inner{height:64px;padding:0 18px}
   .menu{display:none}
   .status-pill{display:none}
   .brand small{display:none}
-  .page-hero{padding:54px 18px 32px}
-  .acard{padding:22px 20px}
-  .ac-title{font-size:18px}
-  .acard.is-old::after{top:70px}
-  .ac-new{margin-left:0}
+  .page-hero{padding:44px 18px 20px}
+  .grid{grid-template-columns:1fr}
+  .wrap{padding:0 16px}
 }
 </style>
 </head>
@@ -211,66 +185,164 @@ footer{border-top:1px solid rgba(125,211,252,.12);position:relative;margin-top:3
   <section class="page-hero">
     <span class="hero-kicker">Announcement</span>
     <h1>更新公告</h1>
-    <p>每一版調整都會列在這裡；最新一筆標示 NEW，過往公告只留標題、點一下即可展開。</p>
+    <p>依版本分區，最新版本排最上面；每列三張，從左到右由新到舊。0.6.66 是上游原作者版本，台灣版自 0.6.106 起獨立編號。</p>
   </section>
 
-  <!-- ===== 公告列表 ===== -->
   <div class="wrap">
     <div class="list">
 
-      <!-- 最新更新：全透明可讀 -->
-      <article class="acard is-new">
-        <div class="ac-head">
-          <span class="ac-date">2026-11-23</span>
-          <span class="ac-cat">更新</span>
-          <span class="ac-new">NEW</span>
+      <!-- ===== 測試階段（現行建置） ===== -->
+      <section class="version">
+        <div class="ver-head"><span class="ver-no">測試階段</span><span class="ver-sub">現行建置 · 未標新標籤</span><time class="ver-date">2026-11-24</time></div>
+        <div class="grid">
+          <article class="acard is-new">
+            <div class="ac-head"><span class="ac-date">2026-11-24</span><span class="ac-cat">行程</span><span class="ac-new">NEW</span></div>
+            <h3 class="ac-title">行事曆改支援台灣常用平台，新增 Google 日曆</h3>
+            <p class="ac-body">「新增行事曆」不再列飛書、釘釘、企業微信，改成 <b>Google、iCloud、CalDAV、Exchange</b>，預設選 Google。Google 走 CalDAV＋應用程式密碼，彈出視窗引導同步改寫；密碼只存 Windows 憑據管理員，全程唯讀同步。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-24</span><span class="ac-cat">版面</span></div>
+            <h3 class="ac-title">頂欄時鐘不再壓到「重新整理」</h3>
+            <p class="ac-body">額度、天氣頁同時顯示電量、日期、時段與秒數時，整組會向右蓋住右上角按鈕。現在這兩頁字級略縮並把整組向左收齊，右緣保留固定間距，時段與秒數都不刪。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-24</span><span class="ac-cat">音樂</span></div>
+            <h3 class="ac-title">瀏覽器抓 YouTube 歌詞更穩定</h3>
+            <p class="ac-body">播放卡沒給頻道時改用清洗後歌名查詢；嚴格時長比對落空後放寬時長再試一輪，歌名與歌手仍嚴格核對。標題新增 1 Hour、Loop、Live、Cover 等清洗。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">監控</span></div>
+            <h3 class="ac-title">監控台左側改成可點擊分頁</h3>
+            <p class="ac-body">原本五個標題只是文字、卡片全塞在同一頁，視窗放不下時下方資訊被切掉。改為真正的分頁按鈕，所在分頁藍底高亮，監控／網路／發布／自檢／建議各一頁。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">電量</span></div>
+            <h3 class="ac-title">電量在藍牙斷線或重開後仍保留</h3>
+            <p class="ac-body">鏈路閒置時改讀仍在場的藍牙節點與最後已知電量，並持久化到本機；恢復後自動回最新數字，滑過電量環會標「最後已知電量」。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">簽章</span></div>
+            <h3 class="ac-title">程式簽章降低 SmartScreen 攔截</h3>
+            <p class="ac-body">主程式、啟動器先簽，打包後再對安裝檔補簽並加時間戳，SHA 以簽章後檔案計算；未設憑證時自動略過，不影響建置。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">官方</span></div>
+            <h3 class="ac-title">官網新增更新公告頁</h3>
+            <p class="ac-body">用玻璃卡片列出每一版調整，最新一筆標 NEW；版本異動即時更新，不標版本號，過往內容保留可查。</p>
+          </article>
         </div>
-        <h3 class="ac-title">行事曆改支援台灣常用平台，新增 Google 日曆</h3>
-        <div class="ac-body">
-          <p>「新增行事曆」彈窗原本列出飛書、釘釘、企業微信等大陸平台，台灣使用者多半用不到、也沒有帳號。現在這些平台已全部移除，清單改成台灣常用的四個：Google、iCloud、CalDAV、Exchange，預設就選 Google。</p>
-          <p>Google 走 CalDAV 同步，只要在 Google 帳戶開啟兩步驟驗證、產生一組「應用程式密碼」，使用者名稱填 Gmail、密碼填應用程式密碼即可，彈窗內的引導也改成對應 Google 的路徑；iCloud 同樣用 App 專用密碼，CalDAV 可自訂 Nextcloud、群暉、Fastmail 等伺服器。舊版若已連線飛書、釘釘、企業微信，更新後會自動略過這些過時帳號。密碼維持只存進 Windows 憑據管理員，全程只讀同步、不會改動線上行程。</p>
-        </div>
-      </article>
+      </section>
 
-      <!-- 舊公告：平時霧化，展開可讀 -->
-      <article class="acard is-old" tabindex="0" role="button" aria-expanded="false">
-        <span class="ac-toggle" aria-hidden="true">+</span>
-        <div class="ac-head">
-          <span class="ac-date">2026-11-23</span>
-          <span class="ac-cat">監控</span>
+      <!-- ===== 0.6.108 / 0.6.109 ===== -->
+      <section class="version">
+        <div class="ver-head"><span class="ver-no">0.6.108 / 0.6.109</span><span class="ver-sub">電量頁與發布</span><time class="ver-date">2026-11-23</time></div>
+        <div class="grid">
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">電量</span></div>
+            <h3 class="ac-title">新增「電量」頁，每台裝置一圈環形電量</h3>
+            <p class="ac-body">頂欄電量環可點開：手機、耳機、滑鼠、鍵盤、手把、音箱各佔一環，環內線稿圖示、環下百分比；低於 20% 整圈轉紅、充電多一顆閃電。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">電量</span></div>
+            <h3 class="ac-title">超過 6 個裝置仍完整保留</h3>
+            <p class="ac-body">原本超過 6 個會被截掉數量，現在保留完整數字，並提示還有未列出的裝置。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">安裝</span></div>
+            <h3 class="ac-title">安裝前自動結束靈動島</h3>
+            <p class="ac-body">安裝與解除安裝先關閉主程式與啟動器、等待單一實例鎖釋放；未退出會自動重試，最後才提示重新開機，升級不必先手動退出。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">流程</span></div>
+            <h3 class="ac-title">版本字串與實際版本對齊</h3>
+            <p class="ac-body">app.rc 版本字與 package.ps1 版本檢查對齊 0.6.108，修掉版本脫鉤；中文自檢修正後出 0.6.109。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">官方</span></div>
+            <h3 class="ac-title">下載改用 Release 固定資產＋SHA-256</h3>
+            <p class="ac-body">官網與 Release 共用固定檔名，頁面標示 SHA-256；下載截斷就重下，CI 先靜默安裝驗證，避免完整性檢查失敗。</p>
+          </article>
         </div>
-        <h3 class="ac-title">左側選單改成可點擊分頁，所有資訊一頁看得到</h3>
-        <div class="ac-body">
-          <p>監控台左側的分頁原本只是不會動的文字，卡片全塞在同一個長頁面，視窗放不下時下方資訊會被切掉。現在改成真正可點擊的分頁按鈕，所在分頁藍底高亮，點一下主區就切換對應內容，每頁都落在視窗可視範圍，預設視窗大小不用捲動就能看完全部資訊。</p>
-        </div>
-        <p class="ac-hint">點一下或按 Enter 展開完整內容</p>
-      </article>
+      </section>
 
-      <article class="acard is-old" tabindex="0" role="button" aria-expanded="false">
-        <span class="ac-toggle" aria-hidden="true">+</span>
-        <div class="ac-head">
-          <span class="ac-date">2026-11-23</span>
-          <span class="ac-cat">音樂</span>
+      <!-- ===== 0.6.107 ===== -->
+      <section class="version">
+        <div class="ver-head"><span class="ver-no">0.6.107</span><span class="ver-sub">安裝與通知穩定</span><time class="ver-date">2026-11-23</time></div>
+        <div class="grid">
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">安裝</span></div>
+            <h3 class="ac-title">修復首次啟動卡在 94% 解壓失敗</h3>
+            <p class="ac-body">啟動器改用 PowerShell 5.1 的 .NET ZipArchive 逐筆解壓、保留中文檔名，寫入前檢查絕對路徑與「..」越界；下載與 SHA 校驗不變。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">音樂</span></div>
+            <h3 class="ac-title">音樂來源改在顯示層過濾</h3>
+            <p class="ac-body">來源過濾移出底層，避免連帶影響歌詞邏輯與舊設定，同步修正在地化測試。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">版面</span></div>
+            <h3 class="ac-title">未讀圖示放大、數字徽章不再蓋圖</h3>
+            <p class="ac-body">社群圖示由 20px 放大到 26px，徽章半徑 6 縮到 5；兩位數以上改成短藥丸，不再壓住圖示。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">音樂</span></div>
+            <h3 class="ac-title">汽水音樂補上繁體來源</h3>
+            <p class="ac-body">補齊繁體來源名稱，同步五項在地化介面測試，來源顯示不再落回簡體。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-23</span><span class="ac-cat">流程</span></div>
+            <h3 class="ac-title">CI 安裝煙霧測試</h3>
+            <p class="ac-body">建置安裝檔後以靜默模式安裝、確認啟動器存在再卸載；損壞或裝不起來的安裝檔不會被送上線。</p>
+          </article>
         </div>
-        <h3 class="ac-title">歌詞顏色改成可拖曳的漸層</h3>
-        <div class="ac-body">
-          <p>設定「音樂」頁新增「歌詞顏色」區，開啟後歌詞沿著色盤漸變換色，一共 11 組色盤可選；下方色帶可左右拖動調整相位，並保留明暗可讀性，暗部不會壓成一片白。關閉開關後歌詞恢復單色。</p>
-        </div>
-        <p class="ac-hint">點一下或按 Enter 展開完整內容</p>
-      </article>
+      </section>
 
-      <article class="acard is-old" tabindex="0" role="button" aria-expanded="false">
-        <span class="ac-toggle" aria-hidden="true">+</span>
-        <div class="ac-head">
-          <span class="ac-date">2026-11-23</span>
-          <span class="ac-cat">電量</span>
+      <!-- ===== 0.6.106 ===== -->
+      <section class="version">
+        <div class="ver-head"><span class="ver-no">0.6.106</span><span class="ver-sub">台灣版首發 · 基礎建設</span><time class="ver-date">2026-11-22</time></div>
+        <div class="grid">
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-22</span><span class="ac-cat">品牌</span></div>
+            <h3 class="ac-title">品牌更名「鬼島 Kuidao」</h3>
+            <p class="ac-body">顯示名、視窗標題、安裝器、版本資源與執行檔名全面改名，保留 MIT 授權與原作者聲明。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-22</span><span class="ac-cat">在地化</span></div>
+            <h3 class="ac-title">全專案繁體化與台灣用語</h3>
+            <p class="ac-body">字串轉繁體，用語改設定／檔案／資料夾／網路／螢幕／滑鼠／桌布，微軟正黑體優先、12 小時制。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-22</span><span class="ac-cat">品牌</span></div>
+            <h3 class="ac-title">吉祥物改台灣石虎「島虎」</h3>
+            <p class="ac-body">改用程式內建石虎影格，各主題共用一組、只換底色；舊範例圖移到備份資料夾，沒有刪除。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-22</span><span class="ac-cat">音樂</span></div>
+            <h3 class="ac-title">大陸播放器預設不上島</h3>
+            <p class="ac-body">網易雲、酷狗、汽水、酷我、波點、QQ 音樂不再自動上島；程式與歌詞邏輯完整保留，一個開關可恢復。Spotify、Apple Music 與瀏覽器照常。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-22</span><span class="ac-cat">信箱</span></div>
+            <h3 class="ac-title">信箱改列台灣可連線服務</h3>
+            <p class="ac-body">選單改 Yahoo 奇摩、iCloud、Gmail、Outlook／Hotmail 與自訂 IMAP；舊的 QQ、163 帳號仍可解析。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-22</span><span class="ac-cat">官方</span></div>
+            <h3 class="ac-title">移除贊助區塊</h3>
+            <p class="ac-body">「關於」頁的支援作者卡片與收款碼由常數關閉，上游日後改版也不會自動復原。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-22</span><span class="ac-cat">外觀</span></div>
+            <h3 class="ac-title">主題與安裝流程</h3>
+            <p class="ac-body">新增奶油、毛玻璃、懸浮雲與七款漸層主題；系統級安裝進 Program Files、固定檔名，啟動器約 1.2MB、完成後下載主程式。</p>
+          </article>
+          <article class="acard">
+            <div class="ac-head"><span class="ac-date">2026-11-22</span><span class="ac-cat">官方</span></div>
+            <h3 class="ac-title">官網上線</h3>
+            <p class="ac-body">單檔自包含官網，含功能介紹、雙版本下載、系統需求、常見問題與品牌圖示。</p>
+          </article>
         </div>
-        <h3 class="ac-title">頂欄電量斷線、重開都不再消失</h3>
-        <div class="ac-body">
-          <p>手機藍牙鏈路閒置或斷線時，程式會讀取仍在場的藍牙節點，並記住最後一次看到的電量存到本機；即使系統清掉快取或重新啟動，頂欄電量環與手機圖示仍顯示最後已知值，鏈路恢復後自動回到最新數字。</p>
-        </div>
-        <p class="ac-hint">點一下或按 Enter 展開完整內容</p>
-      </article>
+      </section>
 
     </div>
   </div>
@@ -292,49 +364,5 @@ footer{border-top:1px solid rgba(125,211,252,.12);position:relative;margin-top:3
   </div>
 </footer>
 
-<script>
-(function(){
-  var cards = Array.prototype.slice.call(document.querySelectorAll('.acard.is-old'));
-
-  function setOpen(card, open){
-    card.classList.toggle('open', open);
-    card.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if(open){
-      var toggle = card.querySelector('.ac-toggle');
-      if(toggle) toggle.textContent = '×';
-    }else{
-      var t = card.querySelector('.ac-toggle');
-      if(t) t.textContent = '+';
-    }
-  }
-  function closeAll(except){
-    cards.forEach(function(card){ if(card !== except) setOpen(card, false); });
-  }
-
-  cards.forEach(function(card){
-    // 滑鼠：移入展開、移開收起
-    card.addEventListener('pointerenter', function(e){ if(e.pointerType === 'mouse'){ closeAll(card); setOpen(card, true); } });
-    card.addEventListener('pointerleave', function(e){ if(e.pointerType === 'mouse') setOpen(card, false); });
-    // 鍵盤與觸控：點一下或 Enter／Space 切換
-    card.addEventListener('click', function(){
-      var open = card.classList.contains('open');
-      closeAll(card);
-      setOpen(card, !open);
-    });
-    card.addEventListener('keydown', function(e){
-      if(e.key === 'Enter' || e.key === ' '){
-        e.preventDefault();
-        var open = card.classList.contains('open');
-        closeAll(card);
-        setOpen(card, !open);
-      }
-    });
-  });
-
-  window.addEventListener('pointerdown', function(e){
-    if(!e.target.closest('.acard.is-old')) closeAll(null);
-  }, true);
-})();
-</script>
 </body>
 </html>

@@ -2431,6 +2431,33 @@ fn island_lyrics_center_segments_in_a_fixed_height(){
 }
 
 #[test]
+fn karaoke_plugin_lights_the_current_line_as_it_plays(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();
+    h.app.settings.island_lyrics=true;
+    h.app.settings.lyric_karaoke=true;
+    let line="願每一個認真生活的人都能找到自己的光";
+    h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),position:5.0,duration:120.0,playing:true,..Default::default()};
+    h.app.set_lyrics("Track","Artist",120.0,crate::lyrics::parse_lrc(&format!("[00:05]{line}\n[00:15]下一句")));
+    // 唱到一半：左半亮、右半暗，才算真的跟播放進度走。
+    h.media.position=10.0;
+    for _ in 0..90 {h.frame(vec![]);}
+    let mesh=h.shapes.iter().find_map(|s|match &s.shape {
+        egui::Shape::Mesh(mesh) if mesh.vertices.iter().any(|v|v.uv!=egui::Pos2::ZERO)=>Some(mesh.clone()),
+        _=>None,
+    }).expect("開啟導唱後，島上歌詞應以文字網格繪製");
+    let lum=|c:egui::Color32|0.2126*c.r() as f32+0.7152*c.g() as f32+0.0722*c.b() as f32;
+    let colors:Vec<f32>=mesh.vertices.iter().map(|v|lum(v.color)).collect();
+    assert!(colors.len()>=8,"文字網格應該有足夠頂點");
+    let take=(colors.len()/4).max(1);
+    let head=colors[..take].iter().sum::<f32>()/take as f32;
+    let tail=colors[colors.len()-take..].iter().sum::<f32>()/take as f32;
+    assert!(head>tail+25.0,"已唱的字應明顯比未唱的字亮（左 {head:.1} / 右 {tail:.1}）");
+    assert!(colors.iter().cloned().fold(f32::NEG_INFINITY,f32::max)>=140.0,"亮起的字要看得清楚");
+    assert!(colors.iter().cloned().fold(f32::INFINITY,f32::min)<=190.0,"未唱的字要留下暗部");
+}
+
+#[test]
 fn island_lyric_segments_follow_playback_pause_and_seek(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();h.app.settings.island_lyrics=true;

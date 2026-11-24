@@ -1854,6 +1854,13 @@ impl App {
     /// 换句、分段和展开高亮共用时间调整；正数延后，负数提前。
     pub(crate) fn lyric_position(&self)->f32 {(self.media.position-self.settings.lyric_delay_ms as f64/1000.0)as f32}
 
+    /// 導唱進度：目前這一句唱到幾成；尚未同步或對不上歌時回 None。
+    pub(crate) fn lyric_line_progress(&self,index:usize)->Option<f32> {
+        if !lyric_key_matches(&self.ly.key,&self.media) {return None;}
+        let lyrics=self.ly.lyrics.as_ref().filter(|lyrics|lyrics.synced)?;
+        lyrics.line_progress(index,self.lyric_position(),self.media.duration as f32)
+    }
+
     fn bell_active(&self)->bool {self.mail_unread>0 || self.t<self.notification_bell_until}
     pub(crate) fn island_lyric(&self) -> Option<(usize,&str)> {
         if !self.island_lyrics_active(){return None;}
@@ -1900,7 +1907,7 @@ impl App {
             ctx.fonts(|fonts|fonts.layout_job(job))
         };
         let mut galley=layout(text.to_owned());
-        if translation.is_none() {
+        if translation.is_none() && !self.settings.lyric_karaoke {
             if let Some((index,_))=current.filter(|_|galley.rows.len()>1) {
                 let lyrics=self.ly.lyrics.as_ref().unwrap();
                 let start=lyrics.lines[index].t;
@@ -3207,7 +3214,14 @@ impl App {
             } else {center_y-galley.size().y/2.0+shift};
             let position=c.pos(left+content_width-LYRIC_BAR_W/2.0,origin_y);
             let sub_y=origin_y+galley.size().y+1.0;
-            if self.settings.lyric_gradient {
+            let karaoke=lyric.and_then(|index|self.lyric_line_progress(index))
+                .filter(|_|self.settings.lyric_karaoke);
+            if let Some(progress)=karaoke {
+                let style=crate::lyric_karaoke::resolve(&self.settings.lyric_karaoke_style,self.settings.lyric_gradient_preset,self.settings.lyric_gradient_shift);
+                let font_tex_size=c.painter.ctx().fonts(|f|{let img=f.image();[img.width() as f32,img.height() as f32]});
+                let mesh=crate::lyric_karaoke::sweep_mesh(position,&galley,&style,progress,font_tex_size);
+                c.painter.add(egui::Shape::Mesh(std::sync::Arc::new(mesh)));
+            } else if self.settings.lyric_gradient {
                 let font_tex_size=c.painter.ctx().fonts(|f|{let img=f.image();[img.width() as f32,img.height() as f32]});
                 let mesh=crate::lyric_gradient::gradient_text_mesh(position,&galley,self.settings.lyric_gradient_preset,self.settings.lyric_gradient_shift,font_tex_size);
                 c.painter.add(egui::Shape::Mesh(std::sync::Arc::new(mesh)));
