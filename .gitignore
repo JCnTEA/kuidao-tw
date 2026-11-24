@@ -16,5 +16,5 @@ Thumbs.db
 /.upstream-incoming/
 
 # 監控台 .NET 建置殘留，不進版本庫
-/monitor/KuidaoMonitor/bin/
-/monitor/KuidaoMonitor/obj/
+/docs/archive/records/2024/reference/legacy-utilities/bin/
+/docs/archive/records/2024/reference/legacy-utilities/obj/
