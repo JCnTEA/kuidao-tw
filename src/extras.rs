@@ -2030,6 +2030,9 @@ impl App {
                                 settings_hint(ui,"Chrome、Edge、Firefox 播 YouTube／YouTube Music 時，會從 Windows 右下角播放卡自動讀取歌名；瀏覽器縮小也持續顯示，不需要安裝擴充功能。");
                                 settings_hint(ui,"YouTube 標題常混著頻道名、「Official Video」與「- YouTube」；抓詞前會先拆成歌名與歌手，再逐組比對同步歌詞。");
                                 ui.separator();
+                                setting_row(ui,"聽歌辨識","瀏覽器播放時直接聽電腦正在輸出的聲音認歌；影片標題不準也能抓到正確歌名，並依辨識到的段落對上歌詞", &mut self.settings.listen_id);
+                                settings_hint(ui,"只聆聽系統輸出的聲音（不開麥克風、不收環境音），只用於辨識歌名，不會錄音存檔；聽歌辨識需要連網。關掉後瀏覽器改回用分頁標題猜歌。");
+                                ui.separator();
                                 let translate=self.settings.lyrics_translate;
                                 setting_row(ui,"自動翻譯歌詞","非中文歌詞保留原文，譯文顯示在原文下方；中文歌本身就是繁體，不做翻譯",&mut self.settings.lyrics_translate);
                                 settings_hint(ui,"日文、韓文原文也會翻譯；譯文快取在本機，同一首歌不重複送翻。翻譯需連網，歌詞文字會送到 Google 翻譯，失敗時照常顯示原文。");

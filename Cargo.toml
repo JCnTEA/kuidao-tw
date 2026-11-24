@@ -57,6 +57,9 @@ chrono = "0.4"
 chrono-tz = "0.10"
 rrule = "0.14.0"
 rquickjs = "0.8"
+chfft = "0.3"
+byteorder = "1"
+crc32fast = "1"
 
 # Linux 下 winit 至少要一个后端才能编译（只用于开发/录制，正式目标是 Windows）。
 [target.'cfg(target_os = "linux")'.dependencies]
