@@ -5,6 +5,7 @@
 //! - `model` / `lyrics` / `smtc` / `icons`：数据、歌词、系统媒体、文件图标
 //! - `native` / `tray`：仅 Windows 的窗口区域、命中穿透与托盘
 
+pub mod audio_id;
 pub mod display_layout;
 pub mod diagnostics_tool;
 pub mod dev_update;

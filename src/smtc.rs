@@ -877,6 +877,13 @@ pub fn spawn_poller(state: Shared,ctx:eframe::egui::Context)->Poller {
             #[cfg(not(windows))]
             let native_pending=false;
             let mut np=choose_media_for_source(system,native,&selected_source,native_pending).unwrap_or_default();
+            // 瀏覽器只給影片標題（甚至是分頁名）時，直接聽系統正在播的聲音認歌，
+            // 順便把「唱到第幾秒」補進位置，歌詞才能從正確的段落進場。
+            #[cfg(windows)]
+            if crate::smtc::is_browser_source(&np.source) && !np.title.trim().is_empty() {
+                crate::audio_id::request();
+                if let Some(found)=crate::audio_id::cached(){crate::audio_id::apply(&mut np,&found);}
+            }
             memory.update(&mut np,std::time::Instant::now());
             np.volume=volume.poll(&np.source);
             if !np.source.is_empty(){selected_source=np.source.clone();}

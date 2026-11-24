@@ -1009,6 +1009,7 @@ impl App {
             s.visuals.selection.bg_fill = theme::alpha_blue(0.45);
         });
         let mut settings = model::Settings::load();
+        crate::audio_id::set_enabled(settings.listen_id);
         // 台灣版吉祥物固定島虎；舊設定選過其他形象也在啟動時收回，避免五種圖示輪替時看起來都一樣。
         settings.mascot = crate::mascot::Mascot::Tiger;
         crate::mascot::set(settings.mascot);
@@ -1732,7 +1733,7 @@ impl App {
             self.set_page_visible(QUOTA_PAGE,false);
             if !self.settings.visible_pages[QUOTA_PAGE] {self.quota.config.enabled=true;self.quota.config.save();settings_changed=true;}
         }
-        if settings_changed {self.settings.save();}
+        if settings_changed {self.settings.save();crate::audio_id::set_enabled(self.settings.listen_id);}
     }
 
     pub(crate) fn set_page_visible(&mut self,page:usize,visible:bool) {
