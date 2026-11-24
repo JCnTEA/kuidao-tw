@@ -151,6 +151,16 @@ pub fn normalize_username(provider: Provider, raw: &str) -> String {
     user
 }
 
+/// 應用程式密碼：Google／iCloud 產生的 16 碼密碼常被複製成「四組、中間有空白」，
+/// 空白會讓 Basic 認證直接變錯帳密，這裡只對這兩家清掉空白。
+pub fn normalize_password(provider: Provider, raw: &str) -> String {
+    let password = raw.trim();
+    match provider {
+        Provider::Google | Provider::ICloud => password.split_whitespace().collect::<String>(),
+        _ => password.to_string(),
+    }
+}
+
 /// 自定义 CalDAV 地址：去掉空白，补全 https://；只接受 https（本机回环地址允许 http）。
 pub fn normalize_server(raw: &str) -> Option<String> {
     let raw = raw.trim();
@@ -1292,6 +1302,14 @@ pub fn human_error(provider: Provider, status: Option<u16>) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn generated_passwords_lose_grouping_spaces() {
+        use super::{normalize_password, Provider};
+        assert_eq!(normalize_password(Provider::Google, "sjvx cqxb kfzs tuk\r\n"), "sjvxcqxbkfzstuk");
+        assert_eq!(normalize_password(Provider::ICloud, " abcd efgh "), "abcdefgh");
+        assert_eq!(normalize_password(Provider::Custom, " keep space "), "keep space");
+    }
+
     #[test]
     fn google_username_gains_full_address() {
         use super::{normalize_username, Provider};

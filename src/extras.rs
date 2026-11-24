@@ -2654,12 +2654,15 @@ impl App {
                                 else if user.is_empty(){self.calendar.note="請先填使用者名稱".into();self.calendar.note_error=true;}
                                 else if self.calendar.form.password.is_empty(){self.calendar.note="請先填密碼".into();self.calendar.note_error=true;}
                                 else{
+                                    // Google／iCloud 的 16 碼應用程式密碼常被複製成四組、夾著空白，清掉才驗得過。
+                                    let password=crate::calendar::normalize_password(self.calendar.form.provider,&self.calendar.form.password);
+                                    self.calendar.form.password=password.clone();
                                     let cfg=crate::calendar::Config{provider:self.calendar.form.provider,username:user,href:None,server:if custom{server}else{None}};
                                     self.calendar.testing=true;
-                                    self.calendar.test_password=self.calendar.form.password.clone();
+                                    self.calendar.test_password=password.clone();
                                     self.calendar.note="正在連線行事曆…".into();
                                     self.calendar.note_error=false;
-                                    self.pending.push(Cmd::CalendarTest(cfg,self.calendar.form.password.clone()));
+                                    self.pending.push(Cmd::CalendarTest(cfg,password));
                                 }
                             }
                             ui.add_space(5.0);
