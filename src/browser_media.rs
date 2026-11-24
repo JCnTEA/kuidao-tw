@@ -24,6 +24,18 @@ pub(crate) fn browser_for_exe(exe: &str) -> Option<(&'static str, &'static str)>
         .map(|(_, suffix, source)| (*suffix, *source))
 }
 
+/// 社群網站、首頁、搜尋結果這類「只是分頁名稱」的標題，不該被當成正在播的歌。
+fn is_plain_page(title: &str) -> bool {
+    const PAGES: [&str; 24] = [
+        "threads", "facebook", "instagram", "messenger", "x", "twitter", "google", "gmail",
+        "youtube 首頁", "youtube home", "youtube", "youtube music", "kkbox", "spotify",
+        "netflix", "line", "discord", "reddit", "tiktok", "twitch", "蝦皮", "momo",
+        "新分頁", "new tab",
+    ];
+    let lower = title.trim().to_lowercase();
+    PAGES.iter().any(|page| lower == *page)
+}
+
 /// 把瀏覽器視窗標題清成「歌手／歌名」。
 /// 常見樣式：`周杰倫 Jay Chou【稻香 Rice Field】-Official Music Video - YouTube - Google Chrome`。
 pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, String)> {
@@ -45,6 +57,29 @@ pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, S
             break;
         }
     }
+    // YouTube 安裝成應用程式（PWA）時視窗標題只剩影片名稱，沒有「 - YouTube」尾巴，
+    // 這時仍要看整串標題有沒有站點字樣，否則會被當成來源不明的頁面濾掉。
+    if album.is_empty() {
+        for (hint, name) in [
+            ("YouTube Music", "YouTube Music"),
+            ("YouTube", "YouTube"),
+            ("KKBOX", "KKBOX"),
+            ("Spotify", "Spotify"),
+            ("StreetVoice", "StreetVoice"),
+            ("Bilibili", "Bilibili"),
+            ("嗶哩嗶哩", "Bilibili"),
+        ] {
+            if title.contains(hint) {
+                if let Some(stripped) = title.strip_suffix(&format!(" {hint}")) {
+                    title = stripped.trim().to_string();
+                } else if let Some(stripped) = title.strip_suffix(&format!(" | {hint}")) {
+                    title = stripped.trim().to_string();
+                }
+                album = name.to_string();
+                break;
+            }
+        }
+    }
     for suffix in [
         "-Official Music Video",
         "- Official Music Video",
@@ -63,6 +98,9 @@ pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, S
     if title.is_empty() || title.contains("chrome://") || title.contains("edge://") {
         return None;
     }
+    if is_plain_page(&title) {
+        return None;
+    }
     // 「歌手【歌名】」是台灣 MV 常見格式；拆開後歌詞比對才不會被整串雜訊干擾。
     if let (Some(open), Some(close)) = (title.find('【'), title.find('】')) {
         if open < close {
@@ -77,7 +115,10 @@ pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, S
 }
 
 #[cfg(windows)]
-fn now_playing(source: &str, title: String, artist: String, album: String) -> NowPlaying {
+fn now_playing(source: &str, title: String, artist: String, mut album: String) -> NowPlaying {
+    if album.is_empty() {
+        album = "網頁播放".to_string();
+    }
     NowPlaying {
         title,
         artist,
@@ -257,5 +298,22 @@ mod tests {
     #[test]
     fn ignores_empty_title() {
         assert!(parse_title(" - Google Chrome", " - Google Chrome").is_none());
+    }
+
+    #[test]
+    fn youtube_app_window_without_suffix_still_counts_as_music_page() {
+        // YouTube 應用程式（PWA）的視窗標題常只有影片名稱，沒有瀏覽器與站點尾巴。
+        let (title, _, album) =
+            parse_title("zb1 'ICONIK' MV 完整版 - YouTube", " - Google Chrome").unwrap();
+        assert_eq!(title, "zb1 'ICONIK' MV 完整版");
+        assert_eq!(album, "YouTube");
+    }
+
+    #[test]
+    fn community_pages_are_not_songs() {
+        for page in ["Threads - Google Chrome", "Instagram - Microsoft Edge", "YouTube 首頁 - Google Chrome"] {
+            let suffix = if page.ends_with(" - Microsoft Edge") { " - Microsoft Edge" } else { " - Google Chrome" };
+            assert!(parse_title(page, suffix).is_none(), "不該把分頁名稱當歌曲：{page}");
+        }
     }
 }
