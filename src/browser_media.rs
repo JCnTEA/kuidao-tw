@@ -38,8 +38,35 @@ fn is_plain_page(title: &str) -> bool {
 
 /// 把瀏覽器視窗標題清成「歌手／歌名」。
 /// 常見樣式：`周杰倫 Jay Chou【稻香 Rice Field】-Official Music Video - YouTube - Google Chrome`。
+/// 去掉 Windows 分頁群組加在視窗標題上的雜訊。
+/// 例：`稻香 - YouTube 和其他 2 個頁面 - 個人 - Microsoft Edge`
+/// 這種標題原本會整串被當成歌名，歌詞自然也查不到。
+fn clean_window_title(raw: &str) -> String {
+    let mut title = raw.trim().to_string();
+    // 「和其他 N 個頁面」「and N other pages」：主標題在前，後面全是分頁群組描述。
+    for marker in [" 和其他 ", " 還有 ", " and "] {
+        if let Some(position) = title.find(marker) {
+            let tail = &title[position + marker.len()..];
+            if tail.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+                title = title[..position].trim().to_string();
+            }
+        }
+    }
+    // 群組名稱（個人／公司／系統管理員／來賓…）夾在瀏覽器名稱前。
+    for tail in [
+        " - 個人", " - 公司", " - 系統管理員", " - 來賓", " - 訪客",
+        " - Personal", " - Work", " - Administrator", " - Guest",
+    ] {
+        if let Some(stripped) = title.strip_suffix(tail) {
+            title = stripped.trim().to_string();
+        }
+    }
+    title.trim_end_matches([' ', '-']).to_string()
+}
+
 pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, String)> {
-    let raw = raw.trim_end();
+    let raw = clean_window_title(raw);
+    let raw = raw.as_str();
     let mut title = match raw.strip_suffix(browser_suffix) {
         Some(stripped) => stripped.trim().to_string(),
         None => raw.trim_start().to_string(),
@@ -247,6 +274,12 @@ mod platform {
         BOOL(1)
     }
 
+    /// 音量混音器裡正在出聲的瀏覽器來源（不要求視窗標題可用）。
+    /// 聽歌辨識靠它判斷「有人在播東西」，標題抓不到也能開始聽。
+    pub fn audible_source() -> Option<&'static str> {
+        audible_browsers().into_iter().next()
+    }
+
     pub fn probe() -> Option<NowPlaying> {
         let browsers = audible_browsers();
         if browsers.is_empty() {
@@ -267,9 +300,13 @@ mod platform {
     pub fn probe() -> Option<crate::smtc::NowPlaying> {
         None
     }
+
+    pub fn audible_source() -> Option<&'static str> {
+        None
+    }
 }
 
-pub use platform::probe;
+pub use platform::{audible_source, probe};
 
 #[cfg(test)]
 mod tests {
@@ -308,6 +345,28 @@ mod tests {
             parse_title("zb1 'ICONIK' MV 完整版 - YouTube", " - Google Chrome").unwrap();
         assert_eq!(title, "zb1 'ICONIK' MV 完整版");
         assert_eq!(album, "YouTube");
+    }
+
+    #[test]
+    fn edge_tab_group_noise_is_stripped() {
+        let (title, _, album) = parse_title(
+            "稻香 - YouTube 和其他 2 個頁面 - 個人 - Microsoft Edge",
+            " - Microsoft Edge",
+        )
+        .unwrap();
+        assert_eq!(title, "稻香");
+        assert_eq!(album, "YouTube");
+    }
+
+    #[test]
+    fn edge_tab_group_without_site_still_parses() {
+        let (title, artist, _) = parse_title(
+            "周杰倫【稻香】 和其他 1 個頁面 - 系統管理員 - Microsoft Edge",
+            " - Microsoft Edge",
+        )
+        .unwrap();
+        assert_eq!(title, "稻香");
+        assert_eq!(artist, "周杰倫");
     }
 
     #[test]

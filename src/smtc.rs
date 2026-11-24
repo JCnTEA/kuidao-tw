@@ -884,9 +884,23 @@ pub fn spawn_poller(state: Shared,ctx:eframe::egui::Context)->Poller {
             // 順便把「唱到第幾秒」補進位置，歌詞才能從正確的段落進場。
             // 標題是不是空的都要聽：Chrome 常常整個標題都給不出來。
             #[cfg(windows)]
-            if crate::smtc::is_browser_source(&np.source) && np.playing && crate::audio_id::enabled() {
-                crate::audio_id::request();
-                if let Some(found)=crate::audio_id::cached(){crate::audio_id::apply(&mut np,&found);}
+            if crate::audio_id::enabled() {
+                if np.source.is_empty() {
+                    // 播放卡和視窗標題都問不到東西（Edge 常見）：改看「音量混音器裡有瀏覽器在出聲」，
+                    // 只要有人在播就開始聽，認出來之後直接補成島上的播放資訊。
+                    if let Some(source)=crate::browser_media::audible_source() {
+                        crate::audio_id::request();
+                        if let Some(found)=crate::audio_id::cached() {
+                            np.source=source.to_string();
+                            np.playing=true;
+                            np.playback_type=MediaKind::Music;
+                            crate::audio_id::apply(&mut np,&found);
+                        }
+                    }
+                } else if crate::smtc::is_browser_source(&np.source) && np.playing {
+                    crate::audio_id::request();
+                    if let Some(found)=crate::audio_id::cached(){crate::audio_id::apply(&mut np,&found);}
+                }
             }
             memory.update(&mut np,std::time::Instant::now());
             np.volume=volume.poll(&np.source);
