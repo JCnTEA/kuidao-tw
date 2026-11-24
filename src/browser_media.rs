@@ -104,7 +104,7 @@ mod platform {
     use windows::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible,
     };
-    use windows::core::PWSTR;
+    use windows::core::{Interface, PWSTR};
 
     fn process_exe(pid: u32) -> Option<String> {
         unsafe {
