@@ -72,7 +72,7 @@ struct PackFile {
 }
 
 fn default_name() -> String { "未命名導唱".into() }
-fn default_preset() -> usize { 7 }
+fn default_preset() -> usize { 0 }
 fn default_edge() -> f32 { 0.7 }
 fn default_dim() -> u8 { 118 }
 
@@ -296,8 +296,8 @@ mod tests {
 
     #[test]
     fn resolve_falls_back_to_builtin_for_unknown_name() {
-        let style = resolve("不存在的樣式", 3, 0.4);
+        let style = resolve("不存在的樣式", 1, 0.4);
         assert_eq!(style.name, BUILTIN);
-        assert_eq!(style.preset, 3);
+        assert_eq!(style.preset, 1);
     }
 }

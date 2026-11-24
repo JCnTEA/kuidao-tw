@@ -2311,7 +2311,7 @@ fn lyric_gradient_editor_paints_draggable_strip_and_dismisses_guide(){
     let open=frame(&mut settings,vec![]);
     find_text(&open,"按住色帶左右拖動，即可捲動歌詞的漸層位置；點上方色塊可更換色盤。").expect("首次開啟應顯示拖曳引導");
     let meshes:Vec<_>=open.iter().filter_map(|s|match &s.shape{egui::Shape::Mesh(m)=>Some(m),_=>None}).collect();
-    assert!(meshes.len()>=12,"應繪製 11 個色盤色塊與一條漸層色帶");
+    assert!(meshes.len()>=crate::lyric_gradient::PALETTE_COUNT+1,"應繪製所有色盤色塊與一條漸層色帶");
     // 找最寬的網格＝可拖曳色帶，模擬拖到 70% 位置。
     let strip=meshes.iter().map(|m|mesh_bounds(m)).max_by(|a,b|a.width().partial_cmp(&b.width()).unwrap()).unwrap();
     let start=egui::pos2(strip.left()+2.0,strip.center().y);
@@ -2332,14 +2332,14 @@ fn lyric_gradient_settings_round_trip_and_clamp_on_load(){
         "lyric_gradient=1\nlyric_gradient_preset=9\nlyric_gradient_shift=0.35\nlyric_gradient_hint=0\n")).unwrap();
     let loaded=crate::model::Settings::load();
     assert!(loaded.lyric_gradient);
-    assert_eq!(loaded.lyric_gradient_preset,9);
+    assert_eq!(loaded.lyric_gradient_preset,1);
     assert!((loaded.lyric_gradient_shift-0.35).abs()<1e-6);
     assert!(!loaded.lyric_gradient_hint);
     // 非法值夾緊：色盤超出範圍、shift 超出 0..1。
     std::fs::write(directory.join("settings.txt"),concat!(
         "lyric_gradient_preset=999\nlyric_gradient_shift=1.6\n")).unwrap();
     let bad=crate::model::Settings::load();
-    assert_eq!(bad.lyric_gradient_preset,10);
+    assert_eq!(bad.lyric_gradient_preset,1);
     assert!((bad.lyric_gradient_shift-0.6).abs()<1e-6,"shift 應取模回 0..1");
 }
 

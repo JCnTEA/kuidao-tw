@@ -1106,7 +1106,7 @@ pub(crate) fn lyric_gradient_editor(ui:&mut egui::Ui, settings:&mut crate::model
     setting_row(ui,"歌詞漸層","以拖曳方式讓島上歌詞在色盤上漸變換色",&mut settings.lyric_gradient);
     if settings.lyric_gradient {
         ui.separator();
-        // 11 個色盤色塊，點擊選取；選中項加白色外框。
+        // 色盤色塊，點擊選取；選中項加白色外框。
         let swatch=28.0;
         ui.horizontal_wrapped(|ui|{
             ui.spacing_mut().item_spacing=egui::vec2(6.0,6.0);
