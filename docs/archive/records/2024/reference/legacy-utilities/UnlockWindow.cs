@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
 
@@ -13,6 +14,7 @@ public sealed class UnlockWindow : Window
 
   public UnlockWindow()
   {
+    TextElement.SetFontFamily(this, new FontFamily("Microsoft JhengHei UI, Microsoft YaHei UI, Segoe UI, Noto Sans TC"));
     Title = "解鎖";
     Width = 340; Height = 260; CanResize = false;
     Background = new SolidColorBrush(Color.Parse("#0A1520"));

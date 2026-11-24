@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform;
@@ -59,6 +60,7 @@ public sealed class MainWindow : Window
   public MainWindow()
   {
     _selfCheck = new SelfCheckService(_github);
+    TextElement.SetFontFamily(this, new FontFamily("Microsoft JhengHei UI, Microsoft YaHei UI, Segoe UI, Noto Sans TC"));
     Title = DevBuild ? "鬼島監控台（開發版）" : "鬼島監控台";
     Icon = new WindowIcon(AssetLoader.Open(new Uri(DevBuild ? "avares://KuidaoMonitor/Assets/kuidao_dev.ico" : "avares://KuidaoMonitor/Assets/kuidao.ico")));
     Width = 1440; Height = 900; MinWidth = 1200; MinHeight = 760;
