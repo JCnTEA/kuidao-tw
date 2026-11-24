@@ -2031,7 +2031,20 @@ impl App {
                                 settings_hint(ui,"YouTube 標題常混著頻道名、「Official Video」與「- YouTube」；抓詞前會先拆成歌名與歌手，再逐組比對同步歌詞。");
                                 ui.separator();
                                 setting_row(ui,"聽歌辨識","瀏覽器播放時直接聽電腦正在輸出的聲音認歌；影片標題不準也能抓到正確歌名，並依辨識到的段落對上歌詞", &mut self.settings.listen_id);
-                                settings_hint(ui,"只聆聽系統輸出的聲音（不開麥克風、不收環境音），只用於辨識歌名，不會錄音存檔；聽歌辨識需要連網。關掉後瀏覽器改回用分頁標題猜歌。");
+                                settings_hint(ui,"先聽系統輸出的聲音；系統迴路不可用時才改用內建麥克風。只用於辨識歌名、片段不會存檔，需要連網。關掉後瀏覽器改回用分頁標題猜歌。");
+                                if self.settings.listen_id {
+                                    match crate::audio_id::status() {
+                                        Some(status) if status.needs_permission => {
+                                            settings_hint(ui,"Windows 目前封鎖桌面應用程式使用麥克風，聽歌辨識收不到聲音。請開啟「設定 → 隱私權與安全性 → 麥克風 → 允許桌面應用程式存取您的麥克風」。");
+                                            if settings_action_button(ui,"開啟 Windows 麥克風權限設定",SettingsActionGlyph::Refresh,true,true,"listen-permission").clicked() {
+                                                crate::audio_id::open_permission_settings();
+                                            }
+                                            ui.add_space(2.0);
+                                        }
+                                        Some(status) => settings_hint(ui,&format!("聽歌辨識狀態：{}",status.text)),
+                                        None => settings_hint(ui,"聽歌辨識狀態：待瀏覽器開始播放"),
+                                    }
+                                }
                                 ui.separator();
                                 let translate=self.settings.lyrics_translate;
                                 setting_row(ui,"自動翻譯歌詞","非中文歌詞保留原文，譯文顯示在原文下方；中文歌本身就是繁體，不做翻譯",&mut self.settings.lyrics_translate);

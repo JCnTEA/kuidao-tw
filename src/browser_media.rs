@@ -133,6 +133,7 @@ fn now_playing(source: &str, title: String, artist: String, mut album: String) -
         artwork: None,
         playback_type: MediaKind::Music,
         volume: None,
+        identified: false,
     }
 }
 

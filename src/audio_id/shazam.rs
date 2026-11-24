@@ -39,8 +39,12 @@ fn uuid() -> String {
     )
 }
 
-/// 送出簽章並解析回傳結果；辨識不到歌時回 `None`。
-pub fn identify(signature: &super::fingerprint::Signature) -> Option<Match> {
+/// 送出簽章並解析回傳結果。
+///
+/// 回傳 `Ok(None)` 代表連線正常但認不出歌（安靜、人聲、冷門曲目）；
+/// `Err` 帶回短原因，設定頁與診斷檔要看得到是「連不上」還是「格式不對」，
+/// 不然使用者只會覺得「聽歌辨識沒反應」。
+pub fn identify(signature: &super::fingerprint::Signature) -> Result<Option<Match>, String> {
     let bytes = super::fingerprint::encode(signature);
     let uri = format!(
         "data:audio/vnd.shazam.sig;base64,{}",
@@ -60,8 +64,9 @@ pub fn identify(signature: &super::fingerprint::Signature) -> Option<Match> {
         a = uuid(),
         b = uuid()
     );
-    let payload = serde_json::to_vec(&body).ok()?;
-    let response = agent()?
+    let payload = serde_json::to_vec(&body).map_err(|error| format!("打包失敗:{error}"))?;
+    let agent = agent().ok_or_else(|| "代理設定無效".to_string())?;
+    let response = agent
         .post(&url)
         .set("X-Shazam-Platform", "IPHONE")
         .set("X-Shazam-AppVersion", "14.1.0")
@@ -69,10 +74,16 @@ pub fn identify(signature: &super::fingerprint::Signature) -> Option<Match> {
         .set("Accept-Language", "zh")
         .set("User-Agent", "Shazam/3685 CFNetwork/1197 Darwin/20.0.0")
         .set("Content-Type", "application/json")
-        .send_bytes(&payload)
-        .ok()?;
-    let text = response.into_string().ok()?;
-    parse(&text)
+        .send_bytes(&payload);
+    let response = match response {
+        Ok(response) => response,
+        Err(ureq::Error::Status(code, _)) => return Err(format!("HTTP {code}")),
+        Err(error) => return Err(format!("連線失敗:{error}")),
+    };
+    let text = response
+        .into_string()
+        .map_err(|error| format!("讀取回應失敗:{error}"))?;
+    Ok(parse(&text))
 }
 
 /// 解析 Shazam 回應；沒有 track 時視為未辨識。

@@ -557,7 +557,8 @@ fn lyric_key_matches(key:&str,media:&NowPlaying)->bool {
     let Some(rest)=rest.strip_prefix(media.artist.as_str()).and_then(|rest|rest.strip_prefix('|')) else{return false;};
     let mut buffer=[0u8;32];
     let mut cursor=std::io::Cursor::new(&mut buffer[..]);
-    if write!(cursor,"{:.0}",media.duration).is_err(){return rest==format!("{:.0}",media.duration);}
+    let duration=lyric_duration(media);
+    if write!(cursor,"{:.0}",duration).is_err(){return rest==format!("{:.0}",duration);}
     let written=cursor.position() as usize;
     rest.as_bytes()==&buffer[..written]
 }
@@ -578,7 +579,7 @@ fn lyric_key_matches_the_formatted_key_without_allocating(){
 pub(crate) struct LyricSong {pub source:String,pub title:String,pub artist:String,pub duration:f64,pub song_id:Option<u64>}
 impl LyricSong {
     fn of(media:&NowPlaying)->Self {
-        Self{source:media.source.clone(),title:media.title.clone(),artist:media.artist.clone(),duration:media.duration,song_id:media.song_id}
+        Self{source:media.source.clone(),title:media.title.clone(),artist:media.artist.clone(),duration:lyric_duration(media),song_id:media.song_id}
     }
 }
 
@@ -590,6 +591,13 @@ enum SongChange {
     Same,
     /// 同一首，署名有补全：重新查询，但查询期间继续显示已有歌词。
     Refined,
+}
+
+/// 查歌詞時要用的長度。
+/// 聽歌辨識認出來的歌，duration 還是 YouTube 影片長度（含前奏、片尾、直播），
+/// 拿它和唱片版比對會把正確候選全部刷掉，所以一律當作「長度未知」。
+fn lyric_duration(media:&NowPlaying)->f64 {
+    if media.identified {0.0}else{media.duration}
 }
 
 fn song_change(previous:&LyricSong,media:&NowPlaying)->SongChange {
@@ -3719,7 +3727,7 @@ impl App {
         if !self.show_lyrics && !self.settings.island_lyrics {self.ly=LyricsState::default();return;}
         let np = &self.media;
         if np.title.is_empty(){self.ly=LyricsState::default();return;}
-        let key = format!("{}|{}|{:.0}", np.title, np.artist, np.duration);
+        let key = format!("{}|{}|{:.0}", np.title, np.artist, lyric_duration(np));
         let id_arrived=key==self.ly.key && !self.ly.loading && self.ly.song_id.is_none() && np.song_id.is_some()
             && !self.ly.lyrics.as_ref().is_some_and(|lyrics|lyrics.synced);
         if key != self.ly.key {
@@ -3784,7 +3792,7 @@ impl App {
         self.ly = LyricsState { key, loading: shown.is_none() && !native_only, lyrics:shown,
             error:native_only.then_some(lyrics::FetchError::NotFound), song_id:np.song_id, attempts,
             song:Some(LyricSong::of(np)), ..Default::default() };
-        let (source, title, artist, dur) = (np.source.clone(), np.title.clone(), np.artist.clone(), np.duration);
+        let (source, title, artist, dur) = (np.source.clone(), np.title.clone(), np.artist.clone(), lyric_duration(np));
         let song_id=np.song_id;
         if kugou || lyrics::is_soda(&source) {
             let (tx,rx)=std::sync::mpsc::sync_channel(1);self.ly.native_rx=Some(rx);

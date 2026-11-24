@@ -68,6 +68,9 @@ pub struct NowPlaying {
     pub playback_type: MediaKind,
     /// 当前播放器在 Windows 音量混合器中的音量与静音状态。
     pub volume: Option<(u32,bool)>,
+    /// 歌名與歌手是「聽聲音辨識」補上的，不是播放器給的。
+    /// 這種情況 duration 仍是影片長度（含前奏、片尾），查歌詞時不能拿來比對。
+    pub identified: bool,
 }
 
 /// 台灣版開關：大陸音樂來源（網易雲、酷狗、汽水、酷我、波點、QQ 音樂）預設不上島。
@@ -454,7 +457,7 @@ fn read_session(session:&windows::Media::Control::GlobalSystemMediaTransportCont
     }
     if !has_position{sampled_at=None;}
     let playback_type=match playback_type.map(|kind|kind.0){Some(1)=>MediaKind::Music,Some(2)=>MediaKind::Video,_=>MediaKind::Unknown};
-    Some(NowPlaying { title, artist, album, source, song_id:None, playing, position, sampled_at, event_time_ms, duration, artwork:None, playback_type, volume:None })
+    Some(NowPlaying { title, artist, album, source, song_id:None, playing, position, sampled_at, event_time_ms, duration, artwork:None, playback_type, volume:None, identified:false })
 }
 
 #[cfg(not(windows))]
@@ -877,10 +880,11 @@ pub fn spawn_poller(state: Shared,ctx:eframe::egui::Context)->Poller {
             #[cfg(not(windows))]
             let native_pending=false;
             let mut np=choose_media_for_source(system,native,&selected_source,native_pending).unwrap_or_default();
-            // 瀏覽器只給影片標題（甚至是分頁名）時，直接聽系統正在播的聲音認歌，
+            // 瀏覽器只給影片標題（甚至是分頁名、或整個空字串）時，直接聽系統正在播的聲音認歌，
             // 順便把「唱到第幾秒」補進位置，歌詞才能從正確的段落進場。
+            // 標題是不是空的都要聽：Chrome 常常整個標題都給不出來。
             #[cfg(windows)]
-            if crate::smtc::is_browser_source(&np.source) && !np.title.trim().is_empty() {
+            if crate::smtc::is_browser_source(&np.source) && np.playing && crate::audio_id::enabled() {
                 crate::audio_id::request();
                 if let Some(found)=crate::audio_id::cached(){crate::audio_id::apply(&mut np,&found);}
             }
