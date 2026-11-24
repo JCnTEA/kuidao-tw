@@ -8,7 +8,7 @@ pub fn capture_mono(seconds: u32) -> Option<(Vec<f32>, u32)> {
     use windows::Win32::Media::Audio::{
         eConsole, eRender, IAudioCaptureClient, IAudioClient, IMMDeviceEnumerator, MMDeviceEnumerator,
         AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK,
-        WAVEFORMATEX, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_PCM,
+        WAVEFORMATEX,
     };
     use windows::Win32::System::Com::{
         CoCreateInstance, CoInitializeEx, CoTaskMemFree, CLSCTX_ALL, COINIT_MULTITHREADED,
@@ -38,9 +38,13 @@ pub fn capture_mono(seconds: u32) -> Option<(Vec<f32>, u32)> {
 
         let channels = format.nChannels.max(1) as usize;
         let rate = format.nSamplesPerSec;
-        let is_float = format.wFormatTag == WAVE_FORMAT_IEEE_FLOAT as u16
-            || (format.wFormatTag == 0xFFFE && format.wBitsPerSample == 32);
-        let is_pcm16 = format.wFormatTag == WAVE_FORMAT_PCM as u16 && format.wBitsPerSample == 16;
+        // WAVE_FORMAT_IEEE_FLOAT = 0x0003、WAVE_FORMAT_EXTENSIBLE = 0xFFFE；windows crate 沒匯出前兩個常數。
+        const IEEE_FLOAT: u16 = 0x0003;
+        const PCM: u16 = 0x0001;
+        const EXTENSIBLE: u16 = 0xFFFE;
+        let is_float = format.wFormatTag == IEEE_FLOAT
+            || (format.wFormatTag == EXTENSIBLE && format.wBitsPerSample == 32);
+        let is_pcm16 = format.wFormatTag == PCM && format.wBitsPerSample == 16;
         if !is_float && !is_pcm16 {
             return None;
         }
@@ -63,10 +67,8 @@ pub fn capture_mono(seconds: u32) -> Option<(Vec<f32>, u32)> {
                 let mut data: *mut u8 = std::ptr::null_mut();
                 let mut frames: u32 = 0;
                 let mut flags: u32 = 0;
-                let mut device_position: u64 = 0;
-                let mut qpc_position: u64 = 0;
                 if capture
-                    .GetBuffer(&mut data, &mut frames, &mut flags, &mut device_position, &mut qpc_position)
+                    .GetBuffer(&mut data, &mut frames, &mut flags, None, None)
                     .is_err()
                 {
                     break;
