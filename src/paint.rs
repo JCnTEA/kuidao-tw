@@ -421,17 +421,18 @@ pub fn chevron(c: &Card, x: f32, y: f32, dir: f32, hover: f32, press: f32) {
     c.path(&[(cx - dir * s * 0.75, y - s), (cx + dir * s * 0.45, y), (cx - dir * s * 0.75, y + s)], 1.6, Color32::WHITE);
 }
 
-/// 电池环：充电绿色 + 闪电；低电量红色；否则灰色并显示百分比弧。
+/// 电池环：一般绿色跑圈、低于 20% 转红；充电时用更亮的绿色并加闪电。
 pub fn battery(c: &Card, cx: f32, cy: f32, pct: Option<u8>, charging: bool, k: f32) {
     let r = 8.2 * k;
     let w = 2.6 * k;
     let level = pct.unwrap_or(100) as f32 / 100.0;
+    let low = level < 0.2;
     let col = if charging {
         theme::CHARGE
-    } else if level < 0.2 {
+    } else if low {
         theme::RED
     } else {
-        Color32::from_rgb(220, 220, 224)
+        theme::GREEN
     };
     c.ring(cx, cy, r, w, alpha(col, 0.22));
     let a0 = -FRAC_PI_2;
@@ -445,7 +446,9 @@ pub fn battery(c: &Card, cx: f32, cy: f32, pct: Option<u8>, charging: bool, k: f
         c.poly(&[(cx + 1.6 * s, cy - 5.0 * s), (cx - 3.2 * s, cy + 0.9 * s), (cx + 0.3 * s, cy + 0.9 * s)], col);
         c.poly(&[(cx - 0.3 * s, cy - 0.9 * s), (cx + 3.2 * s, cy - 0.9 * s), (cx - 1.6 * s, cy + 5.0 * s)], col);
     } else {
-        c.text(cx, cy + 2.4 * k, &format!("{}", pct.unwrap_or(0)), 6.6 * k, W::Bold, col, H::Center);
+        // 數字留在白色（低電量跟著轉紅），綠圈裡的字才不會綠色疊綠色看不清楚。
+        let ink = if low { theme::RED } else { theme::WHITE };
+        c.text(cx, cy + 2.4 * k, &format!("{}", pct.unwrap_or(0)), 6.6 * k, W::Bold, ink, H::Center);
     }
 }
 
