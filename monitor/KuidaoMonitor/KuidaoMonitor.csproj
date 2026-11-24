@@ -8,7 +8,14 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <DevBuild Condition="'$(DevBuild)' == ''">false</DevBuild>
+    <ApplicationIcon Condition="'$(DevBuild)' == 'true'">Assets\kuidao_dev.ico</ApplicationIcon>
+    <ApplicationIcon Condition="'$(DevBuild)' != 'true'">Assets\kuidao.ico</ApplicationIcon>
+    <DefineConstants Condition="'$(DevBuild)' == 'true'">$(DefineConstants);DEV_BUILD</DefineConstants>
   </PropertyGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.2" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />

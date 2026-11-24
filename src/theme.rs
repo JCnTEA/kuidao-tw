@@ -222,10 +222,16 @@ fn build_fonts()->FontDefinitions {
 }
 
 /// 各个原生窗口统一使用鬼島品牌图标，避免回落到框架默认图标。
+/// 開發版沿用同一套視窗圖示管線，只在編譯帶 `KUIDAO_CHANNEL=dev` 時換成緞帶版本。
+fn app_icon_bytes()->&'static [u8]{
+    if option_env!("KUIDAO_CHANNEL")==Some("dev"){ return include_bytes!("../assets/kuidao-dev-logo.png"); }
+    include_bytes!("../assets/kuidao-logo.png")
+}
+
 pub fn app_icon()->std::sync::Arc<eframe::egui::IconData>{
     static ICON:std::sync::OnceLock<std::sync::Arc<eframe::egui::IconData>>=std::sync::OnceLock::new();
     ICON.get_or_init(||{
-        let image=image::load_from_memory(include_bytes!("../assets/kuidao-logo.png")).expect("鬼島圖示資源應有效").thumbnail(128,128).to_rgba8();
+        let image=image::load_from_memory(app_icon_bytes()).expect("鬼島圖示資源應有效").thumbnail(128,128).to_rgba8();
         std::sync::Arc::new(eframe::egui::IconData{width:image.width(),height:image.height(),rgba:image.into_raw()})
     }).clone()
 }
