@@ -162,6 +162,9 @@ pub struct Report {
     pub present_power: Option<(u8, DeviceKind)>,
 }
 
+/// 電量重新讀取的節奏：每秒一次，畫面與島上的百分比即時跟進。
+const BATTERY_INTERVAL: Duration = Duration::from_secs(1);
+
 #[derive(Default)]
 struct Cache {
     devices: Vec<Device>,
@@ -174,8 +177,8 @@ impl Cache {
         let changed=devices.len()!=self.devices.len() || devices.iter().any(|d|!self.devices.iter().any(|old|old.id==d.id));
         for device in &mut devices {device.battery=self.devices.iter().find(|old|old.id==device.id).and_then(|old|old.battery);}
         if devices.is_empty(){self.battery_at=None;}
-        else if changed || self.battery_at.is_none_or(|at|now.duration_since(at)>=Duration::from_secs(60)) {
-            // 失败同样限频，避免设备驱动异常时每两秒重新枚举整机。
+        else if changed || self.battery_at.is_none_or(|at|now.duration_since(at)>=BATTERY_INTERVAL) {
+            // 失败同样限频在一个周期内，避免设备驱动异常时不停重新枚举整机。
             self.battery_at=Some(now);
             if let Ok(levels)=read(&devices){for device in &mut devices {device.battery=levels.iter().find(|(id,_)|id==&device.id).map(|(_,level)|*level);}}
         }
@@ -211,7 +214,7 @@ pub fn spawn() -> Service {
             }
             #[cfg(not(windows))]
             let _=&tx;
-            if stopped.recv_timeout(Duration::from_secs(2))!=Err(std::sync::mpsc::RecvTimeoutError::Timeout) {return;}
+            if stopped.recv_timeout(BATTERY_INTERVAL)!=Err(std::sync::mpsc::RecvTimeoutError::Timeout) {return;}
         }
     }).ok();
     Service {rx,stop}
@@ -415,13 +418,13 @@ mod tests {
     fn device(id:&str)->Device {Device{id:id.into(),name:id.into(),battery:None,kind:DeviceKind::Mouse}}
 
     #[test]
-    fn idle_bluetooth_does_not_rescan_all_hardware_every_two_seconds(){
+    fn battery_is_rescanned_every_second(){
         let start=std::time::Instant::now();let mut cache=Cache::default();let mut scans=0;
-        for second in (0..360).step_by(2){
+        for second in 0..10 {
             let found=cache.update(vec![device("AA")],start+Duration::from_secs(second),|_|{scans+=1;Ok(vec![("AA".into(),80)])});
             assert_eq!(found[0].battery,Some(80));
         }
-        assert_eq!(scans,6,"六分鐘內同一裝置的電量掃描應最多每分鐘一次");
+        assert_eq!(scans,10,"每秒都應重新讀一次電量");
     }
 
     #[test]
@@ -432,9 +435,9 @@ mod tests {
         assert_eq!(found[1].battery,Some(60));
         let found=cache.update(vec![device("AA"),device("BB")],now+Duration::from_secs(62),|_|Err(()));
         assert_eq!(found[0].battery,Some(79));
-        cache.update(vec![device("AA"),device("BB")],now+Duration::from_secs(64),|_|panic!("失敗後不能立即重複掃描"));
-        assert!(cache.update(vec![],now+Duration::from_secs(66),|_|panic!("無裝置不能掃描整機")).is_empty());
-        cache.update(vec![device("AA")],now+Duration::from_secs(68),|_|Ok(vec![("AA".into(),78)]));
+        cache.update(vec![device("AA"),device("BB")],now+Duration::from_secs(62) + Duration::from_millis(500),|_|panic!("同一個週期內不能重複掃描"));
+        assert!(cache.update(vec![],now+Duration::from_secs(63),|_|panic!("無裝置不能掃描整機")).is_empty());
+        cache.update(vec![device("AA")],now+Duration::from_secs(64),|_|Ok(vec![("AA".into(),78)]));
         assert_eq!(cache.devices[0].battery,Some(78));
     }
 

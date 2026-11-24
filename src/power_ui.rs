@@ -184,7 +184,7 @@ impl App {
 
         // 底部說明：藍牙裝置要系統有回報電量才會出現，避免使用者以為壞了。
         let footer = POWER_H - 8.0;
-        let note = if total > MAX_RINGS { format!("另有 {} 個裝置未列出", total - MAX_RINGS) } else { "每分鐘更新".to_string() };
+        let note = if total > MAX_RINGS { format!("另有 {} 個裝置未列出", total - MAX_RINGS) } else { "每秒更新".to_string() };
         c.text(
             15.0,
             footer,
