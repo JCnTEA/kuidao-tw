@@ -99,6 +99,14 @@ pub fn is_browser_source(source:&str)->bool{
         .iter().any(|name|source.contains(name))
 }
 
+/// 瀏覽器族系：Chrome 的播放卡來源常是「Chrome.UserData.Profile2」而不是 chrome.exe。
+fn browser_family(source:&str)->Option<&'static str>{
+    let source=source.to_ascii_lowercase();
+    [("chrome","chrome"),("msedge","msedge"),("firefox","firefox"),("brave","brave"),
+     ("opera","opera"),("vivaldi","vivaldi"),("youtube.com","chrome"),("youtube music","chrome")]
+        .iter().find(|(needle,_)|source.contains(needle)).map(|(_,family)|*family)
+}
+
 /// YouTube 分頁在 SMTC 常缺少專輯欄位，甚至被瀏覽器標成影片；
 /// 專輯或標題後綴是唯一穩定的辨識點。
 fn is_youtube(media:&NowPlaying)->bool{
@@ -353,7 +361,34 @@ fn query(artwork:&mut ArtworkCache) -> Option<NowPlaying> {
     if system.as_ref().is_some_and(|media|media.playing && !media.title.trim().is_empty()) {return system;}
     // Windows 播放卡沒有登記瀏覽器分頁時（部分 Chrome／Edge 版本不註冊 SMTC），
     // 改用音量混音器正在出聲的瀏覽器 + 視窗標題當後備來源。
-    crate::browser_media::probe().or(system)
+    // 播放卡只有時間軸、標題是空的（Chrome 常見）時，把時間軸接到標題那條來源上，
+    // 歌詞才會跟著實際進度跑，不會永遠停在第一句、要按暫停才對上。
+    match crate::browser_media::probe() {
+        Some(mut page) => {
+            adopt_browser_timeline(&mut page, system.as_ref());
+            Some(page)
+        }
+        None => system,
+    }
+}
+
+/// 把播放卡的時間軸（進度、長度、播放狀態）接到只拿到視窗標題的瀏覽器來源。
+/// 限瀏覽器自報的來源，避免把別的播放器進度套到網頁音樂上。
+fn adopt_browser_timeline(page: &mut NowPlaying, system: Option<&NowPlaying>) {
+    let Some(sys) = system else { return };
+    if !is_browser_source(&sys.source) { return; }
+    // 兩個來源必須是同一套瀏覽器；Edge 暫停、Chrome 在播時，不能把 Edge 的進度貼過來。
+    if let (Some(one),Some(other))=(browser_family(&sys.source),browser_family(&page.source)) {
+        if one!=other { return; }
+    }
+    page.playing = sys.playing;
+    if sys.duration > 0.0 { page.duration = sys.duration; }
+    if let Some(at) = sys.sampled_at {
+        page.position = sys.position;
+        page.event_time_ms = sys.event_time_ms;
+        page.sampled_at = Some(at);
+    }
+    if sys.playback_type != MediaKind::Unknown { page.playback_type = sys.playback_type; }
 }
 
 #[cfg(windows)]
@@ -738,6 +773,34 @@ fn kugou_repeated_samples_do_not_freeze_lyrics() {
         assert_eq!(media.sampled_at,Some(now));
         assert_eq!(media.position,position);
     }
+}
+
+#[test]
+fn browser_page_borrows_the_system_timeline_when_the_card_has_no_title(){
+    let sampled=std::time::Instant::now();
+    let system=NowPlaying{source:"Chrome.UserData.Profile2".into(),title:String::new(),position:72.5,
+        duration:240.0,playing:true,playback_type:MediaKind::Music,sampled_at:Some(sampled),..Default::default()};
+    let mut page=NowPlaying{source:"chrome.exe".into(),title:"江蕙 - 夢中的情話".into(),artist:"江蕙".into(),
+        playing:true,position:0.0,duration:0.0,sampled_at:Some(sampled),..Default::default()};
+    adopt_browser_timeline(&mut page,Some(&system));
+    assert_eq!(page.position,72.5,"歌詞進度要跟著播放卡的時間軸");
+    assert_eq!(page.duration,240.0);
+    assert_eq!(page.sampled_at,Some(sampled));
+    assert_eq!(page.title,"江蕙 - 夢中的情話","標題仍用視窗標題那條來源");
+    // 非瀏覽器來源的時間軸不能借用。
+    let other=NowPlaying{source:"QQMusic.exe".into(),position:10.0,duration:100.0,playing:true,sampled_at:Some(sampled),..Default::default()};
+    adopt_browser_timeline(&mut page,Some(&other));
+    assert_eq!(page.position,72.5);
+    // 不同瀏覽器（Edge 暫停、Chrome 在播）不能借時間軸。
+    let edge=NowPlaying{source:"MSEdge.3cd65c1005a0ceedc70b082.Default".into(),title:String::new(),
+        position:15.0,duration:200.0,playing:true,sampled_at:Some(sampled),..Default::default()};
+    adopt_browser_timeline(&mut page,Some(&edge));
+    assert_eq!(page.position,72.5);
+    // 暫停狀態要跟著播放卡，歌詞才不會繼續往前跑。
+    let paused=NowPlaying{source:"msedge.exe".into(),title:String::new(),position:72.5,duration:240.0,
+        playing:false,sampled_at:Some(sampled),..Default::default()};
+    adopt_browser_timeline(&mut page,Some(&paused));
+    assert!(!page.playing);
 }
 
 #[test]
