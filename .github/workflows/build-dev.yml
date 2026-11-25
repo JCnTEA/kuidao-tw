@@ -52,13 +52,18 @@ jobs:
       - name: Install NSIS
         shell: pwsh
         run: |
-          for ($i = 1; $i -le 3; $i++) {
-            choco install nsis --no-progress -y
-            if (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe') { break }
-            Write-Host "NSIS 安裝失敗，第 $i 次重試…"
-            Start-Sleep -Seconds 15
+          $target = 'C:\Program Files (x86)\NSIS'
+          $makensis = Join-Path $target 'makensis.exe'
+          if (-not (Test-Path $makensis)) { choco install nsis --no-progress -y }
+          if (-not (Test-Path $makensis)) {
+            # Chocolatey 社群源常 503，直接抓 NSIS 免安裝版解到標準路徑。
+            $zip = Join-Path $env:RUNNER_TEMP 'nsis.zip'
+            Invoke-WebRequest 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11.zip' -OutFile $zip -UseBasicParsing -TimeoutSec 180
+            Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'nsis') -Force
+            New-Item -ItemType Directory -Force -Path $target | Out-Null
+            Copy-Item (Join-Path $env:RUNNER_TEMP 'nsis\nsis-3.11\*') $target -Recurse -Force
           }
-          if (-not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) { throw 'NSIS 安裝失敗' }
+          if (-not (Test-Path $makensis)) { throw 'NSIS 安裝失敗' }
 
       - name: Build dev launcher
         shell: pwsh
