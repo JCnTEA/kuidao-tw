@@ -5,6 +5,9 @@ on:
   push:
     branches: [main, feat/dev-icon]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -46,6 +49,27 @@ jobs:
           $ver = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
           Compress-Archive -Path 'dist\*' -DestinationPath "Kuidao-Dev-v$ver-tw-windows-x64.zip" -Force
 
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
+      - name: Build dev launcher
+        shell: pwsh
+        env:
+          KUIDAO_BOOTSTRAP_CHANNEL: dev
+        run: |
+          cargo build --locked --release --bin kuidao-bootstrap
+          if ($LASTEXITCODE -ne 0) { throw 'Dev launcher build failed' }
+
+      - name: Build dev installer
+        shell: pwsh
+        run: |
+          $ver = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          $makensis = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
+          & $makensis /V2 /WX "/DPROJECT_DIR=$env:GITHUB_WORKSPACE" "/DBOOTSTRAP_EXE=target\release\kuidao-bootstrap.exe" "/DOUTPUT_FILE=KuidaoDev-Setup-TW-x64.exe" "/DDISPLAY_VERSION=$ver" "/DDISPLAY_VERSION_NUM=$ver.0" 'installer\setup-dev.nsi'
+          if ($LASTEXITCODE -ne 0) { throw 'Dev installer build failed' }
+          if (-not (Test-Path 'installer\KuidaoDev-Setup-TW-x64.exe')) { throw 'Dev installer missing' }
+          Copy-Item 'installer\KuidaoDev-Setup-TW-x64.exe' 'KuidaoDev-Setup-TW-x64.exe' -Force
+
       - name: Upload dev artifact
         uses: actions/upload-artifact@v4
         with:
@@ -53,3 +77,16 @@ jobs:
           path: |
             dist\鬼島 Kuidao 開發版.exe
             Kuidao-Dev-v*-tw-windows-x64.zip
+            KuidaoDev-Setup-TW-x64.exe
+
+      - name: Publish dev launcher to fixed URL
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = 'dev-latest'
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --prerelease --title '鬼島 Kuidao 開發版（固定下載位址）' --notes '這個標籤只放開發版安裝檔，下載網址固定不變；內容由每次開發版建置自動更新。'
+          }
+          gh release upload $tag KuidaoDev-Setup-TW-x64.exe --clobber

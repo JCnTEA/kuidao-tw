@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>鬼島 Kuidao 開發版 · 固定下載網址</title>
+<meta name="description" content="鬼島 Kuidao 開發版專用下載頁：固定下載網址、獨立安裝資料夾、啟動器每次開啟自動更新程式與素材。">
+<style>
+:root{
+  --bg:#05070b; --panel:rgba(18,22,31,.72); --line:rgba(255,255,255,.09);
+  --text:#eef2f8; --muted:#98a3b6; --dev:#7ee2c6; --dev2:#6aa9ff; --warn:#ffcc74;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:
+    radial-gradient(1100px 620px at 82% -8%, rgba(110,226,198,.16), transparent 62%),
+    radial-gradient(900px 560px at 8% 4%, rgba(106,169,255,.14), transparent 60%),
+    var(--bg);
+  color:var(--text);
+  font:16px/1.75 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+header{position:sticky;top:0;z-index:9;backdrop-filter:blur(14px);background:rgba(5,7,11,.72);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:20px;height:68px}
+.brand{display:flex;align-items:baseline;gap:10px;font-weight:700;letter-spacing:.02em}
+.brand small{font-weight:500;font-size:12px;color:var(--muted);letter-spacing:.14em}
+.nav .links{margin-left:auto;display:flex;gap:18px;font-size:14px;color:var(--muted)}
+.nav .links a:hover{color:var(--text)}
+.badge{font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid rgba(126,226,198,.35);color:var(--dev);background:rgba(126,226,198,.08)}
+main{padding:64px 0 96px}
+.hero{display:grid;gap:22px;grid-template-columns:1.25fr .75fr;align-items:start}
+h1{font-size:44px;line-height:1.2;margin:0 0 14px;letter-spacing:-.01em}
+h1 span{background:linear-gradient(100deg,var(--dev),var(--dev2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{color:var(--muted);max-width:52ch}
+.hero-card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:26px}
+.hero-card .tag{font-size:12px;letter-spacing:.16em;color:var(--dev)}
+.hero-card dl{margin:14px 0 0;display:grid;gap:10px}
+.hero-card dl div{display:flex;justify-content:space-between;gap:14px;font-size:14px;border-top:1px dashed var(--line);padding-top:10px}
+.hero-card dt{color:var(--muted)}
+.hero-card dd{margin:0;text-align:right}
+.dl{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-top:8px}
+.btn{
+  display:inline-flex;align-items:center;gap:10px;padding:15px 26px;border-radius:14px;font-weight:700;
+  background:linear-gradient(100deg,#8ef0d3,#7fbaff);color:#061014;
+  box-shadow:0 18px 40px -18px rgba(126,226,198,.65);transition:transform .15s ease,box-shadow .15s ease
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 22px 46px -16px rgba(126,226,198,.75)}
+.ghost{border:1px solid var(--line);color:var(--text);padding:14px 22px;border-radius:14px;font-size:14px;background:rgba(255,255,255,.03)}
+.note{font-size:13px;color:var(--muted)}
+section{margin-top:64px}
+h2{font-size:26px;margin:0 0 8px}
+.sub{color:var(--muted);margin:0 0 24px;font-size:14px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(3,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px}
+.card h3{margin:0 0 8px;font-size:17px}
+.card p{margin:0;color:var(--muted);font-size:14px}
+.steps{display:grid;gap:14px}
+.step{display:grid;grid-template-columns:42px 1fr;gap:16px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px}
+.num{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:700;color:#061014;background:linear-gradient(140deg,#8ef0d3,#7fbaff)}
+.step b{display:block;margin-bottom:4px}
+.step span{color:var(--muted);font-size:14px}
+.warn{border-left:3px solid var(--warn);background:rgba(255,204,116,.07);border-radius:0 16px 16px 0;padding:18px 22px;font-size:14px;color:#f4e3c3}
+.warn b{color:var(--warn)}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:10px;padding:2px 8px;word-break:break-all;color:#cfe0f5}
+footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:13px}
+.foot{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between}
+@media(max-width:860px){
+  .hero{grid-template-columns:1fr} .grid{grid-template-columns:1fr} h1{font-size:34px}
+  .nav .links{display:none} main{padding-top:40px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="index.html">鬼島<small>KUDAO · 開發版</small></a>
+    <div class="links">
+      <a href="index.html">官網首頁</a>
+      <a href="announcement.html">更新公告</a>
+      <a href="dev.html" style="color:var(--dev)">開發版</a>
+    </div>
+    <span class="badge">開發版線</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" style="margin-top:0">
+    <div>
+      <span class="badge">獨立安裝 · 不與正式版衝突</span>
+      <h1>鬼島 <span>開發版</span> 專用下載</h1>
+      <p class="lede">
+        開發版是主線每次改動就發佈的版本：功能先上、修正快、變動多。這一頁的下載網址固定不變，
+        檔案本身由每次開發版建置自動換新，所以把這個網址存成書籤就能一直拿到最新開發版安裝檔。
+      </p>
+      <div class="dl">
+        <a class="btn" href="https://github.com/JCnTEA/kuidao-tw/releases/download/dev-latest/KuidaoDev-Setup-TW-x64.exe" download>
+          下載開發版安裝檔
+        </a>
+        <a class="ghost" href="announcement.html">看這次改了什麼</a>
+      </div>
+      <p class="note" style="margin-top:14px">
+        檔名固定為 <b>KuidaoDev-Setup-TW-x64.exe</b>，不帶版本號；每個使用者都能自己安裝，不需要系統管理員。
+      </p>
+    </div>
+    <aside class="hero-card">
+      <div class="tag">DEV CHANNEL</div>
+      <dl>
+        <div><dt>下載網址</dt><dd>固定不變</dd></div>
+        <div><dt>安裝位置</dt><dd>%LOCALAPPDATA%\KuidaoDev</dd></div>
+        <div><dt>程式與素材</dt><dd>啟動器自動抓最新</dd></div>
+        <div><dt>與正式版</dt><dd>並存，互不覆蓋</dd></div>
+        <div><dt>設定與歌詞庫</dt><dd>%APPDATA%\Kuidao（共用）</dd></div>
+        <div><dt>更新方式</dt><dd>每次開啟先比版本</dd></div>
+      </dl>
+    </aside>
+  </section>
+
+  <section>
+    <h2>跟正式版不一樣的地方</h2>
+    <p class="sub">三件最重要的事，先看這段再安裝。</p>
+    <div class="grid">
+      <article class="card">
+        <h3>固定下載網址</h3>
+        <p>這一頁的連結永遠指向最新開發版安裝檔，不用每次去找新的 Release，也不用記版本號。</p>
+      </article>
+      <article class="card">
+        <h3>自己的安裝資料夾</h3>
+        <p>開發版安裝到使用者自己的 <span class="code">%LOCALAPPDATA%\KuidaoDev</span>，正式版在 Program Files，兩套可以同時開。</p>
+      </article>
+      <article class="card">
+        <h3>啟動器自動更新</h3>
+        <p>安裝包裡只有一個極小的開發版啟動器。每次開啟先確認最新開發版，版本不同就把程式與素材整包換新再開啟。</p>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>安裝流程</h2>
+    <p class="sub">三步結束，第一次開啟會需要一點下載時間。</p>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div><b>執行安裝檔</b><span>開啟 <span class="code">KuidaoDev-Setup-TW-x64.exe</span>，不需要管理員權限，桌面與開始選單會出現「鬼島 Kuidao 開發版」捷徑。</span></div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div><b>完成頁按下載並開啟</b><span>安裝完成後啟動器會抓最新開發版（程式檔＋assets 素材），下載完自動開啟鬼島。</span></div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div><b>之後照平常開就好</b><span>之後每次點捷徑，啟動器會先比對版本；有新版就靜默更新，沒有新版直接開啟。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="warn">
+      <b>先說清楚：開發版是測試性質。</b>功能會先上，改動密集，偶爾會有沒預期到的狀況。
+      正式版維持穩定、只在確認沒問題後才跟進。開發版有問題請直接回報，會以開發版為主線修。
+      安裝檔目前沒有程式碼簽章，Windows 可能會跳 SmartScreen 提示，選擇「仍要執行」即可。
+    </div>
+  </section>
+
+  <section>
+    <h2>移除方式</h2>
+    <p class="sub">開發版可以單獨移除，不會動到正式版。</p>
+    <div class="card">
+      <p style="color:var(--text)">從「設定 → 應用程式」找到「鬼島 Kuidao 開發版」解除安裝，或直接執行安裝資料夾裡的 <span class="code">Uninstall.exe</span>。
+      設定、歌詞庫與診斷紀錄放在 <span class="code">%APPDATA%\Kuidao</span>，會保留給下次重新安裝使用。</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>鬼島 Kuidao · 台灣版 · 開發版線</span>
+    <span><a href="index.html">官網首頁</a> · <a href="announcement.html">更新公告</a> · <a href="https://github.com/JCnTEA/kuidao-tw">原始碼</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -13,7 +13,29 @@ use std::time::Duration;
 
 const REPOSITORY: &str = "https://github.com/JCnTEA/kuidao-tw";
 const API: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases/latest";
+/// 開發版走另一條發布線：最新一個帶 `-tw-dev` 的 prerelease，每次啟動都比版本、自動換新版。
+const API_DEV: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases?per_page=20";
 const APP_EXE: &str = "kuidao.exe";
+/// 同一份啟動器原始碼，靠建置時的 `KUIDAO_BOOTSTRAP_CHANNEL=dev` 切成開發版啟動器。
+const IS_DEV: bool = matches!(option_env!("KUIDAO_BOOTSTRAP_CHANNEL"), Some("dev"));
+/// 開發版主程式在發佈包裡的檔名（中文名，跟正式版的 kuidao.exe 分開）。
+const APP_EXE_DEV: &str = "鬼島 Kuidao 開發版.exe";
+
+fn app_name() -> &'static str {
+    if IS_DEV {
+        APP_EXE_DEV
+    } else {
+        APP_EXE
+    }
+}
+
+fn channel_title() -> &'static str {
+    if IS_DEV {
+        "鬼島 · 開發版"
+    } else {
+        "鬼島 · 首次啟動"
+    }
+}
 
 static PERCENT: AtomicU32 = AtomicU32::new(0);
 static QUIT: AtomicBool = AtomicBool::new(false);
@@ -34,7 +56,7 @@ fn set_status(status: impl Into<String>, detail: impl Into<String>, percent: u32
 
 #[cfg(windows)]
 mod gui {
-    use super::{DETAIL, FAILED, PERCENT, QUIT, STATUS};
+    use super::{channel_title, DETAIL, FAILED, PERCENT, QUIT, STATUS};
     use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
     use windows::Win32::Graphics::Gdi::{
         BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, DrawTextW, EndPaint, FillRect,
@@ -187,7 +209,11 @@ mod gui {
         unsafe {
             text(
                 hdc,
-                "安裝包不含主程式，下載完成後會自動開啟。",
+                if IS_DEV {
+                    "開發版啟動器：每次開啟自動更新到最新開發版。"
+                } else {
+                    "安裝包不含主程式，下載完成後會自動開啟。"
+                },
                 &mut note,
                 13,
                 false,
@@ -312,11 +338,12 @@ mod gui {
         let height = rect.bottom - rect.top;
         let x = (unsafe { GetSystemMetrics(SM_CXSCREEN) } - width) / 2;
         let y = (unsafe { GetSystemMetrics(SM_CYSCREEN) } - height) / 2 - (24.0 * s) as i32;
+        let title = windows::core::HSTRING::from(channel_title());
         let hwnd = unsafe {
             CreateWindowExW(
                 WINDOW_EX_STYLE(0),
                 class_name,
-                windows::core::w!("鬼島 · 首次啟動"),
+                windows::core::PCWSTR(title.as_ptr()),
                 WS_CAPTION | WS_OVERLAPPED | WS_SYSMENU,
                 x,
                 y,
@@ -421,13 +448,18 @@ fn main() {
         .ok()
         .and_then(|path| path.parent().map(Path::to_path_buf))
         .unwrap_or_else(|| PathBuf::from("."));
-    let app = install_dir.join(APP_EXE);
+    let app = install_dir.join(app_name());
 
     if app.is_file() && !force_update {
-        if !no_launch {
-            launch(&app, &install_dir, &forwarded);
+        // 正式版：主程式存在就直接開，日常開啟不經過網路。
+        // 開發版：每次啟動都先問一次最新開發版，版本不同就自動換掉全部檔案（程式＋素材）。
+        let needs_update = IS_DEV && dev_update_needed(&install_dir);
+        if !needs_update {
+            if !no_launch {
+                launch(&app, &install_dir, &forwarded);
+            }
+            return;
         }
-        return;
     }
 
     let Some(hwnd) = gui::create() else {
@@ -462,7 +494,7 @@ fn main() {
                         // MB_YESNO | MB_ICONERROR = 0x00000014，IDYES = 6
                         let choice = gui::message(
                             &format!("{error}\n\n目前已安裝的版本仍可開啟。要改用已安裝版本嗎？"),
-                            "鬼島 · 下載失敗",
+                            channel_title(),
                             0x0000_0014,
                         );
                         if choice == 6 {
@@ -475,7 +507,7 @@ fn main() {
                         // MB_RETRYCANCEL | MB_ICONERROR = 0x00000015，IDRETRY = 4
                         let choice = gui::message(
                             &format!("{error}\n\n請確認網路連線後再試一次。"),
-                            "鬼島 · 下載失敗",
+                            channel_title(),
                             0x0000_0015,
                         );
                         if choice == 4 {
@@ -534,6 +566,9 @@ fn update(install_dir: &Path, app: &Path) -> Result<(), String> {
             return Err("安裝後仍找不到主程式，請重新安裝".into());
         }
         set_status("安裝完成", "正在開啟鬼島…", 100);
+        if IS_DEV {
+            let _ = std::fs::write(install_dir.join("dev-version.txt"), &release.version);
+        }
         update_uninstall_version(&release.version);
         Ok(())
     })();
@@ -551,6 +586,9 @@ struct Release {
 }
 
 fn fetch_release() -> Result<Release, String> {
+    if IS_DEV {
+        return fetch_dev_release();
+    }
     let response = agent(20)?
         .get(API)
         .set(
@@ -605,6 +643,93 @@ fn fetch_release() -> Result<Release, String> {
         size,
         hash,
     })
+}
+
+/// 開發版發布：`releases` 清單裡最新一個 prerelease、標籤結尾是 `-tw-dev`，
+/// 資產固定叫 `Kuidao-Dev-v<版本>-tw-windows-x64.zip`，下載後整包換上去（程式＋素材）。
+fn fetch_dev_release() -> Result<Release, String> {
+    let response = agent(20)?
+        .get(API_DEV)
+        .set(
+            "User-Agent",
+            concat!("KuidaoDevBootstrap/", env!("CARGO_PKG_VERSION")),
+        )
+        .set("Accept", "application/vnd.github+json")
+        .call()
+        .map_err(|error| match error {
+            ureq::Error::Status(403 | 429, _) => "更新服務暫時限流，請稍後再試".to_owned(),
+            _ => "無法連線更新服務，請檢查網路或代理".to_owned(),
+        })?;
+    let list: serde_json::Value = serde_json::from_reader(response.into_reader())
+        .map_err(|_| "更新資訊格式異常".to_owned())?;
+    let releases = list
+        .as_array()
+        .ok_or_else(|| "更新資訊格式異常".to_owned())?;
+    for value in releases {
+        if value["draft"].as_bool() == Some(true) {
+            continue;
+        }
+        let Some(tag) = value["tag_name"].as_str() else {
+            continue;
+        };
+        if !tag.ends_with("-tw-dev") {
+            continue;
+        }
+        let stem = tag.trim_start_matches('v').trim_end_matches("-tw-dev");
+        if stem.is_empty() {
+            continue;
+        }
+        let name = format!("Kuidao-Dev-v{stem}-tw-windows-x64.zip");
+        let expected = format!("{REPOSITORY}/releases/download/{tag}/{name}");
+        let Some(asset) = value["assets"].as_array().and_then(|assets| {
+            assets
+                .iter()
+                .find(|asset| asset["name"].as_str() == Some(&name))
+        }) else {
+            continue;
+        };
+        let url = asset["browser_download_url"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        let size = asset["size"].as_u64().unwrap_or_default();
+        let hash = asset["digest"]
+            .as_str()
+            .and_then(|digest| digest.strip_prefix("sha256:"))
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        if url != expected || !url.starts_with("https://") || size == 0 || size > 200 * 1024 * 1024
+        {
+            return Err("開發版下載網址或檔案大小不符".into());
+        }
+        if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("開發版缺少校驗碼".into());
+        }
+        return Ok(Release {
+            version: tag.to_owned(),
+            url,
+            size,
+            hash,
+        });
+    }
+    Err("目前沒有可用的開發版".into())
+}
+
+/// 開發版版本記在這台電腦的安裝資料夾；跟線上最新開發版不同就換新版。
+fn dev_update_needed(install_dir: &Path) -> bool {
+    let install_dir_ref = install_dir.to_path_buf();
+    let local = std::fs::read_to_string(install_dir_ref.join("dev-version.txt"))
+        .ok()
+        .map(|text| text.trim().to_owned())
+        .unwrap_or_default();
+    if local.is_empty() {
+        return true;
+    }
+    match fetch_dev_release() {
+        Ok(release) => release.version != local,
+        // 離線或服務掛掉時照常開目前版本，不要卡在啟動器。
+        Err(_) => false,
+    }
 }
 
 fn agent(timeout: u64) -> Result<ureq::Agent, String> {
@@ -847,7 +972,11 @@ fn cache_dir() -> Result<PathBuf, String> {
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("TEMP").map(PathBuf::from))
         .ok_or_else(|| "找不到暫存資料夾".to_owned())?
-        .join("Kuidao/Bootstrap");
+        .join(if IS_DEV {
+            "KuidaoDev/Bootstrap"
+        } else {
+            "Kuidao/Bootstrap"
+        });
     std::fs::create_dir_all(&root).map_err(|_| "無法建立暫存資料夾".to_owned())?;
     Ok(root.join(std::process::id().to_string()))
 }
@@ -857,13 +986,21 @@ fn update_uninstall_version(version: &str) {
     use windows::core::w;
     use windows::Win32::Foundation::ERROR_SUCCESS;
     use windows::Win32::System::Registry::{
-        RegCloseKey, RegOpenKeyExW, RegSetValueExW, HKEY, HKEY_LOCAL_MACHINE, KEY_SET_VALUE, REG_SZ,
+        RegCloseKey, RegOpenKeyExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE,
+        KEY_SET_VALUE, REG_SZ,
     };
-    let key_path = w!("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Kuidao");
+    let key_path = if IS_DEV {
+        w!("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\KuidaoDev")
+    } else {
+        w!("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Kuidao")
+    };
+    let root = if IS_DEV {
+        HKEY_CURRENT_USER
+    } else {
+        HKEY_LOCAL_MACHINE
+    };
     let mut key = HKEY::default();
-    if unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, key_path, 0, KEY_SET_VALUE, &mut key) }
-        != ERROR_SUCCESS
-    {
+    if unsafe { RegOpenKeyExW(root, key_path, 0, KEY_SET_VALUE, &mut key) } != ERROR_SUCCESS {
         return;
     }
     let mut value: Vec<u8> = version
