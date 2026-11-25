@@ -88,6 +88,15 @@ pub fn resolved(track_seconds: f32, player_seconds: f64) -> Option<f32> {
     (offset.abs() <= MAX_OFFSET_SECONDS).then_some(offset)
 }
 
+/// 位移只在同一種播放來源之間通用：影片版（瀏覽器）與播放器版（曲內時間）本來就不該套同一個位移。
+fn scope(source: &str) -> &'static str {
+    if crate::smtc::is_browser_source(source) { "web" } else { "local" }
+}
+
+fn store_key(title: &str, artist: &str, source: &str) -> String {
+    format!("{}@{}", crate::lyrics_library::key(title, artist), scope(source))
+}
+
 fn dir() -> PathBuf {
     crate::model::config_dir().join("lyrics")
 }
@@ -134,11 +143,11 @@ fn cache() -> &'static Mutex<Cache> {
 }
 
 /// 這首歌學到的位移（秒）；沒學過就是 0。
-pub fn offset_seconds(title: &str, artist: &str) -> f32 {
+pub fn offset_seconds(title: &str, artist: &str, source: &str) -> f32 {
     if title.trim().is_empty() {
         return 0.0;
     }
-    let key = crate::lyrics_library::key(title, artist);
+    let key = store_key(title, artist, source);
     let Ok(mut guard) = cache().lock() else { return 0.0 };
     if !guard.loaded {
         guard.map = read_from(&dir());
@@ -148,11 +157,11 @@ pub fn offset_seconds(title: &str, artist: &str) -> f32 {
 }
 
 /// 記住這首歌的位移；回傳實際存進去的毫秒數。
-pub fn remember(title: &str, artist: &str, offset: f32) -> Option<i32> {
+pub fn remember(title: &str, artist: &str, source: &str, offset: f32) -> Option<i32> {
     if title.trim().is_empty() || !offset.is_finite() || offset.abs() > MAX_OFFSET_SECONDS {
         return None;
     }
-    let key = crate::lyrics_library::key(title, artist);
+    let key = store_key(title, artist, source);
     let ms = (offset * 1000.0).round() as i32;
     let Ok(mut guard) = cache().lock() else { return None };
     if !guard.loaded {
@@ -165,11 +174,11 @@ pub fn remember(title: &str, artist: &str, offset: f32) -> Option<i32> {
 }
 
 /// 忘掉這首歌的位移（使用者手動歸零時用）。
-pub fn forget(title: &str, artist: &str) {
+pub fn forget(title: &str, artist: &str, source: &str) {
     if title.trim().is_empty() {
         return;
     }
-    let key = crate::lyrics_library::key(title, artist);
+    let key = store_key(title, artist, source);
     let Ok(mut guard) = cache().lock() else { return };
     if !guard.loaded {
         guard.map = read_from(&dir());
@@ -185,7 +194,7 @@ const ANCHOR_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
 const ANCHOR_EPSILON: f32 = 0.3;
 
 /// 用剛拿到的辨識結果校正這首歌：算出位移、寫進本機並留一行診斷。
-pub fn anchor(title: &str, artist: &str, track_seconds: f32) -> Option<i32> {
+pub fn anchor(title: &str, artist: &str, source: &str, track_seconds: f32) -> Option<i32> {
     let pending = *pending_slot().lock().ok()?.as_ref()?;
     if pending.0.elapsed().as_secs() > MAX_ANCHOR_AGE_SECS {
         return None;
@@ -198,10 +207,10 @@ pub fn anchor(title: &str, artist: &str, track_seconds: f32) -> Option<i32> {
         *last = Some(Instant::now());
     }
     let offset = resolved(track_seconds, pending.1)?;
-    if (offset - offset_seconds(title, artist)).abs() < ANCHOR_EPSILON {
+    if (offset - offset_seconds(title, artist, source)).abs() < ANCHOR_EPSILON {
         return None;
     }
-    let ms = remember(title, artist, offset)?;
+    let ms = remember(title, artist, source, offset)?;
     let line = format!(
         "對齊 {title} - {artist}：曲內 {track_seconds:.1}s、播放器 {:.1}s → 位移 {:+.2}s\n",
         pending.1,
@@ -236,7 +245,7 @@ mod tests {
         let root = std::env::temp_dir().join(format!("kuidao-sync-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let mut map = HashMap::new();
-        map.insert(crate::lyrics_library::key("夢中的情話", "江蕙"), -20000);
+        map.insert(store_key("夢中的情話", "江蕙", "chrome.exe"), -20000);
         write_to(&root, &map).unwrap();
         let back = read_from(&root);
         assert_eq!(back, map, "寫進去的位移要原樣讀得回來");
@@ -245,8 +254,14 @@ mod tests {
     }
 
     #[test]
+    fn video_and_player_offsets_stay_separate() {
+        assert_eq!(store_key("稻香", "周杰倫", "chrome.exe"), store_key("稻香", "周杰倫", "msedge.exe"), "瀏覽器之間共用");
+        assert_ne!(store_key("稻香", "周杰倫", "chrome.exe"), store_key("稻香", "周杰倫", "cloudmusic.exe"), "播放器不套用影片位移");
+    }
+
+    #[test]
     fn remember_ignores_impossible_offsets() {
-        assert!(remember("", "江蕙", 3.0).is_none(), "沒有歌名不能存");
-        assert!(remember("夢中的情話", "江蕙", 999.0).is_none(), "超過上限不存");
+        assert!(remember("", "江蕙", "chrome.exe", 3.0).is_none(), "沒有歌名不能存");
+        assert!(remember("夢中的情話", "江蕙", "chrome.exe", 999.0).is_none(), "超過上限不存");
     }
 }

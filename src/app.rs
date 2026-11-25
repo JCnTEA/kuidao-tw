@@ -1863,7 +1863,7 @@ impl App {
     /// 换句、分段和展开高亮共用时间调整；正数延后，负数提前。
     pub(crate) fn lyric_position(&self)->f32 {
         // 播放器時間 + 這首歌學到的位移（聽歌辨識校準）→ 曲內時間；再套全域的時間調整。
-        let offset=crate::lyric_sync::offset_seconds(&self.media.title,&self.media.artist) as f64;
+        let offset=crate::lyric_sync::offset_seconds(&self.media.title,&self.media.artist,&self.media.source) as f64;
         (self.media.position+offset-self.settings.lyric_delay_ms as f64/1000.0)as f32
     }
 

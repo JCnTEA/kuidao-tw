@@ -305,7 +305,7 @@ pub fn apply(target: &mut crate::smtc::NowPlaying, found: &Recognized) {
     // 位置就被反覆釘在同一個值上，歌詞看起來像卡住不動。現在改成只記「這首歌在播放器上的位移」，
     // 進度條維持播放器自己的真實時間，歌詞在繪製時再換算成曲內時間（見 lyric_sync）。
     if found.position > 0.0 {
-        crate::lyric_sync::anchor(&found.title, &found.artist, found.started.max(0.0));
+        crate::lyric_sync::anchor(&found.title, &found.artist, &target.source, found.started.max(0.0));
     }
 }
 
