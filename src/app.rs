@@ -38,6 +38,10 @@ pub const CALENDAR_PAGE: usize = 7;
 pub const WEATHER_PAGE: usize = 8;
 pub const PERFORMANCE_PAGE: usize = 9;
 pub const BLUETOOTH_PAGE: usize = 10;
+/// 遊戲庫：顯示已安裝的大作與啟動入口。
+pub const GAME_PAGE: usize = 11;
+/// 電量頁：手機、耳機、滑鼠、鍵盤等會回報電量的裝置。
+pub const POWER_PAGE: usize = 12;
 pub(crate) const WEATHER_H: f32 = 232.0;
 pub(crate) const CALENDAR_H: f32 = 216.0;
 pub(crate) const GAME_H: f32 = 204.0;
@@ -84,12 +88,12 @@ fn pill_shadow(painter:&egui::Painter,rect:Rect,radius:f32,strength:f32){
         painter.rect_filled(r,radius+grow*0.8,Color32::from_black_alpha((255.0*a*strength) as u8));
     }
 }
-pub(crate) const PAGE_NAMES: [&str; 11] = ["音樂", "專注", "健康", "置物架", "待辦", "郵箱", "AI 額度", "日程", "天氣", "系統性能", "無線設備"];
+pub(crate) const PAGE_NAMES: [&str; 13] = ["音樂", "專注", "健康", "置物架", "待辦", "郵箱", "AI 額度", "日程", "天氣", "系統性能", "無線設備", "遊戲", "電量"];
 pub(crate) const PAGE_SHORTCUT_KEYS: [&str; PAGE_NAMES.len()] = [
     "music", "focus", "health", "shelf", "tasks", "mail", "quota", "calendar", "weather",
-    "performance", "wireless",
+    "performance", "wireless", "games", "power",
 ];
-pub(crate) const PAGE_SETTINGS_TABS: [usize; 11] = [1,2,3,5,4,7,11,8,12,15,crate::extras::SETTINGS_TAB_WIRELESS];
+pub(crate) const PAGE_SETTINGS_TABS: [usize; 13] = [1,2,3,5,4,7,11,8,12,15,crate::extras::SETTINGS_TAB_WIRELESS,crate::extras::SETTINGS_TAB_PAGES,crate::extras::SETTINGS_TAB_PAGES];
 
 // ---------- 動效參數 ----------
 /// 懸停意圖緩衝：光標停留這麼久才真正展開（期間藥丸輕微脹大作為反饋），防誤觸。
@@ -138,6 +142,8 @@ pub struct Env {
     /// 頂欄日期，例如 `10月28日 週三`
     pub date: String,
     pub battery: Option<u8>,
+    /// 藍牙 PnP 節點仍在場但鏈路閒置時的最後電量。
+    pub bt_present: Option<(u8, crate::bt::DeviceKind)>,
     pub charging: bool,
     /// 互聯網連接狀態；未知時不觸發表情提醒。
     pub network: Option<bool>,
@@ -1278,6 +1284,7 @@ impl App {
             bt_shown: Vec::new(), wireless_devices:Vec::new(),wireless_offset:0,wireless_focus:None,wireless_enter_at:None,wireless_fx:Default::default(),wireless_alerted:Default::default(),wireless_seen_at:Default::default(),
             bt_initialized: false,
             mail: MailState { accounts: mail::load_accounts(), ..Default::default() },
+            backdrop:None, mail_unread:0, mail_bell_at:-10.0, mail_bell_account:String::new(), social:crate::social::Badges::load(), line_login:Default::default(), line_account:crate::line_login::load_account(), line_secret_input:String::new(), line_message:String::new(),
             mail_lines_cache: Vec::new(),
             calendar: CalendarState::load(),
             quota: crate::quota_ui::State::load(),
@@ -1425,6 +1432,15 @@ impl App {
                     } else {
                         self.new_mail_alert(body);
                     }
+                }
+            }
+            mail::Event::Unread { account, count } => {
+                if !watching(&account){return;}
+                // 單封事件已通知過就不再重複；IDLE 斷線或解析失敗時，這條補償仍會亮鈴鐺。
+                // 只抑制同一個帳號；另一個 Gmail 在八秒內收到新信仍要通知。
+                if self.t - self.mail_bell_at < 8.0 && self.mail_bell_account.eq_ignore_ascii_case(&account) {
+                    self.mail_unread=self.mail_unread.max(count.min(99) as u16);
+                    return;
                 }
                 self.mail_unread=self.mail_unread.max(count.min(99) as u16);
                 self.notification_bell_at = self.t;
@@ -2398,7 +2414,7 @@ impl App {
             }
             if self.page==TODO_PAGE && self.plugins.has_card(){return PH+46.0;}
         }
-        if self.page==PERFORMANCE_PAGE {crate::performance_ui::PAGE_H}else if self.page==BLUETOOTH_PAGE {194.0}else if self.page==CALENDAR_PAGE {CALENDAR_H}else if self.page==WEATHER_PAGE {WEATHER_H}else if self.page==6{176.0}else if self.page==5&&self.mail.open_uid.is_some(){236.0}else{PH}
+        if self.page==PERFORMANCE_PAGE {crate::performance_ui::PAGE_H}else if self.page==BLUETOOTH_PAGE {194.0}else if self.page==GAME_PAGE {GAME_H}else if self.page==POWER_PAGE {POWER_H}else if self.page==CALENDAR_PAGE {CALENDAR_H}else if self.page==WEATHER_PAGE {WEATHER_H}else if self.page==6{176.0}else if self.page==5&&self.mail.open_uid.is_some(){236.0}else{PH}
     }
 
     // ---------------------------------------------------------------
@@ -3255,6 +3271,7 @@ impl App {
         let c=c.faded(self.messenger_appear());
         let inner=c.clipped(0.0,2.0,UNREAD_W,list_h);
         let x=UNREAD_W/2.0;
+        let socials=self.social.active_ordered(&self.settings.social_order);
         for i in 0..self.pending_messengers.len() {
             let u=self.pending_messengers[i];
             let cy=2.0+slot*(i as f32+0.5)-self.messenger_scroll;
@@ -3340,7 +3357,7 @@ impl App {
         }
         #[cfg(windows)]
         self.draw_plugin_notice_stack(c,horizontal,sources.len()+health.len(),step,length,cmds);
-        for (i,kind) in health.into_iter().enumerate() {
+        for (i,(source,n)) in socials.iter().enumerate().filter(|_|icons>1) {
             let k=sources.len()+i;
             let (x,y)=at(k);
             let start=if k==0{0.0}else{(if horizontal{x}else{y})-step/2.0};
@@ -3365,6 +3382,32 @@ impl App {
         self.open=true; self.forced_open_until=self.t+4.0;
         self.w.tune(OPEN_W.0,OPEN_W.1);self.h.tune(OPEN_H.0,OPEN_H.1);
         self.w.target=PW;self.h.target=self.expanded_height();
+    }
+    /// 全部已讀：只清掉島上的訊息未讀，不開任何程式，然後把島體收回。
+    pub(crate) fn clear_all_unread(&mut self){
+        let pending=self.pending_messengers.clone();
+        for unread in pending {self.discard_unread(unread);}
+        for source in crate::social::Social::ALL {
+            if self.social.count(source)>0 {self.social.clear(source);}
+        }
+        self.social.persist();
+        self.mail_unread=0;
+        self.notice=None;
+        self.hud_notice=None;
+        self.notice_details=false;
+        self.notification_bell_until=0.0;
+        self.messenger_scroll=0.0;
+        self.open=false;
+        self.hover_lock=true;
+        self.hover_since=None;
+        self.leave_since=None;
+        self.forced_open_until=0.0;
+        self.music_volume_open=false;
+        let (bw,bh)=self.base_size();
+        self.w.tune(CLOSE.0,CLOSE.1);
+        self.h.tune(CLOSE.0,CLOSE.1);
+        self.w.target=bw;
+        self.h.target=bh;
     }
     fn notice_rect(&self,panel:Rect)->Option<Rect>{
         if !self.compact_notices(){return None;}
@@ -3433,7 +3476,7 @@ impl App {
     pub(crate) fn skin_palette(&self)->Option<crate::skin_paint::Palette> {
         #[cfg(feature="sdk-js")]
         if let Some(skin)=self.plugins.active_skin() {return Some(skin.palette);}
-        match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Classic|model::Skin::Fluid=>None}
+        match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Classic|model::Skin::Fluid|model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>None}
     }
 
     /// 設置頁預覽用的島體底色：沒有真實模糊，毛玻璃按較實的玻璃表現。
@@ -4290,6 +4333,8 @@ impl App {
             // 詳情頁的標題帶返回箭頭，由頁面自己畫。
             BLUETOOTH_PAGE if self.wireless_focus.is_some() && self.wireless_devices.len()>1 => return,
             BLUETOOTH_PAGE => ("無線", "設備", theme::CYAN),
+            GAME_PAGE => ("遊戲", "庫", theme::SOFT_GREEN),
+            POWER_PAGE => ("電量", "裝置", theme::GREEN),
             _ => ("島仔", "設置", theme::WHITE),
         };
         let wa = c.text(15.0, base, a, size::TITLE, W::Bold, theme::WHITE, H::Left);
@@ -4458,7 +4503,6 @@ impl App {
         #[cfg(any(feature="sdk-js",feature="sdk-wasm"))]
         if page==4 && crate::sdk_spike::live_card(c){return;}
         match page {
-            POWER_PAGE => self.page_power(c, env),
             0 => self.page_music(c, env, cmds),
             1 => self.page_focus(c, header, env),
             2 => self.page_water(c, header, env),
@@ -4475,6 +4519,8 @@ impl App {
             PERFORMANCE_PAGE => self.page_performance(c),
             8 => self.page_weather(c,&actions,env,cmds),
             BLUETOOTH_PAGE => self.page_wireless(c,env),
+            GAME_PAGE => self.page_games(c),
+            POWER_PAGE => self.page_power(c, env),
             CALENDAR_PAGE => self.page_calendar(c,header,env),
             _ => self.page_settings(c),
         }

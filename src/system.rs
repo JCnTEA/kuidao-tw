@@ -865,9 +865,6 @@ unsafe fn avoidance_for_window(foreground:HWND,island:RECT,pid:u32,settings:&cra
         }
         parent = GetWindow(hwnd, GW_OWNER).ok();
     }
-    if owner.is_some() || info.app_window || !path.as_deref().is_some_and(listed) {
-        return Some(false);
-    }
     if owner.is_some() || info.app_window || !path.as_deref().is_some_and(matches){return Some(false);}
     // 部分插件工具窗未登記 owner。優先跟隨剛才操作的同進程主窗口，每次重新檢查其位置。
     let host = match last.get() {
@@ -1437,11 +1434,32 @@ pub fn pick_files_for(title: &str, multiple: bool) -> Result<Vec<std::path::Path
     picked
 }
 
-pub fn pick_files_for(title:&str,multiple:bool) -> Result<Vec<std::path::PathBuf>> {
-    use windows::Win32::UI::Shell::*;
-    let mut options=FOS_FILEMUSTEXIST;
-    if multiple{options|=FOS_ALLOWMULTISELECT;}
-    pick_items_for(title,options)
+fn pick_files_dialog(title: &str, multiple: bool) -> Result<Vec<std::path::PathBuf>> {
+    unsafe {
+        use windows::Win32::UI::Shell::*;
+        let dialog: IFileOpenDialog = CoCreateInstance(&FileOpenDialog, None, CLSCTX_ALL)?;
+        let mut options = FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST;
+        if multiple {
+            options |= FOS_ALLOWMULTISELECT;
+        }
+        dialog.SetOptions(options)?;
+        dialog.SetTitle(&HSTRING::from(title))?;
+        if let Err(e) = dialog.Show(None) {
+            if e.code().0 as u32 == 0x800704c7 {
+                return Ok(vec![]);
+            }
+            return Err(e);
+        }
+        let items = dialog.GetResults()?;
+        let mut out = vec![];
+        for i in 0..items.GetCount()? {
+            let ptr = items.GetItemAt(i)?.GetDisplayName(SIGDN_FILESYSPATH)?;
+            let text = ptr.to_string()?;
+            windows::Win32::System::Com::CoTaskMemFree(Some(ptr.0 as _));
+            out.push(text.into());
+        }
+        Ok(out)
+    }
 }
 
 pub fn pick_folder_for(title:&str) -> Result<Option<std::path::PathBuf>> {

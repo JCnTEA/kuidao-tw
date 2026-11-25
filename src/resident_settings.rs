@@ -99,7 +99,7 @@ impl crate::app::App {
                     }
                 },
                 WEATHER=>if let Some(snapshot)=weather_snapshot.as_ref(){self.paint_pill_weather(&c,x,&layout,snapshot);}else{crate::weather_ui::icon(&c,x,15.0,16.0,crate::weather::Kind::Partly);},
-                PET=>self.pet.draw(&c,x,self.t,self.skin_palette(),self.mascot_ink(),self.uses_native_mascot()),
+                PET=>self.pet.draw(&c,x,self.t,self.skin_palette()),
                 MUSIC=>paint::playback_bars(&c,x,15.0,self.t,self.media.playing,theme::WHITE),
                 FOCUS=>crate::focus_bar::draw(&c,x,15.0,self.t,&self.pomo,self.phase_secs(self.pomo.phase),false),
                 QUOTA if count>0=>self.draw_quota_bar(&c,cx,&layout),

@@ -9,6 +9,21 @@ mod windows;
 #[cfg(windows)]
 mod receivers;
 
+
+/// 仍在場的音訊裝置中，電量最低（最需要留意）的一台。
+pub fn audio_with_battery(devices: &[Device]) -> Option<&Device> {
+    devices.iter()
+        .filter(|device| device.is_audio() && device.battery.is_some_and(|level| level <= 100))
+        .min_by_key(|device| device.battery.unwrap_or(101))
+}
+
+/// 桌機沒有系統電池時，優先用已連線手機的電量；手機沒回報才退回耳機／音箱。
+pub fn battery_with_fallback(devices: &[Device]) -> Option<&Device> {
+    devices.iter()
+        .find(|device| device.kind == DeviceKind::Phone && device.battery.is_some_and(|level| level <= 100))
+        .or_else(|| audio_with_battery(devices))
+}
+
 /// 識別順序：具體型號詞 → 通用名稱詞 → 藍牙類別碼 → 兜底名稱詞。
 /// 短詞（pen、mic、band…）按整詞匹配，避免 OpenRun 裡的 pen 被認成觸控筆。
 fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {

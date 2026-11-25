@@ -5277,7 +5277,7 @@ impl App {
                             ui.add_space(2.0);
                             ui.add(egui::Label::new(egui::RichText::new("下載、更新與全部功能都免費。如果它真的幫到你，可以用下面的收款碼請作者喝杯咖啡；完全自願，不影響任何功能。").size(11.0).color(settings_color(ctx,Color32::from_gray(175),Color32::from_gray(85)))).wrap());
                         });
-                        settings_card(ui,support_author);
+                        settings_card(ui,|ui|support_author(ui,&mut self.supporters));
                     }
                     _=>{
                         settings_label(ui,"鬼島 Kuidao 桌面靈動島");

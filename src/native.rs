@@ -317,6 +317,34 @@ fn apply_outline_with_feather(hwnd:HWND,key:&[i32],redraw:bool,feather:bool,[x,y
     }
 }
 
+fn top_edge_title_band(window:&RECT, monitor_top:i32, point:(i32,i32), band:i32)->bool {
+    let (x,y)=point;
+    let top=window.top.max(monitor_top);
+    x>=window.left && x<window.right && y>=top && y<top+band
+}
+
+/// 前台窗口的頂端標題列壓在島體上時，把這一點交還給它。
+unsafe fn foreground_top_edge_at(hwnd:HWND,x:i32,y:i32)->bool {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindowVisible,
+    };
+    let foreground=GetForegroundWindow();
+    if foreground.0.is_null() || foreground==hwnd {return false;}
+    if !IsWindowVisible(foreground).as_bool() || IsIconic(foreground).as_bool(){return false;}
+    let mut window=RECT::default();
+    if GetWindowRect(foreground,&mut window).is_err(){return false;}
+    let mut pid=0u32;
+    let _=GetWindowThreadProcessId(foreground,Some(&mut pid));
+    if pid==0{return false;}
+    let monitor=MonitorFromPoint(POINT{x,y},MONITOR_DEFAULTTONEAREST);
+    let mut info=MONITORINFO{cbSize:std::mem::size_of::<MONITORINFO>() as u32,..Default::default()};
+    if !GetMonitorInfoW(monitor,&mut info).as_bool(){return false;}
+    // 100% 縮放取 46 px；高 DPI 跟著放大，足以涵蓋標準標題列與自繪分頁列。
+    let dpi=windows::Win32::UI::HiDpi::GetDpiForWindow(hwnd).max(96);
+    let band=((46.0*dpi as f32/96.0).round() as i32).max(40);
+    top_edge_title_band(&window,info.rcMonitor.top,(x,y),band)
+}
+
 /// 命中區外 `HTTRANSPARENT`（鼠標投給下層窗口），命中區內 `HTCLIENT`。
 unsafe extern "system" fn subclass(
     hwnd: HWND,

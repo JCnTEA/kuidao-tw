@@ -47,13 +47,14 @@ impl PowerRing {
 
 fn ring_kind(kind: DeviceKind) -> RingKind {
     match kind {
-        DeviceKind::Bone | DeviceKind::Earbuds | DeviceKind::Headphones => RingKind::Audio,
+        DeviceKind::Bone | DeviceKind::Earbuds | DeviceKind::EarbudsStem | DeviceKind::EarbudsStemTips
+        | DeviceKind::OpenEar | DeviceKind::Headphones | DeviceKind::HearingAid => RingKind::Audio,
         DeviceKind::Speaker => RingKind::Speaker,
         DeviceKind::Keyboard => RingKind::Keyboard,
-        DeviceKind::Mouse => RingKind::Mouse,
-        DeviceKind::Gamepad => RingKind::Gamepad,
+        DeviceKind::Mouse | DeviceKind::Trackpad => RingKind::Mouse,
+        DeviceKind::Gamepad | DeviceKind::JoyCon => RingKind::Gamepad,
         DeviceKind::Phone => RingKind::Phone,
-        DeviceKind::Other => RingKind::Other,
+        _ => RingKind::Other,
     }
 }
 

@@ -50,6 +50,9 @@ wgpu-hal = { path = "vendor/wgpu-hal" }
 ureq = { path = "vendor/ureq" }
 
 [dependencies]
+chfft = "0.3"
+byteorder = "1"
+crc32fast = "1"
 ab_glyph = { version = "0.2", optional = true }
 eframe = { version = "0.31", default-features = false, features = ["glow", "wgpu", "default_fonts"] }
 egui_extras = { version = "0.31", default-features = false, features = ["svg", "image"] }

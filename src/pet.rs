@@ -365,7 +365,7 @@ impl Pet {
             PetState::Satisfied => crate::paint::droplet(c,cx+18.0,12.0,5.0,theme::CYAN),
             PetState::Music => {
                 let segment=music_segment_at(self.music_age);
-                self.draw_music(&c.faded(smoothstep(0.0,1.0,segment.elapsed)),cx,segment.pose,ink);
+                self.draw_music(&c.faded(smoothstep(0.0,1.0,segment.elapsed)),cx,segment.pose,theme::WHITE);
             },
             PetState::Worried => {
                 c.fill(cx+17.0,8.0,1.6,4.2,0.8,theme::YELLOW);

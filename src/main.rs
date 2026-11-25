@@ -789,7 +789,7 @@ impl eframe::App for Shell {
             if let Some(service)=&self.bt_rx {
                 while let Ok(report)=service.rx.try_recv(){
                     self.bt=report.devices;
-                    self.bt_present=report.present_power;
+                    self.bt_present=None;
                     self.bt_ready=true;
                 }
             }

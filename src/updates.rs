@@ -1,11 +1,10 @@
 //! 自動檢查正式版更新，下載與安裝由用戶確認。
 use eframe::egui;
-use std::{io::{Read, Write}, path::PathBuf, sync::{mpsc::{self, Receiver}, Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
+use std::{io::{Read, Write}, path::{Path, PathBuf}, sync::{mpsc::{self, Receiver}, Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 
-const REPOSITORY: &str = "https://github.com/Renly1994/xiaotang-daozai";
-const API: &str = "https://api.github.com/repos/Renly1994/xiaotang-daozai/releases/latest";
-const RELEASES: &str = "https://github.com/Renly1994/xiaotang-daozai/releases/latest";
-const BACKUP_DOWNLOAD: &str = "https://pan.quark.cn/s/0a39b4e1f332";
+const REPOSITORY: &str = "https://github.com/JCnTEA/kuidao-tw";
+const API: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases/latest";
+const RELEASES: &str = "https://github.com/JCnTEA/kuidao-tw/releases/latest";
 const STARTUP_WINDOW: Duration = Duration::from_secs(10);
 const CHECK_INTERVAL: Duration = Duration::from_secs(24 * 3600);
 const RETRY_INTERVAL: Duration = Duration::from_secs(3600);
@@ -127,7 +126,7 @@ impl State {
                     };
                     self.result = Some(result); self.rx = None;
                     if let Some(release) = automatic_package {
-                        if !cfg!(test) && automatic {
+                        if !cfg!(test) && automatic_until.is_some() {
                             self.start_download(ctx, release);
                         }
                     }

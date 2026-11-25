@@ -168,10 +168,10 @@ impl Expressions {
             let mut image=egui::ColorImage::from_rgba_unmultiplied([decoded.width() as usize,decoded.height() as usize],decoded.as_raw());
             drop(decoded);
             if let Some(palette)=palette {for pixel in &mut image.pixels {if pixel.a()>0 {*pixel=crate::skin_paint::map_color(*pixel,&palette);}}}
-            if let Some((previous,previous_palette,previous_species,texture))=&mut self.sheet {*previous=expression;*previous_palette=palette;*previous_species=species;texture.set(image,egui::TextureOptions::LINEAR);}
+            if let Some((previous,previous_palette,texture))=&mut self.sheet {*previous=expression;*previous_palette=palette;texture.set(image,egui::TextureOptions::LINEAR);}
             else {
                 let texture=c.ui.ctx().load_texture("daozai-expressions",image,egui::TextureOptions::LINEAR);
-                crate::skin_paint::mark_colored(texture.id());self.sheet=Some((expression,palette,species,texture));
+                crate::skin_paint::mark_colored(texture.id());self.sheet=Some((expression,palette,texture));
             }
         }
         let frame=if crate::bar_layout::animations_enabled(){expression.frame(time)}else{7};
