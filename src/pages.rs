@@ -1070,7 +1070,7 @@ impl App {
         }
     }
 
-    /// 拖入遮罩：流動虛線框 + 跟隨光標的柔光 + 上下輕跳的托盤圖標。
+    /// 拖入遮罩：流動虛線框 + 跟隨光標的柔光 + 上下輕跳的託盤圖標。
     pub(crate) fn drag_overlay(&self, c: &Card) {
         let (x, y, w, h) = (42.0, 31.0, 335.0, 93.0);
         c.fill(x, y, w, h, 12.0, Color32::from_black_alpha(110));

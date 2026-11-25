@@ -1,5 +1,5 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
-//! Windows 外殼：無邊框透明窗口 + 托盤 + 系統數據，界面全部交給 `daozai::app::App`。
+//! Windows 外殼：無邊框透明窗口 + 託盤 + 系統數據，界面全部交給 `daozai::app::App`。
 
 mod guard;
 use eframe::egui::{self, Color32, Pos2};
@@ -1157,7 +1157,7 @@ impl eframe::App for Shell {
                     }
                 }
                 Cmd::RestartApp=>{
-                    // 先拉起新進程（它會等本進程退出），再像托盤「退出」一樣摘圖標後結束。
+                    // 先拉起新進程（它會等本進程退出），再像託盤「退出」一樣摘圖標後結束。
                     if diagnostics::spawn_replacement(){
                         self.app.save_window_before_exit();
                         #[cfg(windows)] if let Some(tray)=&self.tray {tray.exit_process();}
@@ -1573,7 +1573,7 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-// 性能複測使用獨立數據目錄，避開日常島仔的托盤和安裝信息。
+// 性能複測使用獨立數據目錄，避開日常島仔的託盤和安裝信息。
 fn profiling_island()->bool {
     cfg!(feature="sdk-js") && std::env::var_os("DAOZAI_DATA_DIR").is_some() && std::env::args().any(|a|a=="--sdk-profile-island")
 }
@@ -1596,7 +1596,7 @@ fn request_material_restart(app: &mut App, ctx: &egui::Context, fallback: bool) 
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         true
     } else {
-        app.say("無法重新啟動島仔，請從托盤退出後手動打開");
+        app.say("無法重新啟動島仔，請從託盤退出後手動打開");
         ctx.request_repaint();
         false
     }

@@ -1,4 +1,4 @@
-//! QQ 的安裝位置、主窗口和托盤規則。
+//! QQ 的安裝位置、主窗口和託盤規則。
 use super::{Messenger,OpenError,Target,Unread};
 use super::windows::*;
 use windows::{core::{w,PCWSTR},Win32::{Foundation::{HWND,LPARAM,WPARAM},System::{Registry::{HKEY_CLASSES_ROOT,HKEY_CURRENT_USER},Threading::{OpenProcess,PROCESS_QUERY_LIMITED_INFORMATION}},UI::WindowsAndMessaging::*}};
@@ -113,7 +113,7 @@ mod tests{
         let steps=take_wake_steps();
         let _=DestroyWindow(window);
         assert_eq!(result,Err(OpenError::Unavailable));
-        assert_eq!(steps,["沒有可見的 QQ 主視窗".to_string(),"提醒視窗不是 QQ 系統匣宿主（Static）".to_string()],"依次記錄切前台和托盤兩條路為什麼都走不通");
+        assert_eq!(steps,["沒有可見的 QQ 主視窗".to_string(),"提醒視窗不是 QQ 系統匣宿主（Static）".to_string()],"依次記錄切前台和託盤兩條路為什麼都走不通");
         take_wake_steps();
         let gone=open(Unread{source:Messenger::Qq,pid:std::process::id(),window:0},&paths,true);
         assert_eq!((gone,take_wake_steps()),(Err(OpenError::Unavailable),vec!["提醒視窗已不屬於該帳號".to_string()]));
@@ -134,7 +134,7 @@ mod tests{
         }
         let pid=std::process::id();let paths=[normalized(&std::env::current_exe().unwrap().to_string_lossy())];
         assert_eq!(host_icons(&[(pid,host)],pid),vec![(host,3)]);
-        let found=accounts(&paths).expect("單一托盤帳號不能因多個隱藏輔助窗口而識別失敗");
+        let found=accounts(&paths).expect("單一託盤帳號不能因多個隱藏輔助窗口而識別失敗");
         assert_eq!(found.len(),1);assert_eq!(found[0].unread.window,host.0 as isize);
         assert!(ready_with_paths(found[0],&paths));
         let mut history=super::super::AccountHistory::new(Messenger::Qq);
@@ -171,7 +171,7 @@ mod tests{
                 let tray=class=="Electron_NotifyIconHostWindow";
                 let main=client_main_frame(Messenger::Qq,&class,GetWindowLongW(hwnd,GWL_STYLE)as u32,GetWindowLongW(hwnd,GWL_EXSTYLE)as u32) && GetWindow(hwnd,GW_OWNER).is_err();
                 if (tray||main) && matches(hwnd,search.paths){
-                    println!("候選 {} {:#x} pid {} 樣式 0x{:08X}/0x{:08X}",if tray{"托盤宿主"}else{"主窗口"},hwnd.0 as usize,window_pid(hwnd),GetWindowLongW(hwnd,GWL_STYLE)as u32,GetWindowLongW(hwnd,GWL_EXSTYLE)as u32);
+                    println!("候選 {} {:#x} pid {} 樣式 0x{:08X}/0x{:08X}",if tray{"託盤宿主"}else{"主窗口"},hwnd.0 as usize,window_pid(hwnd),GetWindowLongW(hwnd,GWL_STYLE)as u32,GetWindowLongW(hwnd,GWL_EXSTYLE)as u32);
                     if tray{search.hosts.push(hwnd);}else{search.mains.push(hwnd);}
                 }
                 true.into()

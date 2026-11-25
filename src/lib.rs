@@ -3,7 +3,7 @@
 //! - `app` / `pages`：與平台無關的界面與動效（外殼與錄製器共用）
 //! - `anim` / `paint` / `shape` / `theme`：彈簧、矢量繪製、面板輪廓、配色字體
 //! - `model` / `lyrics` / `smtc` / `icons`：數據、歌詞、系統媒體、文件圖標
-//! - `native` / `tray`：僅 Windows 的窗口區域、命中穿透與托盤
+//! - `native` / `tray`：僅 Windows 的窗口區域、命中穿透與託盤
 
 #[cfg(any(feature="sdk-js",feature="sdk-wasm"))]
 #[path="../spike/mod.rs"]

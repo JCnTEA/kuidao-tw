@@ -1,16 +1,16 @@
-//! 换歌与歌曲信息补全时的歌词状态：不串歌、不闪烁、不叠加网络线程。
+//! 換歌與歌曲信息補全時的歌詞狀態：不串歌、不閃爍、不疊加網絡線程。
 use super::*;
 use crate::smtc::NowPlaying;
 
 fn song(source:&str,title:&str,artist:&str,duration:f64)->NowPlaying{
-    // 播放器上报为音乐：歌手暂时为空时仍按歌曲处理（与真实客户端一致）。
+    // 播放器上報為音樂：歌手暫時為空時仍按歌曲處理（與真實客戶端一致）。
     NowPlaying{source:source.into(),title:title.into(),artist:artist.into(),duration,playing:true,position:7.0,
         playback_type:crate::smtc::MediaKind::Music,..Default::default()}
 }
 
 fn lyrics_on(h:&mut H){h.app.opts.fetch_lyrics=true;h.app.settings.island_lyrics=true;h.app.show_lyrics=true;}
 
-/// 用一个阻塞中的假线程占住网络名额：排队的查询不会真的联网。
+/// 用一個阻塞中的假線程佔住網絡名額：排隊的查詢不會真的聯網。
 fn busy(h:&mut H)->(std::sync::mpsc::Sender<()>,std::thread::ThreadId){
     let (release,wait)=std::sync::mpsc::channel::<()>();
     let worker=std::thread::spawn(move||{let _=wait.recv();});
@@ -21,7 +21,7 @@ fn finish(h:&mut H,release:std::sync::mpsc::Sender<()>){
     release.send(()).unwrap();h.app.ly_worker.take().unwrap().join().unwrap();
 }
 
-/// 模拟当前歌曲已查到同步歌词。
+/// 模擬當前歌曲已查到同步歌詞。
 fn showing(h:&mut H,media:&NowPlaying,lrc:&str){
     h.media=media.clone();h.frame(vec![]);
     h.app.ly=crate::app::LyricsState{
@@ -36,17 +36,17 @@ fn showing(h:&mut H,media:&NowPlaying,lrc:&str){
 fn switching_songs_clears_old_lyrics_immediately_even_while_a_request_is_running(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();lyrics_on(&mut h);
     let (release,id)=busy(&mut h);
-    showing(&mut h,&song("QQMusic.exe","旧歌","歌手",200.0),"[00:01]旧歌词\n[00:05]第二句");
+    showing(&mut h,&song("QQMusic.exe","舊歌","歌手",200.0),"[00:01]舊歌詞\n[00:05]第二句");
     assert_eq!(h.app.island_lyric().map(|(_,line)|line),Some("第二句"));
     let (late,rx)=std::sync::mpsc::channel();h.app.ly.rx=Some(rx);
     h.media=song("QQMusic.exe","新歌","歌手",180.0);h.frame(vec![]);
-    assert!(h.app.ly.lyrics.is_none(),"换歌后不能继续显示上一首的歌词");
+    assert!(h.app.ly.lyrics.is_none(),"換歌后不能繼續顯示上一首的歌詞");
     assert!(h.app.island_lyric().is_none());
-    assert!(h.app.ly.loading,"新歌应立即显示查找状态，不等旧请求结束");
+    assert!(h.app.ly.loading,"新歌應立即顯示查找狀態，不等舊請求結束");
     assert!(h.app.ly.key.starts_with("新歌|"));
-    assert!(late.send(Ok((crate::lyrics::parse_lrc("[00:01]迟到的旧歌词"),false))).is_err(),"上一首迟到的结果必须丢弃");
-    assert!(h.app.ly.pending.is_some() && h.app.ly.rx.is_none(),"在线查询排队，等旧请求结束");
-    assert_eq!(h.app.ly_worker.as_ref().unwrap().thread().id(),id,"旧请求未结束时不得另开取词线程");
+    assert!(late.send(Ok((crate::lyrics::parse_lrc("[00:01]遲到的舊歌詞"),false))).is_err(),"上一首遲到的結果必須丟棄");
+    assert!(h.app.ly.pending.is_some() && h.app.ly.rx.is_none(),"在線查詢排隊，等舊請求結束");
+    assert_eq!(h.app.ly_worker.as_ref().unwrap().thread().id(),id,"舊請求未結束時不得另開取詞線程");
     finish(&mut h,release);
 }
 
@@ -54,16 +54,16 @@ fn switching_songs_clears_old_lyrics_immediately_even_while_a_request_is_running
 fn filled_in_duration_keeps_synced_lyrics_without_a_new_lookup(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();lyrics_on(&mut h);
     let (release,_)=busy(&mut h);
-    let mut media=song("QQMusic.exe","晴天","周杰伦",0.0);
-    showing(&mut h,&media,"[00:01]故事的小黄花\n[00:05]从出生那年就飘着");
+    let mut media=song("QQMusic.exe","晴天","周杰倫",0.0);
+    showing(&mut h,&media,"[00:01]故事的小黃花\n[00:05]從出生那年就飄著");
     media.duration=269.0;h.media=media.clone();h.frame(vec![]);
-    assert_eq!(h.app.ly.key,"晴天|周杰伦|269");
-    assert_eq!(h.app.ly.lyrics.as_ref().unwrap().lines[1].text,"从出生那年就飘着","补全时长不能清空歌词");
-    assert!(!h.app.ly.loading && h.app.ly.pending.is_none(),"已有同步歌词时补全时长不再查询");
-    assert_eq!(h.app.island_lyric().map(|(_,line)|line),Some("从出生那年就飘着"));
-    // 歌手从空补全、写法变化同样视为同一首。
-    let mut blank=song("QQMusic.exe","晴天","",269.0);showing(&mut h,&blank,"[00:05]从出生那年就飘着");
-    blank.artist="周杰伦".into();h.media=blank;h.frame(vec![]);
+    assert_eq!(h.app.ly.key,"晴天|周杰倫|269");
+    assert_eq!(h.app.ly.lyrics.as_ref().unwrap().lines[1].text,"從出生那年就飄著","補全時長不能清空歌詞");
+    assert!(!h.app.ly.loading && h.app.ly.pending.is_none(),"已有同步歌詞時補全時長不再查詢");
+    assert_eq!(h.app.island_lyric().map(|(_,line)|line),Some("從出生那年就飄著"));
+    // 歌手從空補全、寫法變化同樣視為同一首。
+    let mut blank=song("QQMusic.exe","晴天","",269.0);showing(&mut h,&blank,"[00:05]從出生那年就飄著");
+    blank.artist="周杰倫".into();h.media=blank;h.frame(vec![]);
     assert!(h.app.ly.lyrics.is_some() && h.app.ly.pending.is_none());
     finish(&mut h,release);
 }
@@ -72,12 +72,12 @@ fn filled_in_duration_keeps_synced_lyrics_without_a_new_lookup(){
 fn completed_artist_credits_requery_but_keep_showing_current_lyrics(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();lyrics_on(&mut h);
     let (release,_)=busy(&mut h);
-    let mut media=song("QQMusic.exe","有点甜","汪苏泷",230.0);
+    let mut media=song("QQMusic.exe","有點甜","汪蘇瀧",230.0);
     showing(&mut h,&media,"[00:01]第一句\n[00:05]我的心");
-    media.artist="汪苏泷、BY2".into();h.media=media;h.frame(vec![]);
-    assert_eq!(h.app.ly.lyrics.as_ref().unwrap().lines[1].text,"我的心","查询期间继续显示已有歌词");
-    assert!(!h.app.ly.loading,"已有歌词时不闪查找状态");
-    assert!(h.app.ly.pending.is_some(),"署名补全后按完整署名重新查询");
+    media.artist="汪蘇瀧、BY2".into();h.media=media;h.frame(vec![]);
+    assert_eq!(h.app.ly.lyrics.as_ref().unwrap().lines[1].text,"我的心","查詢期間繼續顯示已有歌詞");
+    assert!(!h.app.ly.loading,"已有歌詞時不閃查找狀態");
+    assert!(h.app.ly.pending.is_some(),"署名補全後按完整署名重新查詢");
     assert_eq!(h.app.island_lyric().map(|(_,line)|line),Some("我的心"));
     finish(&mut h,release);
 }
@@ -87,9 +87,9 @@ fn same_title_with_other_version_or_artist_is_a_different_song(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     for next in [song("QQMusic.exe","Track","甲",300.0),song("QQMusic.exe","Track","丙",240.0),song("QQMusic.exe","Track (Live)","甲",240.0)] {
         let mut h=H::new();lyrics_on(&mut h);let (release,_)=busy(&mut h);
-        showing(&mut h,&song("QQMusic.exe","Track","甲",240.0),"[00:01]原版歌词");
+        showing(&mut h,&song("QQMusic.exe","Track","甲",240.0),"[00:01]原版歌詞");
         h.media=next.clone();h.frame(vec![]);
-        assert!(h.app.ly.lyrics.is_none(),"{} - {}（{} 秒）不能沿用原版歌词",next.title,next.artist,next.duration);
+        assert!(h.app.ly.lyrics.is_none(),"{} - {}（{} 秒）不能沿用原版歌詞",next.title,next.artist,next.duration);
         finish(&mut h,release);
     }
 }
@@ -97,18 +97,18 @@ fn same_title_with_other_version_or_artist_is_a_different_song(){
 #[test]
 fn native_lyrics_polling_starts_on_switch_without_waiting_for_the_old_request(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
-    for source in ["汽水音乐","KuGou.exe"] {
+    for source in ["汽水音樂","KuGou.exe"] {
         let mut h=H::new();lyrics_on(&mut h);let (release,_)=busy(&mut h);
-        showing(&mut h,&song(source,"旧歌","歌手",200.0),"[00:01]旧歌词");
+        showing(&mut h,&song(source,"舊歌","歌手",200.0),"[00:01]舊歌詞");
         let room=crate::resources::NATIVE_LYRICS.active()<2;
-        h.media=song(source,"阶段二测试歌曲","不存在的歌手",180.0);h.frame(vec![]);
-        if room {assert!(h.app.ly.native_rx.is_some(),"{source}：本机歌词轮询应立即开始");}
-        assert!(h.app.ly.pending.is_some() && h.app.ly.rx.is_none(),"{source}：在线查询仍排队等待旧请求");
-        // 本机歌词先到：排队的在线查询取消，不再联网。
+        h.media=song(source,"階段二測試歌曲","不存在的歌手",180.0);h.frame(vec![]);
+        if room {assert!(h.app.ly.native_rx.is_some(),"{source}：本機歌詞輪詢應立即開始");}
+        assert!(h.app.ly.pending.is_some() && h.app.ly.rx.is_none(),"{source}：在線查詢仍排隊等待舊請求");
+        // 本機歌詞先到：排隊的在線查詢取消，不再聯網。
         let (native,rx)=std::sync::mpsc::channel();h.app.ly.native_rx=Some(rx);
-        native.send(Some(crate::lyrics::parse_lrc("[00:01]本机歌词"))).unwrap();h.frame(vec![]);
-        assert_eq!(h.app.ly.lyrics.as_ref().unwrap().lines[0].text,"本机歌词");
-        assert!(!h.app.ly.loading && h.app.ly.pending.is_none(),"{source}：本机歌词到达后取消排队的在线查询");
+        native.send(Some(crate::lyrics::parse_lrc("[00:01]本機歌詞"))).unwrap();h.frame(vec![]);
+        assert_eq!(h.app.ly.lyrics.as_ref().unwrap().lines[0].text,"本機歌詞");
+        assert!(!h.app.ly.loading && h.app.ly.pending.is_none(),"{source}：本機歌詞到達後取消排隊的在線查詢");
         finish(&mut h,release);
     }
 }
@@ -118,25 +118,25 @@ fn native_lyrics_polling_starts_on_switch_without_waiting_for_the_old_request(){
 fn player_version_without_progress_shows_the_title_instead_of_frozen_lyrics(){
     use crate::smtc::music_compat::{self as compat,Item,Support};
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();lyrics_on(&mut h);
-    let media=song("kugou","红玫瑰","陈奕迅",240.0);
+    let media=song("kugou","紅玫瑰","陳奕迅",240.0);
     compat::set("KuGou.exe",Item::Progress,Support::Ok);
     showing(&mut h,&media,"[00:01]第一句\n[00:05]第二句");
     assert_eq!(h.app.island_lyric().map(|(_,line)|line),Some("第二句"));
-    // 酷狗版本读不到进度：歌词无法同步，岛上改显示歌名（暖色），不显示停住的歌词。
-    compat::set("KuGou.exe",Item::Progress,Support::Unavailable("版本不在适配表里".into()));
+    // 酷狗版本讀不到進度：歌詞無法同步，島上改顯示歌名（暖色），不顯示停住的歌詞。
+    compat::set("KuGou.exe",Item::Progress,Support::Unavailable("版本不在適配表裡".into()));
     h.frame(vec![]);
     assert!(h.app.music_lyrics_limited());
     assert_eq!(h.app.island_lyric(),None);
-    // 拖动跳转不可用不影响歌词。
+    // 拖動跳轉不可用不影響歌詞。
     compat::set("KuGou.exe",Item::Progress,Support::Learned);
     compat::set("KuGou.exe",Item::Seek,Support::Unavailable("接口不可用".into()));
     h.frame(vec![]);
     assert!(!h.app.music_lyrics_limited());
     assert_eq!(h.app.island_lyric().map(|(_,line)|line),Some("第二句"));
     compat::clear("KuGou.exe",Item::Progress);compat::clear("KuGou.exe",Item::Seek);
-    // 其他播放器不受酷狗的结论影响。
+    // 其他播放器不受酷狗的結論影響。
     compat::set("KuGou.exe",Item::Progress,Support::Unavailable("x".into()));
-    showing(&mut h,&song("QQMusic.exe","旧歌","歌手",200.0),"[00:01]旧歌词\n[00:05]第二句");
+    showing(&mut h,&song("QQMusic.exe","舊歌","歌手",200.0),"[00:01]舊歌詞\n[00:05]第二句");
     assert!(!h.app.music_lyrics_limited());
     compat::clear("KuGou.exe",Item::Progress);
 }
@@ -148,33 +148,33 @@ fn song_with_system_position_keeps_lyrics_after_player_fallback_fails(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();lyrics_on(&mut h);
     let (release,_)=busy(&mut h);
-    compat::set("cloudmusic.exe",Item::Progress,Support::Unavailable("备用进度读取失败".into()));
-    showing(&mut h,&song("cloudmusic.exe","缺少进度的歌","歌手",0.0),"[00:01]旧歌词");
+    compat::set("cloudmusic.exe",Item::Progress,Support::Unavailable("備用進度讀取失敗".into()));
+    showing(&mut h,&song("cloudmusic.exe","缺少進度的歌","歌手",0.0),"[00:01]舊歌詞");
     let without_position=h.app.island_lyric().is_none();
-    let mut next=song("cloudmusic.exe","带系统进度的歌","歌手",220.0);
+    let mut next=song("cloudmusic.exe","帶系統進度的歌","歌手",220.0);
     next.sampled_at=Some(std::time::Instant::now());
-    showing(&mut h,&next,"[00:01]新歌词");
+    showing(&mut h,&next,"[00:01]新歌詞");
     let with_position=h.app.island_lyric().map(|(_,line)|line.to_owned());
     compat::clear("cloudmusic.exe",Item::Progress);
     finish(&mut h,release);
-    assert!(without_position,"读不到当前歌曲进度时应显示歌名");
-    assert_eq!(with_position.as_deref(),Some("新歌词"));
+    assert!(without_position,"讀不到當前歌曲進度時應顯示歌名");
+    assert_eq!(with_position.as_deref(),Some("新歌詞"));
 }
 
 #[test]
 #[cfg(windows)]
-#[ignore="按需导出：设置音乐页、收起时读不到进度的歌名，以及播放器版本较旧时的更新提醒"]
+#[ignore="按需導出：設置音樂頁、收起時讀不到進度的歌名，以及播放器版本較舊時的更新提醒"]
 fn music_compat_gallery(){
     use crate::smtc::music_compat::{self as compat,Item,Support};
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
-    let dest=std::path::PathBuf::from(std::env::var_os("DAOZAI_MUSIC_COMPAT_PREVIEW").expect("设置导出目录"));
+    let dest=std::path::PathBuf::from(std::env::var_os("DAOZAI_MUSIC_COMPAT_PREVIEW").expect("設置導出目錄"));
     std::fs::create_dir_all(&dest).unwrap();
     compat::set_version("QQMusic.exe","21.10.0.0");
-    compat::set_version("bodian_pc.exe","1.2.0");compat::set("bodian_pc.exe",Item::Reader,Support::Unavailable("播放组件版本不在适配表里（已适配波点 1.1.7）".into()));
+    compat::set_version("bodian_pc.exe","1.2.0");compat::set("bodian_pc.exe",Item::Reader,Support::Unavailable("播放組件版本不在適配表裡（已適配波點 1.1.7）".into()));
     compat::set_version("cloudmusic.exe","3.1.43.9019");compat::set("cloudmusic.exe",Item::Progress,Support::Learned);
     compat::set_version("KuGou.exe","20.1.61.28014");
     compat::set("KuGou.exe",Item::Progress,Support::Ok);compat::set("KuGou.exe",Item::Duration,Support::Ok);compat::set("KuGou.exe",Item::Seek,Support::Ok);
-    // 设置页：深色、浅色。
+    // 設置頁：深色、淺色。
     for (name,theme) in [("settings-music-dark",crate::settings_theme::SettingsTheme::Dark),("settings-music-light",crate::settings_theme::SettingsTheme::Light)] {
         let mut h=H::new();h.app.settings.island_lyrics=true;h.app.settings.settings_theme=theme;h.app.settings_tab=1;h.app.open_settings();h.ctx.set_embed_viewports(false);
         let size=egui::vec2(740.0,1180.0);let scale=1.5;
@@ -200,20 +200,20 @@ fn music_compat_gallery(){
             for (_,out) in &children{raster.free_textures(&out.textures_delta);}
         }
     }
-    // 岛上：正常同步歌词 与 读不到进度时的暖色歌名。
+    // 島上：正常同步歌詞 與 讀不到進度時的暖色歌名。
     for (name,limited) in [("island-lyrics-normal",false),("island-lyrics-limited",true),("island-update-notice",true),("island-update-notice-plain",true)] {
         let mut h=H::new();lyrics_on(&mut h);h.app.settings.pet=false;
-        compat::set("KuGou.exe",Item::Progress,if limited{Support::Unavailable("版本不在适配表里".into())}else{Support::Ok});
+        compat::set("KuGou.exe",Item::Progress,if limited{Support::Unavailable("版本不在適配表裡".into())}else{Support::Ok});
         if name.starts_with("island-update-notice") {compat::set_version("KuGou.exe",if name.ends_with("plain"){"19.8.3.25813"}else{"19.8.3.25812"});compat::outdated("KuGou.exe");}
         if name.ends_with("plain") {h.app.settings.island_lyrics=false;}
-        let media=song("kugou","七月七日晴","许慧欣",240.0);
-        showing(&mut h,&media,"[00:01]第一句\n[00:05]不能哭泣 不能放弃");
+        let media=song("kugou","七月七日晴","許慧欣",240.0);
+        showing(&mut h,&media,"[00:01]第一句\n[00:05]不能哭泣 不能放棄");
         let ppp=2.0;let (w,hgt)=(crate::app::CANVAS_W,WIN_H);
         let mut raster=feature_raster();
         let frames=if name.starts_with("island-update-notice"){40}else{60};
         for f in 0..frames {
             h.t+=1.0/60.0;
-            let env=Env{t:h.t,clock:"09:41:00".into(),today:"2026-11-21".into(),date:"11月21日 周六".into(),media:h.media.clone(),bt_ready:true,..Default::default()};
+            let env=Env{t:h.t,clock:"09:41:00".into(),today:"2026-11-21".into(),date:"11月21日 週六".into(),media:h.media.clone(),bt_ready:true,..Default::default()};
             let raw=egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(w,hgt))),time:Some(h.t),focused:true,
                 viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(ppp),..Default::default()})).collect(),..Default::default()};
             let app=&mut h.app;
@@ -233,17 +233,17 @@ fn music_compat_gallery(){
 
 #[test]
 fn artist_filled_in_later_requeries_lyrics_with_the_full_credit(){
-    // 波点：换歌后本机歌曲库约 30 秒才写入，先只有歌名，随后补上歌手和歌曲 ID。
+    // 波點：換歌后本機歌曲庫約 30 秒才寫入，先只有歌名，隨後補上歌手和歌曲 ID。
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();lyrics_on(&mut h);
     let (release,_)=busy(&mut h);
-    let bare=song("bodian_pc.exe","微风细雨","",229.3);
+    let bare=song("bodian_pc.exe","微風細雨","",229.3);
     h.media=bare.clone();h.frame(vec![]);
     let first=h.app.ly.pending.is_some().then(||h.app.ly.song.as_ref().map(|song|(song.title.clone(),song.artist.clone()))).flatten();
-    println!("只有歌名时排队的查询：{first:?}，key={}",h.app.ly.key);
-    let mut full=bare.clone();full.artist="邓丽君".into();full.song_id=Some(27148558);
+    println!("只有歌名時排隊的查詢：{first:?}，key={}",h.app.ly.key);
+    let mut full=bare.clone();full.artist="鄧麗君".into();full.song_id=Some(27148558);
     h.media=full;h.frame(vec![]);
     let second=h.app.ly.pending.is_some().then(||h.app.ly.song.as_ref().map(|song|(song.title.clone(),song.artist.clone()))).flatten();
-    println!("补上歌手后排队的查询：{second:?}，key={}",h.app.ly.key);
-    assert_eq!(second,Some(("微风细雨".into(),"邓丽君".into())),"补上歌手后要按完整署名重新查询");
+    println!("補上歌手後排隊的查詢：{second:?}，key={}",h.app.ly.key);
+    assert_eq!(second,Some(("微風細雨".into(),"鄧麗君".into())),"補上歌手後要按完整署名重新查詢");
     finish(&mut h,release);
 }

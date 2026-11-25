@@ -312,7 +312,7 @@ pub struct Settings {
     pub wecom_notifications:bool,
     pub feishu_notifications:bool,
     pub dingtalk_notifications:bool,
-    /// 微信縮在托盤時，點提醒通過系統托盤按鈕喚起微信（默認關閉）。
+    /// 微信縮在託盤時，點提醒通過系統託盤按鈕喚起微信（默認關閉）。
     pub wechat_tray_open:bool,
     pub qq_only:bool,
     pub notification_preview:bool,

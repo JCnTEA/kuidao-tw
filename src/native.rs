@@ -422,7 +422,7 @@ unsafe extern "system" fn on_foreground(
     }
     let mut pid = 0u32;
     let _ = GetWindowThreadProcessId(hwnd, Some(&mut pid));
-    // 自己（含托盤窗口）拿到前台不算「切走」
+    // 自己（含託盤窗口）拿到前台不算「切走」
     if pid != 0 && pid != GetCurrentProcessId() {
         PAGE_WHEEL_TARGET.set(None);
         FG_CHANGED.store(true, Ordering::Relaxed);

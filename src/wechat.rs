@@ -36,7 +36,7 @@ fn open_wechat(unread:Unread,paths:&[String],allow_tray:bool)->Result<(),OpenErr
         }else{wake_step("沒有該帳號可見的微信主視窗");}
     }
     if !allow_tray{wake_step("未開啟從系統匣喚起");return Err(OpenError::Failed("請從工作列或系統匣開啟微信".into()));}
-    // 托盤喚起的每一步記在 wechat-tray.log（失敗時寫入，失敗代碼 T0–T5 同時出現在喚起結果裡）。
+    // 託盤喚起的每一步記在 wechat-tray.log（失敗時寫入，失敗代碼 T0–T5 同時出現在喚起結果裡）。
     wake_step("改從系統匣喚起");
     wechat_in_tray(unread).map_err(OpenError::Failed)?;
     open_wechat_from_tray(unread).map_err(OpenError::Failed)
@@ -79,14 +79,14 @@ fn installed_paths() -> Vec<String> {
     paths
 }
 
-/// 閃動與前台查看使用同一帳號進程口徑，兼容主窗口與托盤宿主位於不同進程。
+/// 閃動與前台查看使用同一帳號進程口徑，兼容主窗口與託盤宿主位於不同進程。
 pub(crate) fn account_pid(pid:u32,paths:&[String])->u32{
     let owners:std::collections::HashSet<_>=unsafe{tray_hosts(paths)}.into_iter().map(|(pid,_)|pid).collect();
     if owners.is_empty() || owners.contains(&pid){return pid;}
     account_tray_pid(pid,&owners.into_iter().collect::<Vec<_>>(),&parent_processes()).unwrap_or(pid)
 }
 
-/// 托盤喚起的診斷：只記步驟、窗口類名、位置和系統版本，不記窗口標題、提示文字或聊天內容。
+/// 託盤喚起的診斷：只記步驟、窗口類名、位置和系統版本，不記窗口標題、提示文字或聊天內容。
 struct TrayLog(Vec<String>);
 impl TrayLog {
     fn new(unread:crate::app::Unread)->Self{
@@ -137,7 +137,7 @@ unsafe fn tray_account(pid:u32,paths:&[String],log:&mut TrayLog)->Option<TrayAcc
     Some(TrayAccount{pid:mine,hosts,icon})
 }
 
-/// 托盤按鈕的名字是不是微信（排除「微信輸入法」等）。
+/// 託盤按鈕的名字是不是微信（排除「微信輸入法」等）。
 fn wechat_tray_name(name:&str)->bool{
     let first=name.lines().next().unwrap_or("").trim();
     let lower=first.to_ascii_lowercase();
@@ -167,13 +167,13 @@ unsafe fn account_main_window(pid:u32,source:crate::app::Messenger,paths:&[Strin
     visible_main_window_of(owner,source,paths)
 }
 
-/// 該帳號縮在托盤（沒有可見主窗口，但有托盤圖標）時返回 Ok；否則返回給用戶的提示，並記錄診斷。
+/// 該帳號縮在託盤（沒有可見主窗口，但有託盤圖標）時返回 Ok；否則返回給用戶的提示，並記錄診斷。
 pub fn wechat_in_tray(unread:crate::app::Unread)->Result<(),String>{
     if unread.source!=crate::app::Messenger::Wechat {return Err("請從工作列或系統匣開啟微信".into());}
     let paths=client_paths(unread.source);
     let mut log=TrayLog::new(unread);
     unsafe{
-        // 雙開時可能查不到本帳號圖標的位置，此時由喚起流程用排除法定位，這裡只要求找到它的托盤窗口。
+        // 雙開時可能查不到本帳號圖標的位置，此時由喚起流程用排除法定位，這裡只要求找到它的託盤窗口。
         let Some(account)=tray_account(unread.pid,&paths,&mut log) else {return Err(log.fail("T1","未找到該帳號的微信託盤視窗"));};
         let pid=account.pid;
         if let Some(main)=visible_main_window_of(pid,unread.source,&paths).or_else(||account_main_window(unread.pid,unread.source,&paths)){
@@ -188,7 +188,7 @@ fn rect_center_inside(inner:windows::Win32::Foundation::RECT,outer:windows::Win3
     outer.right>outer.left && outer.bottom>outer.top && x>=outer.left && x<outer.right && y>=outer.top && y<outer.bottom
 }
 
-/// 覆蓋圖標中心、大小與托盤按鈕相當的控件（排除整條任務欄之類的容器）。
+/// 覆蓋圖標中心、大小與託盤按鈕相當的控件（排除整條任務欄之類的容器）。
 fn button_sized(icon:windows::Win32::Foundation::RECT,button:windows::Win32::Foundation::RECT)->bool{
     let (iw,ih)=((icon.right-icon.left).max(16),(icon.bottom-icon.top).max(16));
     rect_center_inside(icon,button) && button.right-button.left<=iw*3 && button.bottom-button.top<=ih*3
@@ -255,9 +255,9 @@ unsafe fn tray_overflow_button(ui:&windows::Win32::UI::Accessibility::IUIAutomat
     found
 }
 
-/// 微信縮在托盤時：通過無障礙接口按下該帳號自己的托盤按鈕，由微信自己喚起主窗口。
+/// 微信縮在託盤時：通過無障礙接口按下該帳號自己的託盤按鈕，由微信自己喚起主窗口。
 /// 不移動鼠標、不向微信發送內部消息、不注入、不讀取內容；定位不到唯一按鈕就放棄。
-/// 兼容新版 Win11 托盤與 Windows 10 / 早期 Win11 的舊式托盤。會阻塞幾百毫秒，必須在後台線程調用。
+/// 兼容新版 Win11 託盤與 Windows 10 / 早期 Win11 的舊式託盤。會阻塞幾百毫秒，必須在後台線程調用。
 pub fn open_wechat_from_tray(unread:crate::app::Unread)->Result<(),String>{
     use windows::{core::Interface,Win32::{Foundation::RECT,System::Com::*,UI::{Accessibility::*,HiDpi::*}}};
     let mut log=TrayLog::new(unread);
@@ -275,7 +275,7 @@ pub fn open_wechat_from_tray(unread:crate::app::Unread)->Result<(),String>{
             item.CurrentAutomationId().map(|s|s.to_string()).unwrap_or_default(),item.CurrentClassName().map(|s|s.to_string()).unwrap_or_default(),
             item.CurrentBoundingRectangle().map(show_rect).unwrap_or_default(),
             if item.GetCurrentPatternAs::<IUIAutomationInvokePattern>(UIA_InvokePatternId).is_ok(){" · 可按下"}else{""});
-        // 在某個窗口裡找覆蓋圖標中心、大小像托盤按鈕、可以按下的最小控件。沒找到時記下掃描情況和覆蓋該點的控件，便於排查新系統。
+        // 在某個窗口裡找覆蓋圖標中心、大小像託盤按鈕、可以按下的最小控件。沒找到時記下掃描情況和覆蓋該點的控件，便於排查新系統。
         let button_at=|window:HWND,icon:RECT,log:&mut TrayLog|->Option<IUIAutomationElement>{
             let started=Instant::now();
             let items=match ui.ElementFromHandle(window).and_then(|root|root.FindAll(TreeScope_Descendants,&all)) {
@@ -302,7 +302,7 @@ pub fn open_wechat_from_tray(unread:crate::app::Unread)->Result<(),String>{
             }
             best.map(|(_,item)|item)
         };
-        // 任務欄上找不到時，再找資源管理器名下其他覆蓋該點的可見窗口（新系統可能把托盤放在單獨的窗口裡）。
+        // 任務欄上找不到時，再找資源管理器名下其他覆蓋該點的可見窗口（新系統可能把託盤放在單獨的窗口裡）。
         let button_on_shell=|taskbar:HWND,icon:RECT,log:&mut TrayLog|->Option<IUIAutomationElement>{
             if let Some(button)=button_at(taskbar,icon,log){return Some(button);}
             use windows::Win32::Foundation::BOOL;
@@ -336,7 +336,7 @@ pub fn open_wechat_from_tray(unread:crate::app::Unread)->Result<(),String>{
         let overflow_open=||[w!("TopLevelWindowForOverflowXamlIsland"),w!("NotifyIconOverflowWindow")].into_iter()
             .find_map(|class|FindWindowW(class,PCWSTR::null()).ok().filter(|h|IsWindowVisible(*h).as_bool()));
         let Ok(taskbar)=FindWindowW(w!("Shell_TrayWnd"),PCWSTR::null()) else {return Err(log.fail("T3","找不到工作列"));};
-        // 任務欄自動隱藏時縮在屏幕外，無障礙樹裡沒有托盤按鈕：先讓它彈出來（與鼠標移到屏幕邊緣相同），
+        // 任務欄自動隱藏時縮在屏幕外，無障礙樹裡沒有託盤按鈕：先讓它彈出來（與鼠標移到屏幕邊緣相同），
         // 微信切到前台後任務欄會自己縮回去。
         if taskbar_autohide() {
             let before=window_rect(taskbar);
@@ -732,7 +732,7 @@ mod tests {
         // 備用號由主號拉起：備用號子進程取最近的祖先，不串到主號。
         let nested:HashMap<u32,u32>=[(100,50),(200,100),(201,200)].into_iter().collect();
         assert_eq!(account_tray_pid(201,&hosts,&nested),Some(200));
-        // 托盤在閃動進程的子進程裡（只有一個時才用）。
+        // 託盤在閃動進程的子進程裡（只有一個時才用）。
         assert_eq!(account_tray_pid(100,&[300],&[(300,100)].into_iter().collect()),Some(300));
         // 父進程表裡有環也不會卡住。
         let cycle:HashMap<u32,u32>=[(1,2),(2,1)].into_iter().collect();
@@ -900,7 +900,7 @@ mod tests {
         assert!(rect_center_inside(icon,RECT{left:1532,top:1018,right:1582,bottom:1068}));
         assert!(!rect_center_inside(icon,RECT{left:1582,top:1018,right:1632,bottom:1068}),"相鄰圖示不得命中");
         assert!(!rect_center_inside(icon,RECT::default()),"空矩形不得命中");
-        // 舊式托盤按鈕比圖標略大；整條任務欄這類容器不算按鈕。
+        // 舊式託盤按鈕比圖標略大；整條任務欄這類容器不算按鈕。
         assert!(button_sized(RECT{left:1600,top:1050,right:1616,bottom:1066},RECT{left:1596,top:1044,right:1620,bottom:1074}));
         assert!(!button_sized(icon,RECT{left:0,top:1140,right:1920,bottom:1200}));
     }
@@ -928,7 +928,7 @@ mod tests {
             let _=EnumWindows(Some(visit),LPARAM((&mut found as *mut (Vec<String>,Option<HWND>)) as isize));
             found.1
         });
-        // 微信已在托盤時直接從托盤開始測；否則先把主窗口關到托盤。
+        // 微信已在託盤時直接從託盤開始測；否則先把主窗口關到託盤。
         let main=match main {
             Some(main)=>{PostMessageW(main,WM_SYSCOMMAND,WPARAM(SC_CLOSE as usize),LPARAM(0)).unwrap();std::thread::sleep(Duration::from_secs(2));main}
             None=>{

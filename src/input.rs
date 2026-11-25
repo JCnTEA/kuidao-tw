@@ -108,7 +108,7 @@ impl SwitchKeys {
         let before=self.held;
         if down{self.held|=bit;}else{self.held&=!bit;}
         let chord=if down{self.held}else{before};
-        // Shift、Ctrl+Shift、Alt+Shift；組合中輸入過其他鍵則不視為切換。
+        // Shift、Ctrl+Shift、Alt+Shift；組閤中輸入過其他鍵則不視為切換。
         if !self.used&&chord&1!=0&&chord&8==0 {self.pending=Some((context,now));}
     }
     fn allows(&mut self,context:(usize,usize),now:Instant)->bool{

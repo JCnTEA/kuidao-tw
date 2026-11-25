@@ -26,7 +26,7 @@ fn notice_transport_rejects_corrupt_authorizations_without_rewriting_them() {
 fn notice_transport_bad_clients_do_not_block_the_next_source() {
     let dir = TestDir::new();
     let mut bridge = Bridge::start(&dir.0, egui::Context::default()).unwrap();
-    bridge.authorize("example.client", "示例客户端").unwrap();
+    bridge.authorize("example.client", "示例客戶端").unwrap();
     let connection = descriptor(&bridge, "example.client");
     let addr = (
         Ipv4Addr::LOCALHOST,

@@ -1,4 +1,4 @@
-//! 和风设置的原生交互与截图；只使用占位凭据和合成天气。
+//! 和風設置的原生交互與截圖；只使用佔位憑據和合成天氣。
 use super::*;
 use crate::{weather_source_ui::Provider,settings_theme::SettingsTheme};
 
@@ -16,7 +16,7 @@ fn weather_badge_only_dims_after_repeated_failures_and_old_data(){
         for (age,failures,gray) in [(interval+900,0,false),(interval*3,0,false),(interval*3,1,false),(interval,2,false),(interval*3,2,true),(interval*3,0,false)] {
             if provider==Provider::Qweather&&failures>0 {continue;}
             h.app.weather.failures=failures;
-            let snapshot=crate::weather::Snapshot{place:"广州".into(),temp:23.0,code:2,day:true,at:chrono::Utc::now().timestamp()-age,..Default::default()};
+            let snapshot=crate::weather::Snapshot{place:"廣州".into(),temp:23.0,code:2,day:true,at:chrono::Utc::now().timestamp()-age,..Default::default()};
             let output=h.ctx.run(Default::default(),|ctx|{egui::CentralPanel::default().show(ctx,|ui|{
                 let c=crate::paint::Card::new(ui,Pos2::ZERO,ui.max_rect());
                 let layout=crate::bar_layout::Layout::new(false,0,false,false,false,false,true);
@@ -24,19 +24,19 @@ fn weather_badge_only_dims_after_repeated_failures_and_old_data(){
                 h.app.paint_side_weather(&c,220.0,30.0,&snapshot);
             });});
             let colors:Vec<_>=output.shapes.iter().filter_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="23°"=>Some(t.fallback_color),_=>None}).collect();
-            assert_eq!(colors.len(),2,"横向和侧边都应显示温度");
-            assert!(colors.iter().all(|c|*c==if gray{crate::theme::GRAY}else{crate::theme::WHITE}),"等待刷新或单次失败时应保持白色，只有连续失败且数据明显过期才变灰：age={age}, failures={failures}");
+            assert_eq!(colors.len(),2,"橫向和側邊都應顯示溫度");
+            assert!(colors.iter().all(|c|*c==if gray{crate::theme::GRAY}else{crate::theme::WHITE}),"等待刷新或單次失敗時應保持白色，只有連續失敗且數據明顯過期才變灰：age={age}, failures={failures}");
         }
     }
 }
 
-// 通过真实的和风解析与缓存入口准备示例，避免逐帧轮询覆盖手工注入的天气。
+// 通過真實的和風解析與緩存入口準備示例，避免逐幀輪詢覆蓋手工注入的天氣。
 fn qweather_data_fixture(h:&mut H){
     let location=crate::qweather::Location{position:crate::weather::Position{lat:30.27,lon:120.15,label:"杭州".into(),region:"浙江省 · 杭州市".into()},timezone:"Asia/Shanghai".into()};
     let today=chrono::Utc::now().with_timezone(&chrono_tz::Asia::Shanghai).date_naive();let now=chrono::Utc::now().timestamp();
     let days:Vec<_>=(0..7).map(|i|{let date=today+chrono::Duration::days(i);serde_json::json!({"forecastStartTime":format!("{date}T00:00+08:00"),"astro":{"sunrise":format!("{date}T06:23+08:00"),"sunset":format!("{date}T17:05+08:00")},"temperatureMax":{"value":23-i,"unit":"°C"},"temperatureMin":{"value":15-i/2,"unit":"°C"},"daytime":{"condition":{"code":"101"},"precipitation":{"probability":0.2}},"nighttime":{"precipitation":{"probability":0.3}}})}).collect();
     let credit=serde_json::json!({"attributions":["https://developer.qweather.com/attribution.html"]});
-    let cache=serde_json::json!({"host":"example.re.qweatherapi.com","location":location,"current_at":now,"daily_at":now,"current":{"validTime":chrono::Utc::now().to_rfc3339(),"temperature":{"value":19,"unit":"°C"},"feelsLike":{"value":18,"unit":"°C"},"condition":{"code":"101","text":"多云"},"humidity":0.58,"wind":{"speed":{"value":3.333333,"unit":"m/s"}},"metadata":credit},"daily":{"days":days,"metadata":credit}});
+    let cache=serde_json::json!({"host":"example.re.qweatherapi.com","location":location,"current_at":now,"daily_at":now,"current":{"validTime":chrono::Utc::now().to_rfc3339(),"temperature":{"value":19,"unit":"°C"},"feelsLike":{"value":18,"unit":"°C"},"condition":{"code":"101","text":"多雲"},"humidity":0.58,"wind":{"speed":{"value":3.333333,"unit":"m/s"}},"metadata":credit},"daily":{"days":days,"metadata":credit}});
     let dir=crate::model::config_dir();std::fs::create_dir_all(&dir).unwrap();std::fs::write(dir.join("qweather-cache.json"),serde_json::to_vec(&cache).unwrap()).unwrap();
     let source=&mut h.app.weather_source;source.displayed=Provider::Qweather;source.selected=Provider::Qweather;source.config.host="example.re.qweatherapi.com".into();source.config.location=Some(location.clone());source.config.saved=vec![location.clone()];source.host=source.config.host.clone();source.picked=Some(location.clone());
     source.client=Some(crate::qweather::Client::new(&source.config.host,"fake-test-key",std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true))).unwrap());source.runtime.reset(&source.config.host,Some(location));h.app.weather.snapshot=source.runtime.snapshot();
@@ -68,9 +68,9 @@ fn qweather_verified_connection_is_prominent_and_cities_have_dropdown_controls()
     let mut h=fixture(SettingsTheme::Dark);h.app.weather_source.selected=Provider::Qweather;h.app.weather_source.mock_verified();
     for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
     let texts:Vec<_>=h.shapes.iter().filter_map(|s|if let egui::Shape::Text(t)=&s.shape{Some(t.galley.text())}else{None}).collect();
-    assert!(texts.contains(&"连接测试通过"),"成功状态应明确显示在配置区");
-    assert!(texts.contains(&"不限省份"),"省份应有可直接选择的下拉列表");
-    assert!(texts.contains(&"添加城市"),"保存城市应有独立入口");
+    assert!(texts.contains(&"連接測試通過"),"成功狀態應明確顯示在配置區");
+    assert!(texts.contains(&"不限省份"),"省份應有可直接選擇的下拉列表");
+    assert!(texts.contains(&"添加城市"),"保存城市應有獨立入口");
 }
 
 fn district(name:&str,index:usize)->crate::qweather::Location {
@@ -81,21 +81,21 @@ fn district(name:&str,index:usize)->crate::qweather::Location {
 fn qweather_five_saved_cities_are_independent_selectable_and_removable(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=fixture(SettingsTheme::Dark);
     h.app.weather_source.selected=Provider::Qweather;h.app.weather_source.mock_verified();
-    h.app.settings.weather_saved=vec![district("默认来源城市",0).position];let original=h.app.settings.weather_saved.clone();
-    let locations:Vec<_>=["余杭","临平","富阳","临安","桐庐"].iter().enumerate().map(|(i,n)|district(n,i)).collect();
+    h.app.settings.weather_saved=vec![district("默認來源城市",0).position];let original=h.app.settings.weather_saved.clone();
+    let locations:Vec<_>=["餘杭","臨平","富陽","臨安","桐廬"].iter().enumerate().map(|(i,n)|district(n,i)).collect();
     for location in &locations{h.app.weather_source.mock_choose_city(location.clone());h.app.qweather_add_city();}
-    assert_eq!(h.app.weather_source.config.saved.len(),5);assert!(h.app.weather_source.displayed==Provider::OpenMeteo,"添加城市不能自动切换来源");
-    h.app.weather_source.mock_choose_city(locations[0].clone());h.app.qweather_add_city();assert_eq!(h.app.weather_source.config.saved.len(),5,"同一城市不能重复保存");
-    h.app.weather_source.mock_choose_city(district("建德",6));h.app.qweather_add_city();assert_eq!(h.app.weather_source.config.saved.len(),5,"第六个城市不能绕过上限");
+    assert_eq!(h.app.weather_source.config.saved.len(),5);assert!(h.app.weather_source.displayed==Provider::OpenMeteo,"添加城市不能自動切換來源");
+    h.app.weather_source.mock_choose_city(locations[0].clone());h.app.qweather_add_city();assert_eq!(h.app.weather_source.config.saved.len(),5,"同一城市不能重複保存");
+    h.app.weather_source.mock_choose_city(district("建德",6));h.app.qweather_add_city();assert_eq!(h.app.weather_source.config.saved.len(),5,"第六個城市不能繞過上限");
     assert_eq!(h.app.settings.weather_saved,original);assert_eq!(crate::qweather::Config::load().saved.len(),5);
     h.app.weather_source.mock_choose_city(locations[0].clone());
-    for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}click(&mut h,"保存并启用");assert!(h.app.weather_source.displayed==Provider::Qweather);
+    for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}click(&mut h,"保存並啟用");assert!(h.app.weather_source.displayed==Provider::Qweather);
     h.app.qweather_select_location(locations[3].clone());assert!(h.app.weather_source.config.location.as_ref()==Some(&locations[3]));
     h.app.qweather_remove_city(&locations[1]);assert!(h.app.weather_source.config.location.as_ref()==Some(&locations[3]));
-    h.app.qweather_remove_city(&locations[3]);assert!(h.app.weather_source.config.location.as_ref()==Some(&locations[0]),"删除当前城市后应切换到剩余城市");
+    h.app.qweather_remove_city(&locations[3]);assert!(h.app.weather_source.config.location.as_ref()==Some(&locations[0]),"刪除當前城市後應切換到剩餘城市");
     for location in h.app.weather_source.config.saved.clone(){h.app.qweather_remove_city(&location);}
-    assert!(h.app.weather_source.config.saved.is_empty()&&h.app.weather_source.config.location.is_none());h.app.weather_tick();assert!(h.app.weather.snapshot.is_none());assert!(h.app.weather.error.as_ref().unwrap().contains("先选择"));
-    h.app.weather_source.mock_choose_city(locations[0].clone());h.app.qweather_add_city();assert!(h.app.weather_source.config.location.is_none()&&h.app.weather_source.picked.is_none(),"添加城市不能冒充已经切换到该城市");
+    assert!(h.app.weather_source.config.saved.is_empty()&&h.app.weather_source.config.location.is_none());h.app.weather_tick();assert!(h.app.weather.snapshot.is_none());assert!(h.app.weather.error.as_ref().unwrap().contains("先選擇"));
+    h.app.weather_source.mock_choose_city(locations[0].clone());h.app.qweather_add_city();assert!(h.app.weather_source.config.location.is_none()&&h.app.weather_source.picked.is_none(),"添加城市不能冒充已經切換到該城市");
     h.app.qweather_select_location(locations[0].clone());assert!(h.app.weather_source.config.location.as_ref()==Some(&locations[0]));
     assert_eq!(h.app.settings.weather_saved,original);
 }
@@ -106,25 +106,25 @@ fn qweather_city_dropdown_supports_fuzzy_input_keyboard_selection_and_add(){
     h.app.weather_source.selected=Provider::Qweather;h.app.weather_source.mock_verified();
     for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
     click(&mut h,"不限省份");for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
-    let point=h.shapes.iter().find_map(|s|if let egui::Shape::Text(t)=&s.shape{(t.galley.text()=="北京").then(||t.visual_bounding_rect().center())}else{None}).expect("省份下拉应显示候选");
+    let point=h.shapes.iter().find_map(|s|if let egui::Shape::Text(t)=&s.shape{(t.galley.text()=="北京").then(||t.visual_bounding_rect().center())}else{None}).expect("省份下拉應顯示候選");
     for frame in 0..25{let mut events=vec![egui::Event::PointerMoved(point)];if frame==0{events.push(egui::Event::MouseWheel{unit:egui::MouseWheelUnit::Point,delta:egui::vec2(0.0,-120.0),modifiers:Default::default()});}draw(&mut h,events,egui::vec2(740.0,1100.0),1.0);}
     click(&mut h,"浙江");assert_eq!(h.app.weather_source.province,"浙江");
-    click(&mut h,"输入城市、县或区名称");
+    click(&mut h,"輸入城市、縣或區名稱");
     draw(&mut h,vec![egui::Event::Text("杭".into())],egui::vec2(740.0,1100.0),1.0);
     for _ in 0..26{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
-    let candidates=vec![district("杭州",0),district("余杭",1),district("临平",2)];h.app.weather_source.mock_search_results(candidates.clone());
+    let candidates=vec![district("杭州",0),district("餘杭",1),district("臨平",2)];h.app.weather_source.mock_search_results(candidates.clone());
     for _ in 0..2{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
     assert!(h.ctx.memory(|m|m.is_popup_open(egui::Id::new("qweather-city-options"))));
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="杭州")),"模糊输入应显示匹配候选");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="杭州")),"模糊輸入應顯示匹配候選");
     let key=|key|egui::Event::Key{key,physical_key:None,pressed:true,repeat:false,modifiers:Default::default()};
     draw(&mut h,vec![egui::Event::Ime(egui::ImeEvent::Enabled),key(egui::Key::ArrowDown)],egui::vec2(740.0,1100.0),1.0);
     draw(&mut h,vec![egui::Event::Ime(egui::ImeEvent::Disabled),key(egui::Key::Enter)],egui::vec2(740.0,1100.0),1.0);
-    assert_eq!(h.app.weather_source.query,"杭","输入法选词不能选中城市");
+    assert_eq!(h.app.weather_source.query,"杭","輸入法選詞不能選中城市");
     draw(&mut h,vec![key(egui::Key::ArrowDown)],egui::vec2(740.0,1100.0),1.0);
     draw(&mut h,vec![key(egui::Key::Enter)],egui::vec2(740.0,1100.0),1.0);
-    assert_eq!(h.app.weather_source.query,"余杭");
+    assert_eq!(h.app.weather_source.query,"餘杭");
     draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);click(&mut h,"添加城市");assert!(h.app.weather_source.config.saved.contains(&candidates[1]));
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="连接测试通过")),"搜索和添加不能覆盖连接成功状态");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="連接測試通過")),"搜索和添加不能覆蓋連接成功狀態");
 }
 
 #[test]
@@ -133,18 +133,18 @@ fn qweather_draft_hides_default_cities_requires_validation_and_can_collapse_with
     for theme in [SettingsTheme::Dark,SettingsTheme::Light]{
         let mut h=fixture(theme);let settings=format!("{:?}",h.app.settings);
         for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
-        click(&mut h,"和风天气");
+        click(&mut h,"和風天氣");
         assert!(h.app.weather_source.selected==Provider::Qweather&&h.app.weather_source.displayed==Provider::OpenMeteo);
         let text=|h:&H|h.shapes.iter().filter_map(|s|if let egui::Shape::Text(t)=&s.shape{Some(t.galley.text().to_string())}else{None}).collect::<Vec<_>>().join("\n");
-        assert!(!text(&h).contains("19°")&&!text(&h).contains("杭州"),"和风草稿不应混入默认源数据");
-        assert!(text(&h).contains("先填写 Host / Key"));
+        assert!(!text(&h).contains("19°")&&!text(&h).contains("杭州"),"和風草稿不應混入默認源數據");
+        assert!(text(&h).contains("先填寫 Host / Key"));
         h.app.weather_source.host="https://not-official.invalid".into();h.app.weather_source.key="frontend-placeholder".into();
-        click(&mut h,"测试连接");assert!(h.app.weather_source.message.unwrap().1);
-        click(&mut h,"保存并启用");assert!(h.app.weather_source.displayed==Provider::OpenMeteo);
-        click(&mut h,"免费额度详情");assert!(text(&h).contains("50,000"));assert!(!text(&h).contains("840")&&!text(&h).contains("预估"));
+        click(&mut h,"測試連接");assert!(h.app.weather_source.message.unwrap().1);
+        click(&mut h,"保存並啟用");assert!(h.app.weather_source.displayed==Provider::OpenMeteo);
+        click(&mut h,"免費額度詳情");assert!(text(&h).contains("50,000"));assert!(!text(&h).contains("840")&&!text(&h).contains("預估"));
         click(&mut h,"收起");assert!(!h.app.weather_source.config_open);draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);
-        assert!(!text(&h).lines().any(|line|line=="API Host"));assert!(text(&h).contains("和风城市")&&text(&h).contains("保存并启用"));
-        click(&mut h,"展开");assert!(h.app.weather_source.config_open);
+        assert!(!text(&h).lines().any(|line|line=="API Host"));assert!(text(&h).contains("和風城市")&&text(&h).contains("保存並啟用"));
+        click(&mut h,"展開");assert!(h.app.weather_source.config_open);
         assert!(!text(&h).contains("frontend-placeholder"));assert_eq!(format!("{:?}",h.app.settings),settings);
         h.app.settings.save();let saved=std::fs::read_to_string(crate::model::config_dir().join("settings.txt")).unwrap();assert!(!saved.contains("frontend-placeholder"));
         click(&mut h,"配置教程 ↗");assert!(h.app.weather_source.tutorial_open);
@@ -156,7 +156,7 @@ fn qweather_draft_hides_default_cities_requires_validation_and_can_collapse_with
             let (_,children)=draw(&mut h,events,egui::vec2(740.0,1100.0),1.0);let help=&children.iter().find(|(id,_)|*id==egui::ViewportId::from_hash_of("daozai-weather-tutorial")).unwrap().1;
             second_visible|=help.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Rect(r)if second_tiles.contains(&r.fill_texture_id())&&s.clip_rect.intersects(r.rect)));
         }
-        assert!(second_visible,"长图应能连续滚到新教程后半段");
+        assert!(second_visible,"長圖應能連續滾到新教程後半段");
         h.app.weather_source.close();assert!(h.app.weather_source.key.is_empty());assert!(!h.app.weather_source.tutorial_open);
     }
 }
@@ -167,14 +167,14 @@ fn qweather_apply_switches_only_after_validation_and_module_switch_controls_sour
     h.app.weather_source.selected=Provider::Qweather;h.app.weather_source.config_open=false;
     h.app.weather_source.mock_verified();
     for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
-    click(&mut h,"保存并启用");assert!(h.app.weather_source.displayed==Provider::Qweather);assert!(h.app.weather.snapshot.is_none(),"切换后立即清除默认源天气");
-    assert!(h.app.settings.weather_saved.is_empty(),"和风城市不能写进默认源列表");assert_eq!(h.app.weather_source.config.saved[0].position.label,"余杭");
-    h.app.weather.snapshot=Some(crate::weather::Snapshot{place:"余杭".into(),..Default::default()});h.app.settings.show_weather=true;
+    click(&mut h,"保存並啟用");assert!(h.app.weather_source.displayed==Provider::Qweather);assert!(h.app.weather.snapshot.is_none(),"切換後立即清除默認源天氣");
+    assert!(h.app.settings.weather_saved.is_empty(),"和風城市不能寫進默認源列表");assert_eq!(h.app.weather_source.config.saved[0].position.label,"餘杭");
+    h.app.weather.snapshot=Some(crate::weather::Snapshot{place:"餘杭".into(),..Default::default()});h.app.settings.show_weather=true;
     assert!(h.app.weather_pill().is_some());h.app.settings.show_weather=false;assert!(h.app.weather_pill().is_none());h.app.settings.show_weather=true;
     h.app.settings.visible_pages[8]=false;h.app.weather_tick();assert!(h.app.weather_pill().is_none());assert!(!h.app.weather_source.client.as_ref().unwrap().gate.load(std::sync::atomic::Ordering::SeqCst));
     h.app.settings.visible_pages[8]=true;h.app.weather_tick();assert!(h.app.weather_source.client.as_ref().unwrap().gate.load(std::sync::atomic::Ordering::SeqCst));
     h.app.weather_source.selected=Provider::OpenMeteo;for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
-    click(&mut h,"应用 Open-Meteo");assert!(h.app.weather_source.displayed==Provider::OpenMeteo);
+    click(&mut h,"應用 Open-Meteo");assert!(h.app.weather_source.displayed==Provider::OpenMeteo);
 }
 
 #[test]
@@ -183,7 +183,7 @@ fn qweather_configuration_site_opens_developer_console(){
     for theme in [SettingsTheme::Dark,SettingsTheme::Light]{
         let mut h=fixture(theme);h.app.weather_source.selected=Provider::Qweather;
         for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
-        let website=h.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="配置网站 ↗"=>Some(t.visual_bounding_rect().center()),_=>None}).expect("配置标题旁应有控制台入口");
+        let website=h.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="配置網站 ↗"=>Some(t.visual_bounding_rect().center()),_=>None}).expect("配置標題旁應有控制檯入口");
         let mut opened=None;
         for pressed in [true,false]{
             let (root,children)=draw(&mut h,vec![egui::Event::PointerMoved(website),egui::Event::PointerButton{pos:website,button:egui::PointerButton::Primary,pressed,modifiers:Default::default()}],egui::vec2(740.0,1100.0),1.0);
@@ -191,7 +191,7 @@ fn qweather_configuration_site_opens_developer_console(){
                 opened=out.platform_output.commands.into_iter().find_map(|command|if let egui::OutputCommand::OpenUrl(url)=command{Some(url.url)}else{None}).or(opened);
             }
         }
-        assert_eq!(opened,Some("https://console.qweather.com/".into()),"配置网站应打开开发者控制台");
+        assert_eq!(opened,Some("https://console.qweather.com/".into()),"配置網站應打開開發者控制檯");
     }
 }
 
@@ -200,7 +200,7 @@ fn qweather_source_card_shows_account_free_quota_separately_from_local_usage(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=fixture(SettingsTheme::Dark);qweather_data_fixture(&mut h);h.app.weather_source.config_open=false;
     for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1200.0),1.0);}
     let text=h.shapes.iter().filter_map(|s|if let egui::Shape::Text(t)=&s.shape{Some(t.galley.text())}else{None}).collect::<Vec<_>>().join("\n");
-    assert!(text.contains("本机本月已请求")&&text.contains("免费额度 50,000 次"));assert!(!text.contains("5,000"),"来源卡不能把本机保护值写成账号免费额度");
+    assert!(text.contains("本機本月已請求")&&text.contains("免費額度 50,000 次"));assert!(!text.contains("5,000"),"來源卡不能把本機保護值寫成賬號免費額度");
 }
 
 #[test]
@@ -210,18 +210,18 @@ fn qweather_data_credit_opens_the_provider_site_in_forecast_and_solar_views(){
         let mut h=H::new();h.app.settings.pet=false;qweather_data_fixture(&mut h);
         h.app.show_page(8);h.app.weather.solar_open=solar;h.hover(H::local(300.0,60.0),1.0);
         assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="QWeather")));
-        assert!(h.app.weather.snapshot.as_ref().is_some_and(|s|s.days.len()==7),"检查署名时必须实际显示和风数据");
-        assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text().starts_with("预报 "))),"预报需标明自己的更新时间");
+        assert!(h.app.weather.snapshot.as_ref().is_some_and(|s|s.days.len()==7),"檢查署名時必須實際顯示和風數據");
+        assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text().starts_with("預報 "))),"預報需標明自己的更新時間");
         let point=h.ctx.read_response(egui::Id::new(("card",true,"weather-source"))).unwrap().rect.center();
         h.click(point);assert!(h.cmds.contains(&crate::app::Cmd::OpenUrl("https://www.qweather.com/".into())));assert_eq!(h.app.page(),8);
     }
 }
 
 #[test]
-#[ignore="按需导出和风配置、离线教程和署名的原生界面"]
+#[ignore="按需導出和風配置、離線教程和署名的原生界面"]
 fn qweather_frontend_gallery(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
-    let dest=std::path::PathBuf::from(std::env::var_os("DAOZAI_QWEATHER_PREVIEW_DIR").expect("需指定预览目录"));std::fs::create_dir_all(&dest).unwrap();
+    let dest=std::path::PathBuf::from(std::env::var_os("DAOZAI_QWEATHER_PREVIEW_DIR").expect("需指定預覽目錄"));std::fs::create_dir_all(&dest).unwrap();
     for (name,dark,size) in [("weather-source-cards-dark",true,egui::vec2(500.0,86.0)),("weather-source-cards-light",false,egui::vec2(500.0,86.0)),("weather-source-cards-compact",true,egui::vec2(350.0,86.0))]{
         let mut h=H::new();h.ctx.set_visuals(if dark{egui::Visuals::dark()}else{egui::Visuals::light()});h.ctx.set_pixels_per_point(2.0);
         let mut raster=crate::preview_raster::Raster::new((size.x*2.0)as usize,(size.y*2.0)as usize);
@@ -257,15 +257,15 @@ fn qweather_frontend_gallery(){
         h.app.weather_source.tutorial_open=help;h.app.weather_source.config_open=name!="qweather-collapsed";
         if name.contains("ready")||name.contains("city-picker"){
             h.app.weather_source.mock_verified();h.app.weather_source.config_open=false;
-            h.app.weather_source.config.saved=vec![district("富阳",3),district("临安",4)];h.app.weather_source.picked=Some(district("富阳",3));
+            h.app.weather_source.config.saved=vec![district("富陽",3),district("臨安",4)];h.app.weather_source.picked=Some(district("富陽",3));
         }
         if name.contains("city-picker"){
-            h.app.weather_source.province="浙江".into();h.app.weather_source.query="杭".into();h.app.weather_source.mock_search_results(vec![district("杭州",0),district("余杭",1),district("临平",2)]);
+            h.app.weather_source.province="浙江".into();h.app.weather_source.query="杭".into();h.app.weather_source.mock_search_results(vec![district("杭州",0),district("餘杭",1),district("臨平",2)]);
             h.ctx.memory_mut(|m|m.open_popup(egui::Id::new("qweather-city-options")));
         }
         if name=="qweather-five-cities" {
             qweather_data_fixture(&mut h);h.app.weather_source.key.clear();h.app.weather_source.config_open=false;
-            let current=h.app.weather_source.config.location.clone().unwrap();h.app.weather_source.config.saved=vec![current,district("余杭",1),district("临平",2),district("富阳",3),district("临安",4)];
+            let current=h.app.weather_source.config.location.clone().unwrap();h.app.weather_source.config.saved=vec![current,district("餘杭",1),district("臨平",2),district("富陽",3),district("臨安",4)];
         }
         let canvas=if help{egui::vec2(820.0,680.0)}else{size};let scale=1.5;
         let mut raster=crate::preview_raster::Raster::new((canvas.x*scale)as usize,(canvas.y*scale)as usize);
@@ -281,7 +281,7 @@ fn qweather_frontend_gallery(){
                 raster.buf.fill([0.10,0.10,0.11,1.0]);raster.draw(&h.ctx.tessellate(out.shapes.clone(),out.pixels_per_point),out.pixels_per_point);
                 let mut rgba=Vec::new();raster.to_rgba8(&mut rgba);image::save_buffer(dest.join(format!("{name}.png")),&rgba,(canvas.x*scale)as u32,(canvas.y*scale)as u32,image::ColorType::Rgba8).unwrap();
                 for shape in &out.shapes{if let egui::Shape::Text(text)=&shape.shape {
-                    let rect=text.visual_bounding_rect();if shape.clip_rect.contains(rect.center()) {assert!(rect.left()>=-1.0&&rect.right()<=canvas.x+1.0,"窗口内文字不能横向溢出：{}",text.galley.text());}
+                    let rect=text.visual_bounding_rect();if shape.clip_rect.contains(rect.center()) {assert!(rect.left()>=-1.0&&rect.right()<=canvas.x+1.0,"窗口內文字不能橫向溢出：{}",text.galley.text());}
                 }}
             }
             for (_,out) in &children{raster.free_textures(&out.textures_delta);}

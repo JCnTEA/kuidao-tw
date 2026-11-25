@@ -78,7 +78,7 @@ unsafe fn has_preferred_dingtalk_qt(pid:u32,visible_only:bool)->bool{
     search.found
 }
 /// 新版釘釘的主窗口是 StandardFrame_DingTalk；同進程裡的 Qt 窗口只是對話框（常為隱藏狀態），
-/// 不能算作第二個主窗口。主窗口本身隱藏到托盤時仍然認它。只有舊版沒有該窗口時才按 Qt 主窗口識別。
+/// 不能算作第二個主窗口。主窗口本身隱藏到託盤時仍然認它。只有舊版沒有該窗口時才按 Qt 主窗口識別。
 unsafe fn has_dingtalk_frame(pid:u32)->bool{
     struct Search{pid:u32,found:bool}
     unsafe extern "system" fn visit(window:HWND,data:LPARAM)->BOOL{
@@ -117,7 +117,7 @@ pub(crate) fn describe_process_windows(client:Messenger,pid:u32)->String{unsafe{
     if total>12{lines.push(format!("另有 {} 個",total-12));}
     format!("進程 {pid} 頂層窗口 {total} 個：{}",lines.join("；"))
 }}
-/// 飛書主窗口的標題固定為應用名（切換消息、雲文檔等頁面不變，關到托盤後仍保留）；
+/// 飛書主窗口的標題固定為應用名（切換消息、雲文檔等頁面不變，關到託盤後仍保留）；
 /// 「在獨立窗口打開」的會話、文檔窗口與主窗口同進程、同類名、同樣式，只有標題是會話或文檔名。
 const FEISHU_TITLES:[&str;3]=["飛書","Feishu","Lark"];
 const FEISHU_FRAME:&str="Chrome_WidgetWin_1";
@@ -238,7 +238,7 @@ fn open(target:Target,paths:&[String],_:bool)->Result<Target,OpenError>{unsafe{
     if unread.pid==0 || window_pid(window)!=unread.pid {wake_step("提醒視窗已不屬於該帳號");return Err(OpenError::Unavailable);}
     if !main_window(window,unread.source){wake_step(format!("提醒視窗不是主視窗（{}）",describe_window(window)));return Err(OpenError::Unavailable);}
     if !matches(window,paths){wake_step("提醒視窗所屬程式不在已知安裝路徑中");return Err(OpenError::Unavailable);}
-    // 不執行協議、托盤回調或鼠標鍵盤模擬，只恢復該消息保存的主窗口。
+    // 不執行協議、託盤回調或鼠標鍵盤模擬，只恢復該消息保存的主窗口。
     wake_step(format!("切前台 {}",describe_window(window)));
     let show_queued=match wake_route(unread.source,IsWindowVisible(window).as_bool(),IsIconic(window).as_bool()) {
         WakeRoute::Restore=>Some(ShowWindowAsync(window,SW_RESTORE).as_bool()),
@@ -263,7 +263,7 @@ fn finish_open(show_queued:Option<bool>,focus:impl FnOnce()->bool)->Result<(),Op
 
 #[derive(Debug,PartialEq,Eq)]
 enum WakeRoute {Focus,Restore,Show,Relaunch}
-/// 怎樣把主窗口帶到前台。飛書關到托盤後窗口被隱藏，若由鬼島直接 `ShowWindow`，飛書不會恢復渲染，
+/// 怎樣把主窗口帶到前台。飛書關到託盤後窗口被隱藏，若由鬼島直接 `ShowWindow`，飛書不會恢復渲染，
 /// 頁面停在加載骨架、點擊無響應（#181，本機飛書 8.6 復現）；改為再啟動一次飛書主程序，由飛書自己顯示原窗口。
 /// 最小化的窗口照常還原（實測正常）；其他客戶端未驗證，保持原做法。
 fn wake_route(source:Messenger,visible:bool,iconic:bool)->WakeRoute {
@@ -281,7 +281,7 @@ unsafe fn relaunch(target:Target,paths:&[String])->Result<Target,OpenError>{
     super::trust::launch_feishu(std::path::Path::new(&path),pid).map_err(|reason|{
         wake_step(reason);OpenError::Failed(reason.into())
     })?;
-    wake_step("窗口在托盤中，由客戶端自己顯示主窗口");
+    wake_step("窗口在託盤中，由客戶端自己顯示主窗口");
     let until=std::time::Instant::now()+std::time::Duration::from_secs(3);
     while std::time::Instant::now()<until {
         if let Some(shown)=visible_relaunched_target(target,paths){
@@ -335,7 +335,7 @@ mod tests{
     }
     #[test]
     fn feishu_in_tray_is_shown_by_feishu_itself(){
-        assert_eq!(wake_route(Messenger::Feishu,false,false),WakeRoute::Relaunch,"關到托盤的飛書不能由島仔直接顯示（#181 卡死）");
+        assert_eq!(wake_route(Messenger::Feishu,false,false),WakeRoute::Relaunch,"關到託盤的飛書不能由島仔直接顯示（#181 卡死）");
         assert_eq!(wake_route(Messenger::Feishu,false,true),WakeRoute::Relaunch,"隱藏優先於殘留的最小化標誌");
         assert_eq!(wake_route(Messenger::Feishu,true,true),WakeRoute::Restore,"最小化的飛書照常還原");
         assert_eq!(wake_route(Messenger::Feishu,true,false),WakeRoute::Focus);
@@ -373,7 +373,7 @@ mod tests{
         DestroyWindow(replacement).unwrap();
         assert_eq!(shown,Some(Target{unread:Unread{window:replacement.0 as isize,..original.unread},..original}));
     }}
-    /// 本機實測：先把飛書關到托盤，再運行 `cargo test live_feishu -- --ignored`，走島仔點提醒時的同一條喚起路徑。
+    /// 本機實測：先把飛書關到託盤，再運行 `cargo test live_feishu -- --ignored`，走島仔點提醒時的同一條喚起路徑。
     #[test]
     #[ignore="需要本機飛書已登入並關到系統匣"]
     fn live_feishu_tray_window_is_shown_by_feishu(){unsafe{
@@ -463,7 +463,7 @@ mod tests{
         assert_eq!(rebuild_target(Target{started:started.wrapping_add(1),..original},&paths),None,"禁止重綁到複用 PID 的新進程");
         DestroyWindow(small).unwrap();DestroyWindow(new_main).unwrap();
         // 用戶診斷包裡釘釘 9.0.5 的窗口組合：一個 StandardFrame_DingTalk 主窗口和三個隱藏的 Qt 對話框。
-        // 主窗口最小化到任務欄和隱藏到托盤時，都必須對應到原進程。
+        // 主窗口最小化到任務欄和隱藏到託盤時，都必須對應到原進程。
         for (state,frame_style) in [("最小化",0x260f0000u32),("隱藏到系統匣",0x060f0000)]{
             let frame=CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("StandardFrame_DingTalk"),w!("Kuidao synthetic client"),WINDOW_STYLE(frame_style),-10000,-10000,1200,800,None,None,instance,None).unwrap();
             let dialogs=[0;3].map(|_|CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!(""),WINDOW_STYLE(0x86cf0000),-10000,-10000,655,517,None,None,instance,None).unwrap());
@@ -476,8 +476,8 @@ mod tests{
             assert_eq!(flash_target(Messenger::DingTalk,dialogs[0],&paths),Some(Unread::of(Messenger::DingTalk)),"舊版多個 Qt 主視窗仍不能猜帳號");
             for dialog in dialogs{DestroyWindow(dialog).unwrap();}
         }
-        // 釘釘 9.0.5 的 Qt 主窗口最小化時樣式是 0xB60F0000。收進托盤後，此處模擬它清除可見和最小化標誌。
-        for (state,main_style) in [("顯示",0x960f0000u32),("最小化",0xb60f0000),("關到托盤",0x860f0000)]{
+        // 釘釘 9.0.5 的 Qt 主窗口最小化時樣式是 0xB60F0000。收進託盤後，此處模擬它清除可見和最小化標誌。
+        for (state,main_style) in [("顯示",0x960f0000u32),("最小化",0xb60f0000),("關到託盤",0x860f0000)]{
             let main=CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!("Daozai synthetic client"),WINDOW_STYLE(main_style),-10000,-10000,1200,800,None,None,instance,None).unwrap();
             let dialogs=[0;3].map(|_|CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!(""),WINDOW_STYLE(0x86cf0000),-10000,-10000,655,517,None,None,instance,None).unwrap());
             let original=Target{unread:Unread{source:Messenger::DingTalk,pid,window:main.0 as isize},started};
@@ -495,7 +495,7 @@ mod tests{
             for window in pair{DestroyWindow(window).unwrap();}
         }
         // 本機飛書 8.6 實測：主窗口標題「飛書」，「在獨立窗口打開」的會話窗口與它同進程、同類名、同樣式，標題是會話名。
-        // 主窗口正常顯示和關到托盤（隱藏）兩種狀態都要能對應到原進程，獨立窗口閃動歸到主窗口。
+        // 主窗口正常顯示和關到託盤（隱藏）兩種狀態都要能對應到原進程，獨立窗口閃動歸到主窗口。
         for (state,main_style) in [("顯示",0x16cf0000u32),("關到系統匣",0x06cf0000)]{
             let frame=|title,style|CreateWindowExW(WINDOW_EX_STYLE(0x00200100),w!("Chrome_WidgetWin_1"),title,WINDOW_STYLE(style),-10000,-10000,1200,800,None,None,instance,None).unwrap();
             let main=frame(w!("飛書"),main_style);let chat=frame(w!("少爺"),0x16cf0000);

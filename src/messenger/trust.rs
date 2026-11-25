@@ -146,7 +146,7 @@ pub(super) fn launch_feishu(path: &Path, pid: u32) -> Result<(), &'static str> {
         let token = process_token(*process, TOKEN_QUERY | TOKEN_DUPLICATE)
             .map_err(|_| "無法獲取客戶端運行權限")?;
         if elevated(*token).map_err(|_| "無法確認客戶端運行權限")? {
-            return Err("客戶端以管理員身份運行，請從托盤手動打開");
+            return Err("客戶端以管理員身份運行，請從託盤手動打開");
         }
         let mut primary = HANDLE::default();
         DuplicateTokenEx(*token, TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY, None,
@@ -157,7 +157,7 @@ pub(super) fn launch_feishu(path: &Path, pid: u32) -> Result<(), &'static str> {
         let mut child = PROCESS_INFORMATION::default();
         CreateProcessWithTokenW(*primary, CREATE_PROCESS_LOGON_FLAGS(0), PCWSTR(wide_path.as_ptr()),
             PWSTR::null(), PROCESS_CREATION_FLAGS(0), None, PCWSTR(wide_dir.as_ptr()), &startup, &mut child)
-            .map_err(|_| "無法以普通權限打開客戶端，請從托盤手動打開")?;
+            .map_err(|_| "無法以普通權限打開客戶端，請從託盤手動打開")?;
         let _process = Owned::new(child.hProcess);
         let _thread = Owned::new(child.hThread);
         Ok(())

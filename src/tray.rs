@@ -1,6 +1,6 @@
-//! 系統托盤、右鍵菜單與開機啟動。
+//! 系統託盤、右鍵菜單與開機啟動。
 //!
-//! 托盤行為：
+//! 託盤行為：
 //! - `uID=1`，`uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP`，回調 `WM_APP+9`，提示 `鬼島`；
 //! - 圖標取 exe 內 `RT_GROUP_ICON #1`，按 `SM_CXSMICON` 走 `LoadImageW`；
 //! - 左鍵、右鍵都彈同一個菜單，沒有雙擊分支；
@@ -31,7 +31,7 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::*;
 
-/// 原版的托盤回調消息。
+/// 原版的託盤回調消息。
 pub const WM_TRAY: u32 = WM_APP + 9;
 /// 僅構建並導出當前菜單狀態，不彈出菜單（自動化取證用）。
 pub const WM_TRAY_DUMP: u32 = WM_APP + 2;
@@ -365,7 +365,7 @@ pub struct Tray {
 }
 
 impl Tray {
-    /// 與托盤菜單「退出」相同：先摘圖標再結束進程（用於「立即重啟」）。
+    /// 與託盤菜單「退出」相同：先摘圖標再結束進程（用於「立即重啟」）。
     pub fn exit_process(&self) -> ! {
         unsafe { remove_icon(self.hwnd); ExitProcess(0); }
     }
@@ -504,7 +504,7 @@ impl Drop for Tray {
     }
 }
 
-/// 健康提醒獨立播放，托盤氣泡被 Windows 隱藏時也能聽到。
+/// 健康提醒獨立播放，託盤氣泡被 Windows 隱藏時也能聽到。
 pub fn play_health_sound() {
     use windows::Win32::Media::Audio::{PlaySoundW, SND_ASYNC, SND_MEMORY, SND_NODEFAULT, SND_NOSTOP};
     // 異步播放期間 Windows 仍會讀取這段內嵌的 WAV。
@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     fn icon_resource_is_embedded() {
-        // 托盤圖標必須來自 exe 資源 #1（rc.exe 編入），不是臨時畫的
+        // 託盤圖標必須來自 exe 資源 #1（rc.exe 編入），不是臨時畫的
         assert!(load_resource_icon().is_some(), "RT_GROUP_ICON #1 取不到");
     }
 
@@ -662,7 +662,7 @@ pub fn activate_existing(calendar:bool)->bool {unsafe{
     GetWindowThreadProcessId(tray,Some(&mut tray_pid));
     GetWindowThreadProcessId(window,Some(&mut window_pid));
     if tray_pid==0 || tray_pid!=window_pid{return false;}
-    // 托盤有獨立線程，能接收消息不代表界面線程仍可響應。
+    // 託盤有獨立線程，能接收消息不代表界面線程仍可響應。
     if SendMessageTimeoutW(window,WM_NULL,WPARAM(0),LPARAM(0),
         SMTO_ABORTIFHUNG|SMTO_ERRORONEXIT,1500,None).0==0{return false;}
     // 用戶再次啟動時，把新進程的前台激活權限交給現有實例，無需模擬按鍵。

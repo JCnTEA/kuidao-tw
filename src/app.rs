@@ -261,7 +261,7 @@ mod env_power_tests {
 
 pub use crate::messenger::{Messenger,Unread};
 
-/// 展開後未讀膠囊的寬度、離面板的間距和每個圖標占的高度。
+/// 展開後未讀膠囊的寬度、離面板的間距和每個圖標佔的高度。
 pub(crate) const UNREAD_W: f32 = 68.0;
 pub(crate) const UNREAD_GAP: f32 = 8.0;
 pub(crate) const UNREAD_SLOT: f32 = 36.0;
@@ -1908,7 +1908,7 @@ impl App {
     #[cfg(windows)]
     pub fn start_tray(&self,state:crate::tray::State)->Option<crate::tray::Tray>{
         let layout=self.settings_window.clone();
-        // 原生文件選擇框會佔用界面線程，托盤退出時直接保存最近一次觀察到的佈局。
+        // 原生文件選擇框會佔用界面線程，託盤退出時直接保存最近一次觀察到的佈局。
         crate::tray::Tray::start_with_exit(state,move||{layout.lock().unwrap_or_else(|e|e.into_inner()).close();})
     }
 

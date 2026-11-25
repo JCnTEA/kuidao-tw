@@ -738,7 +738,7 @@ pub fn browser_at_top(bounds:RECT,settings:&crate::model::Settings)->Option<bool
         }
         let mut pid = 0;
         GetWindowThreadProcessId(foreground, Some(&mut pid));
-        // 設置、托盤和島內輸入沿用此前的避讓狀態，避免自身窗口引起反覆切換。
+        // 設置、託盤和島內輸入沿用此前的避讓狀態，避免自身窗口引起反覆切換。
         if pid == GetCurrentProcessId() {
             return None;
         }

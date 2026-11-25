@@ -913,7 +913,7 @@ pub fn checklist(c: &Card, cx: f32, cy: f32, size: f32, ink: Color32, plate: Col
     }
 }
 
-/// 下載托盤：向下箭頭落進收納盒。`drop` 為箭頭下墜位移（拖入時輕微彈跳）。
+/// 下載託盤：向下箭頭落進收納盒。`drop` 為箭頭下墜位移（拖入時輕微彈跳）。
 pub fn tray(c: &Card, cx: f32, cy: f32, size: f32, drop: f32, color: Color32, shade: Color32) {
     let u = size / 30.0;
     let ay = cy - 13.0 * u + drop * u;
