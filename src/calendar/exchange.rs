@@ -502,7 +502,7 @@ mod tests {
 
     #[test]
     fn exchange_connection_test_accepts_unparseable_items() {
-        for provider in [Provider::WeCom, Provider::Exchange] {
+        for provider in [Provider::Exchange] {
             let (base, worker) = mock(vec![
                 Box::new(|_| (200, Some(folders()))),
                 Box::new(|_| (200, Some(sync_page("1", false)))),

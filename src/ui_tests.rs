@@ -601,7 +601,7 @@ fn header_clock_never_overlaps_page_refresh_with_period_and_seconds(){
     // 實機擷圖的真實字串：日期含星期、時鐘含時段與秒數，是頂欄最寬的組合。
     let date="11月23日 週一";
     let raw_time="23:17:59";
-    let phone=crate::bt::Device{id:"P".into(),name:"Phone".into(),battery:Some(71),kind:crate::bt::DeviceKind::Phone};
+    let phone=crate::bt::Device{id:"P".into(),name:"Phone".into(),battery:Some(71),kind:crate::bt::DeviceKind::Phone, ..Default::default() };
     for page in [crate::app::QUOTA_PAGE, crate::app::WEATHER_PAGE] {
         let refresh_name=if page==crate::app::WEATHER_PAGE{"weather-refresh"}else{"quota-refresh"};
         // 系統電池與連線手機（藍牙）電量兩種來源都要驗證。
@@ -894,8 +894,8 @@ fn bluetooth_headset_battery_replaces_missing_desktop_battery() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();h.app.settings.show_battery=true;h.app.settings.pet=false;
     h.bt=vec![
-        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(64),kind:crate::bt::DeviceKind::Earbuds},
-        crate::bt::Device{id:"BB".into(),name:"Mouse".into(),battery:Some(5),kind:crate::bt::DeviceKind::Mouse},
+        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(64),kind:crate::bt::DeviceKind::Earbuds, ..Default::default() },
+        crate::bt::Device{id:"BB".into(),name:"Mouse".into(),battery:Some(5),kind:crate::bt::DeviceKind::Mouse, ..Default::default() },
     ];
     for _ in 0..90 {h.frame(vec![]);}
     assert_eq!(h.app.resident_power,(Some(64),false),"桌機沒有系統電池時，島上應顯示藍牙耳機電量");
@@ -906,8 +906,8 @@ fn connected_phone_battery_replaces_missing_desktop_battery_and_beats_earbuds() 
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();h.app.settings.show_battery=true;h.app.settings.pet=false;
     h.bt=vec![
-        crate::bt::Device{id:"4FA8446CAF75".into(),name:"iPhone 13 Por Max".into(),battery:Some(77),kind:crate::bt::DeviceKind::Phone},
-        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(64),kind:crate::bt::DeviceKind::Earbuds},
+        crate::bt::Device{id:"4FA8446CAF75".into(),name:"iPhone 13 Por Max".into(),battery:Some(77),kind:crate::bt::DeviceKind::Phone, ..Default::default() },
+        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(64),kind:crate::bt::DeviceKind::Earbuds, ..Default::default() },
     ];
     for _ in 0..90 {h.frame(vec![]);}
     assert_eq!(h.app.resident_power,(Some(77),false),"桌機沒有系統電池時，手機電量應優先顯示");
@@ -924,7 +924,7 @@ fn bluetooth_phone_battery_preview(){
         h.t+=1.0/60.0;
         let cursor=Some(H::local(180.0,185.0));
         let env=Env{t:h.t,clock:"14:08:26".into(),today:"2026-11-21".into(),date:"11月21日 週六".into(),cursor,
-            battery:None,bt:vec![crate::bt::Device{id:"4FA8446CAF75".into(),name:"iPhone 13 Por Max".into(),battery:Some(77),kind:crate::bt::DeviceKind::Phone}],bt_ready:true,..Default::default()};
+            battery:None,bt:vec![crate::bt::Device{id:"4FA8446CAF75".into(),name:"iPhone 13 Por Max".into(),battery:Some(77),kind:crate::bt::DeviceKind::Phone, ..Default::default() }],bt_ready:true,..Default::default()};
         let output=h.ctx.run(egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(w,hgt))),time:Some(h.t),focused:true,
             events:vec![egui::Event::PointerMoved(cursor.unwrap())],viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(ppp),..Default::default()})).collect(),..Default::default()},
             |ctx|{egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx,|ui|{h.app.frame(ui,Rect::from_min_size(ui.max_rect().min,Vec2::new(WIN_W,WIN_H)),&env);});});
@@ -949,7 +949,7 @@ fn bluetooth_headset_battery_preview(){
         h.t+=1.0/60.0;
         let cursor=Some(H::local(180.0,185.0));
         let env=Env{t:h.t,clock:"14:08:26".into(),today:"2026-11-21".into(),date:"11月21日 週六".into(),cursor,
-            battery:None,bt:vec![crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(64),kind:crate::bt::DeviceKind::Earbuds}],bt_ready:true,..Default::default()};
+            battery:None,bt:vec![crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(64),kind:crate::bt::DeviceKind::Earbuds, ..Default::default() }],bt_ready:true,..Default::default()};
         let output=h.ctx.run(egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(w,hgt))),time:Some(h.t),focused:true,
             events:vec![egui::Event::PointerMoved(cursor.unwrap())],viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(ppp),..Default::default()})).collect(),..Default::default()},
             |ctx|{egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx,|ui|{h.app.frame(ui,Rect::from_min_size(ui.max_rect().min,Vec2::new(WIN_W,WIN_H)),&env);});});
@@ -3285,7 +3285,7 @@ fn hold_open_header_controls_do_not_overlap_during_page_transitions() {
 fn music_header_shortcut_returns_from_every_page_without_controlling_playback() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     for playing in [true,false] {
-        let mut h=H::new();h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9,10];
+        let mut h=H::new();h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9,10,11,12];
         h.media=crate::smtc::NowPlaying{source:"cloudmusic.exe".into(),title:"Track".into(),artist:"Artist".into(),playing,duration:120.0,..Default::default()};
         h.app.set_page_visible(crate::app::PERFORMANCE_PAGE,true);
         for page in 1..crate::app::PAGE_NAMES.len() {
@@ -4269,7 +4269,7 @@ fn quota_accounts_switch_independently_and_hide_with_the_page() {
 fn page_visibility_is_saved_and_sets_the_starting_page() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
-    assert_eq!(h.app.settings.visible_pages,[true,true,true,true,true,true,true,true,true,false,true]);
+    assert_eq!(h.app.settings.visible_pages,[true,true,true,true,true,true,true,true,true,true,true,false,true]);
     assert!(h.app.settings.show_battery);
     h.app.settings.show_battery=false;
     h.app.set_page_visible(0,false);
@@ -4277,17 +4277,17 @@ fn page_visibility_is_saved_and_sets_the_starting_page() {
     h.app.settings.save();
     let settings=crate::model::Settings::load();
     assert!(!settings.show_battery);
-    assert_eq!(settings.visible_pages,[false,true,true,false,true,true,true,true,true,false,true]);
+    assert_eq!(settings.visible_pages,[false,true,true,false,true,true,true,true,true,true,true,false,true]);
     let restarted=App::new(&h.ctx,Options{fetch_lyrics:false,pet_idle:1e9});
     assert_eq!(restarted.page(),1);
     assert_eq!(restarted.settings.visible_pages,settings.visible_pages);
     assert!(!restarted.settings.show_battery);
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=000000\n").unwrap();
-    assert_eq!(crate::model::Settings::load().visible_pages,[false,false,false,false,false,false,false,false,false,false,true],"舊版存檔全關時，新增的無線設備頁按默認開啟，已有頁面可見");
+    assert_eq!(crate::model::Settings::load().visible_pages,[false,false,false,false,false,false,false,false,false,false,false,false,true],"舊版存檔全關時，新增的無線設備頁按默認開啟，已有頁面可見");
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=1000000\n").unwrap();
-    assert_eq!(crate::model::Settings::load().visible_pages,[true,false,false,false,false,false,false,true,true,false,true],"舊版頁面開關應保留，並開啟新增的日程頁與天氣頁");
+    assert_eq!(crate::model::Settings::load().visible_pages,[true,false,false,false,false,false,false,true,true,false,true,false,true],"舊版頁面開關應保留，並開啟新增的日程頁與天氣頁");
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=invalid\n").unwrap();
-    assert_eq!(crate::model::Settings::load().visible_pages,[true,true,true,true,true,true,true,true,true,false,true]);
+    assert_eq!(crate::model::Settings::load().visible_pages,[true,true,true,true,true,true,true,true,true,true,true,false,true]);
 }
 
 #[test]
@@ -4344,10 +4344,10 @@ fn power_page_draws_one_ring_per_reported_device() {
     h.app.settings.pet=false;
     h.power=(None,false);
     h.bt=vec![
-        crate::bt::Device{id:"4F".into(),name:"iPhone".into(),battery:Some(95),kind:crate::bt::DeviceKind::Phone},
-        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(12),kind:crate::bt::DeviceKind::Earbuds},
-        crate::bt::Device{id:"BB".into(),name:"MX Master".into(),battery:Some(79),kind:crate::bt::DeviceKind::Mouse},
-        crate::bt::Device{id:"CC".into(),name:"沒有電量的鍵盤".into(),battery:None,kind:crate::bt::DeviceKind::Keyboard},
+        crate::bt::Device{id:"4F".into(),name:"iPhone".into(),battery:Some(95),kind:crate::bt::DeviceKind::Phone, ..Default::default() },
+        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(12),kind:crate::bt::DeviceKind::Earbuds, ..Default::default() },
+        crate::bt::Device{id:"BB".into(),name:"MX Master".into(),battery:Some(79),kind:crate::bt::DeviceKind::Mouse, ..Default::default() },
+        crate::bt::Device{id:"CC".into(),name:"沒有電量的鍵盤".into(),battery:None,kind:crate::bt::DeviceKind::Keyboard, ..Default::default() },
     ];
     h.app.show_page(crate::app::POWER_PAGE);
     h.hover(Pos2::new(WIN_W/2.0,90.0),1.2);
@@ -4385,10 +4385,10 @@ fn power_page_preview(){
     let mut h=H::new();h.app.settings.show_battery=true;h.app.settings.pet=false;
     h.power=(Some(85),true);
     h.bt=vec![
-        crate::bt::Device{id:"4F".into(),name:"iPhone 15 Pro".into(),battery:Some(95),kind:crate::bt::DeviceKind::Phone},
-        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(100),kind:crate::bt::DeviceKind::Headphones},
-        crate::bt::Device{id:"BB".into(),name:"MX Keys".into(),battery:Some(58),kind:crate::bt::DeviceKind::Keyboard},
-        crate::bt::Device{id:"CC".into(),name:"MX Master 3S".into(),battery:Some(12),kind:crate::bt::DeviceKind::Mouse},
+        crate::bt::Device{id:"4F".into(),name:"iPhone 15 Pro".into(),battery:Some(95),kind:crate::bt::DeviceKind::Phone, ..Default::default() },
+        crate::bt::Device{id:"AA".into(),name:"AirPods Pro".into(),battery:Some(100),kind:crate::bt::DeviceKind::Headphones, ..Default::default() },
+        crate::bt::Device{id:"BB".into(),name:"MX Keys".into(),battery:Some(58),kind:crate::bt::DeviceKind::Keyboard, ..Default::default() },
+        crate::bt::Device{id:"CC".into(),name:"MX Master 3S".into(),battery:Some(12),kind:crate::bt::DeviceKind::Mouse, ..Default::default() },
     ];
     h.app.show_page(crate::app::POWER_PAGE);
     let (w,hgt)=(crate::app::CANVAS_W,WIN_H);let ppp=2.0;let mut raster=feature_raster_sized(w,hgt);
@@ -8105,7 +8105,7 @@ fn page_management_resident_switches_follow_their_modules(){
     h.app.settings.show_clock=true;
     h.app.settings.show_battery=true;
     h.app.settings.show_weather=true;
-    h.app.settings.visible_pages=[true;11];
+    h.app.settings.visible_pages=[true;13];
     h.app.settings.show_bluetooth=false;
     h.app.quota.config.compact=true;
     h.app.quota.config.save();
@@ -8373,7 +8373,7 @@ fn calendar_sync_result_does_not_enqueue_another_sync() {
 fn page_order_persists_and_controls_navigation() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
-    h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9,10];
+    h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9,10,11,12];
     h.app.settings.save();
     let settings=crate::model::Settings::load();
     assert_eq!(settings.page_order,[5,2,0,1,3,4,6,7,8,9,10]);

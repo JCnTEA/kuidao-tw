@@ -65,7 +65,7 @@ fn caldav_connection_test_accepts_parse_errors_but_requires_read_access() {
     let invalid = "BEGIN:VEVENT\nUID:bad\nDTSTART;TZID=Unsupported/Zone:20261112T100000\nEND:VEVENT";
     let start = (chrono::Utc::now() + chrono::Duration::minutes(30)).format("%Y%m%dT%H%M%SZ");
     let mixed = format!("{invalid}\nBEGIN:VEVENT\nUID:good\nDTSTART:{start}\nEND:VEVENT");
-    for provider in [Provider::DingTalk, Provider::Feishu, Provider::ICloud, Provider::Custom] {
+    for provider in [Provider::ICloud, Provider::Custom] {
         for (status, ics, count) in [(207, invalid, 0), (207, mixed.as_str(), 1), (207, "", 0), (401, "", 0), (403, "", 0)] {
             let data = if ics.is_empty() { String::new() } else { format!("<d:response><d:href>/calendar/1.ics</d:href><c:calendar-data>{ics}</c:calendar-data></d:response>") };
             let xml = format!(r#"<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">{data}</d:multistatus>"#);

@@ -126,6 +126,10 @@ pub fn spawn_receivers(store:compat::Store,wake:impl Fn()+Send+'static)->Service
 }
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+    fn device(id: &str) -> Device {
+        Device { id: id.into(), name: id.into(), ..Default::default() }
+    }
     use super::*;
     #[test]
     fn identifies_connected_audio_and_input_devices() {
@@ -194,8 +198,8 @@ mod tests {
     fn live_phone_battery_is_visible_to_the_app() {
         let service=spawn();
         let report=service.rx.recv_timeout(Duration::from_secs(10)).expect("藍牙掃描沒有回傳");
-        for device in &report.devices { println!("{:?} {}",device.kind,device.summary()); }
-        let phone=battery_with_fallback(&report.devices).filter(|device|device.kind==DeviceKind::Phone);
+        for device in &report { println!("{:?} {}",device.kind,device.summary()); }
+        let phone=battery_with_fallback(&report).filter(|device|device.kind==DeviceKind::Phone);
         assert!(phone.is_some_and(|device|device.battery.is_some()),"已連線手機應該回報電量");
     }
 }

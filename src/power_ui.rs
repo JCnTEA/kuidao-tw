@@ -296,8 +296,7 @@ mod tests {
     use super::*;
 
     fn device(name: &str, kind: DeviceKind, battery: Option<u8>) -> Device {
-        Device { id: name.into(), name: name.into(), battery, kind }
-    }
+        Device { id: name.into(), name: name.into(), battery, kind }, ..Default::default() }
 
     #[test]
     fn rings_put_system_battery_first_and_drop_devices_without_levels() {

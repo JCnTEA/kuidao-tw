@@ -214,8 +214,7 @@ mod env_power_tests {
     use crate::bt::{Device,DeviceKind};
 
     fn headset(level:Option<u8>)->Device {
-        Device{id:"AA".into(),name:"Headset".into(),battery:level,kind:DeviceKind::Headphones}
-    }
+        Device{id:"AA".into(),name:"Headset".into(),battery:level,kind:DeviceKind::Headphones}, ..Default::default() }
 
     #[test]
     fn system_battery_keeps_priority_over_bluetooth() {
@@ -3456,6 +3455,9 @@ impl App {
         if self.glassy() { return self.material_glass_fill(215); }
         self.glass_fill()
     }
+
+    /// 鬼島所有主題都使用同一組虎斑影格，漸層只換底色。
+    pub fn uses_native_mascot(&self)->bool { true }
 
     pub(crate) fn island_palette(&self)->Option<crate::skin_paint::Palette> {
         #[cfg(all(windows, feature = "sdk-material"))]
