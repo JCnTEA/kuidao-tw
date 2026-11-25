@@ -90,3 +90,18 @@ jobs:
             gh release create $tag --prerelease --title '鬼島 Kuidao 開發版（固定下載位址）' --notes '這個標籤只放開發版安裝檔，下載網址固定不變；內容由每次開發版建置自動更新。'
           }
           gh release upload $tag KuidaoDev-Setup-TW-x64.exe --clobber
+
+      - name: Publish versioned dev release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ver = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          $tag = "v$ver-tw-dev"
+          $zip = "Kuidao-Dev-v$ver-tw-windows-x64.zip"
+          if (-not (Test-Path $zip)) { throw "Dev zip missing: $zip" }
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --prerelease --title "鬼島 Kuidao 開發版 $ver" --notes "版本 $ver。啟動器每次啟動會比對這個版本，較新就整包換上（程式＋素材），換完自動重新開啟。"
+          }
+          gh release upload $tag $zip --clobber

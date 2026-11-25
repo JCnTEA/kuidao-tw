@@ -36,6 +36,17 @@ pub(crate) struct State {
     notified_version: Option<String>,
     history_path: Option<PathBuf>,
     latest_notes: Option<NotesRecord>,
+    /// 使用者手動按下「檢查更新」：查到有安裝包就直接下載安裝、自動重啟。
+    auto_download: bool,
+}
+
+/// 開發版（建置時帶 KUIDAO_CHANNEL=dev）：更新由同資料夾的開發版啟動器統一套用整包。
+fn dev_channel() -> bool { matches!(option_env!("KUIDAO_CHANNEL"), Some("dev")) }
+
+fn dev_launcher() -> Option<PathBuf> {
+    if !dev_channel() || cfg!(test) { return None; }
+    let exe = std::env::current_exe().ok()?.parent()?.join("KuidaoDevLauncher.exe");
+    exe.is_file().then_some(exe)
 }
 
 impl Drop for State {
@@ -109,10 +120,16 @@ impl State {
             match event {
                 Event::Checked(result) => {
                     let automatic_until = self.automatic_check_until.take();
+                    let manual_auto = std::mem::take(&mut self.auto_download);
+                    let auto = automatic_until.is_some() || manual_auto;
                     let now = Instant::now();
                     self.manual_check_after = Some(now + MANUAL_INTERVAL);
+                    let has_package = matches!(&result, Ok(Some(release)) if release.package.is_some());
                     let new_notice = matches!(&result, Ok(Some(release)) if self.notified_version.as_deref() != Some(release.version.as_str()));
-                    self.dialog_open = matches!(&result, Ok(Some(_))) && automatic_until.is_none_or(|until| now < until && new_notice);
+                    // 手動按下時若已有安裝包就直接更新，不再多開一層對話框要使用者確認。
+                    self.dialog_open = matches!(&result, Ok(Some(_)))
+                        && !(manual_auto && has_package)
+                        && automatic_until.is_none_or(|until| now < until && new_notice);
                     self.focus_requested = self.dialog_open;
                     if self.dialog_open { if let Ok(Some(release)) = &result { self.notified_version = Some(release.version.clone()); } }
                     // 錯過啟動時段的新版留在設置裡，下次啟動時可以再提醒。
@@ -121,12 +138,12 @@ impl State {
                         else { CHECK_INTERVAL };
                     self.remember_check(delay);
                     let automatic_package = match &result {
-                        Ok(Some(release)) if self.dialog_open && release.package.is_some() => Some(release.clone()),
+                        Ok(Some(release)) if auto && release.package.is_some() => Some(release.clone()),
                         _ => None,
                     };
                     self.result = Some(result); self.rx = None;
                     if let Some(release) = automatic_package {
-                        if !cfg!(test) && automatic_until.is_some() {
+                        if !cfg!(test) {
                             self.start_download(ctx, release);
                         }
                     }
@@ -163,7 +180,22 @@ impl State {
     pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
         let wait = self.manual_wait();
         if ui.add_enabled(self.rx.is_none() && wait.is_zero(), egui::Button::new("檢查更新")).clicked() {
-            self.begin_check(ui.ctx(), None, check);
+            // 開發版交給同資料夾的更新啟動器：檢查→有新版本就下載整包→換版→自動重開。
+            if let Some(launcher) = dev_launcher() {
+                let spawned = std::process::Command::new(&launcher)
+                    .arg("--update")
+                    .spawn();
+                match spawned {
+                    Ok(_) => {
+                        self.message = "已交給更新啟動器，稍後會自動換版並重新開啟。".into();
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                    Err(_) => self.begin_check(ui.ctx(), None, check),
+                }
+            } else {
+                self.auto_download = true;
+                self.begin_check(ui.ctx(), None, check);
+            }
         }
         match &self.result {
             Some(Ok(Some(release))) => {
