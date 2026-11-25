@@ -3602,19 +3602,19 @@ fn support_author(ui:&mut egui::Ui, supporters: &mut crate::supporters::State){
     if ui.ctx().data(|data| data.get_temp::<bool>(wall_id).unwrap_or(false)) {
         release_support_image(ui.ctx(), SUPPORT_RECENT_URI);
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("感谢墙").size(17.0).strong());
+            ui.label(egui::RichText::new("感謝牆").size(17.0).strong());
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.link("← 返回").clicked() {
                     ui.ctx().data_mut(|data| data.insert_temp(wall_id, false));
                 }
             });
         });
-        ui.label(egui::RichText::new("按累计支持排序").size(11.0).weak());
+        ui.label(egui::RichText::new("按累計支持排序").size(11.0).weak());
         ui.add_space(4.0);
         let image = match snapshot {
             Some(data) => egui::Image::from_bytes(format!("bytes://supporters/wall-{}.webp", data.version), data.wall.clone()),
             None => egui::Image::new(egui::include_image!("../assets/support/wall.webp")),
-        }.fit_to_original_size(1.0).max_width(ui.available_width()).alt_text("岛仔感谢墙");
+        }.fit_to_original_size(1.0).max_width(ui.available_width()).alt_text("鬼島感謝牆");
         add_support_image(ui, image, SUPPORT_WALL_URI);
         return;
     }
@@ -3632,21 +3632,21 @@ fn support_author(ui:&mut egui::Ui, supporters: &mut crate::supporters::State){
             ui.horizontal(|ui|{
                 ui.allocate_ui_with_layout(egui::vec2(text_width,64.0),egui::Layout::top_down(egui::Align::Min).with_main_align(egui::Align::Center),|ui|{
                     ui.set_max_width(text_width);
-                    ui.label(egui::RichText::new("请小唐喝杯咖啡").size(19.0).strong());
-                    ui.add(egui::Label::new("岛仔陪你认真生活，你的支持，陪小唐把它慢慢做好。").wrap());
+                    ui.label(egui::RichText::new("請作者喝杯咖啡").size(19.0).strong());
+                    ui.add(egui::Label::new("鬼島陪你認真生活，你的支持，讓它慢慢做好。").wrap());
                 });
-                ui.add(egui::Image::new(egui::include_image!("../assets/support/daozai-coffee.svg")).fit_to_exact_size(egui::vec2(image_width,62.5)));
+                ui.add(egui::Image::new(egui::include_image!("../assets/support/kuidao-coffee.png")).fit_to_exact_size(egui::vec2(image_width,62.5)));
             });
         });
     } else {
         ui.set_min_height(200.0);
         let ctx=ui.ctx().clone();
-        // 只解码一次并裁出二维码区域，按实际显示像素缩小：原图解码后两张合计约 17MB，缩小后不到 1MB。
+        // 只解碼一次並裁出二維碼區塊，按實際顯示像素縮小，收起時釋放。
         let pixels=((180.0*ctx.pixels_per_point()).ceil() as u32).clamp(180,600);
         ui.columns(2,|columns|{
             for (i,(name,bytes,crop,color)) in [
-                ("微信支付",include_bytes!("../assets/support/support-wechat-original.jpg").as_slice(),[330.0,370.0,600.0],Color32::from_rgb(5,160,80)),
-                ("支付宝",include_bytes!("../assets/support/support-alipay-original.jpg").as_slice(),[200.0,660.0,860.0],Color32::from_rgb(22,120,255)),
+                ("街口支付",include_bytes!("../assets/support/support-jkopay-qr.png").as_slice(),[0.0,0.0,600.0],Color32::from_rgb(214,0,40)),
+                ("支付寶",include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),[0.0,0.0,600.0],Color32::from_rgb(22,120,255)),
             ].into_iter().enumerate(){
                 let texture_id=egui::Id::new(("support-author-qr",i));
                 let texture=ctx.data_mut(|data|data.get_temp::<egui::TextureHandle>(texture_id)).filter(|texture|texture.size()==[pixels as usize;2]).unwrap_or_else(||{
@@ -3659,87 +3659,24 @@ fn support_author(ui:&mut egui::Ui, supporters: &mut crate::supporters::State){
                     ui.label(egui::RichText::new(name).color(color).strong());
                     let side=ui.available_width().min(156.0);
                     ui.add(egui::Image::new((texture.id(),egui::vec2(side,side))).uv(uv));
-                    ui.label(egui::RichText::new(if i==0{"打开微信扫一扫"}else{"打开支付宝扫一扫"}).size(11.0));
+                    ui.label(egui::RichText::new(if i==0{"用街口支付掃一掃"}else{"打開支付寶掃一掃"}).size(11.0));
                 });
-            ui.add_space(9.0);
-            ui.label(
-                egui::RichText::new("鬼島維護 · 陪你生活")
-                    .size(10.5)
-                    .color(accent),
-            );
-            ui.label(egui::RichText::new("請作者喝杯咖啡").size(19.0).strong());
-            ui.label("鬼島陪你認真生活，\n你的支援，讓它慢慢變好。");
-        } else {
-            let ctx = ui.ctx().clone();
-            // 只解码一次并裁出二维码区域，按实际显示像素缩小：原图解码后两张合计约 17MB，缩小后不到 1MB。
-            let pixels = ((180.0 * ctx.pixels_per_point()).ceil() as u32).clamp(180, 600);
-            ui.columns(2, |columns| {
-                for (i, (name, bytes, crop, color)) in [
-                    (
-                        "街口支付",
-                        include_bytes!("../assets/support/support-jkopay-qr.png").as_slice(),
-                        [0.0, 0.0, 600.0],
-                        Color32::from_rgb(214, 0, 40),
-                    ),
-                    (
-                        "支付寶",
-                        include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),
-                        [0.0, 0.0, 600.0],
-                        Color32::from_rgb(22, 120, 255),
-                    ),
-                ]
-                .into_iter()
-                .enumerate()
-                {
-                    let texture_id = egui::Id::new(("support-author-qr", i));
-                    let texture = ctx
-                        .data_mut(|data| data.get_temp::<egui::TextureHandle>(texture_id))
-                        .filter(|texture| texture.size() == [pixels as usize; 2])
-                        .unwrap_or_else(|| {
-                            let image = support_code_image(bytes, crop, pixels);
-                            let texture =
-                                ctx.load_texture(name, image, egui::TextureOptions::LINEAR);
-                            ctx.data_mut(|data| data.insert_temp(texture_id, texture.clone()));
-                            texture
-                        });
-                    let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
-                    columns[i].vertical_centered(|ui| {
-                        ui.label(egui::RichText::new(name).color(color).strong());
-                        let side = ui.available_width().min(180.0);
-                        ui.add(egui::Image::new((texture.id(), egui::vec2(side, side))).uv(uv));
-                        ui.label(
-                            egui::RichText::new(if i == 0 {
-                                "用街口支付掃一掃"
-                            } else {
-                                "打開支付寶掃一掃"
-                            })
-                            .size(11.0),
-                        );
-                    });
-                }
-            });
-        }
+            }
+        });
+    }
     });
-    let button = egui::Button::new(
-        egui::RichText::new(if open {
-            "返回"
-        } else {
-            "請喝咖啡 · 支援作者"
-        })
-        .color(Color32::from_rgb(33, 27, 51)),
-    )
-    .fill(Color32::from_rgb(182, 163, 245))
-    .corner_radius(8.0);
-    if ui.add_sized([ui.available_width(), 32.0], button).clicked() {
-        ui.ctx().data_mut(|data| data.insert_temp(id, !open));
+    let button=egui::Button::new(egui::RichText::new(if open{"返回"}else{"請喝咖啡 · 支援作者"}).color(Color32::from_rgb(33,27,51)))
+        .fill(Color32::from_rgb(182,163,245)).corner_radius(8.0);
+    if ui.add_sized([ui.available_width(),32.0],button).clicked(){
+        ui.ctx().data_mut(|data|data.insert_temp(id,!open));
     }
     ui.add_space(if open{4.0}else{7.0});
-    ui.label(egui::RichText::new("完全自愿 · 感谢每一份支持 · 不影响功能使用").size(11.0).color(ui.visuals().weak_text_color()));
+    ui.label(egui::RichText::new("完全自願 · 感謝每一份支持 · 不影響功能使用").size(11.0).color(ui.visuals().weak_text_color()));
     if !open {
         ui.add_space(4.0);
         ui.separator();
         let count = snapshot.map_or(BUNDLED_SUPPORTERS, |data| data.count);
-        ui.label(format!("已有 {count} 位朋友请岛仔喝过咖啡"));
+        ui.label(format!("已有 {count} 位朋友請鬼島喝過咖啡"));
         ui.horizontal_wrapped(|ui| {
             ui.label(egui::RichText::new("最近支持").size(11.0).weak());
             let image = match snapshot {
@@ -3747,7 +3684,7 @@ fn support_author(ui:&mut egui::Ui, supporters: &mut crate::supporters::State){
                 None => egui::Image::new(egui::include_image!("../assets/support/recent.webp")),
             }.max_size(egui::vec2(190.0, 29.0)).alt_text("最近支持的朋友");
             add_support_image(ui, image, SUPPORT_RECENT_URI);
-            if ui.link("查看感谢墙 →").clicked() {
+            if ui.link("查看感謝牆 →").clicked() {
                 ui.ctx().data_mut(|data| data.insert_temp(wall_id, true));
             }
         });

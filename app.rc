@@ -3,8 +3,8 @@
 2 ICON "assets/kuidao_logo.ico"
 1 24 "app.manifest"
 1 VERSIONINFO
- FILEVERSION 0,6,70,0
- PRODUCTVERSION 0,6,70,0
+ FILEVERSION 0,6,133,0
+ PRODUCTVERSION 0,6,133,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS 0x40004L
@@ -15,12 +15,12 @@ BEGIN
     BEGIN
         BLOCK "040404b0"
         BEGIN
-            VALUE "FileDescription", "岛仔"
-            VALUE "InternalName", "Daozai"
-            VALUE "OriginalFilename", "daozai.exe"
-            VALUE "ProductName", "岛仔 Daozai"
-            VALUE "ProductVersion", "0.6.70"
-            VALUE "FileVersion", "0.6.70"
+            VALUE "FileDescription", "鬼島 Kuidao"
+            VALUE "InternalName", "Kuidao"
+            VALUE "OriginalFilename", "kuidao.exe"
+            VALUE "ProductName", "鬼島 Kuidao"
+            VALUE "ProductVersion", "0.6.133"
+            VALUE "FileVersion", "0.6.133"
         END
     END
     BLOCK "VarFileInfo"
