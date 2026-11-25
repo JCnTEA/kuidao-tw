@@ -86,9 +86,9 @@ fn painted(output: &egui::FullOutput, value: &str) -> bool {
 fn plugin_status_sensitive_values_are_masked_until_clicked_and_for_private_frames() {
     let fixture = Fixture::new(
         json!({
-            "state":"running","label":"實時",
-            "metrics":[{"label":"工資","value":"¥4321.25","sensitive":true}],
-            "items":[{"label":"私密便籤","detail":"便籤正文","sensitive":true}],
+            "state":"running","label":"实时",
+            "metrics":[{"label":"工资","value":"¥4321.25","sensitive":true}],
+            "items":[{"label":"私密便签","detail":"便签正文","sensitive":true}],
             "counter":{"start_value":9.5,"per_second":0,"start_at":0,"decimals":2,"prefix":"¥","sensitive":true}
         }),
         json!({
@@ -97,7 +97,7 @@ fn plugin_status_sensitive_values_are_masked_until_clicked_and_for_private_frame
     );
     let initial = fixture.draw(0.0, vec![], true, false);
     assert!(painted(&initial, MASKED_VALUE));
-    for text in ["¥4321.25", "私密便籤", "便籤正文", "¥9.50"] {
+    for text in ["¥4321.25", "私密便签", "便签正文", "¥9.50"] {
         assert!(!painted(&initial, text), "{text}");
     }
 
@@ -133,7 +133,7 @@ fn plugin_status_sensitive_values_are_masked_until_clicked_and_for_private_frame
 #[test]
 fn plugin_status_sensitive_counter_is_hidden_after_its_rate_changes() {
     let status = |rate| json!({
-        "state":"running","label":"實時",
+        "state":"running","label":"实时",
         "counter":{"start_value":9.5,"per_second":rate,"start_at":0,"decimals":2,"prefix":"¥","sensitive":true}
     });
     let mut fixture = Fixture::new(status(0), json!({"components":[{"type":"counter"}]}));
@@ -147,8 +147,8 @@ fn plugin_status_sensitive_counter_is_hidden_after_its_rate_changes() {
 fn plugin_status_sensitive_list_requires_reveal_before_actions() {
     let fixture = Fixture::new(
         json!({
-            "state":"running","label":"便籤",
-            "items":[{"label":"私密便籤","action":"delete-1","copy":"私密正文","sensitive":true}]
+            "state":"running","label":"便签",
+            "items":[{"label":"私密便签","action":"delete-1","copy":"私密正文","sensitive":true}]
         }),
         json!({"components":[{"type":"list"}]}),
     );
@@ -182,18 +182,18 @@ fn plugin_status_sensitive_list_requires_reveal_before_actions() {
 
     let inactive = frame(0.0, vec![], false).0;
     assert!(painted(&inactive, MASKED_VALUE));
-    assert!(!painted(&inactive, "複製"));
+    assert!(!painted(&inactive, "复制"));
     let copy = egui::pos2(340.0, 58.0);
     let (shown, first_click) = click(0.1, copy, false);
-    assert!(painted(&shown, "私密便籤") && first_click.is_none());
-    assert!(painted(&frame(0.2, vec![], false).0, "複製"));
+    assert!(painted(&shown, "私密便签") && first_click.is_none());
+    assert!(painted(&frame(0.2, vec![], false).0, "复制"));
     assert!(matches!(click(0.3, copy, false).1, Some(ClickTarget::CopyItem(0))));
     let body = egui::pos2(95.0, 58.0);
     assert!(matches!(click(0.4, body, false).1, Some(ClickTarget::Item(0))));
 
     let (blocked, clicked) = click(0.5, copy, true);
     assert!(painted(&blocked, MASKED_VALUE) && clicked.is_none());
-    assert!(!painted(&blocked, "複製"));
+    assert!(!painted(&blocked, "复制"));
     assert!(painted(&frame(31.0, vec![], false).0, MASKED_VALUE));
 }
 
@@ -201,10 +201,10 @@ fn plugin_status_sensitive_list_requires_reveal_before_actions() {
 fn plugin_status_real_time_requests_repaint_only_for_visible_values() {
     let fixture = Fixture::new(
         json!({
-            "state":"running","label":"時鐘",
+            "state":"running","label":"时钟",
             "clock":[
-                {"label":"時鐘甲","utc_offset_minutes":480,"format":"HH:mm:ss"},
-                {"label":"時鐘乙","utc_offset_minutes":540,"format":"HH:mm"}
+                {"label":"时钟甲","utc_offset_minutes":480,"format":"HH:mm:ss"},
+                {"label":"时钟乙","utc_offset_minutes":540,"format":"HH:mm"}
             ]
         }),
         json!({
@@ -214,7 +214,7 @@ fn plugin_status_real_time_requests_repaint_only_for_visible_values() {
     fixture.draw(0.0, vec![], true, false);
     fixture.draw(0.1, vec![], true, false);
     let active = fixture.draw(0.2, vec![], true, false);
-    assert!(painted(&active, "時鐘甲") && painted(&active, "時鐘乙"));
+    assert!(painted(&active, "时钟甲") && painted(&active, "时钟乙"));
     let delay = active.viewport_output[&egui::ViewportId::ROOT].repaint_delay;
     assert!(
         delay <= Duration::from_secs(1) && delay > Duration::ZERO,

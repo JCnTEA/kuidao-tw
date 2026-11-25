@@ -48,10 +48,10 @@ fn gmail_proxy_routes_connection_test_background_mail_and_management() {
                 match proxy.accept() {
                     Ok((socket, _)) => break socket,
                     Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                        assert!(Instant::now() < deadline, "缺少預期的 CONNECT 請求");
+                        assert!(Instant::now() < deadline, "缺少预期的 CONNECT 请求");
                         std::thread::sleep(Duration::from_millis(5));
                     }
-                    Err(e) => panic!("代理測試監聽失敗：{e}"),
+                    Err(e) => panic!("代理测试监听失败：{e}"),
                 }
             };
             socket.set_nonblocking(false).unwrap();
@@ -80,7 +80,7 @@ fn gmail_proxy_routes_connection_test_background_mail_and_management() {
     let deadline = Instant::now() + Duration::from_secs(8);
     let (mut tested, mut synced, mut managed) = (false, false, false);
     while !(tested && synced && managed) {
-        assert!(Instant::now() < deadline, "連接測試、收信或管理缺少回執");
+        assert!(Instant::now() < deadline, "连接测试、收信或管理缺少回执");
         match service.try_recv() {
             Some(Event::Test { account: email, ok, note }) => {
                 assert_eq!(email, account.email);
@@ -118,10 +118,10 @@ fn gmail_proxy_routes_connection_test_background_mail_and_management() {
                 socket.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
                 let mut record_type = [0];
                 socket.read_exact(&mut record_type).unwrap();
-                assert_eq!(record_type, [0x16], "其他郵箱應直接向郵箱服務器發起 TLS 握手");
+                assert_eq!(record_type, [0x16], "其他邮箱应直接向邮箱服务器发起 TLS 握手");
                 break;
             }
-            assert!(Instant::now() < deadline, "其他郵箱未走直連");
+            assert!(Instant::now() < deadline, "其他邮箱未走直连");
             std::thread::sleep(Duration::from_millis(5));
         }
     });

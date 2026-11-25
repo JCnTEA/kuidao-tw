@@ -21,7 +21,7 @@ fn install(app: &mut App, id: &str, name: &str, quota: serde_json::Value) {
     .unwrap();
     let manifest = folder.join("plugin.json");
     fs::write(&manifest, json!({
-        "id":id, "name":name, "author":"驗收", "version":"1.0.0", "api":1,
+        "id":id, "name":name, "author":"验收", "version":"1.0.0", "api":1,
         "runtime":"js", "entry":"main.js", "cover":"cover.png", "owner":"quota",
         "capabilities":["quota.source","timer"], "dataVersion":1, "permissions":{}, "settings":[]
     }).to_string()).unwrap();
@@ -42,7 +42,7 @@ fn plugin_quota_uses_the_existing_panel_without_changing_builtin_accounts() {
     let baseline = "native-account";
     h.app.quota.config.accounts.push(Account {
         id: baseline.into(),
-        alias: "內置來源".into(),
+        alias: "内置来源".into(),
         provider: Provider::Sub2Api,
         source: "https://example.invalid".into(),
         slot: None,
@@ -61,17 +61,17 @@ fn plugin_quota_uses_the_existing_panel_without_changing_builtin_accounts() {
     install(
         &mut h.app,
         "example.panel-first",
-        "模擬積分源",
+        "模拟积分源",
         json!({
-            "windows":[{"label":"當月模擬積分","remaining":680,"limit":1000,"unit":"積分"}]
+            "windows":[{"label":"当月模拟积分","remaining":680,"limit":1000,"unit":"积分"}]
         }),
     );
     install(
         &mut h.app,
         "example.panel-second",
-        "模擬週期源",
+        "模拟周期源",
         json!({
-            "windows":[{"label":"本週模擬額度","remaining_pct":42}]
+            "windows":[{"label":"本周模拟额度","remaining_pct":42}]
         }),
     );
     h.app.settings.visible_pages[crate::app::QUOTA_PAGE] = true;
@@ -81,16 +81,16 @@ fn plugin_quota_uses_the_existing_panel_without_changing_builtin_accounts() {
         h.app
             .plugins
             .tick_features(false, false, true, "2026-10-28");
-        assert!(Instant::now() < deadline, "模擬額度未加載");
+        assert!(Instant::now() < deadline, "模拟额度未加载");
         std::thread::sleep(Duration::from_millis(2));
     }
     h.hover(H::local(230.0, 65.0), 0.8);
-    assert!(shows(&h, "內置來源"));
-    assert!(shows(&h, "模擬積分源"));
-    h.click_text("模擬積分源");
+    assert!(shows(&h, "内置来源"));
+    assert!(shows(&h, "模拟积分源"));
+    h.click_text("模拟积分源");
     h.hover(H::local(230.0, 65.0), 0.25);
-    assert!(shows(&h, "當月模擬積分"));
-    assert!(shows(&h, "680 / 1000 積分"));
+    assert!(shows(&h, "当月模拟积分"));
+    assert!(shows(&h, "680 / 1000 积分"));
     assert_eq!(h.app.quota.config, original);
     assert_eq!(h.app.quota.rows.len(), 1);
     if let Some(path) = std::env::var_os("DAOZAI_PLUGIN_QUOTA_PREVIEW") {
@@ -101,7 +101,7 @@ fn plugin_quota_uses_the_existing_panel_without_changing_builtin_accounts() {
             &mut h,
             &mut raster,
             &path,
-            "插件額度面板",
+            "插件额度面板",
             25,
             Some(H::local(230.0, 65.0)),
             "2026-10-28",
@@ -110,12 +110,12 @@ fn plugin_quota_uses_the_existing_panel_without_changing_builtin_accounts() {
 
     h.app.plugins.enable("example.panel-first", false).unwrap();
     h.frame(vec![]);
-    assert!(!shows(&h, "模擬積分源"));
+    assert!(!shows(&h, "模拟积分源"));
     assert!(shows(&h, "23 USD"));
-    assert!(shows(&h, "模擬週期源"));
-    h.click_text("模擬週期源");
+    assert!(shows(&h, "模拟周期源"));
+    h.click_text("模拟周期源");
     h.hover(H::local(230.0, 65.0), 0.25);
-    assert!(shows(&h, "本週模擬額度"));
+    assert!(shows(&h, "本周模拟额度"));
     assert!(shows(&h, "42%"));
     assert_eq!(h.app.quota.config, original);
 }

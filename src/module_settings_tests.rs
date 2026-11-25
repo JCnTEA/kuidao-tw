@@ -21,17 +21,17 @@ fn disabled_module_settings_dismiss_existing_popups_and_allow_reenabling() {
         for _ in 0..3 {draw_page_management(&mut h,vec![]);}
         assert!(!h.app.mail.form.open && !h.app.calendar.form.open
             && !h.app.quota.connect_open && !h.app.weather_source.tutorial_open,
-            "關閉的模塊應收起舊設置彈窗：{page}");
+            "关闭的模块应收起旧设置弹窗：{page}");
         let enable=h.shapes.iter().find_map(|shape|match &shape.shape {
-            egui::Shape::Text(text) if text.galley.text()=="開啟" =>Some(text.visual_bounding_rect().center()),
+            egui::Shape::Text(text) if text.galley.text()=="开启" =>Some(text.visual_bounding_rect().center()),
             _=>None,
-        }).expect("關閉的功能頁應保留開啟入口");
+        }).expect("关闭的功能页应保留开启入口");
         for pressed in [true,false] {
             draw_page_management(&mut h,vec![egui::Event::PointerMoved(enable),egui::Event::PointerButton{
                 pos:enable,button:egui::PointerButton::Primary,pressed,modifiers:Default::default(),
             }]);
         }
-        assert!(h.app.module_on(page),"獨立設置頁應可重新啟用模塊：{page}");
+        assert!(h.app.module_on(page),"独立设置页应可重新启用模块：{page}");
         assert!(crate::model::Settings::load().visible_pages[page]);
     }
 }
