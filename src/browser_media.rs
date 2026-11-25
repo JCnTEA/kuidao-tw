@@ -67,7 +67,12 @@ fn clean_window_title(raw: &str) -> String {
 pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, String)> {
     let raw = clean_window_title(raw);
     let raw = raw.as_str();
-    let mut title = match raw.strip_suffix(browser_suffix) {
+    // 視窗標題前面的空白已被清掉，後綴也要用去空白的版本比一次，
+    // 否則「 - Chrome」這種只有瀏覽器名稱的標題會被留下來當成歌名。
+    let mut title = match raw
+        .strip_suffix(browser_suffix)
+        .or_else(|| raw.strip_suffix(browser_suffix.trim()))
+    {
         Some(stripped) => stripped.trim().to_string(),
         None => raw.trim_start().to_string(),
     };

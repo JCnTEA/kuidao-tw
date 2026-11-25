@@ -1319,7 +1319,7 @@ mod tests {
     #[test]
     fn short_app_password_is_caught_before_the_401() {
         use super::{app_password_problem, Provider};
-        assert!(app_password_problem(Provider::Google, "sjvxcqxbkfzstuk").is_none(), "16 碼不該被擋");
+        assert!(app_password_problem(Provider::Google, "sjvxcqxbkfzstukx").is_none(), "16 碼不該被擋");
         let problem = app_password_problem(Provider::Google, "psnxxvzlhxrzyn").expect("14 碼要擋下來");
         assert!(problem.contains("16 碼") && problem.contains("14 碼"), "要說清楚幾碼：{problem}");
         assert!(problem.contains("兩步驟驗證"));

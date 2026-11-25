@@ -274,11 +274,15 @@ mod tests {
 
     #[test]
     fn lit_colors_keep_a_gradient_across_the_line() {
-        let style = Style::builtin(8, 0.0);
-        let first = lum(lit_color(&style, 0, 8));
-        let mid = lum(lit_color(&style, 4, 8));
-        let last = lum(lit_color(&style, 7, 8));
-        assert!((first - last).abs() > 20.0 || (mid - last).abs() > 20.0, "整句應有可見漸層");
+        // 色盤已縮成兩組粉彩，逐一驗證每一組在整句上仍有可見的顏色差，而不是固定挑某一組。
+        for preset in 0..lyric_gradient::PALETTE_COUNT {
+            let style = Style::builtin(preset, 0.0);
+            let lit = [0usize, 4, 7].map(|glyph| lum(lit_color(&style, glyph, 8)));
+            assert!(
+                (lit[0] - lit[2]).abs() > 2.0 || (lit[1] - lit[2]).abs() > 2.0,
+                "色盤 {preset} 整句應有可見漸層：{lit:?}"
+            );
+        }
     }
 
     #[test]

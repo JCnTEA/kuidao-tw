@@ -796,8 +796,8 @@ fn browser_page_borrows_the_system_timeline_when_the_card_has_no_title(){
         position:15.0,duration:200.0,playing:true,sampled_at:Some(sampled),..Default::default()};
     adopt_browser_timeline(&mut page,Some(&edge));
     assert_eq!(page.position,72.5);
-    // 暫停狀態要跟著播放卡，歌詞才不會繼續往前跑。
-    let paused=NowPlaying{source:"msedge.exe".into(),title:String::new(),position:72.5,duration:240.0,
+    // 暫停狀態要跟著播放卡，歌詞才不會繼續往前跑；同一套瀏覽器才借得到（上面已驗過不同瀏覽器不借）。
+    let paused=NowPlaying{source:"Chrome.UserData.Profile2".into(),title:String::new(),position:72.5,duration:240.0,
         playing:false,sampled_at:Some(sampled),..Default::default()};
     adopt_browser_timeline(&mut page,Some(&paused));
     assert!(!page.playing);

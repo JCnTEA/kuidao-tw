@@ -214,7 +214,10 @@ mod tests {
 
     #[test]
     fn library_key_ignores_duration_and_decoration() {
-        assert_eq!(key("無歡 NoFun", "我們OURS"), key("無歡…", "我們ours"));
+        assert_eq!(key("無歡…", "我們OURS"), key("無歡", "我們ours"));
+        // 拉丁副標是有意義的辨識點（同名中文歌與英文版歌名不同），不能整段吃掉，
+        // 否則會把別首歌的歌詞回給這一首。
+        assert_ne!(key("無歡 NoFun", "我們"), key("無歡", "我們"));
         assert_eq!(key("(Live) 晴天", "周杰倫"), key("晴天", "周杰倫"));
     }
 
