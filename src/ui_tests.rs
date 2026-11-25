@@ -6642,7 +6642,7 @@ fn calendar_agenda_starts_today_and_lists_only_days_with_events() {
     assert!(visible(&h,"月底安排"));
     assert!(visible(&h,"10月28日"),"滾進同一天的後續行時仍應顯示日期");
 
-    let config=crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"demo".into(),href:None,server:None};
+    let config=crate::calendar::Config{provider:crate::calendar::Provider::ICloud,username:"demo".into(),href:None,server:None};
     h.app.calendar.config=Some(config.clone());
     h.click(H::local(269.0,42.0));
     let next_month=today+days(4);
@@ -6730,7 +6730,7 @@ fn calendar_layout_gallery() {
         h.app.calendar.view.day=day;h.app.calendar.view.month=crate::calendar::month_start(day);
         h.app.open_calendar(None);
         if mode=="lunar-term-cream"{h.app.settings.skin=crate::model::Skin::Cream;}
-        let provider=match mode{"dingtalk"=>crate::calendar::Provider::DingTalk,"wecom"=>crate::calendar::Provider::WeCom,_=>crate::calendar::Provider::Feishu};
+        let provider=crate::calendar::Provider::ICloud;
         if !mode.starts_with("local-editor") && !["disconnected","local","local-all-day","lunar","lunar-term","lunar-term-cream"].contains(&mode){h.app.calendar.config=Some(crate::calendar::Config{provider,username:"demo".into(),href:None,server:None});h.app.calendar.connected=true;}
         h.app.calendar.view.loaded=Some(crate::calendar::month_start(day));
         if ["agenda","agenda-list","dingtalk","wecom","mixed"].contains(&mode) {
@@ -6818,7 +6818,7 @@ fn calendar_reminder_fires_once_and_dedupes_with_mail() {
     let _g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut h = H::new();
     h.app.mail.accounts=vec![crate::mail::Account {use_windows_proxy: false, custom: None, email:"a@qq.com".into(),provider:crate::mail::Provider::Qq,enabled:true}];
-    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::Feishu,username:"demo".into(),href:None,server:None});
+    h.app.calendar.config=Some(crate::calendar::Config{provider:crate::calendar::Provider::ICloud,username:"demo".into(),href:None,server:None});
     h.app.settings.calendar_prompt = false;
     let start = chrono::Local::now().timestamp() + 600;
     let at = "10-30 10:00".to_string();
@@ -8376,7 +8376,7 @@ fn page_order_persists_and_controls_navigation() {
     h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9,10,11,12];
     h.app.settings.save();
     let settings=crate::model::Settings::load();
-    assert_eq!(settings.page_order,[5,2,0,1,3,4,6,7,8,9,10]);
+    assert_eq!(settings.page_order,[5,2,0,1,3,4,6,7,8,9,10,11,12]);
     let restarted=App::new(&h.ctx,Options{fetch_lyrics:false,pet_idle:1e9});
     assert_eq!(restarted.page(),5);
     for page in [1,3,4,6,7,8,9,10] {h.app.set_page_visible(page,false);}
@@ -8392,7 +8392,7 @@ fn page_order_persists_and_controls_navigation() {
     assert_eq!(h.app.page,5);
     for invalid in ["0,0,1,2,3,4,5,6","8,1,2,3,4,5,6,7","0,1","invalid"] {
         std::fs::write(crate::model::config_dir().join("settings.txt"),format!("page_order={invalid}\n")).unwrap();
-        assert_eq!(crate::model::Settings::load().page_order,[0,1,2,3,4,5,6,7,8,9,10]);
+        assert_eq!(crate::model::Settings::load().page_order,[0,1,2,3,4,5,6,7,8,9,10,11,12]);
     }
 }
 
@@ -8419,9 +8419,9 @@ fn page_order_drag_applies_on_release_and_saves() {
     draw(&mut h,vec![egui::Event::PointerMoved(from),button(from,true)]);
     draw(&mut h,vec![egui::Event::PointerMoved(from+egui::vec2(0.0,10.0))]);
     draw(&mut h,vec![egui::Event::PointerMoved(to)]);
-    assert_eq!(h.app.settings.page_order,[0,1,2,3,4,5,6,7,8,9,10]);
+    assert_eq!(h.app.settings.page_order,[0,1,2,3,4,5,6,7,8,9,10,11,12]);
     draw(&mut h,vec![button(to,false)]);
-    assert_eq!(h.app.settings.page_order,[1,2,0,3,4,5,6,7,8,9,10]);
+    assert_eq!(h.app.settings.page_order,[1,2,0,3,4,5,6,7,8,9,10,11,12]);
     assert_eq!(crate::model::Settings::load().page_order,h.app.settings.page_order);
 }
 
