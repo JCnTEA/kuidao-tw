@@ -3,7 +3,7 @@
 //! 極小安裝啟動器：安裝包本體不含主程式。
 //!
 //! 第一次開啟時查詢 GitHub 最新 Release，下載發佈 zip、驗證 SHA-256、
-//! 解壓到安裝目錄後啟動 `kuidao.exe`。主程式存在時直接啟動，日常開啟不經過網路。
+//! 解壓到安裝目錄後啟動主程式（正式版 `kuidao.exe`／開發版 `鬼島 Kuidao 開發版.exe`）。
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -563,7 +563,7 @@ fn update(install_dir: &Path, app: &Path) -> Result<(), String> {
         set_status("正在解壓縮", "展開主程式與素材…", 94);
         let stage = work.join("stage");
         extract(&zip, &stage)?;
-        let source = find_app(&stage).ok_or_else(|| "下載內容中找不到 kuidao.exe".to_owned())?;
+        let source = find_app(&stage).ok_or_else(|| format!("下載內容中找不到 {}", app_name()))?;
         set_status("正在安裝", "寫入安裝資料夾…", 97);
         copy_tree(source.parent().unwrap_or(&stage), install_dir)?;
         if !app.is_file() {
@@ -938,7 +938,7 @@ fn find_app(root: &Path) -> Option<PathBuf> {
                 stack.push(path);
             } else if path
                 .file_name()
-                .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(APP_EXE))
+                .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(app_name()))
             {
                 found.push(path);
             }
