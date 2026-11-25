@@ -176,6 +176,8 @@ mod tests {
         // 網易雲的日文歌常常回整份中文翻譯：沒有假名、全是漢字。
         let translated = lyrics(&[
             "夜晚奔跑", "只有我与你两人", "在无人知晓的街道上", "朝着黎明奔跑而去", "直到呼吸停止",
+            "再也不能回头", "就这样一直跑到天亮", "把所有的声音都留在身后", "风从耳边穿过去",
+            "心跳盖过了整座城市",
         ]);
         assert_eq!(mismatch("夜に駆ける", "YOASOBI", &translated), Some("中文翻譯"));
         let original = lyrics(&[
@@ -189,7 +191,8 @@ mod tests {
     fn korean_song_rejects_romanization_and_translation() {
         let romaji = lyrics(&[
             "nune koppip", "sum swineun neoui nunbit", "neoui sumgyeol hanakkaji", "geu eoneu nugudeun",
-            "nareul ttara hae",
+            "nareul ttara hae", "mianhae mianhae hajima", "nado neol bogo sipeo", "ireoke rado neol bonda",
+            "neoui nunbit sogen", "naega salgo isseo",
         ]);
         assert_eq!(mismatch("눈,코,입", "태양", &romaji), Some("羅馬拼音"));
         let original = lyrics(&[

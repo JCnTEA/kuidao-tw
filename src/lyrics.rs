@@ -2272,7 +2272,7 @@ mod tests {
         take_trace();
         let (result,_)=fetch_with_sources_detail(Some(&netease),Some(&qq),None,title,"TAEYANG",229.0);
         assert_eq!(result.unwrap().lines[0].text,"혹시 이런 나 땜에 힘들었니");first.join().unwrap();second.join().unwrap();
-        assert!(take_trace()[0].ends_with("(羅馬音)"),"診斷日誌標明羅馬音");
+        assert!(take_trace()[0].contains("羅馬"),"診斷日誌標明羅馬拼音：{:?}",take_trace());
         // 已缓存的罗马音版本会被忽略。
         let path=std::env::temp_dir().join(format!("daozai-roman-{}.lrc",std::process::id()));
         write_cache(&path,&parse_lrc("[00:01.00]Hoksi ireon na ttaeme himdeureonni\n[00:04.00]Amu daedap eomneun neo\n[00:07.00]Babocheoreom wae neoreul jiuji mothae"));

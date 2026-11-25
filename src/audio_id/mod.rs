@@ -347,7 +347,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_sets_position_and_marks_identified() {
+    fn apply_fills_metadata_and_leaves_progress_alone() {
         let mut media = crate::smtc::NowPlaying {
             source: "chrome.exe".into(),
             title: "Threads".into(),
@@ -358,7 +358,8 @@ mod tests {
         assert_eq!(media.title, "稻香");
         assert_eq!(media.artist, "周杰倫");
         assert!(media.identified);
-        assert!((media.position - 63.0).abs() < 0.01);
+        // 進度條維持播放器自己的時間；辨識到的曲內秒數改用「每首歌的位移」對齊歌詞。
+        assert!(media.position.abs() < 0.01, "不再改寫播放進度");
         assert_eq!(media.album, "網頁播放");
     }
 
