@@ -29,6 +29,7 @@ struct Clock {
 
 static CLOCK: OnceLock<Mutex<Option<Clock>>> = OnceLock::new();
 static PENDING: OnceLock<Mutex<Option<(Instant, f64)>>> = OnceLock::new();
+static LAST_ANCHOR: OnceLock<Mutex<Option<Instant>>> = OnceLock::new();
 
 fn clock_slot() -> &'static Mutex<Option<Clock>> {
     CLOCK.get_or_init(|| Mutex::new(None))
@@ -178,13 +179,28 @@ pub fn forget(title: &str, artist: &str) {
     let _ = write_to(&dir(), &guard.map);
 }
 
+/// 同一個辨識結果會被播放卡每一輪沿用，不能每幀都重寫檔案；五秒最多校正一次。
+const ANCHOR_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
+/// 學到的位移跟原本差不到這個量就不重寫。
+const ANCHOR_EPSILON: f32 = 0.3;
+
 /// 用剛拿到的辨識結果校正這首歌：算出位移、寫進本機並留一行診斷。
 pub fn anchor(title: &str, artist: &str, track_seconds: f32) -> Option<i32> {
     let pending = *pending_slot().lock().ok()?.as_ref()?;
     if pending.0.elapsed().as_secs() > MAX_ANCHOR_AGE_SECS {
         return None;
     }
+    {
+        let mut last = LAST_ANCHOR.get_or_init(|| Mutex::new(None)).lock().ok()?;
+        if last.is_some_and(|at: Instant| at.elapsed() < ANCHOR_INTERVAL) {
+            return None;
+        }
+        *last = Some(Instant::now());
+    }
     let offset = resolved(track_seconds, pending.1)?;
+    if (offset - offset_seconds(title, artist)).abs() < ANCHOR_EPSILON {
+        return None;
+    }
     let ms = remember(title, artist, offset)?;
     let line = format!(
         "對齊 {title} - {artist}：曲內 {track_seconds:.1}s、播放器 {:.1}s → 位移 {:+.2}s\n",
