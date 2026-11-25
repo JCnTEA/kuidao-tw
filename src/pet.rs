@@ -324,44 +324,30 @@ impl Pet {
         self.y = approach(self.y, y, 14.0, dt);
     }
 
-    pub fn draw(&mut self, c: &Card, cx: f32, t: f64, palette:Option<crate::skin_paint::Palette>, ink: Color32, native_mascot: bool) {
-        let state = self.state;
-        let has_pack = self.mascot_pack.active_for(crate::mascot::current().key(), native_mascot);
-        let time = self.mascot_animation_time(t);
-        if has_pack {
-            // 動畫包只接手它真的有定義的狀態；缺少該狀態就退回內建單線條，不會整套都播同一段待機。
-            if self.mascot_pack.draw(c.ui.ctx(), c, cx, state, time, palette, ink) {
-                self.draw_state_marks(c, cx, t);
-                return;
-            }
-        }
-        // 沒有外掛動畫包時一律畫自製的單線條向量吉祥物；
-        // 身體固定在槽位內，只有尾巴、耳朵與眼睛會動。
-        if ink.r() > 200 {
-            // 白線遇到半透明或偏亮的毛玻璃時補一層極淡深色底，避免線條整個融進背景。
-            crate::mascot_art::draw(c, cx + 0.7, t, state, Color32::from_rgba_unmultiplied(8, 12, 18, 150));
-        }
-        crate::mascot_art::draw(c, cx, t, state, ink);
+    fn draw_face(&mut self, c: &Card, cx: f32, palette:Option<crate::skin_paint::Palette>, ink:Color32) -> bool {
+        if self.expressions.draw(c,cx,palette) {return true;}
         for (i, eye) in self.eyes.iter().enumerate() {
-            let x = cx + if i == 0 { -3.2 } else { 3.2 } + self.gaze[0] * 0.5;
-            let y = 13.5 + self.y + eye.y + self.gaze[1] * 0.4;
-            if eye.height < 0.7 {
-                c.seg((x - 1.4, y), (x + 1.4, y), 1.0, ink);
-            } else if eye.curve.abs() > 0.8 {
-                let points: Vec<_> = (0..=8).map(|n| {
-                    let q = n as f32 / 4.0 - 1.0;
-                    (x + q * 1.8, y + q * (eye.height / 2.0 + eye.tilt) + (1.0 - q * q) * eye.curve)
-                }).collect();
-                c.path(&points, 1.1, ink);
-            } else {
-                let radius = (eye.height / 4.4 * 1.15).clamp(0.3, 1.2);
-                c.circle(x, y, radius, ink);
-            }
+            let x = cx + if i == 0 { -5.6 } else { 5.6 } + self.gaze[0];
+            let y = 14.5 + self.y + eye.y + self.gaze[1];
+            let points: Vec<_> = (0..=12).map(|n| {
+                let q = n as f32 / 6.0 - 1.0;
+                (x + q * eye.spread, y + q * (eye.height / 2.0 + eye.tilt) + (1.0 - q*q) * eye.curve)
+            }).collect();
+            let stroke=if self.state==PetState::Music {3.6-0.8*smoothstep(0.5,1.5,eye.spread.abs())}else{3.6};
+            c.path(&points, stroke, ink);
+            // 圆端点保持胶囊眼睛的轮廓。
+            for p in [points[0], points[12]] { c.circle(p.0, p.1, stroke/2.0, ink); }
         }
-        if state == PetState::Music {
-            // 單線條身體照樣保留原本的麥克風小道具，唱歌時才不會兩手空空。
-            microphone(c, cx, self.y, self.music_age);
-        }
+        false
+    }
+
+    #[cfg(feature="sdk-js")]
+    pub(crate) fn draw_canvas_face(&mut self,c:&Card,cx:f32,palette:Option<crate::skin_paint::Palette>,ink:Color32) {
+        self.draw_face(c,cx,palette,ink);
+    }
+
+    pub fn draw(&mut self, c: &Card, cx: f32, t: f64, palette:Option<crate::skin_paint::Palette>) {
+        if self.draw_face(c,cx,palette,theme::WHITE) {return;}
         match self.state {
             PetState::Dozing | PetState::Sleeping => {
                 let bob = ((t as f32 * 1.4).sin() + 1.0) * 0.7;

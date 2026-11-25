@@ -83,7 +83,9 @@ kuidao.exe --license 授權碼
 
 程式預設 OpenGL，失敗時自動改試 Direct3D 12；仍不正常可在設定關閉硬體加速。
 
-**自己編譯**
+**AMD 核显上岛体发黑、设置页白屏怎么办？** 打开「设置 → 通用 → 高级」，开启「兼容渲染（Direct3D 12）」并重启岛仔。如果设置页看不清，从系统托盘退出岛仔，在文件资源管理器地址栏输入 `%APPDATA%\Daozai`，用记事本打开 `settings.txt`。把 `render_compat=0` 改成 `render_compat=1`（没有这一行就另起一行添加），保存后重新启动岛仔。
+
+**邮箱登录失败：** 确认填的是授权码／App 专用密码、IMAP 已启用、账号没有被管理员限制。
 
 ```powershell
 cargo build --locked --release --bin kuidao

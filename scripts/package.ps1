@@ -21,13 +21,16 @@ try {
         $env:CARGO_BUILD_JOBS = '1'
         # QuickJS 的 C 断言使用宽字符源文件名，MSVC 要单独去掉构建目录前缀。
         $originalCL = $env:CL
+        $originalTestBuild = $env:DAOZAI_TEST_BUILD
         try {
+            Remove-Item Env:DAOZAI_TEST_BUILD -ErrorAction SilentlyContinue
             $trimFlags = $privatePaths | ForEach-Object { '"/d1trimfile:' + $_ + '"' }
             $env:CL = (@($originalCL) + $trimFlags) -join ' '
-            cargo +stable-x86_64-pc-windows-msvc build --locked --release --bin kuidao --bin kuidao-bootstrap --target x86_64-pc-windows-msvc
+            cargo +stable-x86_64-pc-windows-msvc build --locked --release --features sdk-js,sdk-material --bin daozai --target x86_64-pc-windows-msvc
             if ($LASTEXITCODE -ne 0) { throw 'Release build failed' }
         } finally {
             $env:CL = $originalCL
+            $env:DAOZAI_TEST_BUILD = $originalTestBuild
         }
     }
     if (-not $Executable) {
@@ -66,8 +69,7 @@ try {
     @('LICENSE','THIRD_PARTY_NOTICES.txt') | ForEach-Object {
         Copy-Item -LiteralPath (Join-Path $projectRoot $_) -Destination $stagingDirectory -Recurse
     }
-    # 發佈包没有开始菜单：附带一个只调用 daozai.exe --collect-diagnostics 的 cmd，岛仔打不开时双击收集。
-    # 诊断脚本本身内嵌在程序里，不再单独附带，也就不会出现新程序配旧脚本。
+    # 免安装包没有开始菜单：附带一个只调用 daozai.exe --collect-diagnostics 的 cmd，岛仔打不开时双击收集。
     Copy-Item -LiteralPath (Join-Path $projectRoot 'installer\收集岛仔诊断.cmd') -Destination $stagingDirectory
     # 台灣版：安裝檔固定用英文檔名，避免郵件與防毒對中文名誤判。
     $setup = Join-Path $outputDirectory "Kuidao-Setup-TW-x64.exe"

@@ -88,6 +88,17 @@ try {
         $own = @('kuidao.exe','Uninstall.exe','LICENSE') | ForEach-Object { Join-Path $targetDir $_ } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
         $sizeKb = [int][Math]::Ceiling((($own | ForEach-Object { (Get-Item -LiteralPath $_).Length }) | Measure-Object -Sum).Sum / 1KB)
         if ($sizeKb -gt 0) { Set-ItemProperty -LiteralPath $key -Name EstimatedSize -Value $sizeKb -Type DWord -ErrorAction SilentlyContinue }
+        # 将旧版诊断快捷方式统一指向程序的诊断入口。失败不影响更新。
+        try {
+            $link = Join-Path ([Environment]::GetFolderPath('Programs')) '收集岛仔诊断.lnk'
+            $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($link)
+            $shortcut.TargetPath = $target; $shortcut.Arguments = '--collect-diagnostics'
+            $shortcut.WorkingDirectory = $targetDir; $shortcut.IconLocation = "$target,0"; $shortcut.Save()
+        } catch { }
+        foreach ($legacy in @('收集岛仔诊断.cmd', 'scripts\collect-diagnostics.ps1')) {
+            try { $path = Join-Path $targetDir $legacy; if (Test-Path -LiteralPath $path -PathType Leaf) { Assert-PlainPath $path; Remove-Item -LiteralPath $path -Force } } catch { }
+        }
+        try { $scripts = Join-Path $targetDir 'scripts'; if ((Test-Path -LiteralPath $scripts) -and -not (Get-ChildItem -LiteralPath $scripts -Force)) { Remove-Item -LiteralPath $scripts -Force } } catch { }
     }
     # 只清理已經確認位於專用快取內的本次更新目錄。
     if ($workRoot.StartsWith($cacheRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {

@@ -294,8 +294,8 @@ Section "安裝"
   File /oname=kuidao-bootstrap.exe "${BOOTSTRAP_EXE}"
   File "${PROJECT_DIR}\LICENSE"
   File "${PROJECT_DIR}\THIRD_PARTY_NOTICES.txt"
-  ; 診斷指令碼已內嵌在程式裡（kuidao.exe --collect-diagnostics），清掉測試版留下的單獨診斷檔案。
-  Delete "$INSTDIR\收集鬼島診斷.cmd"
+  ; 清理旧测试版安装目录中的独立诊断文件。
+  Delete "$INSTDIR\收集岛仔诊断.cmd"
   Delete "$INSTDIR\scripts\collect-diagnostics.ps1"
   RMDir "$INSTDIR\scripts"
   WriteUninstaller "$INSTDIR\Uninstall.exe"

@@ -2,7 +2,9 @@
 
 歡迎回報相容性問題、修正 bug 或補強使用說明。送出較大的功能前，先開 Issue 說明情境與預期行為。
 
-## 本機開發
+有新功能、已有分支或 PR 想迁成插件，可从[插件作者入门与 PR 迁移](docs/plugins/author-guide.md)开始。
+
+## 本地开发
 
 安裝 Rust stable、Visual Studio C++ 建置工具與 Windows SDK，複製倉庫後執行：
 
