@@ -72,9 +72,7 @@ Function CloseOfficial
   ${EndIf}
   ${If} $1 == 1
     Sleep 400
-    MessageBox MB_OK|MB_ICONINFORMATION "偵測到正式版正在執行，已先關閉正式版。$$
-$$
-正式版的安裝檔案與設定都會保留，之後仍可繼續使用正式版。"
+    MessageBox MB_OK|MB_ICONINFORMATION "偵測到正式版正在執行，已先關閉正式版。$\r$\n$\r$\n正式版的安裝檔案與設定都會保留，之後仍可繼續使用正式版。"
   ${EndIf}
 FunctionEnd
 
