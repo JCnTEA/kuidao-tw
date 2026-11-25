@@ -7,35 +7,93 @@ pub(crate) const SETTINGS_TAB_SUPPORT: usize = 17;
 /// 贊助頁目前只掛開發版（建置時帶 KUIDAO_CHANNEL=dev）；正式版側欄先不出現這一頁。
 /// 測試環境一律視為開啟，才能驗證頁面本身畫得出來。
 pub(crate) fn support_page_enabled() -> bool {
-    if cfg!(test) { return true; }
+    if cfg!(test) {
+        return true;
+    }
     matches!(option_env!("KUIDAO_CHANNEL"), Some("dev"))
 }
-use crate::app::{App, Cmd, Env, NotificationSound, Phase, HUD_TRACK_W, HUD_TRACK_X, HUD_W, PAGE_NAMES};
+use crate::app::{
+    App, Cmd, Env, NotificationSound, Phase, HUD_TRACK_W, HUD_TRACK_X, HUD_W, PAGE_NAMES,
+};
 use crate::paint::{Card, H};
 use crate::theme::{self, size, W};
 use eframe::egui::{self, Color32, Rect};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum AlertSource { Internal, Messenger(crate::app::Messenger), External(String) }
+pub(crate) enum AlertSource {
+    Internal,
+    Messenger(crate::app::Messenger),
+    External(String),
+}
 
-#[derive(Clone,Copy,Debug,PartialEq,Eq)]
-pub(crate) enum HealthReminder {Water,Sit}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum HealthReminder {
+    Water,
+    Sit,
+}
 impl HealthReminder {
-    pub(crate) const ALL:[Self;2]=[Self::Water,Self::Sit];
-    pub(crate) fn title(self)->&'static str {match self {Self::Water=>"喝水時間到了",Self::Sit=>crate::app::SIT_TITLE}}
-    pub(crate) fn label(self)->&'static str {match self {Self::Water=>"待喝水",Self::Sit=>"待活動"}}
-    pub(crate) fn id(self)->&'static str {match self {Self::Water=>"health-water",Self::Sit=>"health-sit"}}
-    pub(crate) fn icon(self,c:&Card,x:f32,y:f32,scale:f32) {
-        let c=&c.scaled(x,y,scale);
+    pub(crate) const ALL: [Self; 2] = [Self::Water, Self::Sit];
+    pub(crate) fn title(self) -> &'static str {
         match self {
-            Self::Water=>{
-                c.poly(&[(x-7.0,y-1.0),(x+5.0,y-1.0),(x+3.5,y+8.0),(x-5.5,y+8.0)],theme::BLUE);
-                c.path(&[(x-9.0,y-10.0),(x-6.5,y+9.0),(x+4.5,y+9.0),(x+7.0,y-10.0)],1.6,theme::CYAN);
-                c.seg((x-9.0,y-10.0),(x+7.0,y-10.0),1.6,theme::CYAN);
-                c.path(&[(x+6.5,y-6.0),(x+10.5,y-6.0),(x+11.5,y-3.0),(x+10.0,y+2.0),(x+5.5,y+3.0)],1.6,theme::CYAN);
-                c.seg((x-5.0,y-6.5),(x-4.2,y-2.5),1.0,Color32::from_white_alpha(170));
-            },
-            Self::Sit=>crate::paint::chair(c,x,y,0.6,theme::SOFT_GREEN),
+            Self::Water => "喝水時間到了",
+            Self::Sit => crate::app::SIT_TITLE,
+        }
+    }
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            Self::Water => "待喝水",
+            Self::Sit => "待活動",
+        }
+    }
+    pub(crate) fn id(self) -> &'static str {
+        match self {
+            Self::Water => "health-water",
+            Self::Sit => "health-sit",
+        }
+    }
+    pub(crate) fn icon(self, c: &Card, x: f32, y: f32, scale: f32) {
+        let c = &c.scaled(x, y, scale);
+        match self {
+            Self::Water => {
+                c.poly(
+                    &[
+                        (x - 7.0, y - 1.0),
+                        (x + 5.0, y - 1.0),
+                        (x + 3.5, y + 8.0),
+                        (x - 5.5, y + 8.0),
+                    ],
+                    theme::BLUE,
+                );
+                c.path(
+                    &[
+                        (x - 9.0, y - 10.0),
+                        (x - 6.5, y + 9.0),
+                        (x + 4.5, y + 9.0),
+                        (x + 7.0, y - 10.0),
+                    ],
+                    1.6,
+                    theme::CYAN,
+                );
+                c.seg((x - 9.0, y - 10.0), (x + 7.0, y - 10.0), 1.6, theme::CYAN);
+                c.path(
+                    &[
+                        (x + 6.5, y - 6.0),
+                        (x + 10.5, y - 6.0),
+                        (x + 11.5, y - 3.0),
+                        (x + 10.0, y + 2.0),
+                        (x + 5.5, y + 3.0),
+                    ],
+                    1.6,
+                    theme::CYAN,
+                );
+                c.seg(
+                    (x - 5.0, y - 6.5),
+                    (x - 4.2, y - 2.5),
+                    1.0,
+                    Color32::from_white_alpha(170),
+                );
+            }
+            Self::Sit => crate::paint::chair(c, x, y, 0.6, theme::SOFT_GREEN),
         }
     }
 }
@@ -53,138 +111,336 @@ pub(crate) struct Alert {
     pub unread: Option<crate::app::Unread>,
 }
 impl Alert {
-    pub(crate) fn health(&self)->Option<HealthReminder> {
-        if self.source!=AlertSource::Internal{return None;}
-        HealthReminder::ALL.into_iter().find(|kind|self.title==kind.title())
+    pub(crate) fn health(&self) -> Option<HealthReminder> {
+        if self.source != AlertSource::Internal {
+            return None;
+        }
+        HealthReminder::ALL
+            .into_iter()
+            .find(|kind| self.title == kind.title())
     }
-    pub(crate) fn messenger(&self)->Option<crate::app::Messenger>{
+    pub(crate) fn messenger(&self) -> Option<crate::app::Messenger> {
         match &self.source {
-            AlertSource::Messenger(client)=>Some(*client),
-            AlertSource::External(id)=>crate::app::Messenger::from_notification_id(id).filter(|client|client.adapter().capture==crate::messenger::Capture::SystemToast),
-            _=>None,
+            AlertSource::Messenger(client) => Some(*client),
+            AlertSource::External(id) => {
+                crate::app::Messenger::from_notification_id(id).filter(|client| {
+                    client.adapter().capture == crate::messenger::Capture::SystemToast
+                })
+            }
+            _ => None,
         }
     }
-    pub(crate) fn is_hud(&self)->bool {self.source==AlertSource::Internal && matches!(self.title.as_str(),"系統音量"|"大寫鎖定"|"數字鍵盤"|"鍵盤輸入語言"|"網路連線"|"電源已連線"|"已切換電池供電"|"藍牙裝置")}
+    pub(crate) fn is_hud(&self) -> bool {
+        self.source == AlertSource::Internal
+            && matches!(
+                self.title.as_str(),
+                "系統音量"
+                    | "大寫鎖定"
+                    | "數字鍵盤"
+                    | "鍵盤輸入語言"
+                    | "網路連線"
+                    | "電源已連線"
+                    | "已切換電池供電"
+                    | "藍牙裝置"
+            )
+    }
 }
-fn bluetooth_notice_content(body:&str)->(&str,&str,Option<u8>){
-    if let Some(name)=body.strip_suffix(" · 已斷開") {return (name,"已斷開",None);}
-    if body=="已斷開連線" {return ("藍牙裝置","已斷開",None);}
-    if let Some((name,level))=body.rsplit_once(" · 電量 ") {
-        if let Some(level)=level.strip_suffix('%').and_then(|s|s.parse::<u8>().ok()).filter(|v|*v<=100){
-            return (name,"已連線",Some(level));
+fn bluetooth_notice_content(body: &str) -> (&str, &str, Option<u8>) {
+    if let Some(name) = body.strip_suffix(" · 已斷開") {
+        return (name, "已斷開", None);
+    }
+    if body == "已斷開連線" {
+        return ("藍牙裝置", "已斷開", None);
+    }
+    if let Some((name, level)) = body.rsplit_once(" · 電量 ") {
+        if let Some(level) = level
+            .strip_suffix('%')
+            .and_then(|s| s.parse::<u8>().ok())
+            .filter(|v| *v <= 100)
+        {
+            return (name, "已連線", Some(level));
         }
     }
-    (body,"已連線",None)
+    (body, "已連線", None)
 }
 
 pub(crate) fn device_icon(c: &Card, kind: crate::bt::DeviceKind, x: f32, y: f32, size: f32) {
-    let icon=match kind {
+    let icon = match kind {
         // 耳機沿用圖四的線稿（頭帶 + 兩側耳罩），在深色面板上與其他線稿圖示一致。
-        crate::bt::DeviceKind::Bone | crate::bt::DeviceKind::Earbuds | crate::bt::DeviceKind::Headphones=>egui::include_image!("../assets/device-icons/headphones-linear.svg"),
-        crate::bt::DeviceKind::Speaker=>egui::include_image!("../assets/device-icons/speaker-bold.svg"),
-        crate::bt::DeviceKind::Keyboard=>egui::include_image!("../assets/device-icons/keyboard-bold.svg"),
-        crate::bt::DeviceKind::Mouse=>egui::include_image!("../assets/device-icons/mouse-bold.svg"),
-        crate::bt::DeviceKind::Gamepad=>egui::include_image!("../assets/device-icons/gamepad-bold.svg"),
-        crate::bt::DeviceKind::Phone=>egui::include_image!("../assets/device-icons/smartphone-bold.svg"),
-        crate::bt::DeviceKind::Other=>egui::include_image!("../assets/device-icons/bluetooth-linear.svg"),
+        crate::bt::DeviceKind::Bone
+        | crate::bt::DeviceKind::Earbuds
+        | crate::bt::DeviceKind::Headphones => {
+            egui::include_image!("../assets/device-icons/headphones-linear.svg")
+        }
+        crate::bt::DeviceKind::Speaker => {
+            egui::include_image!("../assets/device-icons/speaker-bold.svg")
+        }
+        crate::bt::DeviceKind::Keyboard => {
+            egui::include_image!("../assets/device-icons/keyboard-bold.svg")
+        }
+        crate::bt::DeviceKind::Mouse => {
+            egui::include_image!("../assets/device-icons/mouse-bold.svg")
+        }
+        crate::bt::DeviceKind::Gamepad => {
+            egui::include_image!("../assets/device-icons/gamepad-bold.svg")
+        }
+        crate::bt::DeviceKind::Phone => {
+            egui::include_image!("../assets/device-icons/smartphone-bold.svg")
+        }
+        crate::bt::DeviceKind::Other => {
+            egui::include_image!("../assets/device-icons/bluetooth-linear.svg")
+        }
     };
-    let rect=c.rect(x,y,size,size);
-    let egui::ImageSource::Bytes{uri,bytes}=icon else{return};
-    let pixels=(rect.width()*c.ui.ctx().pixels_per_point()).ceil() as u32;
-    let icon=egui::Image::from_bytes(format!("{uri}/{pixels}.svg"),bytes);
-    if let Ok(egui::load::TexturePoll::Ready { texture })=icon.fit_to_exact_size(rect.size()).load_for_size(c.ui.ctx(),rect.size()) {
-        c.painter.image(texture.id,rect,Rect::from_min_max(egui::Pos2::ZERO,egui::pos2(1.0,1.0)),Color32::WHITE);
+    let rect = c.rect(x, y, size, size);
+    let egui::ImageSource::Bytes { uri, bytes } = icon else {
+        return;
+    };
+    let pixels = (rect.width() * c.ui.ctx().pixels_per_point()).ceil() as u32;
+    let icon = egui::Image::from_bytes(format!("{uri}/{pixels}.svg"), bytes);
+    if let Ok(egui::load::TexturePoll::Ready { texture }) = icon
+        .fit_to_exact_size(rect.size())
+        .load_for_size(c.ui.ctx(), rect.size())
+    {
+        c.painter.image(
+            texture.id,
+            rect,
+            Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)),
+            Color32::WHITE,
+        );
     }
 }
 
 pub(crate) use crate::pet::PetState;
 
-pub(crate) fn notice_badge(c:&Card,x:f32,y:f32,a:&Alert){
-    if a.source==AlertSource::Internal && a.title=="藍牙裝置"{
-        c.circle(x,y,11.0,if a.body.contains("已斷開"){Color32::from_gray(95)}else{theme::BLUE});
-        device_icon(c,a.bluetooth.map_or(crate::bt::DeviceKind::Other,|v|v.0),x-7.5,y-7.5,15.0);
-    }else{notice_icon(&c.scaled(x,y,0.85),x,y,a);}
+pub(crate) fn notice_badge(c: &Card, x: f32, y: f32, a: &Alert) {
+    if a.source == AlertSource::Internal && a.title == "藍牙裝置" {
+        c.circle(
+            x,
+            y,
+            11.0,
+            if a.body.contains("已斷開") {
+                Color32::from_gray(95)
+            } else {
+                theme::BLUE
+            },
+        );
+        device_icon(
+            c,
+            a.bluetooth.map_or(crate::bt::DeviceKind::Other, |v| v.0),
+            x - 7.5,
+            y - 7.5,
+            15.0,
+        );
+    } else {
+        notice_icon(&c.scaled(x, y, 0.85), x, y, a);
+    }
 }
-pub(crate) fn messenger_icon(c:&Card,x:f32,y:f32,source:crate::app::Messenger){(source.adapter().paint_icon)(c,x,y);}
-fn notice_icon(c:&Card,x:f32,y:f32,a:&Alert) {
-    if a.source!=AlertSource::Internal{crate::paint::bell(c,x,y,theme::WHITE,0.0);return;}
+pub(crate) fn messenger_icon(c: &Card, x: f32, y: f32, source: crate::app::Messenger) {
+    (source.adapter().paint_icon)(c, x, y);
+}
+fn notice_icon(c: &Card, x: f32, y: f32, a: &Alert) {
+    if a.source != AlertSource::Internal {
+        crate::paint::bell(c, x, y, theme::WHITE, 0.0);
+        return;
+    }
     match a.title.as_str() {
-        "系統音量"=>{
-            c.poly(&[(x-9.0,y-3.0),(x-5.0,y-3.0),(x,y-7.0),(x,y+7.0),(x-5.0,y+3.0),(x-9.0,y+3.0)],theme::WHITE);
-            c.arc(x,y,5.0,-0.8,0.8,1.5,theme::WHITE);c.arc(x,y,8.0,-0.7,0.7,1.3,theme::WHITE);
-        },
-        "大寫鎖定"=>{
-            let ink=if a.body=="已開啟"{theme::GREEN}else{theme::GRAY};
-            c.poly(&[(x-8.0,y-1.0),(x,y-9.0),(x+8.0,y-1.0)],ink);
-            c.fill(x-3.0,y-1.5,6.0,6.5,0.5,ink);
-            c.fill(x-4.0,y+7.0,8.0,2.0,0.8,ink);
-        },
-        "數字鍵盤"=>{
-            let ink=if a.body=="已開啟"{theme::GREEN}else{theme::GRAY};
-            c.stroke(x-9.0,y-8.0,18.0,16.0,3.0,1.2,ink);
-            for row in 0..3{for col in 0..3{
-                c.fill(x-6.5+col as f32*5.0,y-5.5+row as f32*4.5,2.4,2.0,0.4,ink);
-            }}
-            c.fill(x-5.0,y+5.0,10.0,1.8,0.6,ink);
-        },
-        "鍵盤輸入語言"=>{
-            c.stroke(x-10.0,y-8.5,20.0,17.0,4.0,1.2,theme::GRAY);
-            let label=match a.body.as_str(){"中文"=>"中","英語"=>"EN",_=>"Aa"};
-            c.centered_text(x,y,label,if label=="EN"{9.0}else{11.0},W::Semibold,theme::WHITE,H::Center);
-        },
-        "網路連線"=>{
-            let connected=a.body.contains("已連線");
-            let ink=if connected{theme::GREEN}else{theme::GRAY};
-            if a.body.starts_with("Wi-Fi") {
-                for r in [4.0,8.0,12.0]{c.arc(x,y+6.0,r,-2.35,-0.79,1.7,ink);}
-                c.circle(x,y+6.0,1.6,ink);
-            }else if a.body.starts_with("乙太網") {
-                c.stroke(x-8.0,y-8.0,16.0,14.0,2.5,1.6,ink);
-                for dx in [-4.0,-1.3,1.3,4.0]{c.seg((x+dx,y-5.0),(x+dx,y-1.0),1.2,ink);}
-                c.path(&[(x-4.0,y+6.0),(x-4.0,y+9.0),(x+4.0,y+9.0),(x+4.0,y+6.0)],1.6,ink);
-            }else{
-                c.ring(x,y,8.0,1.4,ink);c.seg((x-8.0,y),(x+8.0,y),1.0,ink);
-                c.stroke(x-3.5,y-8.0,7.0,16.0,3.5,1.0,ink);
+        "系統音量" => {
+            c.poly(
+                &[
+                    (x - 9.0, y - 3.0),
+                    (x - 5.0, y - 3.0),
+                    (x, y - 7.0),
+                    (x, y + 7.0),
+                    (x - 5.0, y + 3.0),
+                    (x - 9.0, y + 3.0),
+                ],
+                theme::WHITE,
+            );
+            c.arc(x, y, 5.0, -0.8, 0.8, 1.5, theme::WHITE);
+            c.arc(x, y, 8.0, -0.7, 0.7, 1.3, theme::WHITE);
+        }
+        "大寫鎖定" => {
+            let ink = if a.body == "已開啟" {
+                theme::GREEN
+            } else {
+                theme::GRAY
+            };
+            c.poly(&[(x - 8.0, y - 1.0), (x, y - 9.0), (x + 8.0, y - 1.0)], ink);
+            c.fill(x - 3.0, y - 1.5, 6.0, 6.5, 0.5, ink);
+            c.fill(x - 4.0, y + 7.0, 8.0, 2.0, 0.8, ink);
+        }
+        "數字鍵盤" => {
+            let ink = if a.body == "已開啟" {
+                theme::GREEN
+            } else {
+                theme::GRAY
+            };
+            c.stroke(x - 9.0, y - 8.0, 18.0, 16.0, 3.0, 1.2, ink);
+            for row in 0..3 {
+                for col in 0..3 {
+                    c.fill(
+                        x - 6.5 + col as f32 * 5.0,
+                        y - 5.5 + row as f32 * 4.5,
+                        2.4,
+                        2.0,
+                        0.4,
+                        ink,
+                    );
+                }
             }
-            if !connected{c.seg((x-8.0,y-8.0),(x+9.0,y+9.0),2.0,theme::WHITE);}
-        },
-        "電源已連線"|"已切換電池供電"|"電量偏低"=>{
-            let low=a.title=="電量偏低";let ink=if low{theme::RED_TOP}else if a.title=="電源已連線"{theme::GREEN}else{theme::WHITE};
-            c.stroke(x-11.0,y-6.0,20.0,12.0,3.0,1.5,ink);c.fill(x+10.0,y-2.5,2.0,5.0,0.8,ink);
-            if low{c.fill(x-8.0,y-3.5,3.5,7.0,1.0,ink);}
-            else if a.title=="電源已連線"{
-                c.poly(&[(x,y-4.5),(x-4.0,y+0.8),(x+0.5,y+0.8)],ink);
-                c.poly(&[(x+0.5,y-0.8),(x+4.0,y-0.8),(x-1.0,y+4.5)],ink);
-            }else{c.fill(x-8.0,y-3.5,12.0,7.0,1.0,ink);}
-        },
-        "喝水時間到了"=>HealthReminder::Water.icon(c,x,y,1.0),
-        crate::app::SIT_TITLE=>HealthReminder::Sit.icon(c,x,y,1.0),
-        "待辦到時間了"=>crate::paint::checklist(c,x,y,23.0,Color32::from_rgb(190,180,255),Color32::from_rgb(43,35,66)),
-        "會議提醒"=>{
-            let label=a.meeting.as_ref().map(|(_,source)|source.as_str()).unwrap_or("");
-            let source=if label=="本機行程"{crate::calendar_ui::Source::Local}else if label.starts_with("郵件"){crate::calendar_ui::Source::Mail("")}
-                else{crate::calendar_ui::Source::Calendar(crate::calendar::Provider::ALL.into_iter().find(|provider|provider.label()==label))};
-            crate::calendar_ui::source_icon(c,source,x-14.0,y-14.0,28.0);
-        },
-        "專注計時"=>crate::paint::stopwatch(&c.scaled(x,y,0.65),x,y,8.0,0.0,theme::RED_TOP),
-        _=>crate::paint::bell(&c.scaled(x,y,1.7),x,y,theme::GRAY,0.0),
+            c.fill(x - 5.0, y + 5.0, 10.0, 1.8, 0.6, ink);
+        }
+        "鍵盤輸入語言" => {
+            c.stroke(x - 10.0, y - 8.5, 20.0, 17.0, 4.0, 1.2, theme::GRAY);
+            let label = match a.body.as_str() {
+                "中文" => "中",
+                "英語" => "EN",
+                _ => "Aa",
+            };
+            c.centered_text(
+                x,
+                y,
+                label,
+                if label == "EN" { 9.0 } else { 11.0 },
+                W::Semibold,
+                theme::WHITE,
+                H::Center,
+            );
+        }
+        "網路連線" => {
+            let connected = a.body.contains("已連線");
+            let ink = if connected { theme::GREEN } else { theme::GRAY };
+            if a.body.starts_with("Wi-Fi") {
+                for r in [4.0, 8.0, 12.0] {
+                    c.arc(x, y + 6.0, r, -2.35, -0.79, 1.7, ink);
+                }
+                c.circle(x, y + 6.0, 1.6, ink);
+            } else if a.body.starts_with("乙太網") {
+                c.stroke(x - 8.0, y - 8.0, 16.0, 14.0, 2.5, 1.6, ink);
+                for dx in [-4.0, -1.3, 1.3, 4.0] {
+                    c.seg((x + dx, y - 5.0), (x + dx, y - 1.0), 1.2, ink);
+                }
+                c.path(
+                    &[
+                        (x - 4.0, y + 6.0),
+                        (x - 4.0, y + 9.0),
+                        (x + 4.0, y + 9.0),
+                        (x + 4.0, y + 6.0),
+                    ],
+                    1.6,
+                    ink,
+                );
+            } else {
+                c.ring(x, y, 8.0, 1.4, ink);
+                c.seg((x - 8.0, y), (x + 8.0, y), 1.0, ink);
+                c.stroke(x - 3.5, y - 8.0, 7.0, 16.0, 3.5, 1.0, ink);
+            }
+            if !connected {
+                c.seg((x - 8.0, y - 8.0), (x + 9.0, y + 9.0), 2.0, theme::WHITE);
+            }
+        }
+        "電源已連線" | "已切換電池供電" | "電量偏低" => {
+            let low = a.title == "電量偏低";
+            let ink = if low {
+                theme::RED_TOP
+            } else if a.title == "電源已連線" {
+                theme::GREEN
+            } else {
+                theme::WHITE
+            };
+            c.stroke(x - 11.0, y - 6.0, 20.0, 12.0, 3.0, 1.5, ink);
+            c.fill(x + 10.0, y - 2.5, 2.0, 5.0, 0.8, ink);
+            if low {
+                c.fill(x - 8.0, y - 3.5, 3.5, 7.0, 1.0, ink);
+            } else if a.title == "電源已連線" {
+                c.poly(&[(x, y - 4.5), (x - 4.0, y + 0.8), (x + 0.5, y + 0.8)], ink);
+                c.poly(
+                    &[(x + 0.5, y - 0.8), (x + 4.0, y - 0.8), (x - 1.0, y + 4.5)],
+                    ink,
+                );
+            } else {
+                c.fill(x - 8.0, y - 3.5, 12.0, 7.0, 1.0, ink);
+            }
+        }
+        "喝水時間到了" => HealthReminder::Water.icon(c, x, y, 1.0),
+        crate::app::SIT_TITLE => HealthReminder::Sit.icon(c, x, y, 1.0),
+        "待辦到時間了" => crate::paint::checklist(
+            c,
+            x,
+            y,
+            23.0,
+            Color32::from_rgb(190, 180, 255),
+            Color32::from_rgb(43, 35, 66),
+        ),
+        "會議提醒" => {
+            let label = a
+                .meeting
+                .as_ref()
+                .map(|(_, source)| source.as_str())
+                .unwrap_or("");
+            let source = if label == "本機行程" {
+                crate::calendar_ui::Source::Local
+            } else if label.starts_with("郵件") {
+                crate::calendar_ui::Source::Mail("")
+            } else {
+                crate::calendar_ui::Source::Calendar(
+                    crate::calendar::Provider::ALL
+                        .into_iter()
+                        .find(|provider| provider.label() == label),
+                )
+            };
+            crate::calendar_ui::source_icon(c, source, x - 14.0, y - 14.0, 28.0);
+        }
+        "專注計時" => {
+            crate::paint::stopwatch(&c.scaled(x, y, 0.65), x, y, 8.0, 0.0, theme::RED_TOP)
+        }
+        _ => crate::paint::bell(&c.scaled(x, y, 1.7), x, y, theme::GRAY, 0.0),
     }
 }
 
 impl App {
-    pub(crate) fn health_badges(&self)->Vec<HealthReminder> {
-        if self.fullscreen_hidden || !self.module_on(crate::app::WATER_PAGE){return Vec::new();}
-        HealthReminder::ALL.into_iter().filter(|kind|self.health_pending[*kind as usize]
-            && (match kind {HealthReminder::Water=>self.water.remind,HealthReminder::Sit=>self.settings.sit_remind})
-            && (self.open || !self.notice.as_ref().is_some_and(|a|a.health()==Some(*kind)))).collect()
+    pub(crate) fn health_badges(&self) -> Vec<HealthReminder> {
+        if self.fullscreen_hidden || !self.module_on(crate::app::WATER_PAGE) {
+            return Vec::new();
+        }
+        HealthReminder::ALL
+            .into_iter()
+            .filter(|kind| {
+                self.health_pending[*kind as usize]
+                    && (match kind {
+                        HealthReminder::Water => self.water.remind,
+                        HealthReminder::Sit => self.settings.sit_remind,
+                    })
+                    && (self.open
+                        || !self
+                            .notice
+                            .as_ref()
+                            .is_some_and(|a| a.health() == Some(*kind)))
+            })
+            .collect()
     }
-    pub(crate) fn confirm_health_reminder(&mut self,kind:HealthReminder) {
-        self.health_pending[kind as usize]=false;
+    pub(crate) fn confirm_health_reminder(&mut self, kind: HealthReminder) {
+        self.health_pending[kind as usize] = false;
         crate::model::save_health_pending(self.health_pending);
-        match kind {HealthReminder::Water=>self.last_reminder=self.t,HealthReminder::Sit=>self.sit_start=self.t}
-        self.alerts.retain(|a|a.health()!=Some(kind));
-        if self.notice.as_ref().is_some_and(|a|a.health()==Some(kind)){self.notice=None;}
-        if self.hud_notice.as_ref().is_some_and(|a|a.health()==Some(kind)){self.hud_notice=None;}
+        match kind {
+            HealthReminder::Water => self.last_reminder = self.t,
+            HealthReminder::Sit => self.sit_start = self.t,
+        }
+        self.alerts.retain(|a| a.health() != Some(kind));
+        if self
+            .notice
+            .as_ref()
+            .is_some_and(|a| a.health() == Some(kind))
+        {
+            self.notice = None;
+        }
+        if self
+            .hud_notice
+            .as_ref()
+            .is_some_and(|a| a.health() == Some(kind))
+        {
+            self.hud_notice = None;
+        }
     }
     pub(crate) fn phase_secs(&self, phase: Phase) -> f32 {
         (match phase {
@@ -211,7 +467,13 @@ impl App {
     pub(crate) fn lunch_now(&self, env: &Env) -> bool {
         let (a, b) = (self.settings.lunch_start, self.settings.lunch_end);
         let m = env.hour() as u32 * 60 + env.minute();
-        self.settings.lunch_rest && a != b && if a < b { m >= a && m < b } else { m >= a || m < b }
+        self.settings.lunch_rest
+            && a != b
+            && if a < b {
+                m >= a && m < b
+            } else {
+                m >= a || m < b
+            }
     }
     /// 喝水和久坐提醒此刻能否弹出：在提醒时段内，且不在午休。
     pub(crate) fn remind_window(&self, env: &Env) -> bool {
@@ -237,7 +499,11 @@ impl App {
         } else if self.pet.worried {
             PetState::Worried
         } else if self.media.playing && self.media.is_music() {
-            if self.notice.is_some() || self.hud_notice.is_some() {PetState::Awake}else{PetState::Music}
+            if self.notice.is_some() || self.hud_notice.is_some() {
+                PetState::Awake
+            } else {
+                PetState::Music
+            }
         } else if self.pet.hovered {
             PetState::Curious
         } else if self.idle_for() >= 180.0 {
@@ -256,14 +522,26 @@ impl App {
         system: bool,
     ) {
         let title = title.into();
-        if let Some(kind)=HealthReminder::ALL.into_iter().find(|kind|title==kind.title()) {
-            if self.health_pending[kind as usize]{return;}
-            self.health_pending[kind as usize]=true;
+        if let Some(kind) = HealthReminder::ALL
+            .into_iter()
+            .find(|kind| title == kind.title())
+        {
+            if self.health_pending[kind as usize] {
+                return;
+            }
+            self.health_pending[kind as usize] = true;
             crate::model::save_health_pending(self.health_pending);
         }
         let transient = matches!(
             title.as_str(),
-            "系統音量" | "大寫鎖定" | "數字鍵盤" | "鍵盤輸入語言" | "網路連線" | "電源已連線" | "已切換電池供電" | "藍牙裝置"
+            "系統音量"
+                | "大寫鎖定"
+                | "數字鍵盤"
+                | "鍵盤輸入語言"
+                | "網路連線"
+                | "電源已連線"
+                | "已切換電池供電"
+                | "藍牙裝置"
         );
         let a = Alert {
             source: AlertSource::Internal,
@@ -278,24 +556,56 @@ impl App {
         };
         self.enqueue_alert(a, system);
     }
-    pub(crate) fn meeting_alert(&mut self, meeting: crate::mail::Meeting, source: String, page: usize) {
-        self.enqueue_alert(Alert {
-            source: AlertSource::Internal,
-            title: "會議提醒".into(), body: format!("{} · {} · {}", meeting.title, meeting.at, source),
-            page, at: self.t, duration: 12.0, bluetooth: None, meeting: Some((meeting, source)), unread: None,
-        }, true);
+    pub(crate) fn meeting_alert(
+        &mut self,
+        meeting: crate::mail::Meeting,
+        source: String,
+        page: usize,
+    ) {
+        self.enqueue_alert(
+            Alert {
+                source: AlertSource::Internal,
+                title: "會議提醒".into(),
+                body: format!("{} · {} · {}", meeting.title, meeting.at, source),
+                page,
+                at: self.t,
+                duration: 12.0,
+                bluetooth: None,
+                meeting: Some((meeting, source)),
+                unread: None,
+            },
+            true,
+        );
     }
     pub(crate) fn bluetooth_alert(&mut self, device: &crate::bt::Device, connected: bool) {
-        if !self.settings.bluetooth_notifications { return; }
-        if connected && matches!(device.kind,crate::bt::DeviceKind::Bone|crate::bt::DeviceKind::Earbuds|crate::bt::DeviceKind::Headphones|crate::bt::DeviceKind::Speaker) {
-            self.alerts.retain(|a|a.title!="系統音量");
-            if self.notice.as_ref().is_some_and(|a|a.title=="系統音量") {self.notice=None;}
+        if !self.settings.bluetooth_notifications {
+            return;
+        }
+        if connected
+            && matches!(
+                device.kind,
+                crate::bt::DeviceKind::Bone
+                    | crate::bt::DeviceKind::Earbuds
+                    | crate::bt::DeviceKind::Headphones
+                    | crate::bt::DeviceKind::Speaker
+            )
+        {
+            self.alerts.retain(|a| a.title != "系統音量");
+            if self.notice.as_ref().is_some_and(|a| a.title == "系統音量") {
+                self.notice = None;
+            }
         }
         let a = Alert {
             source: AlertSource::Internal,
             title: "藍牙裝置".into(),
-            body: if connected { device.summary() } else { format!("{} · 已斷開", device.name) },
-            page: 5, at: self.t, duration: 2.5,
+            body: if connected {
+                device.summary()
+            } else {
+                format!("{} · 已斷開", device.name)
+            },
+            page: 5,
+            at: self.t,
+            duration: 2.5,
             bluetooth: Some((device.kind, connected)),
             meeting: None,
             unread: None,
@@ -304,22 +614,42 @@ impl App {
     }
     fn enqueue_alert(&mut self, a: Alert, system: bool) {
         // 通知仅保存在本次运行的内存中。
-        if a.source==AlertSource::Internal {self.history.push_front(a.clone());}
+        if a.source == AlertSource::Internal {
+            self.history.push_front(a.clone());
+        }
         self.history.truncate(50);
-        if self.fullscreen_hidden && a.health().is_some(){return;}
+        if self.fullscreen_hidden && a.health().is_some() {
+            return;
+        }
         if self.settings.notifications {
-            if system && a.source==AlertSource::Internal && self.settings.system_notify {
-                let sound = if !self.settings.sound { NotificationSound::Silent }
-                    else if a.health().is_some() { NotificationSound::Health }
-                    else { NotificationSound::System };
-                self.pending.push(Cmd::Notify(a.title.clone(), a.body.clone(), sound));
+            if system && a.source == AlertSource::Internal && self.settings.system_notify {
+                let sound = if !self.settings.sound {
+                    NotificationSound::Silent
+                } else if a.health().is_some() {
+                    NotificationSound::Health
+                } else {
+                    NotificationSound::System
+                };
+                self.pending
+                    .push(Cmd::Notify(a.title.clone(), a.body.clone(), sound));
             }
-            let same_event=|old:&Alert| match (&a.meeting,&old.meeting) {
-                (Some((next,_)),Some((previous,_)))=>crate::calendar::dedupe_key(next)==crate::calendar::dedupe_key(previous),
-                _=>old.source==a.source && old.title==a.title && old.unread==a.unread && (a.is_hud() || old.body==a.body),
+            let same_event = |old: &Alert| match (&a.meeting, &old.meeting) {
+                (Some((next, _)), Some((previous, _))) => {
+                    crate::calendar::dedupe_key(next) == crate::calendar::dedupe_key(previous)
+                }
+                _ => {
+                    old.source == a.source
+                        && old.title == a.title
+                        && old.unread == a.unread
+                        && (a.is_hud() || old.body == a.body)
+                }
             };
-            if a.source!=AlertSource::Internal || a.title != "藍牙裝置" { self.alerts.retain(|old| !same_event(old)); }
-            if (a.source!=AlertSource::Internal || a.title != "藍牙裝置") && self.notice.as_ref().is_some_and(same_event) {
+            if a.source != AlertSource::Internal || a.title != "藍牙裝置" {
+                self.alerts.retain(|old| !same_event(old));
+            }
+            if (a.source != AlertSource::Internal || a.title != "藍牙裝置")
+                && self.notice.as_ref().is_some_and(same_event)
+            {
                 self.notice = Some(a);
                 return;
             }
@@ -330,134 +660,352 @@ impl App {
         }
     }
     /// 该来源的所有账号都已查看。
-    pub fn viewed_messenger(&mut self,source:crate::app::Messenger){
-        self.pending_messengers.retain(|u|u.source!=source);
+    pub fn viewed_messenger(&mut self, source: crate::app::Messenger) {
+        self.pending_messengers.retain(|u| u.source != source);
         self.clear_messenger_notices(source);
     }
     /// 只清已查看的账号；无法确认账号的 QQ 提醒由用户明确关闭。
-    pub fn viewed_client(&mut self,source:crate::app::Messenger,pid:u32){
-        self.pending_messengers.retain(|u|!u.viewed_by(source,pid));
-        if pid!=0{self.clear_account_notices(source,pid);}
-        if !source.adapter().keep_unidentified{self.clear_account_notices(source,0);}
-        if !self.pending_messengers.iter().any(|u|u.source==source){self.clear_messenger_notices(source);}
+    pub fn viewed_client(&mut self, source: crate::app::Messenger, pid: u32) {
+        self.pending_messengers
+            .retain(|u| !u.viewed_by(source, pid));
+        if pid != 0 {
+            self.clear_account_notices(source, pid);
+        }
+        if !source.adapter().keep_unidentified {
+            self.clear_account_notices(source, 0);
+        }
+        if !self.pending_messengers.iter().any(|u| u.source == source) {
+            self.clear_messenger_notices(source);
+        }
     }
-    pub fn confirm_messenger_open(&mut self,unread:crate::app::Unread,foreground:Option<(crate::app::Messenger,u32)>)->bool{
-        if unread.pid==0 || foreground!=Some((unread.source,unread.pid)){return false;}
-        self.viewed_client(unread.source,unread.pid);
+    pub fn confirm_messenger_open(
+        &mut self,
+        unread: crate::app::Unread,
+        foreground: Option<(crate::app::Messenger, u32)>,
+    ) -> bool {
+        if unread.pid == 0 || foreground != Some((unread.source, unread.pid)) {
+            return false;
+        }
+        self.viewed_client(unread.source, unread.pid);
         true
     }
-    pub fn discard_unread(&mut self,unread:crate::app::Unread){
-        if !self.pending_messengers.contains(&unread){return;}
-        self.pending_messengers.retain(|current|*current!=unread);
-        self.clear_account_notices(unread.source,unread.pid);
-        if !self.pending_messengers.iter().any(|current|current.source==unread.source){self.clear_messenger_notices(unread.source);}
+    pub fn discard_unread(&mut self, unread: crate::app::Unread) {
+        if !self.pending_messengers.contains(&unread) {
+            return;
+        }
+        self.pending_messengers.retain(|current| *current != unread);
+        self.clear_account_notices(unread.source, unread.pid);
+        if !self
+            .pending_messengers
+            .iter()
+            .any(|current| current.source == unread.source)
+        {
+            self.clear_messenger_notices(unread.source);
+        }
     }
-    fn clear_account_notices(&mut self,source:crate::app::Messenger,pid:u32){
-        let matches=|notice:&Alert|notice.unread.is_some_and(|u|u.source==source && u.pid==pid);
-        self.alerts.retain(|notice|!matches(notice));
-        if self.notice.as_ref().is_some_and(matches){self.notice=None;self.notification_bell_until=0.0;}
+    fn clear_account_notices(&mut self, source: crate::app::Messenger, pid: u32) {
+        let matches = |notice: &Alert| {
+            notice
+                .unread
+                .is_some_and(|u| u.source == source && u.pid == pid)
+        };
+        self.alerts.retain(|notice| !matches(notice));
+        if self.notice.as_ref().is_some_and(matches) {
+            self.notice = None;
+            self.notification_bell_until = 0.0;
+        }
     }
-    fn clear_messenger_notices(&mut self,source:crate::app::Messenger){
-        self.alerts.retain(|a|a.messenger()!=Some(source));
-        if self.notice.as_ref().is_some_and(|a|a.messenger()==Some(source)){self.notice=None;self.notification_bell_until=0.0;}
+    fn clear_messenger_notices(&mut self, source: crate::app::Messenger) {
+        self.alerts.retain(|a| a.messenger() != Some(source));
+        if self
+            .notice
+            .as_ref()
+            .is_some_and(|a| a.messenger() == Some(source))
+        {
+            self.notice = None;
+            self.notification_bell_until = 0.0;
+        }
     }
-    fn mark_messenger(&mut self,source:crate::app::Messenger,pid:u32,window:isize){
-        if let Some(index)=self.pending_messengers.iter().position(|u|u.source==source && u.pid==pid){
-            if window!=0 && self.pending_messengers[index].window!=window {
-                self.pending_messengers[index].window=window;
-                if source.adapter().capture==crate::messenger::Capture::Taskbar{
-                    let unread=self.pending_messengers[index];
-                    for alert in self.alerts.iter_mut().chain(self.notice.iter_mut()){
-                        if alert.unread.is_some_and(|old|old.source==source && old.pid==pid){alert.unread=Some(unread);}
+    fn mark_messenger(&mut self, source: crate::app::Messenger, pid: u32, window: isize) {
+        if let Some(index) = self
+            .pending_messengers
+            .iter()
+            .position(|u| u.source == source && u.pid == pid)
+        {
+            if window != 0 && self.pending_messengers[index].window != window {
+                self.pending_messengers[index].window = window;
+                if source.adapter().capture == crate::messenger::Capture::Taskbar {
+                    let unread = self.pending_messengers[index];
+                    for alert in self.alerts.iter_mut().chain(self.notice.iter_mut()) {
+                        if alert
+                            .unread
+                            .is_some_and(|old| old.source == source && old.pid == pid)
+                        {
+                            alert.unread = Some(unread);
+                        }
                     }
-                }else{self.clear_account_notices(source,pid);}
+                } else {
+                    self.clear_account_notices(source, pid);
+                }
             }
             return;
         }
-        self.pending_messengers.push(crate::app::Unread{source,pid,window});
+        self.pending_messengers.push(crate::app::Unread {
+            source,
+            pid,
+            window,
+        });
     }
     /// 横幅「查看」：跳到该来源最近一条未读的窗口。
-    pub(crate) fn latest_unread(&self,source:crate::app::Messenger)->crate::app::Unread{
-        self.pending_messengers.iter().rev().find(|u|u.source==source).copied().unwrap_or(crate::app::Unread::of(source))
+    pub(crate) fn latest_unread(&self, source: crate::app::Messenger) -> crate::app::Unread {
+        self.pending_messengers
+            .iter()
+            .rev()
+            .find(|u| u.source == source)
+            .copied()
+            .unwrap_or(crate::app::Unread::of(source))
     }
-    pub fn receive_wechat_reminder(&mut self){self.receive_wechat_reminder_from(0,0);}
+    pub fn receive_wechat_reminder(&mut self) {
+        self.receive_wechat_reminder_from(0, 0);
+    }
     /// 微信窗口闪动：`pid` 是该账号的进程，`window` 是闪动的窗口。
-    pub fn receive_wechat_reminder_from(&mut self,pid:u32,window:isize){
-        self.receive_messenger_reminder(crate::app::Unread{source:crate::app::Messenger::Wechat,pid,window});
+    pub fn receive_wechat_reminder_from(&mut self, pid: u32, window: isize) {
+        self.receive_messenger_reminder(crate::app::Unread {
+            source: crate::app::Messenger::Wechat,
+            pid,
+            window,
+        });
     }
-    pub fn receive_messenger_reminder(&mut self,unread:crate::app::Unread){
-        let client=unread.source;
-        if client.adapter().capture!=crate::messenger::Capture::Taskbar || !client.enabled(&self.settings){return;}
-        let pending=self.pending_messengers.iter().any(|old|old.source==client && old.pid==unread.pid);
-        self.mark_messenger(client,unread.pid,unread.window);
-        if pending{return;}
-        self.notification_bell_at=self.t;self.notification_bell_until=self.t+4.5;
-        self.enqueue_alert(Alert{source:AlertSource::Messenger(client),title:client.name().into(),body:format!("有新訊息 · 請到{}檢視",client.name()),page:usize::MAX,at:self.t,duration:4.5,bluetooth:None,meeting:None,unread:Some(unread)},false);
+    pub fn receive_messenger_reminder(&mut self, unread: crate::app::Unread) {
+        let client = unread.source;
+        if client.adapter().capture != crate::messenger::Capture::Taskbar
+            || !client.enabled(&self.settings)
+        {
+            return;
+        }
+        let pending = self
+            .pending_messengers
+            .iter()
+            .any(|old| old.source == client && old.pid == unread.pid);
+        self.mark_messenger(client, unread.pid, unread.window);
+        if pending {
+            return;
+        }
+        self.notification_bell_at = self.t;
+        self.notification_bell_until = self.t + 4.5;
+        self.enqueue_alert(
+            Alert {
+                source: AlertSource::Messenger(client),
+                title: client.name().into(),
+                body: format!("有新訊息 · 請到{}檢視", client.name()),
+                page: usize::MAX,
+                at: self.t,
+                duration: 4.5,
+                bluetooth: None,
+                meeting: None,
+                unread: Some(unread),
+            },
+            false,
+        );
     }
-    pub fn set_messenger_status(&mut self,client:crate::app::Messenger,status:String){self.messenger_statuses.insert(client,status);}
-    pub fn messenger_status(&self,client:crate::app::Messenger)->&str{self.messenger_statuses.get(&client).map(String::as_str).unwrap_or("")}
+    pub fn set_messenger_status(&mut self, client: crate::app::Messenger, status: String) {
+        self.messenger_statuses.insert(client, status);
+    }
+    pub fn messenger_status(&self, client: crate::app::Messenger) -> &str {
+        self.messenger_statuses
+            .get(&client)
+            .map(String::as_str)
+            .unwrap_or("")
+    }
     /// 啟動時把通知中心裡還在的未讀補上；點開後仍由 clear 歸零，不會被舊快照復活。
-    pub fn seed_social(&mut self,seeds:Vec<crate::system::SocialSeed>){
-        if !self.settings.read_notifications{return;}
-        for seed in seeds{
-            self.social.seed(seed.social,seed.count,seed.app_id.as_deref(),seed.launch.as_deref());
+    pub fn seed_social(&mut self, seeds: Vec<crate::system::SocialSeed>) {
+        if !self.settings.read_notifications {
+            return;
+        }
+        for seed in seeds {
+            self.social.seed(
+                seed.social,
+                seed.count,
+                seed.app_id.as_deref(),
+                seed.launch.as_deref(),
+            );
         }
         self.social.persist();
     }
-    pub fn receive_notification(&mut self, app:String, id:String, body:String){
-        self.receive_notification_from(app,id,body,None);
+    pub fn receive_notification(&mut self, app: String, id: String, body: String) {
+        self.receive_notification_from(app, id, body, None);
     }
-    pub fn receive_notification_from(&mut self,app:String,id:String,body:String,unread:Option<crate::app::Unread>){
-        self.receive_notification_from_with_launch(app,id,body,unread,None);
+    pub fn receive_notification_from(
+        &mut self,
+        app: String,
+        id: String,
+        body: String,
+        unread: Option<crate::app::Unread>,
+    ) {
+        self.receive_notification_from_with_launch(app, id, body, unread, None);
     }
     /// `launch` 是 Windows 通知原始的深層連結；LINE 會帶 `line://…`，可回到同一個聊天室。
-    pub fn receive_notification_from_with_launch(&mut self,app:String,id:String,body:String,unread:Option<crate::app::Unread>,launch:Option<String>){
-        if !self.settings.read_notifications || id.is_empty() || !crate::messenger::NotificationFilter::for_settings(&self.settings).allows(&id){return;}
-        if crate::messenger::suppresses_toast(&app,&id,crate::messenger::toast_suppression(&self.settings)){return;}
-        let social_source=crate::social::detect(&app,&id).or_else(||crate::social::detect_browser_content(&app,&body));
-        let notification_id=id.clone();
-        let client=crate::app::Messenger::from_notification_id(&id).filter(|client|client.adapter().capture==crate::messenger::Capture::SystemToast);
-        let id=client.map(|client|client.adapter().notification_id.to_string()).unwrap_or(id);
+    pub fn receive_notification_from_with_launch(
+        &mut self,
+        app: String,
+        id: String,
+        body: String,
+        unread: Option<crate::app::Unread>,
+        launch: Option<String>,
+    ) {
+        if !self.settings.read_notifications
+            || id.is_empty()
+            || !crate::messenger::NotificationFilter::for_settings(&self.settings).allows(&id)
+        {
+            return;
+        }
+        if crate::messenger::suppresses_toast(
+            &app,
+            &id,
+            crate::messenger::toast_suppression(&self.settings),
+        ) {
+            return;
+        }
+        let social_source = crate::social::detect_relayed(&app, &id, &body);
+        let notification_id = id.clone();
+        let client = crate::app::Messenger::from_notification_id(&id)
+            .filter(|client| client.adapter().capture == crate::messenger::Capture::SystemToast);
+        let id = client
+            .map(|client| client.adapter().notification_id.to_string())
+            .unwrap_or(id);
         // 鬼島自己发出的系统提醒会被通知中心回传；已在历史里的同一内容不再入队，避免重复显示。
-        if crate::messenger::Messenger::from_notification_id(&id).is_none() && self.history.iter().any(|a|format!("{} · {}",a.title,a.body)==body){return;}
-        if !self.notification_apps.observe(&id,&app) || !self.settings.notifications{return;}
-        if let Some(social)=social_source{self.social.bump_with_launch(social,&notification_id,launch.as_deref());self.social.persist();}
-        let unread=client.map(|client|unread.filter(|u|u.source==client && u.pid!=0).unwrap_or(crate::app::Unread::of(client)));
-        if let Some(unread)=unread{self.mark_messenger(unread.source,unread.pid,unread.window);}
-        self.notification_bell_at=self.t;
-        self.notification_bell_until=self.t+4.5;
-        let title=app.chars().filter(|c|!c.is_control()).take(80).collect();
-        let body=if self.settings.notification_preview {
-            let mut text=body.chars().filter(|c|!c.is_control()).take(300).collect::<String>();
-            if let Some(code)=crate::otp::extract("",&text,&[]) {text=crate::mail_privacy::mask(&text,&code.text);}
+        if crate::messenger::Messenger::from_notification_id(&id).is_none()
+            && self
+                .history
+                .iter()
+                .any(|a| format!("{} · {}", a.title, a.body) == body)
+        {
+            return;
+        }
+        if !self.notification_apps.observe(&id, &app) || !self.settings.notifications {
+            return;
+        }
+        if let Some(social) = social_source {
+            self.social
+                .bump_with_launch(social, &notification_id, launch.as_deref());
+            self.social.persist();
+        }
+        let unread = client.map(|client| {
+            unread
+                .filter(|u| u.source == client && u.pid != 0)
+                .unwrap_or(crate::app::Unread::of(client))
+        });
+        if let Some(unread) = unread {
+            self.mark_messenger(unread.source, unread.pid, unread.window);
+        }
+        self.notification_bell_at = self.t;
+        self.notification_bell_until = self.t + 4.5;
+        let title = app.chars().filter(|c| !c.is_control()).take(80).collect();
+        let body = if self.settings.notification_preview {
+            let mut text = body
+                .chars()
+                .filter(|c| !c.is_control())
+                .take(300)
+                .collect::<String>();
+            if let Some(code) = crate::otp::extract("", &text, &[]) {
+                text = crate::mail_privacy::mask(&text, &code.text);
+            }
             text
-        }else{"收到新通知 · 內容已隱藏".into()};
-        self.enqueue_alert(Alert{source:AlertSource::External(id),title,body,page:usize::MAX,at:self.t,duration:4.5,bluetooth:None,meeting:None,unread},false);
+        } else {
+            "收到新通知 · 內容已隱藏".into()
+        };
+        self.enqueue_alert(
+            Alert {
+                source: AlertSource::External(id),
+                title,
+                body,
+                page: usize::MAX,
+                at: self.t,
+                duration: 4.5,
+                bluetooth: None,
+                meeting: None,
+                unread,
+            },
+            false,
+        );
     }
-    pub fn reveal_messenger_notice(&mut self,unread:crate::app::Unread){
-        if !unread.source.adapter().dismiss_unread || !self.pending_messengers.contains(&unread){return;}
-        let body=if unread.pid==0{"訊息帳號暫無法確認"}else{"暫時無法開啟對應視窗"};
-        let source=if unread.source.adapter().capture==crate::messenger::Capture::Taskbar{AlertSource::Messenger(unread.source)}else{AlertSource::External(unread.source.adapter().notification_id.into())};
-        self.notice=Some(Alert{source,title:unread.source.name().into(),body:body.into(),page:usize::MAX,at:self.t,duration:4.5,bluetooth:None,meeting:None,unread:Some(unread)});
-        self.notification_bell_at=self.t;self.notification_bell_until=self.t+4.5;
+    pub fn reveal_messenger_notice(&mut self, unread: crate::app::Unread) {
+        if !unread.source.adapter().dismiss_unread || !self.pending_messengers.contains(&unread) {
+            return;
+        }
+        let body = if unread.pid == 0 {
+            "訊息帳號暫無法確認"
+        } else {
+            "暫時無法開啟對應視窗"
+        };
+        let source = if unread.source.adapter().capture == crate::messenger::Capture::Taskbar {
+            AlertSource::Messenger(unread.source)
+        } else {
+            AlertSource::External(unread.source.adapter().notification_id.into())
+        };
+        self.notice = Some(Alert {
+            source,
+            title: unread.source.name().into(),
+            body: body.into(),
+            page: usize::MAX,
+            at: self.t,
+            duration: 4.5,
+            bluetooth: None,
+            meeting: None,
+            unread: Some(unread),
+        });
+        self.notification_bell_at = self.t;
+        self.notification_bell_until = self.t + 4.5;
     }
     pub(crate) fn tick_alerts(&mut self) {
-        self.pending_messengers.retain(|u|u.source.enabled(&self.settings) && (u.source.adapter().capture!=crate::messenger::Capture::SystemToast
-            || self.notification_apps.items.iter().any(|(key,_,on)|key==u.source.adapter().notification_id && *on)));
-        let allowed=|a:&Alert|match &a.source {
-            AlertSource::Internal=>!self.fullscreen_hidden || a.health().is_none(),
-            AlertSource::Messenger(client)=>client.enabled(&self.settings),
-            AlertSource::External(id)=>self.settings.read_notifications && crate::messenger::NotificationFilter::for_settings(&self.settings).allows(id) && self.settings.notifications && !crate::messenger::suppresses_toast(&a.title,id,crate::messenger::toast_suppression(&self.settings)) && self.notification_apps.items.iter().any(|(key,_,on)|key==id && *on),
+        self.pending_messengers.retain(|u| {
+            u.source.enabled(&self.settings)
+                && (u.source.adapter().capture != crate::messenger::Capture::SystemToast
+                    || self
+                        .notification_apps
+                        .items
+                        .iter()
+                        .any(|(key, _, on)| key == u.source.adapter().notification_id && *on))
+        });
+        let allowed = |a: &Alert| match &a.source {
+            AlertSource::Internal => !self.fullscreen_hidden || a.health().is_none(),
+            AlertSource::Messenger(client) => client.enabled(&self.settings),
+            AlertSource::External(id) => {
+                self.settings.read_notifications
+                    && crate::messenger::NotificationFilter::for_settings(&self.settings).allows(id)
+                    && self.settings.notifications
+                    && !crate::messenger::suppresses_toast(
+                        &a.title,
+                        id,
+                        crate::messenger::toast_suppression(&self.settings),
+                    )
+                    && self
+                        .notification_apps
+                        .items
+                        .iter()
+                        .any(|(key, _, on)| key == id && *on)
+            }
         };
         self.alerts.retain(&allowed);
-        if self.notice.as_ref().is_some_and(|a|!allowed(a)){self.notice=None;}
-        if self.hud_notice.as_ref().is_some_and(|a|!allowed(a)){self.hud_notice=None;}
+        if self.notice.as_ref().is_some_and(|a| !allowed(a)) {
+            self.notice = None;
+        }
+        if self.hud_notice.as_ref().is_some_and(|a| !allowed(a)) {
+            self.hud_notice = None;
+        }
         if self.fullscreen_hidden {
             self.pending.retain(|cmd|!matches!(cmd,Cmd::Notify(title,..)if HealthReminder::ALL.into_iter().any(|kind|title==kind.title())));
         }
         if !self.settings.notification_preview {
-            for a in self.alerts.iter_mut().chain(self.notice.iter_mut()).chain(self.hud_notice.iter_mut()) {
-                if matches!(&a.source,AlertSource::External(_)){a.body="收到新通知 · 內容已隱藏".into();}
+            for a in self
+                .alerts
+                .iter_mut()
+                .chain(self.notice.iter_mut())
+                .chain(self.hud_notice.iter_mut())
+            {
+                if matches!(&a.source, AlertSource::External(_)) {
+                    a.body = "收到新通知 · 內容已隱藏".into();
+                }
             }
         }
         if self
@@ -474,131 +1022,389 @@ impl App {
             }
         }
     }
-    pub(crate) fn draw_notice(&mut self, c:&Card,panel:Rect,a:&Alert,_cmds:&mut Vec<Cmd>){
-        let nc=c.clipped(0.0,0.0,panel.width(),panel.height());
-        if let Some(source)=a.messenger(){
-            messenger_icon(&nc,22.0,22.0,source);
-            nc.circle(31.0,14.0,2.6,Color32::from_rgb(255,72,72));
-            nc.centered_text(44.0,14.0,&a.title,11.0,W::Semibold,theme::WHITE,H::Left);
-            nc.centered_text(44.0,30.0,&nc.fit(&a.body,10.5,W::Regular,154.0),10.5,W::Regular,theme::GRAY,H::Left);
-            if notice_button(&nc,206.0,12.0,52.0,"檢視","messenger-view"){_cmds.push(Cmd::ViewMessenger(a.unread.unwrap_or_else(||self.latest_unread(source))));}
-            if notice_button(&nc,265.0,12.0,52.0,"關閉","messenger-dismiss"){
-                if source.adapter().dismiss_unread{if let Some(unread)=a.unread{self.discard_unread(unread);}}
-                self.notice=None;self.notification_bell_until=0.0;
+    pub(crate) fn draw_notice(&mut self, c: &Card, panel: Rect, a: &Alert, _cmds: &mut Vec<Cmd>) {
+        let nc = c.clipped(0.0, 0.0, panel.width(), panel.height());
+        if let Some(source) = a.messenger() {
+            messenger_icon(&nc, 22.0, 22.0, source);
+            nc.circle(31.0, 14.0, 2.6, Color32::from_rgb(255, 72, 72));
+            nc.centered_text(
+                44.0,
+                14.0,
+                &a.title,
+                11.0,
+                W::Semibold,
+                theme::WHITE,
+                H::Left,
+            );
+            nc.centered_text(
+                44.0,
+                30.0,
+                &nc.fit(&a.body, 10.5, W::Regular, 154.0),
+                10.5,
+                W::Regular,
+                theme::GRAY,
+                H::Left,
+            );
+            if notice_button(&nc, 206.0, 12.0, 52.0, "檢視", "messenger-view") {
+                _cmds.push(Cmd::ViewMessenger(
+                    a.unread.unwrap_or_else(|| self.latest_unread(source)),
+                ));
+            }
+            if notice_button(&nc, 265.0, 12.0, 52.0, "關閉", "messenger-dismiss") {
+                if source.adapter().dismiss_unread {
+                    if let Some(unread) = a.unread {
+                        self.discard_unread(unread);
+                    }
+                }
+                self.notice = None;
+                self.notification_bell_until = 0.0;
             }
             return;
         }
-        if a.source!=AlertSource::Internal {
-            crate::paint::bell(&nc,310.0,22.0,theme::GRAY,crate::paint::bell_swing(self.t-a.at));
-            nc.circle(314.0,17.5,2.0,Color32::from_rgb(255,72,72));
-            nc.centered_text(16.0,14.0,&nc.fit(&a.title,11.0,W::Semibold,198.0),11.0,W::Semibold,theme::WHITE,H::Left);
-            nc.centered_text(16.0,30.0,&nc.fit(&a.body,10.5,W::Regular,198.0),10.5,W::Regular,theme::GRAY,H::Left);
-            if notice_button(&nc,226.0,12.0,60.0,"關閉","external-dismiss"){
-                self.notice=None;
-                self.notification_bell_until=0.0;
+        if a.source != AlertSource::Internal {
+            crate::paint::bell(
+                &nc,
+                310.0,
+                22.0,
+                theme::GRAY,
+                crate::paint::bell_swing(self.t - a.at),
+            );
+            nc.circle(314.0, 17.5, 2.0, Color32::from_rgb(255, 72, 72));
+            nc.centered_text(
+                16.0,
+                14.0,
+                &nc.fit(&a.title, 11.0, W::Semibold, 198.0),
+                11.0,
+                W::Semibold,
+                theme::WHITE,
+                H::Left,
+            );
+            nc.centered_text(
+                16.0,
+                30.0,
+                &nc.fit(&a.body, 10.5, W::Regular, 198.0),
+                10.5,
+                W::Regular,
+                theme::GRAY,
+                H::Left,
+            );
+            if notice_button(&nc, 226.0, 12.0, 60.0, "關閉", "external-dismiss") {
+                self.notice = None;
+                self.notification_bell_until = 0.0;
             }
             return;
         }
-        if let Some((meeting,_))=&a.meeting {
-            let secondary=Color32::from_gray(174);
-            notice_icon(&nc.scaled(34.0,46.0,36.0/28.0),34.0,46.0,a);
-            let now=chrono::Local::now();
-            let start=chrono::DateTime::from_timestamp(meeting.start,0).unwrap().with_timezone(&chrono::Local);
-            let left=meeting.start-now.timestamp();
-            let countdown=if left>0 {format!("{} 分鐘後",(left+59)/60)}else{"正在開始".into()};
-            let countdown_width=nc.text_w(&countdown,10.5,W::Semibold)+16.0;
-            let countdown_x=344.0-countdown_width;
-            nc.centered_text(64.0,33.0,&start.format("%H:%M").to_string(),30.0,W::Semibold,theme::WHITE,H::Left);
-            nc.fill(countdown_x,23.0,countdown_width,20.0,10.0,Color32::from_gray(28));
-            nc.centered_text(countdown_x+countdown_width/2.0,33.0,&countdown,10.5,W::Semibold,theme::WHITE,H::Center);
-            let overflow=(nc.text_w(&meeting.title,size::TITLE,W::Semibold)-280.0).max(0.0);
-            let offset=(((self.t-a.at-1.2).max(0.0) as f32)*24.0).min(overflow);
-            nc.clipped(64.0,52.0,280.0,24.0).centered_text(64.0-offset,64.0,&meeting.title,size::TITLE,W::Semibold,theme::WHITE,H::Left);
-            nc.seg((16.0,84.0),(344.0,84.0),0.6,Color32::from_gray(36));
-            let date=format!("{}{}",if start.date_naive()==now.date_naive(){"今天 · "}else{""},start.format("%-m月%-d日"));
-            nc.centered_text(16.0,110.0,&date,11.0,W::Regular,secondary,H::Left);
-            let (dismiss,dc)=crate::paint::capsule(&nc,188.0,98.0,72.0,24.0,"meeting-dismiss",Color32::from_gray(32),Color32::from_gray(48));
-            dc.centered_text(224.0,110.0,"關閉",10.5,W::Semibold,theme::WHITE,H::Center);
-            if dismiss.on_hover_text("關閉本次提醒，行程仍保留").clicked(){
-                self.notice=None;
+        if let Some((meeting, _)) = &a.meeting {
+            let secondary = Color32::from_gray(174);
+            notice_icon(&nc.scaled(34.0, 46.0, 36.0 / 28.0), 34.0, 46.0, a);
+            let now = chrono::Local::now();
+            let start = chrono::DateTime::from_timestamp(meeting.start, 0)
+                .unwrap()
+                .with_timezone(&chrono::Local);
+            let left = meeting.start - now.timestamp();
+            let countdown = if left > 0 {
+                format!("{} 分鐘後", (left + 59) / 60)
+            } else {
+                "正在開始".into()
+            };
+            let countdown_width = nc.text_w(&countdown, 10.5, W::Semibold) + 16.0;
+            let countdown_x = 344.0 - countdown_width;
+            nc.centered_text(
+                64.0,
+                33.0,
+                &start.format("%H:%M").to_string(),
+                30.0,
+                W::Semibold,
+                theme::WHITE,
+                H::Left,
+            );
+            nc.fill(
+                countdown_x,
+                23.0,
+                countdown_width,
+                20.0,
+                10.0,
+                Color32::from_gray(28),
+            );
+            nc.centered_text(
+                countdown_x + countdown_width / 2.0,
+                33.0,
+                &countdown,
+                10.5,
+                W::Semibold,
+                theme::WHITE,
+                H::Center,
+            );
+            let overflow = (nc.text_w(&meeting.title, size::TITLE, W::Semibold) - 280.0).max(0.0);
+            let offset = (((self.t - a.at - 1.2).max(0.0) as f32) * 24.0).min(overflow);
+            nc.clipped(64.0, 52.0, 280.0, 24.0).centered_text(
+                64.0 - offset,
+                64.0,
+                &meeting.title,
+                size::TITLE,
+                W::Semibold,
+                theme::WHITE,
+                H::Left,
+            );
+            nc.seg((16.0, 84.0), (344.0, 84.0), 0.6, Color32::from_gray(36));
+            let date = format!(
+                "{}{}",
+                if start.date_naive() == now.date_naive() {
+                    "今天 · "
+                } else {
+                    ""
+                },
+                start.format("%-m月%-d日")
+            );
+            nc.centered_text(16.0, 110.0, &date, 11.0, W::Regular, secondary, H::Left);
+            let (dismiss, dc) = crate::paint::capsule(
+                &nc,
+                188.0,
+                98.0,
+                72.0,
+                24.0,
+                "meeting-dismiss",
+                Color32::from_gray(32),
+                Color32::from_gray(48),
+            );
+            dc.centered_text(
+                224.0,
+                110.0,
+                "關閉",
+                10.5,
+                W::Semibold,
+                theme::WHITE,
+                H::Center,
+            );
+            if dismiss.on_hover_text("關閉本次提醒，行程仍保留").clicked() {
+                self.notice = None;
                 return;
             }
-            let (button,bc)=crate::paint::capsule(&nc,272.0,98.0,72.0,24.0,"meeting-action",Color32::from_gray(42),Color32::from_gray(56));
-            bc.centered_text(308.0,110.0,"檢視",10.5,W::Semibold,theme::WHITE,H::Center);
+            let (button, bc) = crate::paint::capsule(
+                &nc,
+                272.0,
+                98.0,
+                72.0,
+                24.0,
+                "meeting-action",
+                Color32::from_gray(42),
+                Color32::from_gray(56),
+            );
+            bc.centered_text(
+                308.0,
+                110.0,
+                "檢視",
+                10.5,
+                W::Semibold,
+                theme::WHITE,
+                H::Center,
+            );
             if button.clicked() {
-                self.notice=None;
+                self.notice = None;
                 self.open_calendar(Some(meeting.clone()));
             }
             return;
         }
-        if a.is_hud(){
-            if a.title=="藍牙裝置" {
-                let (name,status,battery)=bluetooth_notice_content(&a.body);
-                nc.circle(26.0,24.0,14.0,if status=="已連線"{Color32::from_rgb(10,132,255)}else{Color32::from_gray(95)});
-                let kind=a.bluetooth.map(|(kind,_)|kind).unwrap_or(crate::bt::DeviceKind::Other);
-                device_icon(&nc,kind,17.0,15.0,18.0);
-                let right=HUD_W-14.0;
-                let name_end=if let Some(level)=battery {
-                    let pct=format!("{level}%");
-                    let pct_width=nc.text_w(&pct,10.5,W::Semibold);
-                    let x=right-pct_width-22.0;
-                    nc.stroke(x,20.0,15.0,8.0,2.0,1.0,Color32::from_gray(175));
-                    nc.fill(x+15.5,22.5,2.0,3.0,0.8,Color32::from_gray(175));
-                    let fill=11.0*level as f32/100.0;
-                    if fill>0.0 {nc.fill(x+2.0,22.0,fill,4.0,1.0,if level<=20{theme::RED}else{theme::GREEN});}
-                    nc.centered_text(right,24.0,&pct,10.5,W::Semibold,theme::WHITE,H::Right);
-                    x-8.0
-                } else {right};
-                nc.centered_text(49.0,16.0,&nc.fit(name,11.0,W::Semibold,(name_end-49.0).max(20.0)),11.0,W::Semibold,theme::WHITE,H::Left);
-                nc.centered_text(49.0,32.0,status,10.5,W::Regular,theme::GRAY,H::Left);
+        if a.is_hud() {
+            if a.title == "藍牙裝置" {
+                let (name, status, battery) = bluetooth_notice_content(&a.body);
+                nc.circle(
+                    26.0,
+                    24.0,
+                    14.0,
+                    if status == "已連線" {
+                        Color32::from_rgb(10, 132, 255)
+                    } else {
+                        Color32::from_gray(95)
+                    },
+                );
+                let kind = a
+                    .bluetooth
+                    .map(|(kind, _)| kind)
+                    .unwrap_or(crate::bt::DeviceKind::Other);
+                device_icon(&nc, kind, 17.0, 15.0, 18.0);
+                let right = HUD_W - 14.0;
+                let name_end = if let Some(level) = battery {
+                    let pct = format!("{level}%");
+                    let pct_width = nc.text_w(&pct, 10.5, W::Semibold);
+                    let x = right - pct_width - 22.0;
+                    nc.stroke(x, 20.0, 15.0, 8.0, 2.0, 1.0, Color32::from_gray(175));
+                    nc.fill(x + 15.5, 22.5, 2.0, 3.0, 0.8, Color32::from_gray(175));
+                    let fill = 11.0 * level as f32 / 100.0;
+                    if fill > 0.0 {
+                        nc.fill(
+                            x + 2.0,
+                            22.0,
+                            fill,
+                            4.0,
+                            1.0,
+                            if level <= 20 {
+                                theme::RED
+                            } else {
+                                theme::GREEN
+                            },
+                        );
+                    }
+                    nc.centered_text(right, 24.0, &pct, 10.5, W::Semibold, theme::WHITE, H::Right);
+                    x - 8.0
+                } else {
+                    right
+                };
+                nc.centered_text(
+                    49.0,
+                    16.0,
+                    &nc.fit(name, 11.0, W::Semibold, (name_end - 49.0).max(20.0)),
+                    11.0,
+                    W::Semibold,
+                    theme::WHITE,
+                    H::Left,
+                );
+                nc.centered_text(49.0, 32.0, status, 10.5, W::Regular, theme::GRAY, H::Left);
                 return;
             }
-            match a.title.as_str(){
-                "系統音量"=>{
-                    nc.poly(&[(17.0,16.0),(21.0,16.0),(26.0,12.0),(26.0,26.0),(21.0,22.0),(17.0,22.0)],theme::WHITE);
-                    if self.volume_ui.is_some_and(|(_,muted)|muted){nc.seg((29.0,16.0),(34.0,22.0),1.4,theme::WHITE);nc.seg((34.0,16.0),(29.0,22.0),1.4,theme::WHITE);}
-                    else{nc.arc(26.0,19.0,5.0,-0.8,0.8,1.5,theme::WHITE);nc.arc(26.0,19.0,8.0,-0.7,0.7,1.3,theme::WHITE);}
-                },
-                _=>notice_icon(&nc,24.0,19.0,a),
+            match a.title.as_str() {
+                "系統音量" => {
+                    nc.poly(
+                        &[
+                            (17.0, 16.0),
+                            (21.0, 16.0),
+                            (26.0, 12.0),
+                            (26.0, 26.0),
+                            (21.0, 22.0),
+                            (17.0, 22.0),
+                        ],
+                        theme::WHITE,
+                    );
+                    if self.volume_ui.is_some_and(|(_, muted)| muted) {
+                        nc.seg((29.0, 16.0), (34.0, 22.0), 1.4, theme::WHITE);
+                        nc.seg((34.0, 16.0), (29.0, 22.0), 1.4, theme::WHITE);
+                    } else {
+                        nc.arc(26.0, 19.0, 5.0, -0.8, 0.8, 1.5, theme::WHITE);
+                        nc.arc(26.0, 19.0, 8.0, -0.7, 0.7, 1.3, theme::WHITE);
+                    }
+                }
+                _ => notice_icon(&nc, 24.0, 19.0, a),
             }
-            if a.title=="系統音量" {
+            if a.title == "系統音量" {
                 self.draw_volume_hud(&nc);
             } else {
-                let (title,body)=if a.title=="鍵盤輸入語言"{("輸入語言",a.body.as_str())}
-                    else if a.title=="已切換電池供電"{("電池供電",a.body.as_str())}
-                    else if a.title=="網路連線"{a.body.split_once(" · ").unwrap_or(("網路",a.body.as_str()))}
-                    else{(a.title.as_str(),a.body.as_str())};
-                nc.centered_text(48.0,19.0,&nc.fit(title,11.0,W::Semibold,90.0),11.0,W::Semibold,theme::WHITE,H::Left);
-                nc.centered_text(HUD_W-16.0,19.0,&nc.fit(body,10.5,W::Regular,92.0),10.5,W::Regular,if a.title=="大寫鎖定"&&a.body=="已開啟"||a.title=="數字鍵盤"&&a.body=="已開啟"||a.title=="網路連線"&&a.body.contains("已連線"){theme::GREEN}else{theme::GRAY},H::Right);
+                let (title, body) = if a.title == "鍵盤輸入語言" {
+                    ("輸入語言", a.body.as_str())
+                } else if a.title == "已切換電池供電" {
+                    ("電池供電", a.body.as_str())
+                } else if a.title == "網路連線" {
+                    a.body
+                        .split_once(" · ")
+                        .unwrap_or(("網路", a.body.as_str()))
+                } else {
+                    (a.title.as_str(), a.body.as_str())
+                };
+                nc.centered_text(
+                    48.0,
+                    19.0,
+                    &nc.fit(title, 11.0, W::Semibold, 90.0),
+                    11.0,
+                    W::Semibold,
+                    theme::WHITE,
+                    H::Left,
+                );
+                nc.centered_text(
+                    HUD_W - 16.0,
+                    19.0,
+                    &nc.fit(body, 10.5, W::Regular, 92.0),
+                    10.5,
+                    W::Regular,
+                    if a.title == "大寫鎖定" && a.body == "已開啟"
+                        || a.title == "數字鍵盤" && a.body == "已開啟"
+                        || a.title == "網路連線" && a.body.contains("已連線")
+                    {
+                        theme::GREEN
+                    } else {
+                        theme::GRAY
+                    },
+                    H::Right,
+                );
             }
         } else {
-            let is_sit=a.health()==Some(HealthReminder::Sit);let is_water=a.health()==Some(HealthReminder::Water);let is_focus=a.page==1;let is_power=a.title=="電量偏低";
-            notice_icon(&nc,22.0,22.0,a);
-            let max=if is_water||is_sit{125.0}else{195.0};
-            nc.centered_text(43.0,14.0,&nc.fit(&a.title,11.0,W::Semibold,max),11.0,W::Semibold,theme::WHITE,H::Left);
-            nc.centered_text(43.0,30.0,&nc.fit(&a.body,10.5,W::Regular,max),10.5,W::Regular,theme::GRAY,H::Left);
+            let is_sit = a.health() == Some(HealthReminder::Sit);
+            let is_water = a.health() == Some(HealthReminder::Water);
+            let is_focus = a.page == 1;
+            let is_power = a.title == "電量偏低";
+            notice_icon(&nc, 22.0, 22.0, a);
+            let max = if is_water || is_sit { 125.0 } else { 195.0 };
+            nc.centered_text(
+                43.0,
+                14.0,
+                &nc.fit(&a.title, 11.0, W::Semibold, max),
+                11.0,
+                W::Semibold,
+                theme::WHITE,
+                H::Left,
+            );
+            nc.centered_text(
+                43.0,
+                30.0,
+                &nc.fit(&a.body, 10.5, W::Regular, max),
+                10.5,
+                W::Regular,
+                theme::GRAY,
+                H::Left,
+            );
             if is_sit {
-                if notice_button(&nc,181.0,12.0,62.0,"知道了","sit-confirm-read"){self.confirm_health_reminder(HealthReminder::Sit);}
-                if notice_button(&nc,250.0,12.0,68.0,"起身了","sit-confirm"){self.notice=None;self.stood_up();}
-            }else if is_water {
-                if notice_button(&nc,181.0,12.0,62.0,"知道了","water-confirm-read"){self.confirm_health_reminder(HealthReminder::Water);}
-                if notice_button(&nc,250.0,12.0,68.0,"喝一口","water-confirm"){self.notice=None;self.drink_water();}
-            }else{
-                let label=if is_focus{"開始"}else if is_power{"知道了"}else{"檢視"};
-                if notice_button(&nc,257.0,12.0,60.0,label,"notice-action"){
-                    self.notice=None;if is_power{return;}if is_focus{self.pomo.running=true;}else if a.page<6{
+                if notice_button(&nc, 181.0, 12.0, 62.0, "知道了", "sit-confirm-read") {
+                    self.confirm_health_reminder(HealthReminder::Sit);
+                }
+                if notice_button(&nc, 250.0, 12.0, 68.0, "起身了", "sit-confirm") {
+                    self.notice = None;
+                    self.stood_up();
+                }
+            } else if is_water {
+                if notice_button(&nc, 181.0, 12.0, 62.0, "知道了", "water-confirm-read") {
+                    self.confirm_health_reminder(HealthReminder::Water);
+                }
+                if notice_button(&nc, 250.0, 12.0, 68.0, "喝一口", "water-confirm") {
+                    self.notice = None;
+                    self.drink_water();
+                }
+            } else {
+                let label = if is_focus {
+                    "開始"
+                } else if is_power {
+                    "知道了"
+                } else {
+                    "檢視"
+                };
+                if notice_button(&nc, 257.0, 12.0, 60.0, label, "notice-action") {
+                    self.notice = None;
+                    if is_power {
+                        return;
+                    }
+                    if is_focus {
+                        self.pomo.running = true;
+                    } else if a.page < 6 {
                         self.show_page(a.page);
-                        if a.page==4 {
-                            let order=self.todos.display_order(&self.today);
-                            if let Some(index)=order.iter().position(|&i|self.todos.items[i].text==a.body && !self.todos.items[i].done_for(&self.today)){
-                                self.todo_first=index.min(order.len().saturating_sub(3));
+                        if a.page == 4 {
+                            let order = self.todos.display_order(&self.today);
+                            if let Some(index) = order.iter().position(|&i| {
+                                self.todos.items[i].text == a.body
+                                    && !self.todos.items[i].done_for(&self.today)
+                            }) {
+                                self.todo_first = index.min(order.len().saturating_sub(3));
                             }
                         }
-                    }else{self.settings_tab=6;self.open_settings();}
+                    } else {
+                        self.settings_tab = 6;
+                        self.open_settings();
+                    }
                 }
             }
-            if let Some(kind)=a.health() {
-                if nc.hit(0.0,0.0,175.0,44.0,"health-notice-confirm").clicked(){self.confirm_health_reminder(kind);}
+            if let Some(kind) = a.health() {
+                if nc
+                    .hit(0.0, 0.0, 175.0, 44.0, "health-notice-confirm")
+                    .clicked()
+                {
+                    self.confirm_health_reminder(kind);
+                }
             }
         }
     }
@@ -620,7 +1426,11 @@ impl App {
         if track.dragged() || track.clicked() {
             if let Some(p) = track.interact_pointer_pos() {
                 let x = nc.to_local(p).x;
-                want = Some((((x - HUD_TRACK_X) / HUD_TRACK_W) * 100.0).clamp(0.0, 100.0).round() as u32);
+                want = Some(
+                    (((x - HUD_TRACK_X) / HUD_TRACK_W) * 100.0)
+                        .clamp(0.0, 100.0)
+                        .round() as u32,
+                );
             }
         } else if nc.live && track.hovered() {
             let dy = nc.ui.ctx().input(|i| i.raw_scroll_delta.y);
@@ -636,26 +1446,64 @@ impl App {
             }
         }
         let (v, muted) = self.volume_ui.unwrap_or((v, muted));
-        let pressed = track.dragged() || track.is_pointer_button_down_on() || icon.is_pointer_button_down_on();
+        let pressed = track.dragged()
+            || track.is_pointer_button_down_on()
+            || icon.is_pointer_button_down_on();
         let target = if muted { 0.0 } else { v as f32 / 100.0 };
-        self.volume_a = crate::anim::approach(self.volume_a, target, if pressed { 34.0 } else { 13.0 }, self.dt);
+        self.volume_a = crate::anim::approach(
+            self.volume_a,
+            target,
+            if pressed { 34.0 } else { 13.0 },
+            self.dt,
+        );
         let h = if pressed { 7.0 } else { 5.0 };
         let y = 19.0 - h / 2.0;
-        nc.fill(HUD_TRACK_X, y, HUD_TRACK_W, h, h / 2.0, Color32::from_white_alpha(if pressed { 46 } else { 34 }));
+        nc.fill(
+            HUD_TRACK_X,
+            y,
+            HUD_TRACK_W,
+            h,
+            h / 2.0,
+            Color32::from_white_alpha(if pressed { 46 } else { 34 }),
+        );
         if self.volume_a > 0.0 {
             let w = (HUD_TRACK_W * self.volume_a).max(h);
-            let col = if muted { Color32::from_gray(150) } else { theme::WHITE };
+            let col = if muted {
+                Color32::from_gray(150)
+            } else {
+                theme::WHITE
+            };
             nc.fill(HUD_TRACK_X, y, w, h, h / 2.0, col);
-            nc.fill(HUD_TRACK_X, y + 0.8, (w - 1.2).max(0.0), h * 0.4, h * 0.2, Color32::from_white_alpha(64));
+            nc.fill(
+                HUD_TRACK_X,
+                y + 0.8,
+                (w - 1.2).max(0.0),
+                h * 0.4,
+                h * 0.2,
+                Color32::from_white_alpha(64),
+            );
             if pressed {
                 nc.circle(HUD_TRACK_X + w - h / 2.0, y + h / 2.0, h * 0.95, col);
             }
         }
-        let label = if muted { "靜音".to_string() } else { format!("{v}%") };
-        nc.centered_text(HUD_W - 26.0, 19.0, &label, 10.5, if pressed { W::Semibold } else { W::Regular }, if muted { theme::GRAY } else { theme::WHITE }, H::Center);
+        let label = if muted {
+            "靜音".to_string()
+        } else {
+            format!("{v}%")
+        };
+        nc.centered_text(
+            HUD_W - 26.0,
+            19.0,
+            &label,
+            10.5,
+            if pressed { W::Semibold } else { W::Regular },
+            if muted { theme::GRAY } else { theme::WHITE },
+            H::Center,
+        );
     }
 
-    pub(crate) fn drink_water(&mut self) {        let hour = self.current_hour;
+    pub(crate) fn drink_water(&mut self) {
+        let hour = self.current_hour;
         let amount = self.settings.serving_ml;
         let was = self.water.percent();
         let before = self.water.drunk_ml;
@@ -669,8 +1517,6 @@ impl App {
             self.alert("今日飲水目標達成", "做得不錯，繼續保持", 2, true);
         }
     }
-
-
 }
 
 /// 将本地提醒时间规范化，拒绝不存在的日期与超出范围的时分。
@@ -720,71 +1566,186 @@ pub(crate) fn parse_due(value: &str, today: &str) -> Option<String> {
 mod tests {
     use super::*;
     #[test]
-    fn island_size_drag_commits_during_drag(){
-        let ctx=egui::Context::default();let mut value=100;
-        let pos=egui::pos2(30.0,30.0);let end=egui::pos2(110.0,30.0);
-        let button=|pos,pressed|egui::Event::PointerButton{pos,button:egui::PointerButton::Primary,pressed,modifiers:Default::default()};
-        let frames=[vec![],vec![egui::Event::PointerMoved(pos)],vec![button(pos,true)],vec![egui::Event::PointerMoved(end)],vec![button(end,false)]];
-        for (i,events) in frames.into_iter().enumerate(){
-            let _=ctx.run(egui::RawInput{events,screen_rect:Some(Rect::from_min_size(egui::Pos2::ZERO,egui::vec2(320.0,80.0))),..Default::default()},|ctx|{
-                egui::CentralPanel::default().frame(egui::Frame::new().inner_margin(20)).show(ctx,|ui|{ui.spacing_mut().slider_width=180.0;island_size_slider(ui,&mut value);});
-            });
-            if i<2{assert_eq!(value,100);}else{assert_ne!(value,100);}
+    fn island_size_drag_commits_during_drag() {
+        let ctx = egui::Context::default();
+        let mut value = 100;
+        let pos = egui::pos2(30.0, 30.0);
+        let end = egui::pos2(110.0, 30.0);
+        let button = |pos, pressed| egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: Default::default(),
+        };
+        let frames = [
+            vec![],
+            vec![egui::Event::PointerMoved(pos)],
+            vec![button(pos, true)],
+            vec![egui::Event::PointerMoved(end)],
+            vec![button(end, false)],
+        ];
+        for (i, events) in frames.into_iter().enumerate() {
+            let _ = ctx.run(
+                egui::RawInput {
+                    events,
+                    screen_rect: Some(Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(320.0, 80.0),
+                    )),
+                    ..Default::default()
+                },
+                |ctx| {
+                    egui::CentralPanel::default()
+                        .frame(egui::Frame::new().inner_margin(20))
+                        .show(ctx, |ui| {
+                            ui.spacing_mut().slider_width = 180.0;
+                            island_size_slider(ui, &mut value);
+                        });
+                },
+            );
+            if i < 2 {
+                assert_eq!(value, 100);
+            } else {
+                assert_ne!(value, 100);
+            }
         }
     }
     #[test]
     fn number_stepper_clicks_follow_steps_and_limits() {
-        for (initial,step,x,expected) in [(5u32,1,127.0,6),(5,1,13.0,4),(0,1,13.0,0),(10,1,127.0,10),(9,3,127.0,10),(1,3,13.0,0)] {
-            let ctx=egui::Context::default();
-            let mut value=initial;
-            let pos=egui::pos2(x+20.0,34.0);
-            let events=[vec![],vec![egui::Event::PointerMoved(pos)],vec![egui::Event::PointerButton{pos,button:egui::PointerButton::Primary,pressed:true,modifiers:Default::default()}],vec![egui::Event::PointerButton{pos,button:egui::PointerButton::Primary,pressed:false,modifiers:Default::default()}]];
+        for (initial, step, x, expected) in [
+            (5u32, 1, 127.0, 6),
+            (5, 1, 13.0, 4),
+            (0, 1, 13.0, 0),
+            (10, 1, 127.0, 10),
+            (9, 3, 127.0, 10),
+            (1, 3, 13.0, 0),
+        ] {
+            let ctx = egui::Context::default();
+            let mut value = initial;
+            let pos = egui::pos2(x + 20.0, 34.0);
+            let events = [
+                vec![],
+                vec![egui::Event::PointerMoved(pos)],
+                vec![egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: Default::default(),
+                }],
+                vec![egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers: Default::default(),
+                }],
+            ];
             for events in events {
-                let raw=egui::RawInput{screen_rect:Some(Rect::from_min_size(egui::Pos2::ZERO,egui::vec2(200.0,80.0))),events,..Default::default()};
-                let _=ctx.run(raw,|ctx|{
-                    egui::CentralPanel::default().frame(egui::Frame::new().inner_margin(20)).show(ctx,|ui|{
-                        ui.horizontal(|ui|{number_stepper(ui,&mut value,0,10,"",step,76.0);});
-                    });
+                let raw = egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(200.0, 80.0),
+                    )),
+                    events,
+                    ..Default::default()
+                };
+                let _ = ctx.run(raw, |ctx| {
+                    egui::CentralPanel::default()
+                        .frame(egui::Frame::new().inner_margin(20))
+                        .show(ctx, |ui| {
+                            ui.horizontal(|ui| {
+                                number_stepper(ui, &mut value, 0, 10, "", step, 76.0);
+                            });
+                        });
                 });
             }
-            assert_eq!(value,expected,"初值 {initial}，步長 {step}，點選位置 {x}");
+            assert_eq!(value, expected, "初值 {initial}，步長 {step}，點選位置 {x}");
         }
     }
 
     #[test]
     fn number_stepper_fits_with_settings_button_padding() {
-        let ctx=egui::Context::default();
-        let raw=egui::RawInput{screen_rect:Some(Rect::from_min_size(egui::Pos2::ZERO,egui::vec2(340.0,240.0))),..Default::default()};
-        let _=ctx.run(raw,|ctx|{
-            egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx,|ui|{
-                ui.spacing_mut().button_padding=egui::vec2(10.0,6.0);
-                for mut value in [0u32,25,180] {
-                    let row=ui.horizontal(|ui|{number_stepper(ui,&mut value,0,180," 分鐘",1,76.0);});
-                    assert!(row.response.rect.width()<=140.1,"數值控制元件超出預留寬度：{}",row.response.rect.width());
-                }
-                for mut value in [25u32,5,15] {setting_number(ui,"計時時長",&mut value,1,180," 分鐘",1.0);}
-                assert!(ui.min_rect().right()<=340.1,"連續數值行不應撐寬卡片");
-            });
+        let ctx = egui::Context::default();
+        let raw = egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(340.0, 240.0),
+            )),
+            ..Default::default()
+        };
+        let _ = ctx.run(raw, |ctx| {
+            egui::CentralPanel::default()
+                .frame(egui::Frame::new())
+                .show(ctx, |ui| {
+                    ui.spacing_mut().button_padding = egui::vec2(10.0, 6.0);
+                    for mut value in [0u32, 25, 180] {
+                        let row = ui.horizontal(|ui| {
+                            number_stepper(ui, &mut value, 0, 180, " 分鐘", 1, 76.0);
+                        });
+                        assert!(
+                            row.response.rect.width() <= 140.1,
+                            "數值控制元件超出預留寬度：{}",
+                            row.response.rect.width()
+                        );
+                    }
+                    for mut value in [25u32, 5, 15] {
+                        setting_number(ui, "計時時長", &mut value, 1, 180, " 分鐘", 1.0);
+                    }
+                    assert!(ui.min_rect().right() <= 340.1, "連續數值行不應撐寬卡片");
+                });
         });
     }
 
     #[test]
     fn settings_groups_keep_every_page_reachable() {
-        let groups = ["通用", "音樂", "專注與健康", "專注與健康", "待辦與置物", "待辦與置物", "訊息提醒", "信箱", "行程", "關於", "頁面管理", "AI 額度", "天氣", "外觀", "位置", "遊戲", "電量", "贊助"];
+        let groups = [
+            "通用",
+            "音樂",
+            "專注與健康",
+            "專注與健康",
+            "待辦與置物",
+            "待辦與置物",
+            "訊息提醒",
+            "信箱",
+            "行程",
+            "關於",
+            "頁面管理",
+            "AI 額度",
+            "天氣",
+            "外觀",
+            "位置",
+            "遊戲",
+            "電量",
+            "贊助",
+        ];
         for (tab, expected) in groups.iter().enumerate() {
-            let matches: Vec<_> = SETTINGS_GROUPS.iter().filter(|(_,start,end,_)| (*start..=*end).contains(&tab)).collect();
+            let matches: Vec<_> = SETTINGS_GROUPS
+                .iter()
+                .filter(|(_, start, end, _)| (*start..=*end).contains(&tab))
+                .collect();
             assert_eq!(matches.len(), 1, "頁面 {tab} 必須且只能屬於一個分組");
             assert_eq!(matches[0].0, *expected);
         }
     }
 
     #[test]
-    fn bluetooth_notice_uses_real_connection_and_battery_data(){
-        assert_eq!(bluetooth_notice_content("OpenMove by Shokz · 電量 80%"),("OpenMove by Shokz","已連線",Some(80)));
-        assert_eq!(bluetooth_notice_content("耳機"),("耳機","已連線",None));
-        assert_eq!(bluetooth_notice_content("已斷開連線"),("藍牙裝置","已斷開",None));
-        assert_eq!(bluetooth_notice_content("青龍鍵盤 · 已斷開"),("青龍鍵盤","已斷開",None));
-        assert_eq!(bluetooth_notice_content("耳機 · 電量 101%"),("耳機 · 電量 101%","已連線",None));
+    fn bluetooth_notice_uses_real_connection_and_battery_data() {
+        assert_eq!(
+            bluetooth_notice_content("OpenMove by Shokz · 電量 80%"),
+            ("OpenMove by Shokz", "已連線", Some(80))
+        );
+        assert_eq!(bluetooth_notice_content("耳機"), ("耳機", "已連線", None));
+        assert_eq!(
+            bluetooth_notice_content("已斷開連線"),
+            ("藍牙裝置", "已斷開", None)
+        );
+        assert_eq!(
+            bluetooth_notice_content("青龍鍵盤 · 已斷開"),
+            ("青龍鍵盤", "已斷開", None)
+        );
+        assert_eq!(
+            bluetooth_notice_content("耳機 · 電量 101%"),
+            ("耳機 · 電量 101%", "已連線", None)
+        );
     }
 
     #[test]
@@ -799,8 +1760,8 @@ mod tests {
             include_bytes!("../assets/device-icons/bluetooth-linear.svg"),
         ];
         for bytes in icons {
-            let image=egui_extras::image::load_svg_bytes(bytes).unwrap();
-            assert!(image.pixels.iter().any(|p|p.a()>0));
+            let image = egui_extras::image::load_svg_bytes(bytes).unwrap();
+            assert!(image.pixels.iter().any(|p| p.a() > 0));
         }
     }
 
@@ -824,363 +1785,1132 @@ mod tests {
     }
 }
 
-pub(crate) struct TaskDraft {index:usize,original:String,text:String,due:String,error:String,focused:bool,reminder_only:bool,pub(crate) repeat:u8,pub(crate) picker:crate::task_picker::ReminderPicker}
+pub(crate) struct TaskDraft {
+    index: usize,
+    original: String,
+    text: String,
+    due: String,
+    error: String,
+    focused: bool,
+    reminder_only: bool,
+    pub(crate) repeat: u8,
+    pub(crate) picker: crate::task_picker::ReminderPicker,
+}
 impl App {
-    pub(crate) fn open_task_dialog(&mut self,index:usize){
-        self.todo_choosing=false;
-        if let Some(task)=self.todos.items.get(index){
-            let draft=TaskDraft{index,original:task.text.clone(),text:task.text.clone(),due:task.due.clone().unwrap_or_default(),error:String::new(),focused:false,reminder_only:false,repeat:task.repeat,picker:crate::task_picker::ReminderPicker::new(task.due.as_deref())};
-            self.show_page(4);self.task_dialog=Some(draft);
+    pub(crate) fn open_task_dialog(&mut self, index: usize) {
+        self.todo_choosing = false;
+        if let Some(task) = self.todos.items.get(index) {
+            let draft = TaskDraft {
+                index,
+                original: task.text.clone(),
+                text: task.text.clone(),
+                due: task.due.clone().unwrap_or_default(),
+                error: String::new(),
+                focused: false,
+                reminder_only: false,
+                repeat: task.repeat,
+                picker: crate::task_picker::ReminderPicker::new(task.due.as_deref()),
+            };
+            self.show_page(4);
+            self.task_dialog = Some(draft);
         }
     }
-    pub(crate) fn open_task_reminder(&mut self,index:usize){
+    pub(crate) fn open_task_reminder(&mut self, index: usize) {
         self.open_task_dialog(index);
-        if let Some(d)=self.task_dialog.as_mut(){d.reminder_only=true;d.picker.show();}
+        if let Some(d) = self.task_dialog.as_mut() {
+            d.reminder_only = true;
+            d.picker.show();
+        }
     }
-    pub(crate) fn draw_task_editor(&mut self,c:&Card){
-        if self.task_dialog.as_ref().is_some_and(|draft|draft.picker.open){self.draw_task_reminder(c);return;}
-        let reminder_only=self.task_dialog.as_ref().is_some_and(|d|d.reminder_only);
-        c.text(15.0,25.0,if reminder_only{"設定提醒"}else{"編輯待辦"},size::TITLE,W::Bold,theme::WHITE,H::Left);
-        c.text(43.0,48.0,if reminder_only{"待辦"}else{"內容"},10.5,W::Regular,theme::GRAY,H::Left);
-        c.fill(91.0,33.0,275.0,20.0,6.0,theme::CARD);
-        if let Some(d)=self.task_dialog.as_ref().filter(|d|d.reminder_only){
-            c.text(97.0,47.0,&c.fit(&d.text,11.5,W::Regular,260.0),11.5,W::Regular,theme::WHITE,H::Left);
+    pub(crate) fn draw_task_editor(&mut self, c: &Card) {
+        if self
+            .task_dialog
+            .as_ref()
+            .is_some_and(|draft| draft.picker.open)
+        {
+            self.draw_task_reminder(c);
+            return;
         }
-        c.text(43.0,72.0,"提醒",10.5,W::Regular,theme::GRAY,H::Left);
-        let time=self.task_dialog.as_ref().map(|d|if d.due.is_empty(){"點選選擇時間".into()}
-            else if d.repeat!=0{format!("{} {}",crate::model::repeat_label(d.repeat),d.due.get(11..16).unwrap_or(&d.due))}else{d.due.clone()}).unwrap_or_default();
-        if setting_button(c,91.0,58.0,275.0,&time,false,"task-select-reminder"){if let Some(d)=self.task_dialog.as_mut(){d.picker.show();}}
+        let reminder_only = self.task_dialog.as_ref().is_some_and(|d| d.reminder_only);
+        c.text(
+            15.0,
+            25.0,
+            if reminder_only {
+                "設定提醒"
+            } else {
+                "編輯待辦"
+            },
+            size::TITLE,
+            W::Bold,
+            theme::WHITE,
+            H::Left,
+        );
+        c.text(
+            43.0,
+            48.0,
+            if reminder_only { "待辦" } else { "內容" },
+            10.5,
+            W::Regular,
+            theme::GRAY,
+            H::Left,
+        );
+        c.fill(91.0, 33.0, 275.0, 20.0, 6.0, theme::CARD);
+        if let Some(d) = self.task_dialog.as_ref().filter(|d| d.reminder_only) {
+            c.text(
+                97.0,
+                47.0,
+                &c.fit(&d.text, 11.5, W::Regular, 260.0),
+                11.5,
+                W::Regular,
+                theme::WHITE,
+                H::Left,
+            );
+        }
+        c.text(43.0, 72.0, "提醒", 10.5, W::Regular, theme::GRAY, H::Left);
+        let time = self
+            .task_dialog
+            .as_ref()
+            .map(|d| {
+                if d.due.is_empty() {
+                    "點選選擇時間".into()
+                } else if d.repeat != 0 {
+                    format!(
+                        "{} {}",
+                        crate::model::repeat_label(d.repeat),
+                        d.due.get(11..16).unwrap_or(&d.due)
+                    )
+                } else {
+                    d.due.clone()
+                }
+            })
+            .unwrap_or_default();
+        if setting_button(c, 91.0, 58.0, 275.0, &time, false, "task-select-reminder") {
+            if let Some(d) = self.task_dialog.as_mut() {
+                d.picker.show();
+            }
+        }
         // 每周重复：七个星期按钮，全不选即一次性待办。
-        c.text(43.0,95.0,"重複",10.5,W::Regular,theme::GRAY,H::Left);
-        self.task_repeat_chips(c,91.0,81.0,25.0,19.0,28.0);
-        let repeat=self.task_dialog.as_ref().map(|d|d.repeat).unwrap_or(0);
-        let quick=if repeat==crate::model::REPEAT_ALL{"不重複"}else{"每天"};
-        if setting_button(c,289.0,81.0,77.0,quick,false,"task-repeat-all"){
-            if let Some(d)=self.task_dialog.as_mut(){d.repeat=if d.repeat==crate::model::REPEAT_ALL{0}else{crate::model::REPEAT_ALL};}
+        c.text(43.0, 95.0, "重複", 10.5, W::Regular, theme::GRAY, H::Left);
+        self.task_repeat_chips(c, 91.0, 81.0, 25.0, 19.0, 28.0);
+        let repeat = self.task_dialog.as_ref().map(|d| d.repeat).unwrap_or(0);
+        let quick = if repeat == crate::model::REPEAT_ALL {
+            "不重複"
+        } else {
+            "每天"
+        };
+        if setting_button(c, 289.0, 81.0, 77.0, quick, false, "task-repeat-all") {
+            if let Some(d) = self.task_dialog.as_mut() {
+                d.repeat = if d.repeat == crate::model::REPEAT_ALL {
+                    0
+                } else {
+                    crate::model::REPEAT_ALL
+                };
+            }
         }
-        if let Some(d)=&self.task_dialog {
-            let summary=if d.repeat!=0{crate::model::repeat_label(d.repeat)}else{"只做一次".into()};
-            let hint=if d.error.is_empty(){summary.as_str()}else{&d.error};
-            c.text(43.0,117.0,&c.fit(hint,10.5,W::Regular,if reminder_only{140.0}else{154.0}),10.5,if d.error.is_empty(){W::Regular}else{W::Semibold},if d.error.is_empty(){theme::GRAY}else{theme::RED},H::Left);
+        if let Some(d) = &self.task_dialog {
+            let summary = if d.repeat != 0 {
+                crate::model::repeat_label(d.repeat)
+            } else {
+                "只做一次".into()
+            };
+            let hint = if d.error.is_empty() {
+                summary.as_str()
+            } else {
+                &d.error
+            };
+            c.text(
+                43.0,
+                117.0,
+                &c.fit(
+                    hint,
+                    10.5,
+                    W::Regular,
+                    if reminder_only { 140.0 } else { 154.0 },
+                ),
+                10.5,
+                if d.error.is_empty() {
+                    W::Regular
+                } else {
+                    W::Semibold
+                },
+                if d.error.is_empty() {
+                    theme::GRAY
+                } else {
+                    theme::RED
+                },
+                H::Left,
+            );
         }
         if reminder_only {
-            let has_reminder=self.task_dialog.as_ref().and_then(|d|self.todos.items.get(d.index)).is_some_and(|task|task.due.is_some());
-            let skip=if has_reminder{"取消提醒"}else if repeat!=0{"只設重複"}else{"暫不提醒"};
-            if setting_button(c,188.0,104.0,88.0,skip,false,"task-reminder-skip"){
-                if let Some(d)=self.task_dialog.as_mut(){d.due.clear();}
+            let has_reminder = self
+                .task_dialog
+                .as_ref()
+                .and_then(|d| self.todos.items.get(d.index))
+                .is_some_and(|task| task.due.is_some());
+            let skip = if has_reminder {
+                "取消提醒"
+            } else if repeat != 0 {
+                "只設重複"
+            } else {
+                "暫不提醒"
+            };
+            if setting_button(c, 188.0, 104.0, 88.0, skip, false, "task-reminder-skip") {
+                if let Some(d) = self.task_dialog.as_mut() {
+                    d.due.clear();
+                }
                 self.save_task_editor();
             }
-        }else if setting_button(c,202.0,104.0,74.0,"取消",false,"task-cancel"){self.task_dialog=None;}
-        if setting_button(c,286.0,104.0,80.0,if reminder_only{"選擇時間"}else{"儲存"},true,"task-save"){
-            if reminder_only{if let Some(d)=self.task_dialog.as_mut(){d.picker.show();}}else{self.save_task_editor();}
+        } else if setting_button(c, 202.0, 104.0, 74.0, "取消", false, "task-cancel") {
+            self.task_dialog = None;
         }
-    }
-    pub(crate) fn task_editor_inputs(&mut self,ui:&mut egui::Ui,origin:egui::Pos2,cmds:&mut Vec<Cmd>){
-        let Some(d)=self.task_dialog.as_mut() else{return};
-        if d.reminder_only || d.picker.open{return;}
-        let name=ui.put(Rect::from_min_size(origin+egui::vec2(97.0,35.0),egui::vec2(260.0,17.0)),egui::TextEdit::singleline(&mut d.text).vertical_align(egui::Align::Center).id(egui::Id::new("task-name-edit")).frame(false).font(theme::font(11.5,W::Regular)));
-        let first_focus=!d.focused;
-        if first_focus{name.request_focus();d.focused=true;cmds.push(Cmd::Focus);}
-        // 新建内容与下一步共用这一帧，避免同一次回车又提交了空提醒。
-        if !first_focus && ui.input(|i|i.key_pressed(egui::Key::Enter)){self.save_task_editor();}
-    }
-    /// 七个星期按钮（一…日），点一下切换；全不选即一次性待办。
-    fn task_repeat_chips(&mut self,c:&Card,x:f32,y:f32,w:f32,h:f32,step:f32){
-        let repeat=self.task_dialog.as_ref().map(|d|d.repeat).unwrap_or(0);
-        for (day,name) in crate::model::WEEKDAY_NAMES.iter().enumerate() {
-            let on=repeat&(1<<day)!=0;
-            let cx=x+day as f32*step;
-            let (r,b)=crate::paint::capsule(c,cx,y,w,h,&format!("task-repeat-{day}"),if on{Color32::from_rgb(39,94,150)}else{theme::BTN},theme::BTN_HOVER);
-            b.centered_text(cx+w/2.0,y+h/2.0,name,if h<18.0{9.5}else{10.5},W::Semibold,if on{theme::WHITE}else{theme::GRAY},H::Center);
-            if r.on_hover_text(format!("每週{name}")).clicked(){
-                if let Some(d)=self.task_dialog.as_mut(){d.repeat^=1<<day;d.error.clear();}
+        if setting_button(
+            c,
+            286.0,
+            104.0,
+            80.0,
+            if reminder_only {
+                "選擇時間"
+            } else {
+                "儲存"
+            },
+            true,
+            "task-save",
+        ) {
+            if reminder_only {
+                if let Some(d) = self.task_dialog.as_mut() {
+                    d.picker.show();
+                }
+            } else {
+                self.save_task_editor();
             }
         }
     }
-    fn draw_task_reminder(&mut self,c:&Card){
-        use crate::task_picker::PickerAction;
-        let Some(d)=self.task_dialog.as_mut().filter(|d|d.picker.open) else{return};
-        let has_reminder=self.todos.items.get(d.index).is_some_and(|task|task.due.is_some());
-        c.text(15.0,25.0,"待辦",size::TITLE,W::Bold,theme::WHITE,H::Left);
-        c.text(44.0,25.0,"清單",size::TITLE,W::Bold,theme::GREEN,H::Left);
-        let (done,total)=self.todos.progress(&self.today);
-        c.text(42.0,61.0,&format!("{done}/{total}"),29.0,W::Bold,theme::WHITE,H::Left);
-        // 左侧：每周重复。选了星期几后，提醒只按时间、在这些日子到点提醒。
-        d.picker.repeat_note=Some(if d.repeat!=0{format!("{} · 到點提醒",crate::model::repeat_label(d.repeat))}else{String::new()});
-        let action=d.picker.draw(c,&d.text,has_reminder);
-        let focus=std::mem::take(&mut d.picker.focus);
-        self.task_repeat_chips(c,41.0,84.0,17.0,16.0,19.5);
-        let Some(d)=self.task_dialog.as_mut() else{return};
-        if focus{self.pending.push(Cmd::Focus);}
-        match action{
-            Some(PickerAction::Save)=>{d.due=d.picker.due();d.picker.open=false;if d.reminder_only{self.save_task_editor();}},
-            Some(PickerAction::Skip)=>{d.due.clear();d.picker.open=false;if d.reminder_only{self.save_task_editor();}},
-            Some(PickerAction::Cancel)=>{d.picker.open=false;if d.reminder_only{self.task_dialog=None;}},
-            None=>{},
+    pub(crate) fn task_editor_inputs(
+        &mut self,
+        ui: &mut egui::Ui,
+        origin: egui::Pos2,
+        cmds: &mut Vec<Cmd>,
+    ) {
+        let Some(d) = self.task_dialog.as_mut() else {
+            return;
+        };
+        if d.reminder_only || d.picker.open {
+            return;
+        }
+        let name = ui.put(
+            Rect::from_min_size(origin + egui::vec2(97.0, 35.0), egui::vec2(260.0, 17.0)),
+            egui::TextEdit::singleline(&mut d.text)
+                .vertical_align(egui::Align::Center)
+                .id(egui::Id::new("task-name-edit"))
+                .frame(false)
+                .font(theme::font(11.5, W::Regular)),
+        );
+        let first_focus = !d.focused;
+        if first_focus {
+            name.request_focus();
+            d.focused = true;
+            cmds.push(Cmd::Focus);
+        }
+        // 新建内容与下一步共用这一帧，避免同一次回车又提交了空提醒。
+        if !first_focus && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+            self.save_task_editor();
         }
     }
-    fn save_task_editor(&mut self){
-        let Some(mut d)=self.task_dialog.take() else{return};
-        let due=if d.due.trim().is_empty(){Some(None)}else{parse_due(&d.due,&self.today).map(Some)};
-        if d.text.trim().is_empty(){d.error="請填寫任務內容".into();}
-        else if due.is_none(){d.error="時間格式應為 18:30 或完整日期時間".into();}
-        else if self.todos.items.get(d.index).is_none_or(|t|t.text!=d.original){d.error="任務已變化，請取消後重新開啟".into();}
-        else{
-            let item=&mut self.todos.items[d.index];
-            if item.repeat!=d.repeat{item.done_on=None;}
-            item.text=d.text.trim().into();item.due=due.unwrap();item.reminded=false;item.reminded_on=None;item.repeat=d.repeat;
-            self.todos.save();self.say("待辦已儲存");return;
+    /// 七个星期按钮（一…日），点一下切换；全不选即一次性待办。
+    fn task_repeat_chips(&mut self, c: &Card, x: f32, y: f32, w: f32, h: f32, step: f32) {
+        let repeat = self.task_dialog.as_ref().map(|d| d.repeat).unwrap_or(0);
+        for (day, name) in crate::model::WEEKDAY_NAMES.iter().enumerate() {
+            let on = repeat & (1 << day) != 0;
+            let cx = x + day as f32 * step;
+            let (r, b) = crate::paint::capsule(
+                c,
+                cx,
+                y,
+                w,
+                h,
+                &format!("task-repeat-{day}"),
+                if on {
+                    Color32::from_rgb(39, 94, 150)
+                } else {
+                    theme::BTN
+                },
+                theme::BTN_HOVER,
+            );
+            b.centered_text(
+                cx + w / 2.0,
+                y + h / 2.0,
+                name,
+                if h < 18.0 { 9.5 } else { 10.5 },
+                W::Semibold,
+                if on { theme::WHITE } else { theme::GRAY },
+                H::Center,
+            );
+            if r.on_hover_text(format!("每週{name}")).clicked() {
+                if let Some(d) = self.task_dialog.as_mut() {
+                    d.repeat ^= 1 << day;
+                    d.error.clear();
+                }
+            }
         }
-        self.task_dialog=Some(d);
+    }
+    fn draw_task_reminder(&mut self, c: &Card) {
+        use crate::task_picker::PickerAction;
+        let Some(d) = self.task_dialog.as_mut().filter(|d| d.picker.open) else {
+            return;
+        };
+        let has_reminder = self
+            .todos
+            .items
+            .get(d.index)
+            .is_some_and(|task| task.due.is_some());
+        c.text(
+            15.0,
+            25.0,
+            "待辦",
+            size::TITLE,
+            W::Bold,
+            theme::WHITE,
+            H::Left,
+        );
+        c.text(
+            44.0,
+            25.0,
+            "清單",
+            size::TITLE,
+            W::Bold,
+            theme::GREEN,
+            H::Left,
+        );
+        let (done, total) = self.todos.progress(&self.today);
+        c.text(
+            42.0,
+            61.0,
+            &format!("{done}/{total}"),
+            29.0,
+            W::Bold,
+            theme::WHITE,
+            H::Left,
+        );
+        // 左侧：每周重复。选了星期几后，提醒只按时间、在这些日子到点提醒。
+        d.picker.repeat_note = Some(if d.repeat != 0 {
+            format!("{} · 到點提醒", crate::model::repeat_label(d.repeat))
+        } else {
+            String::new()
+        });
+        let action = d.picker.draw(c, &d.text, has_reminder);
+        let focus = std::mem::take(&mut d.picker.focus);
+        self.task_repeat_chips(c, 41.0, 84.0, 17.0, 16.0, 19.5);
+        let Some(d) = self.task_dialog.as_mut() else {
+            return;
+        };
+        if focus {
+            self.pending.push(Cmd::Focus);
+        }
+        match action {
+            Some(PickerAction::Save) => {
+                d.due = d.picker.due();
+                d.picker.open = false;
+                if d.reminder_only {
+                    self.save_task_editor();
+                }
+            }
+            Some(PickerAction::Skip) => {
+                d.due.clear();
+                d.picker.open = false;
+                if d.reminder_only {
+                    self.save_task_editor();
+                }
+            }
+            Some(PickerAction::Cancel) => {
+                d.picker.open = false;
+                if d.reminder_only {
+                    self.task_dialog = None;
+                }
+            }
+            None => {}
+        }
+    }
+    fn save_task_editor(&mut self) {
+        let Some(mut d) = self.task_dialog.take() else {
+            return;
+        };
+        let due = if d.due.trim().is_empty() {
+            Some(None)
+        } else {
+            parse_due(&d.due, &self.today).map(Some)
+        };
+        if d.text.trim().is_empty() {
+            d.error = "請填寫任務內容".into();
+        } else if due.is_none() {
+            d.error = "時間格式應為 18:30 或完整日期時間".into();
+        } else if self
+            .todos
+            .items
+            .get(d.index)
+            .is_none_or(|t| t.text != d.original)
+        {
+            d.error = "任務已變化，請取消後重新開啟".into();
+        } else {
+            let item = &mut self.todos.items[d.index];
+            if item.repeat != d.repeat {
+                item.done_on = None;
+            }
+            item.text = d.text.trim().into();
+            item.due = due.unwrap();
+            item.reminded = false;
+            item.reminded_on = None;
+            item.repeat = d.repeat;
+            self.todos.save();
+            self.say("待辦已儲存");
+            return;
+        }
+        self.task_dialog = Some(d);
     }
 }
 
-fn notice_button(c:&Card,x:f32,y:f32,w:f32,text:&str,id:&str)->bool {
-    let (r,b)=crate::paint::capsule(c,x,y,w,20.0,id,Color32::from_gray(35),theme::BTN_HOVER);
-    b.centered_text(x+w/2.0,y+10.0,text,10.5,W::Semibold,theme::WHITE,H::Center);
+fn notice_button(c: &Card, x: f32, y: f32, w: f32, text: &str, id: &str) -> bool {
+    let (r, b) = crate::paint::capsule(
+        c,
+        x,
+        y,
+        w,
+        20.0,
+        id,
+        Color32::from_gray(35),
+        theme::BTN_HOVER,
+    );
+    b.centered_text(
+        x + w / 2.0,
+        y + 10.0,
+        text,
+        10.5,
+        W::Semibold,
+        theme::WHITE,
+        H::Center,
+    );
     r.clicked()
 }
-fn setting_button(c:&Card,x:f32,y:f32,w:f32,text:&str,on:bool,id:&str)->bool {
-    let (r,b)=crate::paint::capsule(c,x,y,w,19.0,id,if on{Color32::from_rgb(39,94,150)}else{theme::BTN},theme::BTN_HOVER);
-    b.text(x+w/2.0,y+13.3,text,10.5,W::Semibold,theme::WHITE,H::Center);
+fn setting_button(c: &Card, x: f32, y: f32, w: f32, text: &str, on: bool, id: &str) -> bool {
+    let (r, b) = crate::paint::capsule(
+        c,
+        x,
+        y,
+        w,
+        19.0,
+        id,
+        if on {
+            Color32::from_rgb(39, 94, 150)
+        } else {
+            theme::BTN
+        },
+        theme::BTN_HOVER,
+    );
+    b.text(
+        x + w / 2.0,
+        y + 13.3,
+        text,
+        10.5,
+        W::Semibold,
+        theme::WHITE,
+        H::Center,
+    );
     r.clicked()
 }
-fn hhmm(m:u32)->String{format!("{:02}:{:02}",m/60%24,m%60)}
+fn hhmm(m: u32) -> String {
+    format!("{:02}:{:02}", m / 60 % 24, m % 60)
+}
 /// 岛内小开关（与健康页右上开关同款）。
-fn island_switch(c:&Card,x:f32,y:f32,on:bool,id:&str)->bool{
-    let r=c.hit(x-2.0,y-2.0,38.0,24.0,id);
-    let (hv,_)=c.hover_t(&r);
-    let track=if on{theme::SIT_GREEN}else{Color32::from_rgb(58,58,62)};
-    c.fill(x,y,34.0,20.0,10.0,crate::paint::mix(track,theme::WHITE,hv*0.08));
-    c.circle(if on{x+24.0}else{x+10.0},y+10.0,8.0,theme::WHITE);
+fn island_switch(c: &Card, x: f32, y: f32, on: bool, id: &str) -> bool {
+    let r = c.hit(x - 2.0, y - 2.0, 38.0, 24.0, id);
+    let (hv, _) = c.hover_t(&r);
+    let track = if on {
+        theme::SIT_GREEN
+    } else {
+        Color32::from_rgb(58, 58, 62)
+    };
+    c.fill(
+        x,
+        y,
+        34.0,
+        20.0,
+        10.0,
+        crate::paint::mix(track, theme::WHITE, hv * 0.08),
+    );
+    c.circle(
+        if on { x + 24.0 } else { x + 10.0 },
+        y + 10.0,
+        8.0,
+        theme::WHITE,
+    );
     r.clicked()
 }
 impl App {
-    fn health_time_summary(&self)->String{
-        let s=&self.settings;
-        let hours=format!("{:02}:00–{:02}:00",s.water_start,s.water_end);
-        if s.lunch_rest{format!("{hours} · 午休 {}–{}",hhmm(s.lunch_start),hhmm(s.lunch_end))}else{hours}
+    fn health_time_summary(&self) -> String {
+        let s = &self.settings;
+        let hours = format!("{:02}:00–{:02}:00", s.water_start, s.water_end);
+        if s.lunch_rest {
+            format!(
+                "{hours} · 午休 {}–{}",
+                hhmm(s.lunch_start),
+                hhmm(s.lunch_end)
+            )
+        } else {
+            hours
+        }
     }
     /// 「提醒时段」二级页：提醒时段起止、午休开关、午休起止（15 分钟一档），喝水和久坐共用。
-    fn health_time_page(&mut self,c:&Card){
-        let row_y=|i:usize|38.0+i as f32*22.0;
-        for i in 1..4{c.fill(44.0,row_y(i)-2.0,326.0,1.0,0.5,Color32::from_rgb(28,28,31));}
-        let y=row_y(0);
-        c.text(44.0,y+13.0,"提醒時段",10.5,W::Regular,theme::GRAY,H::Left);
-        c.text(250.0,y+13.0,"至",10.5,W::Regular,theme::GRAY,H::Center);
-        for i in 0..2{
-            let hour=if i==0{&mut self.settings.water_start}else{&mut self.settings.water_end};
-            let value=egui::DragValue::new(hour).range(0..=if i==0{23}else{24})
-                .custom_formatter(|v,_|format!("{:02}:00",v as u32))
-                .custom_parser(|t|{let t=t.trim();t.strip_suffix(":00").or_else(||t.strip_suffix("：00")).unwrap_or(t).parse::<u32>().ok().map(|v|v as f64)});
-            let (d,field)=stepper(c,if i==0{238.0}else{370.0},y,value,&format!("hour-{i}"));
-            if field.gained_focus(){self.pending.push(Cmd::Focus);}self.settings_editing|=field.has_focus();
-            if d!=0{let hour=if i==0{&mut self.settings.water_start}else{&mut self.settings.water_end};*hour=(*hour as i32+d).rem_euclid(24) as u32;}
+    fn health_time_page(&mut self, c: &Card) {
+        let row_y = |i: usize| 38.0 + i as f32 * 22.0;
+        for i in 1..4 {
+            c.fill(
+                44.0,
+                row_y(i) - 2.0,
+                326.0,
+                1.0,
+                0.5,
+                Color32::from_rgb(28, 28, 31),
+            );
         }
-        let y=row_y(1);
-        c.text(44.0,y+13.0,"午休不提醒",10.5,W::Regular,theme::GRAY,H::Left);
-        if island_switch(c,336.0,y-0.5,self.settings.lunch_rest,"lunch-rest"){self.settings.lunch_rest=!self.settings.lunch_rest;}
-        let y=row_y(2);
-        let on=self.settings.lunch_rest;
-        let lc=c.faded(if on{1.0}else{0.35});let lc=if on{lc}else{lc.ghost()};
-        lc.text(44.0,y+13.0,"午休時間",10.5,W::Regular,theme::GRAY,H::Left);
-        lc.text(250.0,y+13.0,"至",10.5,W::Regular,theme::GRAY,H::Center);
-        for i in 0..2{
-            let minute=if i==0{&mut self.settings.lunch_start}else{&mut self.settings.lunch_end};
-            let value=egui::DragValue::new(minute).range(0..=1439).speed(1.0).custom_formatter(|v,_|hhmm(v as u32))
-                .custom_parser(|t|{let (h,m)=t.trim().split_once([':','：'])?;Some((h.parse::<u32>().ok()?.min(23)*60+m.parse::<u32>().ok()?.min(59)) as f64)});
-            let (d,field)=stepper(&lc,if i==0{238.0}else{370.0},y,value,&format!("lunch-{i}"));
-            if field.gained_focus(){self.pending.push(Cmd::Focus);}self.settings_editing|=field.has_focus();
-            if d!=0{let minute=if i==0{&mut self.settings.lunch_start}else{&mut self.settings.lunch_end};*minute=(*minute as i32+d*15).rem_euclid(1440) as u32;}
+        let y = row_y(0);
+        c.text(
+            44.0,
+            y + 13.0,
+            "提醒時段",
+            10.5,
+            W::Regular,
+            theme::GRAY,
+            H::Left,
+        );
+        c.text(
+            250.0,
+            y + 13.0,
+            "至",
+            10.5,
+            W::Regular,
+            theme::GRAY,
+            H::Center,
+        );
+        for i in 0..2 {
+            let hour = if i == 0 {
+                &mut self.settings.water_start
+            } else {
+                &mut self.settings.water_end
+            };
+            let value = egui::DragValue::new(hour)
+                .range(0..=if i == 0 { 23 } else { 24 })
+                .custom_formatter(|v, _| format!("{:02}:00", v as u32))
+                .custom_parser(|t| {
+                    let t = t.trim();
+                    t.strip_suffix(":00")
+                        .or_else(|| t.strip_suffix("：00"))
+                        .unwrap_or(t)
+                        .parse::<u32>()
+                        .ok()
+                        .map(|v| v as f64)
+                });
+            let (d, field) = stepper(
+                c,
+                if i == 0 { 238.0 } else { 370.0 },
+                y,
+                value,
+                &format!("hour-{i}"),
+            );
+            if field.gained_focus() {
+                self.pending.push(Cmd::Focus);
+            }
+            self.settings_editing |= field.has_focus();
+            if d != 0 {
+                let hour = if i == 0 {
+                    &mut self.settings.water_start
+                } else {
+                    &mut self.settings.water_end
+                };
+                *hour = (*hour as i32 + d).rem_euclid(24) as u32;
+            }
         }
-        c.text(44.0,row_y(3)+13.0,"喝水和久坐提醒都只在提醒時段內、午休以外彈出",10.5,W::Regular,theme::GRAY,H::Left);
+        let y = row_y(1);
+        c.text(
+            44.0,
+            y + 13.0,
+            "午休不提醒",
+            10.5,
+            W::Regular,
+            theme::GRAY,
+            H::Left,
+        );
+        if island_switch(c, 336.0, y - 0.5, self.settings.lunch_rest, "lunch-rest") {
+            self.settings.lunch_rest = !self.settings.lunch_rest;
+        }
+        let y = row_y(2);
+        let on = self.settings.lunch_rest;
+        let lc = c.faded(if on { 1.0 } else { 0.35 });
+        let lc = if on { lc } else { lc.ghost() };
+        lc.text(
+            44.0,
+            y + 13.0,
+            "午休時間",
+            10.5,
+            W::Regular,
+            theme::GRAY,
+            H::Left,
+        );
+        lc.text(
+            250.0,
+            y + 13.0,
+            "至",
+            10.5,
+            W::Regular,
+            theme::GRAY,
+            H::Center,
+        );
+        for i in 0..2 {
+            let minute = if i == 0 {
+                &mut self.settings.lunch_start
+            } else {
+                &mut self.settings.lunch_end
+            };
+            let value = egui::DragValue::new(minute)
+                .range(0..=1439)
+                .speed(1.0)
+                .custom_formatter(|v, _| hhmm(v as u32))
+                .custom_parser(|t| {
+                    let (h, m) = t.trim().split_once([':', '：'])?;
+                    Some(
+                        (h.parse::<u32>().ok()?.min(23) * 60 + m.parse::<u32>().ok()?.min(59))
+                            as f64,
+                    )
+                });
+            let (d, field) = stepper(
+                &lc,
+                if i == 0 { 238.0 } else { 370.0 },
+                y,
+                value,
+                &format!("lunch-{i}"),
+            );
+            if field.gained_focus() {
+                self.pending.push(Cmd::Focus);
+            }
+            self.settings_editing |= field.has_focus();
+            if d != 0 {
+                let minute = if i == 0 {
+                    &mut self.settings.lunch_start
+                } else {
+                    &mut self.settings.lunch_end
+                };
+                *minute = (*minute as i32 + d * 15).rem_euclid(1440) as u32;
+            }
+        }
+        c.text(
+            44.0,
+            row_y(3) + 13.0,
+            "喝水和久坐提醒都只在提醒時段內、午休以外彈出",
+            10.5,
+            W::Regular,
+            theme::GRAY,
+            H::Left,
+        );
     }
 }
-fn island_number_field(c:&Card,rect:Rect,value:egui::DragValue<'_>,id:impl std::hash::Hash)->egui::Response {
-    let mut ui=egui::Ui::new(c.ui.ctx().clone(),egui::Id::new(id),egui::UiBuilder::new().layer_id(c.ui.layer_id()).max_rect(rect).style(c.ui.style().clone()));
-    ui.set_clip_rect(c.painter.clip_rect());ui.set_opacity(c.painter.opacity());if !c.live{ui.disable();}
-    ui.spacing_mut().interact_size=rect.size();ui.spacing_mut().button_padding=egui::vec2(2.0,1.0);
-    ui.style_mut().drag_value_text_style=egui::TextStyle::Body;
-    ui.style_mut().text_styles.insert(egui::TextStyle::Body,c.font(11.0,W::Bold));
-    ui.style_mut().explanation_tooltips=false;
-    ui.visuals_mut().widgets.inactive.weak_bg_fill=Color32::TRANSPARENT;
-    crate::quota_ui::bar_tooltip(ui.put(rect,value.update_while_editing(false)),"點選輸入數值".into())
+fn island_number_field(
+    c: &Card,
+    rect: Rect,
+    value: egui::DragValue<'_>,
+    id: impl std::hash::Hash,
+) -> egui::Response {
+    let mut ui = egui::Ui::new(
+        c.ui.ctx().clone(),
+        egui::Id::new(id),
+        egui::UiBuilder::new()
+            .layer_id(c.ui.layer_id())
+            .max_rect(rect)
+            .style(c.ui.style().clone()),
+    );
+    ui.set_clip_rect(c.painter.clip_rect());
+    ui.set_opacity(c.painter.opacity());
+    if !c.live {
+        ui.disable();
+    }
+    ui.spacing_mut().interact_size = rect.size();
+    ui.spacing_mut().button_padding = egui::vec2(2.0, 1.0);
+    ui.style_mut().drag_value_text_style = egui::TextStyle::Body;
+    ui.style_mut()
+        .text_styles
+        .insert(egui::TextStyle::Body, c.font(11.0, W::Bold));
+    ui.style_mut().explanation_tooltips = false;
+    ui.visuals_mut().widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+    crate::quota_ui::bar_tooltip(
+        ui.put(rect, value.update_while_editing(false)),
+        "點選輸入數值".into(),
+    )
 }
 /// 加减器：[−] 可输入数值 [+]，右缘对齐到 right。
-fn stepper(c:&Card,right:f32,y:f32,value:egui::DragValue<'_>,id:&str)->(i32,egui::Response) {
-    let (w,vw)=(25.0,58.0);
-    let x=right-w*2.0-vw;
-    let field=island_number_field(c,c.rect(x+w,y,vw,19.0),value,("health-number",id));
-    let delta=if setting_button(c,x,y,w,"−",false,&format!("{id}-minus")){-1}
-        else if setting_button(c,right-w,y,w,"+",false,&format!("{id}-plus")){1}else{0};
-    (delta,field)
+fn stepper(
+    c: &Card,
+    right: f32,
+    y: f32,
+    value: egui::DragValue<'_>,
+    id: &str,
+) -> (i32, egui::Response) {
+    let (w, vw) = (25.0, 58.0);
+    let x = right - w * 2.0 - vw;
+    let field = island_number_field(c, c.rect(x + w, y, vw, 19.0), value, ("health-number", id));
+    let delta = if setting_button(c, x, y, w, "−", false, &format!("{id}-minus")) {
+        -1
+    } else if setting_button(c, right - w, y, w, "+", false, &format!("{id}-plus")) {
+        1
+    } else {
+        0
+    };
+    (delta, field)
 }
 impl App {
-    pub(crate) fn page_settings(&mut self,c:&Card) {
-        let help=match self.settings_category{0=>"外觀與系統",1=>"調整喝水、久坐與提醒時段",2=>"點選分鐘數可直接輸入，也可用加減微調",_=>"通知"};
-        if self.settings_category!=1{c.text(44.0,44.0,help,10.5,W::Regular,theme::GRAY,H::Left);}
-        let before=format!("{:?}",self.settings);
-        self.settings_editing=false;
+    pub(crate) fn page_settings(&mut self, c: &Card) {
+        let help = match self.settings_category {
+            0 => "外觀與系統",
+            1 => "調整喝水、久坐與提醒時段",
+            2 => "點選分鐘數可直接輸入，也可用加減微調",
+            _ => "通知",
+        };
+        if self.settings_category != 1 {
+            c.text(44.0, 44.0, help, 10.5, W::Regular, theme::GRAY, H::Left);
+        }
+        let before = format!("{:?}", self.settings);
+        self.settings_editing = false;
         match self.settings_category {
-            0=>{
-                let choices=[("吉祥物",self.settings.pet),("極簡劉海",self.settings.minimal),("系統提示",self.settings.system_hud),("全屏隱藏",self.settings.hide_fullscreen)];
-                for (i,(name,on)) in choices.iter().enumerate(){let x=42.0+(i%2) as f32*169.0;let y=57.0+(i/2) as f32*27.0;let text=format!("{}  {}",name,if *on{"開"}else{"關"});if setting_button(c,x,y,158.0,&text,*on,&format!("general-{i}")){match i{0=>self.set_pet(!self.settings.pet),1=>self.set_minimal(!self.settings.minimal),2=>self.settings.system_hud=!self.settings.system_hud,_=>self.settings.hide_fullscreen=!self.settings.hide_fullscreen}}}
-                c.text(42.0,116.0,"鬼島收起時常駐；極簡模式保留細線",10.5,W::Regular,theme::GRAY,H::Left);
-            }
-            1 if self.health_time=>self.health_time_page(c),
-            1=>{
-                // 与健康页同一套切换（标题旁的水滴 / 椅子）；四行一列，标签靠左、加减器靠右对齐。
-                // 喝水三行、久坐一行加两句说明；最后一行「提醒时段」两边共用，位置不变。
-                let sv=self.sit_view_t.pos.clamp(0.0,1.0);
-                let row_y=|i:usize|38.0+i as f32*22.0;
-                for i in 1..4{c.fill(44.0,row_y(i)-2.0,326.0,1.0,0.5,Color32::from_rgb(28,28,31));}
-                if sv<0.99{
-                    let wc=c.faded(1.0-sv);let wc=if self.sit_mode{wc.ghost()}else{wc};
-                    for (i,label) in ["每日目標","每次記錄","提醒間隔"].iter().enumerate(){
-                        wc.text(44.0,row_y(i)+13.0,label,10.5,W::Regular,theme::GRAY,H::Left);
-                        let goal=self.water.goal_ml;let mut liters=goal as f32/1000.0;
-                        let value=match i {
-                            0=>egui::DragValue::new(&mut liters).range(0.5..=6.0).speed(0.25).suffix(" L").min_decimals(1).max_decimals(2),
-                            1=>egui::DragValue::new(&mut self.settings.serving_ml).range(50..=1000).speed(50.0).suffix(" ml"),
-                            _=>egui::DragValue::new(&mut self.settings.water_minutes).range(5..=180).speed(5.0).suffix(" 分鐘"),
-                        };
-                        let (d,field)=stepper(&wc,370.0,row_y(i),value,&format!("water-{i}"));
-                        if field.gained_focus(){self.pending.push(Cmd::Focus);}self.settings_editing|=field.has_focus();
+            0 => {
+                let choices = [
+                    ("吉祥物", self.settings.pet),
+                    ("極簡劉海", self.settings.minimal),
+                    ("系統提示", self.settings.system_hud),
+                    ("全屏隱藏", self.settings.hide_fullscreen),
+                ];
+                for (i, (name, on)) in choices.iter().enumerate() {
+                    let x = 42.0 + (i % 2) as f32 * 169.0;
+                    let y = 57.0 + (i / 2) as f32 * 27.0;
+                    let text = format!("{}  {}", name, if *on { "開" } else { "關" });
+                    if setting_button(c, x, y, 158.0, &text, *on, &format!("general-{i}")) {
                         match i {
-                            0=>{self.water.goal_ml=((liters*1000.0).round() as i32+d*250).clamp(500,6000) as u32;if self.water.goal_ml!=goal{self.water.save();}}
-                            1=>self.settings.serving_ml=(self.settings.serving_ml as i32+d*50).clamp(50,1000) as u32,
-                            _=>self.settings.water_minutes=(self.settings.water_minutes as i32+d*5).clamp(5,180) as u32,
+                            0 => self.set_pet(!self.settings.pet),
+                            1 => self.set_minimal(!self.settings.minimal),
+                            2 => self.settings.system_hud = !self.settings.system_hud,
+                            _ => self.settings.hide_fullscreen = !self.settings.hide_fullscreen,
                         }
                     }
                 }
-                if sv>0.01{
-                    let sc=c.faded(sv);let sc=if self.sit_mode{sc}else{sc.ghost()};
-                    sc.text(44.0,row_y(0)+13.0,"坐滿多久提醒",10.5,W::Regular,theme::GRAY,H::Left);
-                    let value=egui::DragValue::new(&mut self.settings.sit_minutes).range(15..=180).speed(5.0).suffix(" 分鐘");
-                    let (d,field)=stepper(&sc,370.0,row_y(0),value,"sit");
-                    if field.gained_focus(){self.pending.push(Cmd::Focus);}self.settings_editing|=field.has_focus();
-                    if d!=0{self.settings.sit_minutes=(self.settings.sit_minutes as i32+d*5).clamp(15,180) as u32;}
-                    sc.text(44.0,row_y(1)+13.0,"專注計時進行中不打擾，專注結束後再提醒",10.5,W::Regular,theme::GRAY,H::Left);
-                    sc.text(44.0,row_y(2)+13.0,"提醒後常駐，點選確認或起身後重新計時",10.5,W::Regular,theme::GRAY,H::Left);
+                c.text(
+                    42.0,
+                    116.0,
+                    "鬼島收起時常駐；極簡模式保留細線",
+                    10.5,
+                    W::Regular,
+                    theme::GRAY,
+                    H::Left,
+                );
+            }
+            1 if self.health_time => self.health_time_page(c),
+            1 => {
+                // 与健康页同一套切换（标题旁的水滴 / 椅子）；四行一列，标签靠左、加减器靠右对齐。
+                // 喝水三行、久坐一行加两句说明；最后一行「提醒时段」两边共用，位置不变。
+                let sv = self.sit_view_t.pos.clamp(0.0, 1.0);
+                let row_y = |i: usize| 38.0 + i as f32 * 22.0;
+                for i in 1..4 {
+                    c.fill(
+                        44.0,
+                        row_y(i) - 2.0,
+                        326.0,
+                        1.0,
+                        0.5,
+                        Color32::from_rgb(28, 28, 31),
+                    );
+                }
+                if sv < 0.99 {
+                    let wc = c.faded(1.0 - sv);
+                    let wc = if self.sit_mode { wc.ghost() } else { wc };
+                    for (i, label) in ["每日目標", "每次記錄", "提醒間隔"].iter().enumerate()
+                    {
+                        wc.text(
+                            44.0,
+                            row_y(i) + 13.0,
+                            label,
+                            10.5,
+                            W::Regular,
+                            theme::GRAY,
+                            H::Left,
+                        );
+                        let goal = self.water.goal_ml;
+                        let mut liters = goal as f32 / 1000.0;
+                        let value = match i {
+                            0 => egui::DragValue::new(&mut liters)
+                                .range(0.5..=6.0)
+                                .speed(0.25)
+                                .suffix(" L")
+                                .min_decimals(1)
+                                .max_decimals(2),
+                            1 => egui::DragValue::new(&mut self.settings.serving_ml)
+                                .range(50..=1000)
+                                .speed(50.0)
+                                .suffix(" ml"),
+                            _ => egui::DragValue::new(&mut self.settings.water_minutes)
+                                .range(5..=180)
+                                .speed(5.0)
+                                .suffix(" 分鐘"),
+                        };
+                        let (d, field) =
+                            stepper(&wc, 370.0, row_y(i), value, &format!("water-{i}"));
+                        if field.gained_focus() {
+                            self.pending.push(Cmd::Focus);
+                        }
+                        self.settings_editing |= field.has_focus();
+                        match i {
+                            0 => {
+                                self.water.goal_ml = ((liters * 1000.0).round() as i32 + d * 250)
+                                    .clamp(500, 6000)
+                                    as u32;
+                                if self.water.goal_ml != goal {
+                                    self.water.save();
+                                }
+                            }
+                            1 => {
+                                self.settings.serving_ml =
+                                    (self.settings.serving_ml as i32 + d * 50).clamp(50, 1000)
+                                        as u32
+                            }
+                            _ => {
+                                self.settings.water_minutes =
+                                    (self.settings.water_minutes as i32 + d * 5).clamp(5, 180)
+                                        as u32
+                            }
+                        }
+                    }
+                }
+                if sv > 0.01 {
+                    let sc = c.faded(sv);
+                    let sc = if self.sit_mode { sc } else { sc.ghost() };
+                    sc.text(
+                        44.0,
+                        row_y(0) + 13.0,
+                        "坐滿多久提醒",
+                        10.5,
+                        W::Regular,
+                        theme::GRAY,
+                        H::Left,
+                    );
+                    let value = egui::DragValue::new(&mut self.settings.sit_minutes)
+                        .range(15..=180)
+                        .speed(5.0)
+                        .suffix(" 分鐘");
+                    let (d, field) = stepper(&sc, 370.0, row_y(0), value, "sit");
+                    if field.gained_focus() {
+                        self.pending.push(Cmd::Focus);
+                    }
+                    self.settings_editing |= field.has_focus();
+                    if d != 0 {
+                        self.settings.sit_minutes =
+                            (self.settings.sit_minutes as i32 + d * 5).clamp(15, 180) as u32;
+                    }
+                    sc.text(
+                        44.0,
+                        row_y(1) + 13.0,
+                        "專注計時進行中不打擾，專注結束後再提醒",
+                        10.5,
+                        W::Regular,
+                        theme::GRAY,
+                        H::Left,
+                    );
+                    sc.text(
+                        44.0,
+                        row_y(2) + 13.0,
+                        "提醒後常駐，點選確認或起身後重新計時",
+                        10.5,
+                        W::Regular,
+                        theme::GRAY,
+                        H::Left,
+                    );
                 }
                 // 最后一行两边共用：提醒时段 + 午休的摘要，点进二级页修改。
-                let y=row_y(3);
-                let r=c.hit(40.0,y-2.0,334.0,22.0,"health-time").on_hover_text("設定提醒時段和午休免打擾");
-                let (hv,_)=c.hover_t(&r);
-                if hv>0.0{c.fill(40.0,y-2.0,334.0,22.0,8.0,Color32::from_white_alpha((hv*14.0) as u8));}
-                c.text(44.0,y+13.0,"提醒時段",10.5,W::Regular,theme::GRAY,H::Left);
-                c.text(356.0,y+13.0,&self.health_time_summary(),10.5,W::Semibold,theme::WHITE,H::Right);
-                c.text(366.0,y+13.5,"›",14.0,W::Bold,theme::GRAY,H::Center);
-                if r.clicked(){self.health_time=true;}
-            }
-            2=>{
-                for (i,name) in ["專注","休息"].iter().enumerate(){
-                    let y=53.0+i as f32*23.0;
-                    c.text(48.0,y+13.0,name,10.5,W::Regular,theme::GRAY,H::Left);
-                    let value=if i==0{&mut self.settings.focus_minutes}else{&mut self.settings.rest_minutes};
-                    let max=if i==0{180}else{60};let rect=c.rect(168.0,y,76.0,19.0);
-                    let field=island_number_field(c,rect,egui::DragValue::new(value).range(1..=max).suffix(" 分鐘"),("focus-duration",i));
-                    if field.gained_focus(){self.pending.push(Cmd::Focus);}
-                    self.settings_editing|=field.has_focus();
-                    if setting_button(c,131.0,y,27.0,"−",false,&format!("focus-minus-{i}")){*value=value.saturating_sub(1).max(1);}
-                    if setting_button(c,255.0,y,27.0,"+",false,&format!("focus-plus-{i}")){*value=(*value+1).min(max);}
+                let y = row_y(3);
+                let r = c
+                    .hit(40.0, y - 2.0, 334.0, 22.0, "health-time")
+                    .on_hover_text("設定提醒時段和午休免打擾");
+                let (hv, _) = c.hover_t(&r);
+                if hv > 0.0 {
+                    c.fill(
+                        40.0,
+                        y - 2.0,
+                        334.0,
+                        22.0,
+                        8.0,
+                        Color32::from_white_alpha((hv * 14.0) as u8),
+                    );
                 }
-                c.text(315.0,93.0,"下次生效",10.5,W::Regular,theme::GRAY,H::Center);
-            }
-            _=>{
-                if setting_button(c,43.0,56.0,152.0,if self.settings.notifications{"提醒 · 開"}else{"提醒 · 關"},self.settings.notifications,"set-notice"){self.settings.notifications=!self.settings.notifications;}
-                if setting_button(c,212.0,56.0,153.0,if self.settings.system_notify && self.settings.sound{"聲音 · 開"}else{"聲音 · 關"},self.settings.system_notify && self.settings.sound,"set-sound"){
-                    self.settings.sound=!(self.settings.system_notify && self.settings.sound);
-                    if self.settings.sound {self.settings.system_notify=true;}
+                c.text(
+                    44.0,
+                    y + 13.0,
+                    "提醒時段",
+                    10.5,
+                    W::Regular,
+                    theme::GRAY,
+                    H::Left,
+                );
+                c.text(
+                    356.0,
+                    y + 13.0,
+                    &self.health_time_summary(),
+                    10.5,
+                    W::Semibold,
+                    theme::WHITE,
+                    H::Right,
+                );
+                c.text(366.0, y + 13.5, "›", 14.0, W::Bold, theme::GRAY, H::Center);
+                if r.clicked() {
+                    self.health_time = true;
                 }
-                if setting_button(c,43.0,84.0,152.0,if self.settings.read_notifications{"斷開系統通知"}else{"連線系統通知"},self.settings.read_notifications,"set-listener"){self.pending.push(if self.settings.read_notifications{Cmd::DisconnectNotifications}else{Cmd::RequestNotifications});}
-                let status=c.fit(&self.listener_status,10.5,W::Regular,170.0);c.text(210.0,97.0,&status,10.5,W::Regular,theme::GRAY,H::Left);
+            }
+            2 => {
+                for (i, name) in ["專注", "休息"].iter().enumerate() {
+                    let y = 53.0 + i as f32 * 23.0;
+                    c.text(48.0, y + 13.0, name, 10.5, W::Regular, theme::GRAY, H::Left);
+                    let value = if i == 0 {
+                        &mut self.settings.focus_minutes
+                    } else {
+                        &mut self.settings.rest_minutes
+                    };
+                    let max = if i == 0 { 180 } else { 60 };
+                    let rect = c.rect(168.0, y, 76.0, 19.0);
+                    let field = island_number_field(
+                        c,
+                        rect,
+                        egui::DragValue::new(value).range(1..=max).suffix(" 分鐘"),
+                        ("focus-duration", i),
+                    );
+                    if field.gained_focus() {
+                        self.pending.push(Cmd::Focus);
+                    }
+                    self.settings_editing |= field.has_focus();
+                    if setting_button(c, 131.0, y, 27.0, "−", false, &format!("focus-minus-{i}"))
+                    {
+                        *value = value.saturating_sub(1).max(1);
+                    }
+                    if setting_button(c, 255.0, y, 27.0, "+", false, &format!("focus-plus-{i}")) {
+                        *value = (*value + 1).min(max);
+                    }
+                }
+                c.text(
+                    315.0,
+                    93.0,
+                    "下次生效",
+                    10.5,
+                    W::Regular,
+                    theme::GRAY,
+                    H::Center,
+                );
+            }
+            _ => {
+                if setting_button(
+                    c,
+                    43.0,
+                    56.0,
+                    152.0,
+                    if self.settings.notifications {
+                        "提醒 · 開"
+                    } else {
+                        "提醒 · 關"
+                    },
+                    self.settings.notifications,
+                    "set-notice",
+                ) {
+                    self.settings.notifications = !self.settings.notifications;
+                }
+                if setting_button(
+                    c,
+                    212.0,
+                    56.0,
+                    153.0,
+                    if self.settings.system_notify && self.settings.sound {
+                        "聲音 · 開"
+                    } else {
+                        "聲音 · 關"
+                    },
+                    self.settings.system_notify && self.settings.sound,
+                    "set-sound",
+                ) {
+                    self.settings.sound = !(self.settings.system_notify && self.settings.sound);
+                    if self.settings.sound {
+                        self.settings.system_notify = true;
+                    }
+                }
+                if setting_button(
+                    c,
+                    43.0,
+                    84.0,
+                    152.0,
+                    if self.settings.read_notifications {
+                        "斷開系統通知"
+                    } else {
+                        "連線系統通知"
+                    },
+                    self.settings.read_notifications,
+                    "set-listener",
+                ) {
+                    self.pending.push(if self.settings.read_notifications {
+                        Cmd::DisconnectNotifications
+                    } else {
+                        Cmd::RequestNotifications
+                    });
+                }
+                let status = c.fit(&self.listener_status, 10.5, W::Regular, 170.0);
+                c.text(210.0, 97.0, &status, 10.5, W::Regular, theme::GRAY, H::Left);
             }
         }
-        if before!=format!("{:?}",self.settings){self.settings.save();}
+        if before != format!("{:?}", self.settings) {
+            self.settings.save();
+        }
     }
 }
 
 /// 歌詞顏色：開關、色盤選取與可拖曳的漸層色帶（含一次性拖曳引導）。
-pub(crate) fn lyric_gradient_editor(ui:&mut egui::Ui, settings:&mut crate::model::Settings) {
-    setting_row(ui,"歌詞漸層","以拖曳方式讓島上歌詞在色盤上漸變換色",&mut settings.lyric_gradient);
+pub(crate) fn lyric_gradient_editor(ui: &mut egui::Ui, settings: &mut crate::model::Settings) {
+    setting_row(
+        ui,
+        "歌詞漸層",
+        "以拖曳方式讓島上歌詞在色盤上漸變換色",
+        &mut settings.lyric_gradient,
+    );
     if settings.lyric_gradient {
         ui.separator();
         // 色盤色塊，點擊選取；選中項加白色外框。
-        let swatch=28.0;
-        ui.horizontal_wrapped(|ui|{
-            ui.spacing_mut().item_spacing=egui::vec2(6.0,6.0);
+        let swatch = 28.0;
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
             for p in 0..crate::lyric_gradient::PALETTE_COUNT {
-                let (rect,resp)=ui.allocate_exact_size(egui::vec2(swatch,swatch),egui::Sense::click());
+                let (rect, resp) =
+                    ui.allocate_exact_size(egui::vec2(swatch, swatch), egui::Sense::click());
                 ui.painter().add(egui::Shape::Mesh(std::sync::Arc::new(
-                    crate::lyric_gradient::strip_mesh(rect,p,6.0))));
+                    crate::lyric_gradient::strip_mesh(rect, p, 6.0),
+                )));
                 if resp.clicked() {
-                    settings.lyric_gradient_preset=p;
-                    settings.lyric_gradient_hint=false;
+                    settings.lyric_gradient_preset = p;
+                    settings.lyric_gradient_hint = false;
                 }
-                if settings.lyric_gradient_preset==p {
-                    ui.painter().rect_stroke(rect.expand(2.0),7.0,egui::Stroke::new(1.8,Color32::WHITE),egui::StrokeKind::Middle);
+                if settings.lyric_gradient_preset == p {
+                    ui.painter().rect_stroke(
+                        rect.expand(2.0),
+                        7.0,
+                        egui::Stroke::new(1.8, Color32::WHITE),
+                        egui::StrokeKind::Middle,
+                    );
                 }
             }
         });
         ui.add_space(4.0);
         // 可拖曳漸層色帶：拖曳控制漸層相位。
-        let (rect,resp)=ui.allocate_exact_size(
-            egui::vec2(ui.available_width(),18.0),egui::Sense::drag());
+        let (rect, resp) =
+            ui.allocate_exact_size(egui::vec2(ui.available_width(), 18.0), egui::Sense::drag());
         ui.painter().add(egui::Shape::Mesh(std::sync::Arc::new(
-            crate::lyric_gradient::strip_mesh(rect,settings.lyric_gradient_preset,9.0))));
-        let hx=rect.left()+rect.width()*settings.lyric_gradient_shift;
-        ui.painter().circle_filled(egui::pos2(hx,rect.center().y),8.0,Color32::from_black_alpha(60));
-        ui.painter().circle_filled(egui::pos2(hx,rect.center().y),7.0,Color32::WHITE);
+            crate::lyric_gradient::strip_mesh(rect, settings.lyric_gradient_preset, 9.0),
+        )));
+        let hx = rect.left() + rect.width() * settings.lyric_gradient_shift;
+        ui.painter().circle_filled(
+            egui::pos2(hx, rect.center().y),
+            8.0,
+            Color32::from_black_alpha(60),
+        );
+        ui.painter()
+            .circle_filled(egui::pos2(hx, rect.center().y), 7.0, Color32::WHITE);
         if resp.drag_started() || resp.dragged() {
-            if let Some(pointer)=resp.interact_pointer_pos() {
-                settings.lyric_gradient_shift=
-                    ((pointer.x-rect.left())/rect.width()).clamp(0.0,1.0);
+            if let Some(pointer) = resp.interact_pointer_pos() {
+                settings.lyric_gradient_shift =
+                    ((pointer.x - rect.left()) / rect.width()).clamp(0.0, 1.0);
             }
-            settings.lyric_gradient_hint=false;
+            settings.lyric_gradient_hint = false;
         }
         // 引導：首次使用提示一次，開始拖曳或選色後自動關閉。
         if settings.lyric_gradient_hint {
-            settings_hint(ui,"按住色帶左右拖動，即可捲動歌詞的漸層位置；點上方色塊可更換色盤。");
+            settings_hint(
+                ui,
+                "按住色帶左右拖動，即可捲動歌詞的漸層位置；點上方色塊可更換色盤。",
+            );
         }
-        settings_hint(ui,"漸層套用於島上目前歌詞；關閉開關後恢復單色。");
+        settings_hint(ui, "漸層套用於島上目前歌詞；關閉開關後恢復單色。");
     }
 }
 
 /// 歌詞導唱外掛：開關與樣式（內建或 `%APPDATA%\Kuidao\lyric-karaoke` 的樣式包）。
-pub(crate) fn lyric_karaoke_editor(ui:&mut egui::Ui, settings:&mut crate::model::Settings) {
+pub(crate) fn lyric_karaoke_editor(ui: &mut egui::Ui, settings: &mut crate::model::Settings) {
     ui.separator();
-    setting_row(ui,"歌詞導唱","跟播放進度逐字亮起：已唱的字走漸層色，未唱的字變暗，前緣柔和過渡",&mut settings.lyric_karaoke);
+    setting_row(
+        ui,
+        "歌詞導唱",
+        "跟播放進度逐字亮起：已唱的字走漸層色，未唱的字變暗，前緣柔和過渡",
+        &mut settings.lyric_karaoke,
+    );
     if settings.lyric_karaoke {
-        let names=crate::lyric_karaoke::style_names();
-        if !names.iter().any(|name|*name==settings.lyric_karaoke_style) {
-            settings.lyric_karaoke_style=crate::lyric_karaoke::BUILTIN.into();
+        let names = crate::lyric_karaoke::style_names();
+        if !names
+            .iter()
+            .any(|name| *name == settings.lyric_karaoke_style)
+        {
+            settings.lyric_karaoke_style = crate::lyric_karaoke::BUILTIN.into();
         }
-        let ctx=&ui.ctx().clone();
-        ui.horizontal(|ui|{
-            ui.add(egui::Label::new(egui::RichText::new("導唱樣式").size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41)))));
+        let ctx = &ui.ctx().clone();
+        ui.horizontal(|ui| {
+            ui.add(egui::Label::new(
+                egui::RichText::new("導唱樣式")
+                    .size(13.0)
+                    .color(settings_color(
+                        ctx,
+                        Color32::WHITE,
+                        Color32::from_rgb(30, 34, 41),
+                    )),
+            ));
             egui::ComboBox::from_id_salt("lyric-karaoke-style")
                 .selected_text(settings.lyric_karaoke_style.clone())
                 .width(180.0)
-                .show_ui(ui,|ui|{
+                .show_ui(ui, |ui| {
                     for name in &names {
-                        ui.selectable_value(&mut settings.lyric_karaoke_style,name.clone(),name.clone());
+                        ui.selectable_value(
+                            &mut settings.lyric_karaoke_style,
+                            name.clone(),
+                            name.clone(),
+                        );
                     }
                 });
         });
-        settings_hint(ui,"導唱與上面的整句漸層可各自開關；導唱只作用在目前這一句，不會顯示譯文。");
+        settings_hint(
+            ui,
+            "導唱與上面的整句漸層可各自開關；導唱只作用在目前這一句，不會顯示譯文。",
+        );
         settings_hint(ui,"自訂樣式包：把 JSON 放進 %APPDATA%\\Kuidao\\lyric-karaoke\\ 後重新啟動，名稱就會出現在上面；格式錯誤會被忽略，不影響內建樣式。");
     }
 }
 
-fn switch(ui:&mut egui::Ui,value:&mut bool)->bool {
-    let (rect,response)=ui.allocate_exact_size(egui::vec2(34.0,20.0),egui::Sense::click());
-    if response.clicked(){*value=!*value;}
-    let fill=if *value{Color32::from_rgb(48,184,92)}else{settings_color(&ui.ctx().clone(),Color32::from_rgb(82,82,87),Color32::from_rgb(203,207,214))};
-    ui.painter().rect_filled(rect,10.0,fill);
-    let x=if *value{rect.right()-10.0}else{rect.left()+10.0};
-    ui.painter().circle_filled(egui::pos2(x,rect.center().y+0.5),7.5,Color32::from_black_alpha(35));
-    ui.painter().circle_filled(egui::pos2(x,rect.center().y),7.0,Color32::WHITE);
+fn switch(ui: &mut egui::Ui, value: &mut bool) -> bool {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(34.0, 20.0), egui::Sense::click());
+    if response.clicked() {
+        *value = !*value;
+    }
+    let fill = if *value {
+        Color32::from_rgb(48, 184, 92)
+    } else {
+        settings_color(
+            &ui.ctx().clone(),
+            Color32::from_rgb(82, 82, 87),
+            Color32::from_rgb(203, 207, 214),
+        )
+    };
+    ui.painter().rect_filled(rect, 10.0, fill);
+    let x = if *value {
+        rect.right() - 10.0
+    } else {
+        rect.left() + 10.0
+    };
+    ui.painter().circle_filled(
+        egui::pos2(x, rect.center().y + 0.5),
+        7.5,
+        Color32::from_black_alpha(35),
+    );
+    ui.painter()
+        .circle_filled(egui::pos2(x, rect.center().y), 7.0, Color32::WHITE);
     response.clicked()
 }
 /// 设置页版式：标签列宽、开关尺寸、控件与卡片右边缘之间的固定留白。
@@ -1189,45 +2919,110 @@ const SETTINGS_SWITCH_W: f32 = 34.0;
 const SETTINGS_ROW_GAP: f32 = 16.0;
 
 /// 开关行：左侧标题 + 说明（宽度固定、自动换行），右侧开关，长说明也不会把开关挤出卡片。
-pub(crate) fn setting_row(ui:&mut egui::Ui,title:&str,description:&str,value:&mut bool){
-    let ctx=&ui.ctx().clone();
+pub(crate) fn setting_row(ui: &mut egui::Ui, title: &str, description: &str, value: &mut bool) {
+    let ctx = &ui.ctx().clone();
     ui.add_space(2.0);
-    ui.horizontal(|ui|{
-        let text_w=(ui.available_width()-SETTINGS_SWITCH_W-SETTINGS_ROW_GAP).max(120.0);
-        ui.vertical(|ui|{
+    ui.horizontal(|ui| {
+        let text_w = (ui.available_width() - SETTINGS_SWITCH_W - SETTINGS_ROW_GAP).max(120.0);
+        ui.vertical(|ui| {
             ui.set_width(text_w);
-            ui.spacing_mut().item_spacing.y=2.0;
-            ui.add(egui::Label::new(egui::RichText::new(title).size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41)))).wrap());
-            if !description.is_empty(){ui.add(egui::Label::new(egui::RichText::new(description).size(11.5).color(settings_color(ctx,Color32::from_gray(185),Color32::from_gray(82)))).wrap());}
+            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.add(
+                egui::Label::new(egui::RichText::new(title).size(13.0).color(settings_color(
+                    ctx,
+                    Color32::WHITE,
+                    Color32::from_rgb(30, 34, 41),
+                )))
+                .wrap(),
+            );
+            if !description.is_empty() {
+                ui.add(
+                    egui::Label::new(egui::RichText::new(description).size(11.5).color(
+                        settings_color(ctx, Color32::from_gray(185), Color32::from_gray(82)),
+                    ))
+                    .wrap(),
+                );
+            }
         });
         // add_space 之后还会再插入一次 item_spacing.x，这里一并扣掉，开关才不会每行往外挤一点。
-        ui.add_space((ui.available_width()-SETTINGS_SWITCH_W-ui.spacing().item_spacing.x).max(0.0));
-        switch(ui,value);
+        ui.add_space(
+            (ui.available_width() - SETTINGS_SWITCH_W - ui.spacing().item_spacing.x).max(0.0),
+        );
+        switch(ui, value);
     });
     ui.add_space(2.0);
 }
 
 /// 设置页统一的分段选择器（灰色底框 + 选中块）。返回值为是否发生了切换。
-pub(crate) fn settings_segmented<T:PartialEq+Copy>(ui:&mut egui::Ui,value:&mut T,options:&[(T,&str)],item_w:f32)->bool{
-    let ctx=&ui.ctx().clone();
-    let mut changed=false;
-    egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(28,28,30),Color32::from_rgb(230,233,238)))
-        .corner_radius(8.0).inner_margin(3).show(ui,|ui|{
-            ui.horizontal_wrapped(|ui|{
-                ui.spacing_mut().item_spacing.x=2.0;
-                for (option,label) in options {
-                    let selected=*value==*option;
-                    let text=egui::RichText::new(*label).size(12.0).color(if selected{settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))}else{settings_color(ctx,Color32::from_gray(200),Color32::from_gray(70))});
-                    let button=egui::Button::new(text)
-                        .fill(if selected{settings_color(ctx,Color32::from_rgb(72,72,76),Color32::WHITE)}else{Color32::TRANSPARENT})
-                        .stroke(egui::Stroke::NONE).corner_radius(6.0);
-                    let width=item_w.max(ctx.fonts(|f|f.layout_no_wrap(label.to_string(),egui::FontId::proportional(12.0),Color32::WHITE).size().x)+20.0);
+pub(crate) fn settings_segmented<T: PartialEq + Copy>(
+    ui: &mut egui::Ui,
+    value: &mut T,
+    options: &[(T, &str)],
+    item_w: f32,
+) -> bool {
+    let ctx = &ui.ctx().clone();
+    let mut changed = false;
+    egui::Frame::new()
+        .fill(settings_color(
+            ctx,
+            Color32::from_rgb(28, 28, 30),
+            Color32::from_rgb(230, 233, 238),
+        ))
+        .corner_radius(8.0)
+        .inner_margin(3)
+        .show(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 2.0;
+                for (option, label) in options {
+                    let selected = *value == *option;
+                    let text = egui::RichText::new(*label).size(12.0).color(if selected {
+                        settings_color(ctx, Color32::WHITE, Color32::from_rgb(30, 34, 41))
+                    } else {
+                        settings_color(ctx, Color32::from_gray(200), Color32::from_gray(70))
+                    });
+                    let button = egui::Button::new(text)
+                        .fill(if selected {
+                            settings_color(ctx, Color32::from_rgb(72, 72, 76), Color32::WHITE)
+                        } else {
+                            Color32::TRANSPARENT
+                        })
+                        .stroke(egui::Stroke::NONE)
+                        .corner_radius(6.0);
+                    let width = item_w.max(
+                        ctx.fonts(|f| {
+                            f.layout_no_wrap(
+                                label.to_string(),
+                                egui::FontId::proportional(12.0),
+                                Color32::WHITE,
+                            )
+                            .size()
+                            .x
+                        }) + 20.0,
+                    );
                     // 选中项浮起一点：浅色模式白底加淡阴影，深色模式更亮的底色加阴影。
-                    let clicked=if selected {
-                        egui::Frame::new().corner_radius(6.0).shadow(egui::Shadow{offset:[0,1],blur:4,spread:0,color:Color32::from_black_alpha(if ui.visuals().dark_mode{90}else{38})})
-                            .show(ui,|ui|ui.add_sized([width,26.0],button)).inner.clicked()
-                    } else {ui.add_sized([width,26.0],button).clicked()};
-                    if clicked && !selected {*value=*option;changed=true;}
+                    let clicked = if selected {
+                        egui::Frame::new()
+                            .corner_radius(6.0)
+                            .shadow(egui::Shadow {
+                                offset: [0, 1],
+                                blur: 4,
+                                spread: 0,
+                                color: Color32::from_black_alpha(if ui.visuals().dark_mode {
+                                    90
+                                } else {
+                                    38
+                                }),
+                            })
+                            .show(ui, |ui| ui.add_sized([width, 26.0], button))
+                            .inner
+                            .clicked()
+                    } else {
+                        ui.add_sized([width, 26.0], button).clicked()
+                    };
+                    if clicked && !selected {
+                        *value = *option;
+                        changed = true;
+                    }
                 }
             });
         });
@@ -1235,357 +3030,909 @@ pub(crate) fn settings_segmented<T:PartialEq+Copy>(ui:&mut egui::Ui,value:&mut T
 }
 
 /// 选项行：标签列之后紧跟控件，同一卡片里所有控件左缘对齐成一条竖线。
-pub(crate) fn settings_control_row_right(ui:&mut egui::Ui,title:&str,controls:impl FnOnce(&mut egui::Ui))->egui::Response{
-    settings_control_row(ui,title,SETTINGS_LABEL_W,|ui|ui.horizontal(|ui|controls(ui)).response)
+pub(crate) fn settings_control_row_right(
+    ui: &mut egui::Ui,
+    title: &str,
+    controls: impl FnOnce(&mut egui::Ui),
+) -> egui::Response {
+    settings_control_row(ui, title, SETTINGS_LABEL_W, |ui| {
+        ui.horizontal(|ui| controls(ui)).response
+    })
 }
 
 /// 设置项下方的说明文字。
-fn island_size_slider(ui:&mut egui::Ui,value:&mut u32)->egui::Response {
-    let id=ui.make_persistent_id("island-size-draft");
-    let mut draft=ui.data(|d|d.get_temp::<u32>(id)).unwrap_or(*value);
-    let response=ui.add(egui::Slider::new(&mut draft,crate::model::ISLAND_SIZE_MIN..=crate::model::ISLAND_SIZE_MAX)
-        .step_by(crate::model::ISLAND_SIZE_STEP as f64).suffix("%"));
+fn island_size_slider(ui: &mut egui::Ui, value: &mut u32) -> egui::Response {
+    let id = ui.make_persistent_id("island-size-draft");
+    let mut draft = ui.data(|d| d.get_temp::<u32>(id)).unwrap_or(*value);
+    let response = ui.add(
+        egui::Slider::new(
+            &mut draft,
+            crate::model::ISLAND_SIZE_MIN..=crate::model::ISLAND_SIZE_MAX,
+        )
+        .step_by(crate::model::ISLAND_SIZE_STEP as f64)
+        .suffix("%"),
+    );
     // 文字輸入與拖曳都在變更當下就套用，避免放開滑鼠前的舊草稿把數字跳回最大值。
     if response.changed() {
-        *value=crate::model::island_size_value(draft);
-        ui.data_mut(|d|d.remove::<u32>(id));
-    }else if !ui.input(|i|i.pointer.primary_down()) {
-        ui.data_mut(|d|d.remove::<u32>(id));
+        *value = crate::model::island_size_value(draft);
+        ui.data_mut(|d| d.remove::<u32>(id));
+    } else if !ui.input(|i| i.pointer.primary_down()) {
+        ui.data_mut(|d| d.remove::<u32>(id));
     }
     response
 }
 
-pub(crate) fn settings_hint(ui:&mut egui::Ui,text:&str){
-    let ctx=&ui.ctx().clone();
-    ui.add(egui::Label::new(egui::RichText::new(text).size(11.5).color(settings_color(ctx,Color32::from_gray(170),Color32::from_gray(92)))).wrap());
+pub(crate) fn settings_hint(ui: &mut egui::Ui, text: &str) {
+    let ctx = &ui.ctx().clone();
+    ui.add(
+        egui::Label::new(egui::RichText::new(text).size(11.5).color(settings_color(
+            ctx,
+            Color32::from_gray(170),
+            Color32::from_gray(92),
+        )))
+        .wrap(),
+    );
 }
-pub(crate) fn settings_card(ui:&mut egui::Ui,add:impl FnOnce(&mut egui::Ui)) {
-    let ctx=&ui.ctx().clone();
-    egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(35,35,38),Color32::from_rgb(255,255,255)))
-        .corner_radius(10.0).inner_margin(egui::Margin::symmetric(16,12))
-        .show(ui,|ui|{ui.set_min_width(ui.available_width());ui.spacing_mut().item_spacing.y=8.0;add(ui);});
+pub(crate) fn settings_card(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
+    let ctx = &ui.ctx().clone();
+    egui::Frame::new()
+        .fill(settings_color(
+            ctx,
+            Color32::from_rgb(35, 35, 38),
+            Color32::from_rgb(255, 255, 255),
+        ))
+        .corner_radius(10.0)
+        .inner_margin(egui::Margin::symmetric(16, 12))
+        .show(ui, |ui| {
+            ui.set_min_width(ui.available_width());
+            ui.spacing_mut().item_spacing.y = 8.0;
+            add(ui);
+        });
 }
 
 /// 卡片底部的「高级」折叠区：只放内容多的页面里不常改的项，默认收起。整条都可以点，右侧箭头表示展开状态。
-pub(crate) fn settings_advanced(ui:&mut egui::Ui,id:&str,add:impl FnOnce(&mut egui::Ui)){
-    let ctx=&ui.ctx().clone();
-    let state=egui::Id::new(("settings-advanced",id));
-    let mut open=ctx.data(|d|d.get_temp::<bool>(state)).unwrap_or(false);
+pub(crate) fn settings_advanced(ui: &mut egui::Ui, id: &str, add: impl FnOnce(&mut egui::Ui)) {
+    let ctx = &ui.ctx().clone();
+    let state = egui::Id::new(("settings-advanced", id));
+    let mut open = ctx.data(|d| d.get_temp::<bool>(state)).unwrap_or(false);
     ui.add_space(2.0);
-    let (rect,response)=ui.allocate_exact_size(egui::vec2(ui.available_width(),34.0),egui::Sense::click());
-    if response.hovered(){ui.painter().rect_filled(rect.expand2(egui::vec2(6.0,0.0)),7.0,settings_color(ctx,Color32::from_rgb(44,44,48),Color32::from_rgb(242,244,247)));}
-    let fg=settings_color(ctx,Color32::from_gray(205),Color32::from_gray(60));
-    ui.painter().text(egui::pos2(rect.left(),rect.center().y),egui::Align2::LEFT_CENTER,"高階",egui::FontId::proportional(13.0),fg);
+    let (rect, response) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 34.0), egui::Sense::click());
+    if response.hovered() {
+        ui.painter().rect_filled(
+            rect.expand2(egui::vec2(6.0, 0.0)),
+            7.0,
+            settings_color(
+                ctx,
+                Color32::from_rgb(44, 44, 48),
+                Color32::from_rgb(242, 244, 247),
+            ),
+        );
+    }
+    let fg = settings_color(ctx, Color32::from_gray(205), Color32::from_gray(60));
+    ui.painter().text(
+        egui::pos2(rect.left(), rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        "高階",
+        egui::FontId::proportional(13.0),
+        fg,
+    );
     // 右侧箭头：收起朝右，展开朝下。
-    let c=egui::pos2(rect.right()-10.0,rect.center().y);
-    let pts=if open{vec![c+egui::vec2(-4.5,-2.0),c+egui::vec2(0.0,2.5),c+egui::vec2(4.5,-2.0)]}else{vec![c+egui::vec2(-2.0,-4.5),c+egui::vec2(2.5,0.0),c+egui::vec2(-2.0,4.5)]};
-    ui.painter().add(egui::Shape::line(pts,egui::Stroke::new(1.6,fg)));
-    if response.on_hover_cursor(egui::CursorIcon::PointingHand).clicked(){open=!open;ctx.data_mut(|d|d.insert_temp(state,open));}
+    let c = egui::pos2(rect.right() - 10.0, rect.center().y);
+    let pts = if open {
+        vec![
+            c + egui::vec2(-4.5, -2.0),
+            c + egui::vec2(0.0, 2.5),
+            c + egui::vec2(4.5, -2.0),
+        ]
+    } else {
+        vec![
+            c + egui::vec2(-2.0, -4.5),
+            c + egui::vec2(2.5, 0.0),
+            c + egui::vec2(-2.0, 4.5),
+        ]
+    };
+    ui.painter()
+        .add(egui::Shape::line(pts, egui::Stroke::new(1.6, fg)));
+    if response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .clicked()
+    {
+        open = !open;
+        ctx.data_mut(|d| d.insert_temp(state, open));
+    }
     if open {
-        ui.spacing_mut().item_spacing.y=8.0;
+        ui.spacing_mut().item_spacing.y = 8.0;
         add(ui);
     }
 }
 /// 状态小标签：「已开启」绿色，「已关闭」灰色；固定高度的胶囊，不随行高拉伸。
-fn settings_state_chip(ui:&mut egui::Ui,on:bool){
-    let ctx=&ui.ctx().clone();
-    let (text,fg,bg)=if on{("已開啟",settings_color(ctx,Color32::from_rgb(127,214,155),Color32::from_rgb(29,122,60)),settings_color(ctx,Color32::from_rgb(28,51,36),Color32::from_rgb(227,244,232)))}
-        else{("已關閉",settings_color(ctx,Color32::from_gray(160),Color32::from_gray(105)),settings_color(ctx,Color32::from_rgb(44,44,48),Color32::from_rgb(232,235,240)))};
-    let galley=ui.painter().layout_no_wrap(text.into(),egui::FontId::proportional(11.5),fg);
-    let (rect,_)=ui.allocate_exact_size(egui::vec2(galley.size().x+16.0,20.0),egui::Sense::hover());
-    ui.painter().rect_filled(rect,10.0,bg);
-    ui.painter().galley(rect.center()-galley.size()/2.0,galley,fg);
+fn settings_state_chip(ui: &mut egui::Ui, on: bool) {
+    let ctx = &ui.ctx().clone();
+    let (text, fg, bg) = if on {
+        (
+            "已開啟",
+            settings_color(
+                ctx,
+                Color32::from_rgb(127, 214, 155),
+                Color32::from_rgb(29, 122, 60),
+            ),
+            settings_color(
+                ctx,
+                Color32::from_rgb(28, 51, 36),
+                Color32::from_rgb(227, 244, 232),
+            ),
+        )
+    } else {
+        (
+            "已關閉",
+            settings_color(ctx, Color32::from_gray(160), Color32::from_gray(105)),
+            settings_color(
+                ctx,
+                Color32::from_rgb(44, 44, 48),
+                Color32::from_rgb(232, 235, 240),
+            ),
+        )
+    };
+    let galley = ui
+        .painter()
+        .layout_no_wrap(text.into(), egui::FontId::proportional(11.5), fg);
+    let (rect, _) = ui.allocate_exact_size(
+        egui::vec2(galley.size().x + 16.0, 20.0),
+        egui::Sense::hover(),
+    );
+    ui.painter().rect_filled(rect, 10.0, bg);
+    ui.painter()
+        .galley(rect.center() - galley.size() / 2.0, galley, fg);
 }
 /// 设置页统一的控件样式（按钮、输入框、选中色）；设置页正文和弹窗共用。
-pub(crate) fn settings_apply_style(ui:&mut egui::Ui){
-    let ctx=&ui.ctx().clone();
+pub(crate) fn settings_apply_style(ui: &mut egui::Ui) {
+    let ctx = &ui.ctx().clone();
     // 分割线：浅色模式用很淡的灰，深色模式略亮于卡片，不再是系统默认的粗灰线。
-    ui.visuals_mut().widgets.noninteractive.bg_stroke=egui::Stroke::new(1.0,settings_color(ctx,Color32::from_rgb(52,52,57),Color32::from_rgb(233,235,240)));
-    ui.spacing_mut().item_spacing.y=ui.spacing().item_spacing.y.max(5.0);
-    ui.spacing_mut().item_spacing=egui::vec2(8.0,5.0);
-    ui.spacing_mut().button_padding=egui::vec2(10.0,6.0);
-    ui.style_mut().text_styles.insert(egui::TextStyle::Small,egui::FontId::proportional(12.0));
-    ui.visuals_mut().override_text_color=Some(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41)));
-    ui.visuals_mut().extreme_bg_color=settings_color(ctx,Color32::from_rgb(25,25,28),Color32::from_rgb(244,246,249));
-    ui.visuals_mut().widgets.inactive.bg_fill=settings_color(ctx,Color32::from_rgb(50,50,54),Color32::from_rgb(228,231,236));
-    ui.visuals_mut().widgets.hovered.bg_fill=settings_color(ctx,Color32::from_rgb(65,65,71),Color32::from_rgb(216,222,231));
+    ui.visuals_mut().widgets.noninteractive.bg_stroke = egui::Stroke::new(
+        1.0,
+        settings_color(
+            ctx,
+            Color32::from_rgb(52, 52, 57),
+            Color32::from_rgb(233, 235, 240),
+        ),
+    );
+    ui.spacing_mut().item_spacing.y = ui.spacing().item_spacing.y.max(5.0);
+    ui.spacing_mut().item_spacing = egui::vec2(8.0, 5.0);
+    ui.spacing_mut().button_padding = egui::vec2(10.0, 6.0);
+    ui.style_mut()
+        .text_styles
+        .insert(egui::TextStyle::Small, egui::FontId::proportional(12.0));
+    ui.visuals_mut().override_text_color = Some(settings_color(
+        ctx,
+        Color32::WHITE,
+        Color32::from_rgb(30, 34, 41),
+    ));
+    ui.visuals_mut().extreme_bg_color = settings_color(
+        ctx,
+        Color32::from_rgb(25, 25, 28),
+        Color32::from_rgb(244, 246, 249),
+    );
+    ui.visuals_mut().widgets.inactive.bg_fill = settings_color(
+        ctx,
+        Color32::from_rgb(50, 50, 54),
+        Color32::from_rgb(228, 231, 236),
+    );
+    ui.visuals_mut().widgets.hovered.bg_fill = settings_color(
+        ctx,
+        Color32::from_rgb(65, 65, 71),
+        Color32::from_rgb(216, 222, 231),
+    );
     // 统一按钮：高度 28、圆角 7、内边距 12×5，无描边；默认按钮也套用这套样式。
-    ui.spacing_mut().button_padding=egui::vec2(12.0,5.0);
-    ui.spacing_mut().interact_size.y=28.0;
+    ui.spacing_mut().button_padding = egui::vec2(12.0, 5.0);
+    ui.spacing_mut().interact_size.y = 28.0;
     {
-        let fill=settings_color(ctx,Color32::from_rgb(50,50,54),Color32::from_rgb(228,231,236));
-        let hover=settings_color(ctx,Color32::from_rgb(65,65,71),Color32::from_rgb(216,222,231));
-        let widgets=&mut ui.visuals_mut().widgets;
-        for (w,f) in [(&mut widgets.inactive,fill),(&mut widgets.hovered,hover),(&mut widgets.active,hover)] {
-            w.corner_radius=egui::CornerRadius::same(7);
-            w.weak_bg_fill=f;
-            w.bg_stroke=egui::Stroke::NONE;
+        let fill = settings_color(
+            ctx,
+            Color32::from_rgb(50, 50, 54),
+            Color32::from_rgb(228, 231, 236),
+        );
+        let hover = settings_color(
+            ctx,
+            Color32::from_rgb(65, 65, 71),
+            Color32::from_rgb(216, 222, 231),
+        );
+        let widgets = &mut ui.visuals_mut().widgets;
+        for (w, f) in [
+            (&mut widgets.inactive, fill),
+            (&mut widgets.hovered, hover),
+            (&mut widgets.active, hover),
+        ] {
+            w.corner_radius = egui::CornerRadius::same(7);
+            w.weak_bg_fill = f;
+            w.bg_stroke = egui::Stroke::NONE;
         }
     }
-    ui.visuals_mut().selection.bg_fill=settings_color(ctx,Color32::from_rgb(45,105,165),Color32::from_rgb(209,226,248));
+    ui.visuals_mut().selection.bg_fill = settings_color(
+        ctx,
+        Color32::from_rgb(45, 105, 165),
+        Color32::from_rgb(209, 226, 248),
+    );
 }
 /// 设置页弹窗的外框：卡片底色、大圆角、细描边和阴影。
-pub(crate) fn settings_modal_frame(ctx:&egui::Context)->egui::Frame{
-    egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(36,36,40),Color32::WHITE)).corner_radius(14.0).inner_margin(egui::Margin::same(20))
-        .stroke(egui::Stroke::new(1.0,settings_color(ctx,Color32::from_rgb(58,58,64),Color32::from_rgb(222,225,231))))
-        .shadow(egui::Shadow{offset:[0,8],blur:28,spread:0,color:Color32::from_black_alpha(90)})
+pub(crate) fn settings_modal_frame(ctx: &egui::Context) -> egui::Frame {
+    egui::Frame::new()
+        .fill(settings_color(
+            ctx,
+            Color32::from_rgb(36, 36, 40),
+            Color32::WHITE,
+        ))
+        .corner_radius(14.0)
+        .inner_margin(egui::Margin::same(20))
+        .stroke(egui::Stroke::new(
+            1.0,
+            settings_color(
+                ctx,
+                Color32::from_rgb(58, 58, 64),
+                Color32::from_rgb(222, 225, 231),
+            ),
+        ))
+        .shadow(egui::Shadow {
+            offset: [0, 8],
+            blur: 28,
+            spread: 0,
+            color: Color32::from_black_alpha(90),
+        })
 }
 /// 弹窗标题栏：标题在左、关闭在右，下面一条分隔线。返回是否点了关闭。
-pub(crate) fn settings_modal_title(ui:&mut egui::Ui,title:&str)->bool{
-    let ctx=&ui.ctx().clone();
-    let mut close=false;
-    ui.horizontal(|ui|{
-        ui.label(egui::RichText::new(title).size(16.0).strong().color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
-            close=ui.add(egui::Button::new(egui::RichText::new("×").size(18.0)).frame(false)).on_hover_text("關閉").clicked();
+pub(crate) fn settings_modal_title(ui: &mut egui::Ui, title: &str) -> bool {
+    let ctx = &ui.ctx().clone();
+    let mut close = false;
+    ui.horizontal(|ui| {
+        ui.label(
+            egui::RichText::new(title)
+                .size(16.0)
+                .strong()
+                .color(settings_color(
+                    ctx,
+                    Color32::WHITE,
+                    Color32::from_rgb(30, 34, 41),
+                )),
+        );
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            close = ui
+                .add(egui::Button::new(egui::RichText::new("×").size(18.0)).frame(false))
+                .on_hover_text("關閉")
+                .clicked();
         });
     });
-    ui.add_space(4.0);settings_separator(ui);ui.add_space(6.0);
+    ui.add_space(4.0);
+    settings_separator(ui);
+    ui.add_space(6.0);
     close
 }
 /// 设置页分割线（样式由 settings_apply_style 统一设定）。
-fn settings_separator(ui:&mut egui::Ui){ui.separator();}
+fn settings_separator(ui: &mut egui::Ui) {
+    ui.separator();
+}
 /// 设置页的小型动作按钮图标；用矢量绘制，避免额外位图在深浅主题下发灰。
 #[derive(Clone, Copy)]
-enum SettingsActionGlyph { Refresh, Trash }
+enum SettingsActionGlyph {
+    Refresh,
+    Trash,
+}
 /// 设置页动作按钮：34px 高胶囊、左侧图标、平滑 hover；主要动作用绿色，清除类用安静的描边红。
-fn settings_action_button(ui:&mut egui::Ui,text:&str,glyph:SettingsActionGlyph,primary:bool,enabled:bool,id:&str)->egui::Response{
-    let ctx=ui.ctx().clone();
-    let active=enabled&&ui.is_enabled();
-    let font=egui::FontId::proportional(12.5);
-    let galley=ui.painter().layout_no_wrap(text.to_owned(),font,Color32::WHITE);
-    let width=(galley.size().x+48.0).max(180.0);
-    let (rect,response)=ui.allocate_exact_size(egui::vec2(width,34.0),if active{egui::Sense::click()}else{egui::Sense::hover()});
-    let hover=ctx.animate_bool_with_time(egui::Id::new(("settings-action",id)).with("hover"),active&&response.hovered(),0.13);
-    let press=ctx.animate_bool_with_time(egui::Id::new(("settings-action",id)).with("press"),active&&response.is_pointer_button_down_on(),0.08);
-    let body=rect.translate(egui::vec2(0.0,press*1.2));
-    let (fill,fill_hover,stroke,stroke_hover,fg,fg_hover)=if primary{
+fn settings_action_button(
+    ui: &mut egui::Ui,
+    text: &str,
+    glyph: SettingsActionGlyph,
+    primary: bool,
+    enabled: bool,
+    id: &str,
+) -> egui::Response {
+    let ctx = ui.ctx().clone();
+    let active = enabled && ui.is_enabled();
+    let font = egui::FontId::proportional(12.5);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(text.to_owned(), font, Color32::WHITE);
+    let width = (galley.size().x + 48.0).max(180.0);
+    let (rect, response) = ui.allocate_exact_size(
+        egui::vec2(width, 34.0),
+        if active {
+            egui::Sense::click()
+        } else {
+            egui::Sense::hover()
+        },
+    );
+    let hover = ctx.animate_bool_with_time(
+        egui::Id::new(("settings-action", id)).with("hover"),
+        active && response.hovered(),
+        0.13,
+    );
+    let press = ctx.animate_bool_with_time(
+        egui::Id::new(("settings-action", id)).with("press"),
+        active && response.is_pointer_button_down_on(),
+        0.08,
+    );
+    let body = rect.translate(egui::vec2(0.0, press * 1.2));
+    let (fill, fill_hover, stroke, stroke_hover, fg, fg_hover) = if primary {
         (
-            settings_color(&ctx,Color32::from_rgb(26,47,35),Color32::from_rgb(228,245,234)),
-            settings_color(&ctx,Color32::from_rgb(34,62,45),Color32::from_rgb(211,239,222)),
-            settings_color(&ctx,Color32::from_rgb(55,98,72),Color32::from_rgb(188,222,199)),
-            settings_color(&ctx,Color32::from_rgb(86,150,109),Color32::from_rgb(151,205,172)),
-            settings_color(&ctx,Color32::from_rgb(146,229,175),Color32::from_rgb(25,111,57)),
-            settings_color(&ctx,Color32::from_rgb(178,244,202),Color32::from_rgb(19,92,46)),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(26, 47, 35),
+                Color32::from_rgb(228, 245, 234),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(34, 62, 45),
+                Color32::from_rgb(211, 239, 222),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(55, 98, 72),
+                Color32::from_rgb(188, 222, 199),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(86, 150, 109),
+                Color32::from_rgb(151, 205, 172),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(146, 229, 175),
+                Color32::from_rgb(25, 111, 57),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(178, 244, 202),
+                Color32::from_rgb(19, 92, 46),
+            ),
         )
-    }else{
+    } else {
         (
-            settings_color(&ctx,Color32::from_rgb(42,40,42),Color32::from_rgb(247,244,245)),
-            settings_color(&ctx,Color32::from_rgb(57,40,42),Color32::from_rgb(252,232,234)),
-            settings_color(&ctx,Color32::from_rgb(72,61,63),Color32::from_rgb(230,207,210)),
-            settings_color(&ctx,Color32::from_rgb(127,72,77),Color32::from_rgb(218,158,164)),
-            settings_color(&ctx,Color32::from_rgb(218,182,185),Color32::from_rgb(145,62,70)),
-            settings_color(&ctx,Color32::from_rgb(249,190,194),Color32::from_rgb(178,44,56)),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(42, 40, 42),
+                Color32::from_rgb(247, 244, 245),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(57, 40, 42),
+                Color32::from_rgb(252, 232, 234),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(72, 61, 63),
+                Color32::from_rgb(230, 207, 210),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(127, 72, 77),
+                Color32::from_rgb(218, 158, 164),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(218, 182, 185),
+                Color32::from_rgb(145, 62, 70),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(249, 190, 194),
+                Color32::from_rgb(178, 44, 56),
+            ),
         )
     };
-    let (fill,stroke,fg)=if !active{
+    let (fill, stroke, fg) = if !active {
         (
-            settings_color(&ctx,Color32::from_rgb(38,38,41),Color32::from_rgb(240,241,244)),
-            settings_color(&ctx,Color32::from_rgb(54,54,58),Color32::from_rgb(225,228,233)),
-            settings_color(&ctx,Color32::from_gray(105),Color32::from_gray(155)),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(38, 38, 41),
+                Color32::from_rgb(240, 241, 244),
+            ),
+            settings_color(
+                &ctx,
+                Color32::from_rgb(54, 54, 58),
+                Color32::from_rgb(225, 228, 233),
+            ),
+            settings_color(&ctx, Color32::from_gray(105), Color32::from_gray(155)),
         )
-    }else{
-        (crate::paint::mix(fill,fill_hover,hover),crate::paint::mix(stroke,stroke_hover,hover),crate::paint::mix(fg,fg_hover,hover))
+    } else {
+        (
+            crate::paint::mix(fill, fill_hover, hover),
+            crate::paint::mix(stroke, stroke_hover, hover),
+            crate::paint::mix(fg, fg_hover, hover),
+        )
     };
-    let rad=body.height()*0.5;
-    ui.painter().rect_filled(body.translate(egui::vec2(0.0,2.0-press)),rad,Color32::from_black_alpha(if active{34}else{18}));
-    ui.painter().rect_filled(body,rad,fill);
-    ui.painter().rect_stroke(body,rad,egui::Stroke::new(1.0,stroke),egui::StrokeKind::Inside);
-    let content_w=14.0+7.0+galley.size().x;
-    let left=body.center().x-content_w*0.5;
-    let icon_center=egui::pos2(left+7.0,body.center().y);
-    match glyph {SettingsActionGlyph::Refresh=>paint_refresh_glyph(ui,icon_center,fg),SettingsActionGlyph::Trash=>paint_trash_glyph(ui,icon_center,fg)}
-    ui.painter().galley(egui::pos2(left+21.0,body.center().y-galley.size().y*0.5),galley,fg);
-    if active&&response.hovered(){ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);}
+    let rad = body.height() * 0.5;
+    ui.painter().rect_filled(
+        body.translate(egui::vec2(0.0, 2.0 - press)),
+        rad,
+        Color32::from_black_alpha(if active { 34 } else { 18 }),
+    );
+    ui.painter().rect_filled(body, rad, fill);
+    ui.painter().rect_stroke(
+        body,
+        rad,
+        egui::Stroke::new(1.0, stroke),
+        egui::StrokeKind::Inside,
+    );
+    let content_w = 14.0 + 7.0 + galley.size().x;
+    let left = body.center().x - content_w * 0.5;
+    let icon_center = egui::pos2(left + 7.0, body.center().y);
+    match glyph {
+        SettingsActionGlyph::Refresh => paint_refresh_glyph(ui, icon_center, fg),
+        SettingsActionGlyph::Trash => paint_trash_glyph(ui, icon_center, fg),
+    }
+    ui.painter().galley(
+        egui::pos2(left + 21.0, body.center().y - galley.size().y * 0.5),
+        galley,
+        fg,
+    );
+    if active && response.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
     response
 }
-fn paint_refresh_glyph(ui:&egui::Ui,center:egui::Pos2,color:Color32){
-    let radius=5.2_f32;
-    let mut points=Vec::with_capacity(25);
+fn paint_refresh_glyph(ui: &egui::Ui, center: egui::Pos2, color: Color32) {
+    let radius = 5.2_f32;
+    let mut points = Vec::with_capacity(25);
     for i in 0..=24 {
-        let angle=0.15+4.56*(i as f32/24.0);
-        points.push(center+egui::vec2(angle.cos()*radius,angle.sin()*radius));
+        let angle = 0.15 + 4.56 * (i as f32 / 24.0);
+        points.push(center + egui::vec2(angle.cos() * radius, angle.sin() * radius));
     }
-    let stroke=egui::Stroke::new(1.6,color);
-    ui.painter().add(egui::Shape::line(points,stroke));
-    let end_angle=4.71_f32;
-    let end=center+egui::vec2(end_angle.cos()*radius,end_angle.sin()*radius);
-    let tangent=egui::vec2(-end_angle.sin(),end_angle.cos());
-    let normal=egui::vec2(end_angle.cos(),end_angle.sin());
+    let stroke = egui::Stroke::new(1.6, color);
+    ui.painter().add(egui::Shape::line(points, stroke));
+    let end_angle = 4.71_f32;
+    let end = center + egui::vec2(end_angle.cos() * radius, end_angle.sin() * radius);
+    let tangent = egui::vec2(-end_angle.sin(), end_angle.cos());
+    let normal = egui::vec2(end_angle.cos(), end_angle.sin());
     // 箭頭放在正上方的缺口，24px 下仍能看出是「重新整理」而不是一個 C。
-    let tip=end+tangent*3.0;
-    let base=end-tangent*1.4;
-    ui.painter().add(egui::Shape::convex_polygon(vec![tip,base+normal*2.6,base-normal*2.6],color,egui::Stroke::NONE));
+    let tip = end + tangent * 3.0;
+    let base = end - tangent * 1.4;
+    ui.painter().add(egui::Shape::convex_polygon(
+        vec![tip, base + normal * 2.6, base - normal * 2.6],
+        color,
+        egui::Stroke::NONE,
+    ));
 }
-fn paint_trash_glyph(ui:&egui::Ui,center:egui::Pos2,color:Color32){
-    let stroke=egui::Stroke::new(1.5,color);
-    let body=egui::Rect::from_min_max(center+egui::vec2(-4.3,-1.6),center+egui::vec2(4.3,6.3));
-    ui.painter().rect_stroke(body,1.0,stroke,egui::StrokeKind::Inside);
-    ui.painter().line_segment([center+egui::vec2(-6.1,-3.3),center+egui::vec2(6.1,-3.3)],stroke);
-    ui.painter().line_segment([center+egui::vec2(-2.5,-5.1),center+egui::vec2(2.5,-5.1)],stroke);
-    for x in [-1.7,1.7]{ui.painter().line_segment([center+egui::vec2(x,0.4),center+egui::vec2(x,3.8)],stroke);}
+fn paint_trash_glyph(ui: &egui::Ui, center: egui::Pos2, color: Color32) {
+    let stroke = egui::Stroke::new(1.5, color);
+    let body = egui::Rect::from_min_max(
+        center + egui::vec2(-4.3, -1.6),
+        center + egui::vec2(4.3, 6.3),
+    );
+    ui.painter()
+        .rect_stroke(body, 1.0, stroke, egui::StrokeKind::Inside);
+    ui.painter().line_segment(
+        [
+            center + egui::vec2(-6.1, -3.3),
+            center + egui::vec2(6.1, -3.3),
+        ],
+        stroke,
+    );
+    ui.painter().line_segment(
+        [
+            center + egui::vec2(-2.5, -5.1),
+            center + egui::vec2(2.5, -5.1),
+        ],
+        stroke,
+    );
+    for x in [-1.7, 1.7] {
+        ui.painter().line_segment(
+            [center + egui::vec2(x, 0.4), center + egui::vec2(x, 3.8)],
+            stroke,
+        );
+    }
 }
 /// 可点选的标签：开启时绿色底，关闭时描边灰字。
-fn settings_toggle_chip(ui:&mut egui::Ui,text:&str,on:bool)->egui::Response{
-    let ctx=&ui.ctx().clone();
-    let label=text.to_string();
-    let fg=if on{settings_color(ctx,Color32::from_rgb(127,214,155),Color32::from_rgb(29,122,60))}else{settings_color(ctx,Color32::from_gray(185),Color32::from_gray(80))};
-    let fill=if on{settings_color(ctx,Color32::from_rgb(28,51,36),Color32::from_rgb(227,244,232))}else{Color32::TRANSPARENT};
-    let stroke=if on{egui::Stroke::NONE}else{egui::Stroke::new(1.0,settings_color(ctx,Color32::from_rgb(60,60,66),Color32::from_rgb(214,218,225)))};
-    ui.add(egui::Button::new(egui::RichText::new(label).size(12.0).color(fg)).fill(fill).stroke(stroke).corner_radius(13.0).min_size(egui::vec2(0.0,26.0)))
+fn settings_toggle_chip(ui: &mut egui::Ui, text: &str, on: bool) -> egui::Response {
+    let ctx = &ui.ctx().clone();
+    let label = text.to_string();
+    let fg = if on {
+        settings_color(
+            ctx,
+            Color32::from_rgb(127, 214, 155),
+            Color32::from_rgb(29, 122, 60),
+        )
+    } else {
+        settings_color(ctx, Color32::from_gray(185), Color32::from_gray(80))
+    };
+    let fill = if on {
+        settings_color(
+            ctx,
+            Color32::from_rgb(28, 51, 36),
+            Color32::from_rgb(227, 244, 232),
+        )
+    } else {
+        Color32::TRANSPARENT
+    };
+    let stroke = if on {
+        egui::Stroke::NONE
+    } else {
+        egui::Stroke::new(
+            1.0,
+            settings_color(
+                ctx,
+                Color32::from_rgb(60, 60, 66),
+                Color32::from_rgb(214, 218, 225),
+            ),
+        )
+    };
+    ui.add(
+        egui::Button::new(egui::RichText::new(label).size(12.0).color(fg))
+            .fill(fill)
+            .stroke(stroke)
+            .corner_radius(13.0)
+            .min_size(egui::vec2(0.0, 26.0)),
+    )
 }
 /// 功能页面对应的图标，与侧栏同一套。
 /// 纹理缓存只按地址区分、不分尺寸：侧栏 23px 先加载后，36px 的卡片图标会被放大发糊，所以这里用独立地址。
-fn settings_page_icon(page:usize)->egui::ImageSource<'static>{
+fn settings_page_icon(page: usize) -> egui::ImageSource<'static> {
     use crate::app::*;
-    let (name,bytes):(&str,&'static [u8])=match page {
-        MUSIC_PAGE=>("music",include_bytes!("../assets/settings-icons/system/music.svg")),
-        FOCUS_PAGE=>("focus",include_bytes!("../assets/settings-icons/system/focus.svg")),
-        WATER_PAGE=>("health",include_bytes!("../assets/settings-icons/system/health.svg")),
-        SHELF_PAGE=>("shelf",include_bytes!("../assets/settings-icons/system/shelf.svg")),
-        TODO_PAGE=>("tasks",include_bytes!("../assets/settings-icons/system/tasks.svg")),
-        MAIL_PAGE=>("mail",include_bytes!("../assets/settings-icons/system/mail.svg")),
-        QUOTA_PAGE=>("quota",include_bytes!("../assets/settings-icons/system/quota.svg")),
-        CALENDAR_PAGE=>("calendar",include_bytes!("../assets/settings-icons/system/calendar.svg")),
-        GAME_PAGE=>("game",include_bytes!("../assets/settings-icons/system/game.svg")),
-        _=>("weather",include_bytes!("../assets/settings-icons/system/weather.svg")),
+    let (name, bytes): (&str, &'static [u8]) = match page {
+        MUSIC_PAGE => (
+            "music",
+            include_bytes!("../assets/settings-icons/system/music.svg"),
+        ),
+        FOCUS_PAGE => (
+            "focus",
+            include_bytes!("../assets/settings-icons/system/focus.svg"),
+        ),
+        WATER_PAGE => (
+            "health",
+            include_bytes!("../assets/settings-icons/system/health.svg"),
+        ),
+        SHELF_PAGE => (
+            "shelf",
+            include_bytes!("../assets/settings-icons/system/shelf.svg"),
+        ),
+        TODO_PAGE => (
+            "tasks",
+            include_bytes!("../assets/settings-icons/system/tasks.svg"),
+        ),
+        MAIL_PAGE => (
+            "mail",
+            include_bytes!("../assets/settings-icons/system/mail.svg"),
+        ),
+        QUOTA_PAGE => (
+            "quota",
+            include_bytes!("../assets/settings-icons/system/quota.svg"),
+        ),
+        CALENDAR_PAGE => (
+            "calendar",
+            include_bytes!("../assets/settings-icons/system/calendar.svg"),
+        ),
+        GAME_PAGE => (
+            "game",
+            include_bytes!("../assets/settings-icons/system/game.svg"),
+        ),
+        _ => (
+            "weather",
+            include_bytes!("../assets/settings-icons/system/weather.svg"),
+        ),
     };
-    egui::ImageSource::Bytes{uri:format!("bytes://settings-header-{name}.svg").into(),bytes:bytes.into()}
+    egui::ImageSource::Bytes {
+        uri: format!("bytes://settings-header-{name}.svg").into(),
+        bytes: bytes.into(),
+    }
 }
 
 /// 设置分页对应的功能模块（页面序号）；通用、外观、位置、消息提醒、关于、页面管理不属于任何模块。
-#[cfg_attr(not(test),allow(dead_code))]
-pub(crate) fn settings_tab_module(tab:usize)->Option<usize>{
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn settings_tab_module(tab: usize) -> Option<usize> {
     use crate::app::*;
-    match tab {1=>Some(MUSIC_PAGE),2=>Some(FOCUS_PAGE),3=>Some(WATER_PAGE),4=>Some(TODO_PAGE),5=>Some(SHELF_PAGE),7=>Some(MAIL_PAGE),8=>Some(CALENDAR_PAGE),11=>Some(QUOTA_PAGE),12=>Some(WEATHER_PAGE),15=>Some(GAME_PAGE),SETTINGS_TAB_POWER=>Some(crate::app::POWER_PAGE),_=>None}
+    match tab {
+        1 => Some(MUSIC_PAGE),
+        2 => Some(FOCUS_PAGE),
+        3 => Some(WATER_PAGE),
+        4 => Some(TODO_PAGE),
+        5 => Some(SHELF_PAGE),
+        7 => Some(MAIL_PAGE),
+        8 => Some(CALENDAR_PAGE),
+        11 => Some(QUOTA_PAGE),
+        12 => Some(WEATHER_PAGE),
+        15 => Some(GAME_PAGE),
+        SETTINGS_TAB_POWER => Some(crate::app::POWER_PAGE),
+        _ => None,
+    }
 }
 
-pub(crate) fn settings_label(ui:&mut egui::Ui,text:&str){
-    let ctx=&ui.ctx().clone();
+pub(crate) fn settings_label(ui: &mut egui::Ui, text: &str) {
+    let ctx = &ui.ctx().clone();
     ui.add_space(9.0);
-    ui.label(egui::RichText::new(text).size(11.5).color(settings_color(ctx,Color32::from_gray(185),Color32::from_gray(70))));
+    ui.label(egui::RichText::new(text).size(11.5).color(settings_color(
+        ctx,
+        Color32::from_gray(185),
+        Color32::from_gray(70),
+    )));
     ui.add_space(2.0);
 }
-fn support_author(ui:&mut egui::Ui){
-    let id=egui::Id::new("support-author-open");
-    let open=ui.ctx().data(|data|data.get_temp::<bool>(id).unwrap_or(false));
-    if !open {release_support_codes(ui.ctx());}
-    let dark=ui.visuals().dark_mode;
-    let accent=if dark{Color32::from_rgb(182,163,245)}else{Color32::from_rgb(105,77,163)};
-    ui.scope(|ui|{
-    ui.set_min_height(225.0);
+fn support_author(ui: &mut egui::Ui) {
+    let id = egui::Id::new("support-author-open");
+    let open = ui
+        .ctx()
+        .data(|data| data.get_temp::<bool>(id).unwrap_or(false));
     if !open {
-    egui::Frame::new().fill(if dark{Color32::from_rgb(42,37,53)}else{Color32::from_rgb(239,233,250)})
-        .corner_radius(10.0).show(ui,|ui|{
-            ui.set_min_width(ui.available_width());
-            ui.vertical_centered(|ui|{
-                ui.add(egui::Image::new(egui::include_image!("../assets/support/kuidao-coffee.png")).fit_to_exact_size(egui::vec2(211.0,110.0)));
-            });
-        });
-    ui.add_space(9.0);
-    ui.label(egui::RichText::new("鬼島維護 · 陪你生活").size(10.5).color(accent));
-    ui.label(egui::RichText::new("請作者喝杯咖啡").size(19.0).strong());
-    ui.label("鬼島陪你認真生活，\n你的支援，讓它慢慢變好。");
-    } else {
-        let ctx=ui.ctx().clone();
-        // 只解码一次并裁出二维码区域，按实际显示像素缩小：原图解码后两张合计约 17MB，缩小后不到 1MB。
-        let pixels=((180.0*ctx.pixels_per_point()).ceil() as u32).clamp(180,600);
-        ui.columns(2,|columns|{
-            for (i,(name,bytes,crop,color)) in [
-                ("綠界贊助",include_bytes!("../assets/support/support-ecpay-qr.png").as_slice(),[0.0,0.0,200.0],Color32::from_rgb(0,150,105)),
-                ("支付寶",include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),[0.0,0.0,600.0],Color32::from_rgb(22,120,255)),
-            ].into_iter().enumerate(){
-                let texture_id=egui::Id::new(("support-author-qr",i));
-                let texture=ctx.data_mut(|data|data.get_temp::<egui::TextureHandle>(texture_id)).filter(|texture|texture.size()==[pixels as usize;2]).unwrap_or_else(||{
-                    let image=support_code_image(bytes,crop,pixels);
-                    let texture=ctx.load_texture(name,image,egui::TextureOptions::LINEAR);
-                    ctx.data_mut(|data|data.insert_temp(texture_id,texture.clone()));texture
-                });
-                let uv=egui::Rect::from_min_max(egui::pos2(0.0,0.0),egui::pos2(1.0,1.0));
-                columns[i].vertical_centered(|ui|{
-                    ui.label(egui::RichText::new(name).color(color).strong());
-                    let side=ui.available_width().min(180.0);
-                    ui.add(egui::Image::new((texture.id(),egui::vec2(side,side))).uv(uv));
-                    ui.label(egui::RichText::new(if i==0{"掃碼前往綠界贊助頁"}else{"打開支付寶掃一掃"}).size(11.0));
-                });
-            }
-        });
+        release_support_codes(ui.ctx());
     }
+    let dark = ui.visuals().dark_mode;
+    let accent = if dark {
+        Color32::from_rgb(182, 163, 245)
+    } else {
+        Color32::from_rgb(105, 77, 163)
+    };
+    ui.scope(|ui| {
+        ui.set_min_height(225.0);
+        if !open {
+            egui::Frame::new()
+                .fill(if dark {
+                    Color32::from_rgb(42, 37, 53)
+                } else {
+                    Color32::from_rgb(239, 233, 250)
+                })
+                .corner_radius(10.0)
+                .show(ui, |ui| {
+                    ui.set_min_width(ui.available_width());
+                    ui.vertical_centered(|ui| {
+                        ui.add(
+                            egui::Image::new(egui::include_image!(
+                                "../assets/support/kuidao-coffee.png"
+                            ))
+                            .fit_to_exact_size(egui::vec2(211.0, 110.0)),
+                        );
+                    });
+                });
+            ui.add_space(9.0);
+            ui.label(
+                egui::RichText::new("鬼島維護 · 陪你生活")
+                    .size(10.5)
+                    .color(accent),
+            );
+            ui.label(egui::RichText::new("請作者喝杯咖啡").size(19.0).strong());
+            ui.label("鬼島陪你認真生活，\n你的支援，讓它慢慢變好。");
+        } else {
+            let ctx = ui.ctx().clone();
+            // 只解码一次并裁出二维码区域，按实际显示像素缩小：原图解码后两张合计约 17MB，缩小后不到 1MB。
+            let pixels = ((180.0 * ctx.pixels_per_point()).ceil() as u32).clamp(180, 600);
+            ui.columns(2, |columns| {
+                for (i, (name, bytes, crop, color)) in [
+                    (
+                        "綠界贊助",
+                        include_bytes!("../assets/support/support-ecpay-qr.png").as_slice(),
+                        [0.0, 0.0, 200.0],
+                        Color32::from_rgb(0, 150, 105),
+                    ),
+                    (
+                        "支付寶",
+                        include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),
+                        [0.0, 0.0, 600.0],
+                        Color32::from_rgb(22, 120, 255),
+                    ),
+                ]
+                .into_iter()
+                .enumerate()
+                {
+                    let texture_id = egui::Id::new(("support-author-qr", i));
+                    let texture = ctx
+                        .data_mut(|data| data.get_temp::<egui::TextureHandle>(texture_id))
+                        .filter(|texture| texture.size() == [pixels as usize; 2])
+                        .unwrap_or_else(|| {
+                            let image = support_code_image(bytes, crop, pixels);
+                            let texture =
+                                ctx.load_texture(name, image, egui::TextureOptions::LINEAR);
+                            ctx.data_mut(|data| data.insert_temp(texture_id, texture.clone()));
+                            texture
+                        });
+                    let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
+                    columns[i].vertical_centered(|ui| {
+                        ui.label(egui::RichText::new(name).color(color).strong());
+                        let side = ui.available_width().min(180.0);
+                        ui.add(egui::Image::new((texture.id(), egui::vec2(side, side))).uv(uv));
+                        ui.label(
+                            egui::RichText::new(if i == 0 {
+                                "掃碼前往綠界贊助頁"
+                            } else {
+                                "打開支付寶掃一掃"
+                            })
+                            .size(11.0),
+                        );
+                    });
+                }
+            });
+        }
     });
-    let button=egui::Button::new(egui::RichText::new(if open{"返回"}else{"請喝咖啡 · 支援作者"}).color(Color32::from_rgb(33,27,51)))
-        .fill(Color32::from_rgb(182,163,245)).corner_radius(8.0);
-    if ui.add_sized([ui.available_width(),32.0],button).clicked(){
-        ui.ctx().data_mut(|data|data.insert_temp(id,!open));
+    let button = egui::Button::new(
+        egui::RichText::new(if open {
+            "返回"
+        } else {
+            "請喝咖啡 · 支援作者"
+        })
+        .color(Color32::from_rgb(33, 27, 51)),
+    )
+    .fill(Color32::from_rgb(182, 163, 245))
+    .corner_radius(8.0);
+    if ui.add_sized([ui.available_width(), 32.0], button).clicked() {
+        ui.ctx().data_mut(|data| data.insert_temp(id, !open));
     }
     ui.add_space(7.0);
-    ui.label(egui::RichText::new("完全自願 · 感謝每一份支援 · 不影響功能使用").size(11.0).color(ui.visuals().weak_text_color()));
+    ui.label(
+        egui::RichText::new("完全自願 · 感謝每一份支援 · 不影響功能使用")
+            .size(11.0)
+            .color(ui.visuals().weak_text_color()),
+    );
 }
-pub(crate) fn settings_control_row(ui:&mut egui::Ui,title:&str,label_width:f32,controls:impl FnOnce(&mut egui::Ui)->egui::Response)->egui::Response{
-    ui.horizontal(|ui|{
+pub(crate) fn settings_control_row(
+    ui: &mut egui::Ui,
+    title: &str,
+    label_width: f32,
+    controls: impl FnOnce(&mut egui::Ui) -> egui::Response,
+) -> egui::Response {
+    ui.horizontal(|ui| {
         // 同一张卡片里的控件左缘对齐：标签列至少 SETTINGS_LABEL_W。
-        let (label_rect,_)=ui.allocate_exact_size(egui::vec2(label_width.max(SETTINGS_LABEL_W),30.0),egui::Sense::hover());
-        let content=controls(ui);
-        ui.painter().text(egui::pos2(label_rect.left(),content.rect.center().y),egui::Align2::LEFT_CENTER,title,egui::TextStyle::Body.resolve(ui.style()),ui.visuals().text_color());
+        let (label_rect, _) = ui.allocate_exact_size(
+            egui::vec2(label_width.max(SETTINGS_LABEL_W), 30.0),
+            egui::Sense::hover(),
+        );
+        let content = controls(ui);
+        ui.painter().text(
+            egui::pos2(label_rect.left(), content.rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            title,
+            egui::TextStyle::Body.resolve(ui.style()),
+            ui.visuals().text_color(),
+        );
         content
-    }).inner
+    })
+    .inner
 }
-fn setting_number<N:egui::emath::Numeric>(ui:&mut egui::Ui,title:&str,value:&mut N,min:N,max:N,suffix:&str,speed:f64)->bool{
-    let mut changed=false;
-    settings_control_row(ui,title,80.0,|ui|{
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
-            ui.allocate_ui_with_layout(egui::vec2(140.0,30.0),egui::Layout::left_to_right(egui::Align::Center),|ui|{
-                changed=number_stepper(ui,value,min,max,suffix,N::from_f64(speed),76.0);
-            });
-        }).response
+fn setting_number<N: egui::emath::Numeric>(
+    ui: &mut egui::Ui,
+    title: &str,
+    value: &mut N,
+    min: N,
+    max: N,
+    suffix: &str,
+    speed: f64,
+) -> bool {
+    let mut changed = false;
+    settings_control_row(ui, title, 80.0, |ui| {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.allocate_ui_with_layout(
+                egui::vec2(140.0, 30.0),
+                egui::Layout::left_to_right(egui::Align::Center),
+                |ui| {
+                    changed = number_stepper(ui, value, min, max, suffix, N::from_f64(speed), 76.0);
+                },
+            );
+        })
+        .response
     });
     changed
 }
-fn number_stepper<N:egui::emath::Numeric>(ui:&mut egui::Ui,value:&mut N,min:N,max:N,suffix:&str,step:N,field_width:f32)->bool{
-    let ctx=&ui.ctx().clone();
-    let mut changed=false;
-    ui.scope(|ui|{
-        ui.spacing_mut().item_spacing.x=6.0;
-        ui.spacing_mut().button_padding=egui::vec2(4.0,2.0);
-        let button=|text|egui::Button::new(egui::RichText::new(text).size(16.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))))
-            .fill(settings_color(ctx,Color32::from_rgb(48,48,51),Color32::from_rgb(229,232,238))).stroke(egui::Stroke::NONE).corner_radius(13.0);
-        let decrease=ui.add_enabled(*value>min,button("−").min_size(egui::vec2(26.0,26.0))).on_hover_text("減少");
-        if decrease.clicked(){
-            *value=N::from_f64((value.to_f64()-step.to_f64()).max(min.to_f64()));changed=true;
+fn number_stepper<N: egui::emath::Numeric>(
+    ui: &mut egui::Ui,
+    value: &mut N,
+    min: N,
+    max: N,
+    suffix: &str,
+    step: N,
+    field_width: f32,
+) -> bool {
+    let ctx = &ui.ctx().clone();
+    let mut changed = false;
+    ui.scope(|ui| {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().button_padding = egui::vec2(4.0, 2.0);
+        let button = |text| {
+            egui::Button::new(egui::RichText::new(text).size(16.0).color(settings_color(
+                ctx,
+                Color32::WHITE,
+                Color32::from_rgb(30, 34, 41),
+            )))
+            .fill(settings_color(
+                ctx,
+                Color32::from_rgb(48, 48, 51),
+                Color32::from_rgb(229, 232, 238),
+            ))
+            .stroke(egui::Stroke::NONE)
+            .corner_radius(13.0)
+        };
+        let decrease = ui
+            .add_enabled(*value > min, button("−").min_size(egui::vec2(26.0, 26.0)))
+            .on_hover_text("減少");
+        if decrease.clicked() {
+            *value = N::from_f64((value.to_f64() - step.to_f64()).max(min.to_f64()));
+            changed = true;
         }
-        let field=ui.add_sized([field_width,28.0],egui::DragValue::new(value).range(min..=max).speed(step.to_f64()).suffix(suffix).fixed_decimals(if N::INTEGRAL{0}else{2}));
-        changed|=field.changed();
-        if ui.add_enabled(*value<max,button("+").min_size(egui::vec2(26.0,26.0))).on_hover_text("增加").clicked(){
-            *value=N::from_f64((value.to_f64()+step.to_f64()).min(max.to_f64()));changed=true;
+        let field = ui.add_sized(
+            [field_width, 28.0],
+            egui::DragValue::new(value)
+                .range(min..=max)
+                .speed(step.to_f64())
+                .suffix(suffix)
+                .fixed_decimals(if N::INTEGRAL { 0 } else { 2 }),
+        );
+        changed |= field.changed();
+        if ui
+            .add_enabled(*value < max, button("+").min_size(egui::vec2(26.0, 26.0)))
+            .on_hover_text("增加")
+            .clicked()
+        {
+            *value = N::from_f64((value.to_f64() + step.to_f64()).min(max.to_f64()));
+            changed = true;
         }
     });
     changed
 }
 /// 时段行的宽度：两个加减器（−、输入框、+ 各间隔 6）加中间的「至」和两侧间距。
 /// 区域刚好装下内容，靠右放置时右边缘就和单个加减器对齐。
-const TIME_RANGE_HOURS_W:f32=(26.0+6.0+48.0+6.0+26.0)*2.0+8.0+13.0+8.0;
-const TIME_RANGE_CLOCK_W:f32=(26.0+6.0+56.0+6.0+26.0)*2.0+8.0+13.0+8.0;
+const TIME_RANGE_HOURS_W: f32 = (26.0 + 6.0 + 48.0 + 6.0 + 26.0) * 2.0 + 8.0 + 13.0 + 8.0;
+const TIME_RANGE_CLOCK_W: f32 = (26.0 + 6.0 + 56.0 + 6.0 + 26.0) * 2.0 + 8.0 + 13.0 + 8.0;
 /// 时刻加减器（一天中的分钟数，15 分钟一档，跨午夜循环），中间可直接输入 12:30。
-fn time_stepper(ui:&mut egui::Ui,value:&mut u32,id:&str)->bool{
-    let ctx=&ui.ctx().clone();
-    let mut changed=false;
-    ui.push_id(id,|ui|{
-        ui.spacing_mut().item_spacing.x=6.0;
-        ui.spacing_mut().button_padding=egui::vec2(4.0,2.0);
-        let button=|text|egui::Button::new(egui::RichText::new(text).size(16.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))))
-            .fill(settings_color(ctx,Color32::from_rgb(48,48,51),Color32::from_rgb(229,232,238))).stroke(egui::Stroke::NONE).corner_radius(13.0);
-        if ui.add(button("−").min_size(egui::vec2(26.0,26.0))).on_hover_text("提前 15 分鐘").clicked(){*value=(*value+1440-15)%1440;changed=true;}
-        let field=ui.add_sized([56.0,28.0],egui::DragValue::new(value).range(0..=1439).speed(1.0)
-            .custom_formatter(|v,_|{let m=v as u32;format!("{:02}:{:02}",m/60,m%60)})
-            .custom_parser(|t|{let (h,m)=t.trim().split_once([':','：'])?;Some((h.parse::<u32>().ok()?.min(23)*60+m.parse::<u32>().ok()?.min(59)) as f64)}));
-        changed|=field.changed();
-        if ui.add(button("+").min_size(egui::vec2(26.0,26.0))).on_hover_text("推後 15 分鐘").clicked(){*value=(*value+15)%1440;changed=true;}
+fn time_stepper(ui: &mut egui::Ui, value: &mut u32, id: &str) -> bool {
+    let ctx = &ui.ctx().clone();
+    let mut changed = false;
+    ui.push_id(id, |ui| {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().button_padding = egui::vec2(4.0, 2.0);
+        let button = |text| {
+            egui::Button::new(egui::RichText::new(text).size(16.0).color(settings_color(
+                ctx,
+                Color32::WHITE,
+                Color32::from_rgb(30, 34, 41),
+            )))
+            .fill(settings_color(
+                ctx,
+                Color32::from_rgb(48, 48, 51),
+                Color32::from_rgb(229, 232, 238),
+            ))
+            .stroke(egui::Stroke::NONE)
+            .corner_radius(13.0)
+        };
+        if ui
+            .add(button("−").min_size(egui::vec2(26.0, 26.0)))
+            .on_hover_text("提前 15 分鐘")
+            .clicked()
+        {
+            *value = (*value + 1440 - 15) % 1440;
+            changed = true;
+        }
+        let field = ui.add_sized(
+            [56.0, 28.0],
+            egui::DragValue::new(value)
+                .range(0..=1439)
+                .speed(1.0)
+                .custom_formatter(|v, _| {
+                    let m = v as u32;
+                    format!("{:02}:{:02}", m / 60, m % 60)
+                })
+                .custom_parser(|t| {
+                    let (h, m) = t.trim().split_once([':', '：'])?;
+                    Some(
+                        (h.parse::<u32>().ok()?.min(23) * 60 + m.parse::<u32>().ok()?.min(59))
+                            as f64,
+                    )
+                }),
+        );
+        changed |= field.changed();
+        if ui
+            .add(button("+").min_size(egui::vec2(26.0, 26.0)))
+            .on_hover_text("推後 15 分鐘")
+            .clicked()
+        {
+            *value = (*value + 15) % 1440;
+            changed = true;
+        }
     });
     changed
 }
-fn setting_choices(ui:&mut egui::Ui,title:&str,value:&mut u32,values:[u32;3],unit:&str){
-    let labels=values.map(|v|format!("{v} {unit}"));
-    let options:Vec<(u32,&str)>=values.iter().zip(labels.iter()).map(|(v,l)|(*v,l.as_str())).collect();
-    settings_control_row_right(ui,title,|ui|{settings_segmented(ui,value,&options,62.0);});
+fn setting_choices(ui: &mut egui::Ui, title: &str, value: &mut u32, values: [u32; 3], unit: &str) {
+    let labels = values.map(|v| format!("{v} {unit}"));
+    let options: Vec<(u32, &str)> = values
+        .iter()
+        .zip(labels.iter())
+        .map(|(v, l)| (*v, l.as_str()))
+        .collect();
+    settings_control_row_right(ui, title, |ui| {
+        settings_segmented(ui, value, &options, 62.0);
+    });
 }
 /// 设置页分页序号。旧序号保持不变（岛上入口、测试都按序号跳转），新增外观与位置两页。
 pub(crate) const SETTINGS_TAB_APPEARANCE: usize = 13;
@@ -1593,62 +3940,141 @@ pub(crate) const SETTINGS_TAB_POSITION: usize = 14;
 /// 侧栏：一项就是一页，不再有页内子标签。专注与健康（2、3）、待办与置物（4、5）各合成一页；关于固定左下角。
 /// 第四列是这一项之前的分组标题。
 pub(crate) const SETTINGS_TAB_POWER: usize = 16;
-const SETTINGS_GROUPS: [(&str,usize,usize,&str);16] = [
-    ("通用",0,0,"鬼島"), ("外觀",SETTINGS_TAB_APPEARANCE,SETTINGS_TAB_APPEARANCE,""), ("位置",SETTINGS_TAB_POSITION,SETTINGS_TAB_POSITION,""), ("頁面管理",10,10,""),
-    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("信箱",7,7,""), ("行程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("遊戲",15,15,""), ("電量",SETTINGS_TAB_POWER,SETTINGS_TAB_POWER,""),
-    ("贊助",SETTINGS_TAB_SUPPORT,SETTINGS_TAB_SUPPORT,""), ("關於",9,9,""),
+const SETTINGS_GROUPS: [(&str, usize, usize, &str); 16] = [
+    ("通用", 0, 0, "鬼島"),
+    ("外觀", SETTINGS_TAB_APPEARANCE, SETTINGS_TAB_APPEARANCE, ""),
+    ("位置", SETTINGS_TAB_POSITION, SETTINGS_TAB_POSITION, ""),
+    ("頁面管理", 10, 10, ""),
+    ("音樂", 1, 1, "功能"),
+    ("專注與健康", 2, 3, ""),
+    ("待辦與置物", 4, 5, ""),
+    ("訊息提醒", 6, 6, ""),
+    ("信箱", 7, 7, ""),
+    ("行程", 8, 8, ""),
+    ("AI 額度", 11, 11, ""),
+    ("天氣", 12, 12, ""),
+    ("遊戲", 15, 15, ""),
+    ("電量", SETTINGS_TAB_POWER, SETTINGS_TAB_POWER, ""),
+    ("贊助", SETTINGS_TAB_SUPPORT, SETTINGS_TAB_SUPPORT, ""),
+    ("關於", 9, 9, ""),
 ];
 /// 分页标题；合并页（3→2、5→4）显示合并后的名字。
-fn settings_tab_title(tab:usize)->&'static str{
-    SETTINGS_GROUPS.iter().find(|(_,start,end,_)|(*start..=*end).contains(&tab)).map_or("通用",|g|g.0)
+fn settings_tab_title(tab: usize) -> &'static str {
+    SETTINGS_GROUPS
+        .iter()
+        .find(|(_, start, end, _)| (*start..=*end).contains(&tab))
+        .map_or("通用", |g| g.0)
 }
 #[cfg(test)]
-pub(crate) fn settings_tab_group_for_tests(tab:usize)->&'static str{settings_tab_title(tab)}
+pub(crate) fn settings_tab_group_for_tests(tab: usize) -> &'static str {
+    settings_tab_title(tab)
+}
 #[cfg(test)]
-pub(crate) fn settings_group_names_for_tests()->Vec<&'static str>{SETTINGS_GROUPS.iter().map(|g|g.0).collect()}
+pub(crate) fn settings_group_names_for_tests() -> Vec<&'static str> {
+    SETTINGS_GROUPS.iter().map(|g| g.0).collect()
+}
 
 impl App {
     /// 功能页顶部卡片：名称、说明和开启状态。开关统一在「页面管理」；关闭时这里给出「开启」入口。
     /// 返回功能是否开启，调用方据此把下面的设置置灰。
-    fn settings_feature_header(&mut self,ui:&mut egui::Ui,page:usize,description:&str,extra:impl FnOnce(&mut Self,&mut egui::Ui))->bool{
-        let ctx=&ui.ctx().clone();
-        let on=self.module_on(page);
-        let (mut enable,mut open)=(false,false);
-        settings_card(ui,|ui|{
-            ui.horizontal(|ui|{
-                ui.add(egui::Image::new(settings_page_icon(page)).fit_to_exact_size(egui::vec2(36.0,36.0)));
+    fn settings_feature_header(
+        &mut self,
+        ui: &mut egui::Ui,
+        page: usize,
+        description: &str,
+        extra: impl FnOnce(&mut Self, &mut egui::Ui),
+    ) -> bool {
+        let ctx = &ui.ctx().clone();
+        let on = self.module_on(page);
+        let (mut enable, mut open) = (false, false);
+        settings_card(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::Image::new(settings_page_icon(page))
+                        .fit_to_exact_size(egui::vec2(36.0, 36.0)),
+                );
                 ui.add_space(4.0);
-                ui.vertical(|ui|{
-                    ui.spacing_mut().item_spacing.y=2.0;
-                    ui.label(egui::RichText::new(PAGE_NAMES[page]).size(15.0).strong().color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
-                    ui.label(egui::RichText::new(description).size(11.5).color(settings_color(ctx,Color32::from_gray(175),Color32::from_gray(90))));
+                ui.vertical(|ui| {
+                    ui.spacing_mut().item_spacing.y = 2.0;
+                    ui.label(
+                        egui::RichText::new(PAGE_NAMES[page])
+                            .size(15.0)
+                            .strong()
+                            .color(settings_color(
+                                ctx,
+                                Color32::WHITE,
+                                Color32::from_rgb(30, 34, 41),
+                            )),
+                    );
+                    ui.label(
+                        egui::RichText::new(description)
+                            .size(11.5)
+                            .color(settings_color(
+                                ctx,
+                                Color32::from_gray(175),
+                                Color32::from_gray(90),
+                            )),
+                    );
                 });
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     // 每个功能卡片同一个位置：开着时「打开」跳到岛上对应页面，关着时「开启」。
-                    if on {open=ui.button("開啟").on_hover_text(format!("在島上開啟「{}」",PAGE_NAMES[page])).clicked();extra(self,ui);} else {enable=ui.button("開啟").clicked();}
-                    settings_state_chip(ui,on);
+                    if on {
+                        open = ui
+                            .button("開啟")
+                            .on_hover_text(format!("在島上開啟「{}」", PAGE_NAMES[page]))
+                            .clicked();
+                        extra(self, ui);
+                    } else {
+                        enable = ui.button("開啟").clicked();
+                    }
+                    settings_state_chip(ui, on);
                 });
             });
             if !on {
-                ui.label(egui::RichText::new(format!("「{}」已關閉，不會在後台同步或提醒",PAGE_NAMES[page])).size(12.0).color(settings_color(ctx,Color32::from_rgb(238,181,91),Color32::from_rgb(139,88,12))));
+                ui.label(
+                    egui::RichText::new(format!(
+                        "「{}」已關閉，不會在後台同步或提醒",
+                        PAGE_NAMES[page]
+                    ))
+                    .size(12.0)
+                    .color(settings_color(
+                        ctx,
+                        Color32::from_rgb(238, 181, 91),
+                        Color32::from_rgb(139, 88, 12),
+                    )),
+                );
             }
         });
-        if enable {self.set_page_visible(page,true);}
+        if enable {
+            self.set_page_visible(page, true);
+        }
         if open {
-            self.settings_open=false;
-            if page==crate::app::CALENDAR_PAGE {self.open_calendar(None);}
-            else {if page==crate::app::SHELF_PAGE {self.shelf_tab=0;} self.show_page(page);}
+            self.settings_open = false;
+            if page == crate::app::CALENDAR_PAGE {
+                self.open_calendar(None);
+            } else {
+                if page == crate::app::SHELF_PAGE {
+                    self.shelf_tab = 0;
+                }
+                self.show_page(page);
+            }
         }
         self.module_on(page)
     }
-    pub fn settings_ui(&mut self,ctx:&egui::Context,autostart:bool){
-        if !self.settings_open{self.window_layout().close();release_support_codes(ctx);self.weather_source.close();}
+    pub fn settings_ui(&mut self, ctx: &egui::Context, autostart: bool) {
+        if !self.settings_open {
+            self.window_layout().close();
+            release_support_codes(ctx);
+            self.weather_source.close();
+        }
         self.updates.poll(ctx);
         self.updates.dialog_ui(ctx);
-        if !self.settings_open{return;}
-        let id=egui::ViewportId::from_hash_of("daozai-settings");
-        let focus_requested=std::mem::take(&mut self.settings_focus_requested);
-        let opening=self.window_layout().open();
+        if !self.settings_open {
+            return;
+        }
+        let id = egui::ViewportId::from_hash_of("daozai-settings");
+        let focus_requested = std::mem::take(&mut self.settings_focus_requested);
+        let opening = self.window_layout().open();
         ctx.show_viewport_immediate(id,egui::ViewportBuilder::default().with_title("鬼島設定").with_icon(theme::app_icon()).with_inner_size([690.0,560.0]).with_min_inner_size([600.0,450.0]).with_visible(false).with_active(false).with_window_level(egui::WindowLevel::Normal),|ctx,_|{
             let restored=opening && self.window_layout().restore(ctx);
             if !restored{self.window_layout().observe(ctx);}
@@ -2793,40 +5219,91 @@ impl App {
             if before!=format!("{:?}",self.settings){self.settings.save();}
             ctx.set_style(original_style);
         });
-        if !self.settings_open{self.window_layout().close();self.weather_source.close();}else{self.weather_tutorial_ui(ctx);}
+        if !self.settings_open {
+            self.window_layout().close();
+            self.weather_source.close();
+        } else {
+            self.weather_tutorial_ui(ctx);
+        }
     }
 }
 
 /// 收款码只在「支持作者」卡片展开时占用贴图；收起卡片或关闭设置窗口即释放。
-fn release_support_codes(ctx:&egui::Context){
-    ctx.data_mut(|data|for i in 0..2usize {data.remove::<egui::TextureHandle>(egui::Id::new(("support-author-qr",i)));});
+fn release_support_codes(ctx: &egui::Context) {
+    ctx.data_mut(|data| {
+        for i in 0..2usize {
+            data.remove::<egui::TextureHandle>(egui::Id::new(("support-author-qr", i)));
+        }
+    });
 }
 
 /// 从原图裁出二维码区域 `[x, y, 边长]` 并缩放到 `pixels` 见方。
-fn support_code_image(bytes:&[u8],crop:[f32;3],pixels:u32)->egui::ColorImage {
-    let image=image::load_from_memory(bytes).expect("內建收款碼圖片有效");
-    let side=(crop[2] as u32).min(image.width().saturating_sub(crop[0] as u32)).min(image.height().saturating_sub(crop[1] as u32));
-    let code=image.crop_imm(crop[0] as u32,crop[1] as u32,side,side).resize_exact(pixels,pixels,image::imageops::FilterType::Lanczos3).to_rgba8();
-    egui::ColorImage::from_rgba_unmultiplied([pixels as usize,pixels as usize],code.as_raw())
+fn support_code_image(bytes: &[u8], crop: [f32; 3], pixels: u32) -> egui::ColorImage {
+    let image = image::load_from_memory(bytes).expect("內建收款碼圖片有效");
+    let side = (crop[2] as u32)
+        .min(image.width().saturating_sub(crop[0] as u32))
+        .min(image.height().saturating_sub(crop[1] as u32));
+    let code = image
+        .crop_imm(crop[0] as u32, crop[1] as u32, side, side)
+        .resize_exact(pixels, pixels, image::imageops::FilterType::Lanczos3)
+        .to_rgba8();
+    egui::ColorImage::from_rgba_unmultiplied([pixels as usize, pixels as usize], code.as_raw())
 }
 
 #[test]
-fn support_codes_are_cropped_small_and_released_when_hidden(){
-    for (bytes,crop) in [(include_bytes!("../assets/support/support-ecpay-qr.png").as_slice(),[0.0,0.0,200.0]),(include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),[0.0,0.0,600.0])] {
-        let image=support_code_image(bytes,crop,360);
-        assert_eq!(image.size,[360,360]);
-        assert!(image.pixels.len()*4<=600*1024,"每張收款碼貼圖應小於 0.6MB");
+fn support_codes_are_cropped_small_and_released_when_hidden() {
+    for (bytes, crop) in [
+        (
+            include_bytes!("../assets/support/support-ecpay-qr.png").as_slice(),
+            [0.0, 0.0, 200.0],
+        ),
+        (
+            include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),
+            [0.0, 0.0, 600.0],
+        ),
+    ] {
+        let image = support_code_image(bytes, crop, 360);
+        assert_eq!(image.size, [360, 360]);
+        assert!(
+            image.pixels.len() * 4 <= 600 * 1024,
+            "每張收款碼貼圖應小於 0.6MB"
+        );
         // 裁剪结果应是二维码本身：同时含有大量深色与浅色像素。
-        let dark=image.pixels.iter().filter(|p|p.r()<80).count() as f32/image.pixels.len() as f32;
-        assert!((0.2..0.8).contains(&dark),"裁剪區域不像QR Code：深色佔比 {dark}");
+        let dark =
+            image.pixels.iter().filter(|p| p.r() < 80).count() as f32 / image.pixels.len() as f32;
+        assert!(
+            (0.2..0.8).contains(&dark),
+            "裁剪區域不像QR Code：深色佔比 {dark}"
+        );
     }
-    let ctx=egui::Context::default();
-    let _=ctx.run(Default::default(),|ctx|{
-        let texture=ctx.load_texture("qr",egui::ColorImage::new([4,4],Color32::WHITE),Default::default());
-        ctx.data_mut(|data|data.insert_temp(egui::Id::new(("support-author-qr",0usize)),texture));
+    let ctx = egui::Context::default();
+    let _ = ctx.run(Default::default(), |ctx| {
+        let texture = ctx.load_texture(
+            "qr",
+            egui::ColorImage::new([4, 4], Color32::WHITE),
+            Default::default(),
+        );
+        ctx.data_mut(|data| {
+            data.insert_temp(egui::Id::new(("support-author-qr", 0usize)), texture)
+        });
     });
-    assert_eq!(ctx.tex_manager().read().allocated().filter(|(_,meta)|meta.name=="qr").count(),1);
+    assert_eq!(
+        ctx.tex_manager()
+            .read()
+            .allocated()
+            .filter(|(_, meta)| meta.name == "qr")
+            .count(),
+        1
+    );
     release_support_codes(&ctx);
-    let _=ctx.run(Default::default(),|_|{});
-    assert_eq!(ctx.tex_manager().read().allocated().filter(|(_,meta)|meta.name=="qr").count(),0,"收起後應釋放收款碼貼圖");
+    let _ = ctx.run(Default::default(), |_| {});
+    assert_eq!(
+        ctx.tex_manager()
+            .read()
+            .allocated()
+            .filter(|(_, meta)| meta.name == "qr")
+            .count(),
+        0,
+        "收起後應釋放收款碼貼圖"
+    );
 }
