@@ -344,6 +344,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "chfft"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "103be009e532bf7f2cdbf24dc76953f55c83f03bac8a8ced0d2a21b639907dc0"
+dependencies = [
+ "num-complex",
+ "num-traits",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1513,9 +1523,12 @@ dependencies = [
  "ab_glyph",
  "base64 0.22.1",
  "bytemuck",
+ "byteorder",
+ "chfft",
  "chrono",
  "chrono-tz",
  "clipboard-win",
+ "crc32fast",
  "eframe",
  "egui_extras",
  "flate2",
@@ -1841,6 +1854,15 @@ checksum = "08959a387a676302eebf4ddbcbc611da04285579f76f88ee0506c63b1a61dd4b"
 dependencies = [
  "memchr",
  "version_check",
+]
+
+[[package]]
+name = "num-complex"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
