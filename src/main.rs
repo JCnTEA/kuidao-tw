@@ -94,6 +94,8 @@ struct Shell {
     bt_rx: Option<daozai::bt::Service>,
     bt: Vec<daozai::bt::Device>,
     bt_ready: bool,
+    /// 藍牙 PnP 節點仍在場但鏈路閒置時的電量後備。
+    bt_present: Option<(u8, daozai::bt::DeviceKind)>,
     #[cfg(windows)]
     receiver_rx: Option<daozai::bt::Service>,
     receivers: Vec<daozai::bt::Device>,
@@ -452,6 +454,7 @@ impl Shell {
             bt_rx: None,
             bt: Vec::new(),
             bt_ready: false,
+            bt_present: None,
             #[cfg(windows)]
             receiver_rx: None,
             receivers: Vec::new(),
@@ -593,6 +596,7 @@ impl Shell {
             volume: self.system_state.volume,
             bt: self.bt.clone(),
             bt_ready: self.bt_ready,
+            bt_present: self.bt_present,
             receivers: self.receivers.clone(),
             screen,
             backdrop,
@@ -788,7 +792,7 @@ impl eframe::App for Shell {
             }
             if let Some(service)=&self.bt_rx {
                 while let Ok(report)=service.rx.try_recv(){
-                    self.bt=report.devices;
+                    self.bt=report;
                     self.bt_present=None;
                     self.bt_ready=true;
                 }
