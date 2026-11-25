@@ -960,6 +960,11 @@ fn copy_tree(source: &Path, target: &Path) -> Result<(), String> {
             if meta.file_type().is_symlink() {
                 continue;
             }
+            // 開發版整包裡另外附了一份固定檔名 kuidao.exe 給程式內更新腳本用，
+            // 啟動器換版時不需要它，免得安裝資料夾多一份同名主程式。
+            if is_dev() && path.file_name().and_then(|name| name.to_str()) == Some(APP_EXE) {
+                continue;
+            }
             let relative = path
                 .strip_prefix(source)
                 .map_err(|_| "解壓路徑異常".to_owned())?;
