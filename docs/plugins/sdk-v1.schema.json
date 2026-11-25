@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "岛仔 SDK v1 插件清单（评审稿）",
+  "title": "島仔 SDK v1 插件清單（評審稿）",
   "type": "object",
   "properties": {
     "id": {
@@ -17,7 +17,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 80,
-      "description": "状态页标题要着色的末尾文字，必须是 name 的一部分。颜色使用 statusLayout.style.accent。"
+      "description": "狀態頁標題要著色的末尾文字，必須是 name 的一部分。顏色使用 statusLayout.style.accent。"
     },
     "navigationIcon": {
       "type": "object",
@@ -29,15 +29,15 @@
           "minLength": 1,
           "maxLength": 1024,
           "pattern": "^[ \\t\\n\\r]*[Mm][-MmLlHhVvQqCcZz0-9Ee+., \\t\\n\\r]*$",
-          "description": "24×24 坐标内的描边轮廓，包含可绘制的线段或曲线，最多 64 条路径命令。"
+          "description": "24×24 座標內的描邊輪廓，包含可繪製的線段或曲線，最多 64 條路徑命令。"
         },
         "background": {
           "type": "string",
           "pattern": "^#[0-9a-fA-F]{6}$",
-          "description": "设置侧栏图标的背景色。"
+          "description": "設置側欄圖標的背景色。"
         }
       },
-      "description": "独立插件功能在设置侧栏和岛上快捷导航使用的图标。"
+      "description": "獨立插件功能在設置側欄和島上快捷導航使用的圖標。"
     },
     "author": {
       "type": "string",
@@ -50,7 +50,7 @@
     },
     "api": {
       "const": 1,
-      "description": "插件要求的接口主版本。高于宿主支持版本时，安装提示需要更新岛仔。"
+      "description": "插件要求的接口主版本。高於宿主支持版本時，安裝提示需要更新島仔。"
     },
     "runtime": {
       "enum": [
@@ -66,7 +66,7 @@
     },
     "cover": {
       "const": "cover.png",
-      "description": "包根目录的 PNG 封面，最大 256 KiB，宽高不超过 1920×1080，建议 16:9。"
+      "description": "包根目錄的 PNG 封面，最大 256 KiB，寬高不超過 1920×1080，建議 16:9。"
     },
     "owner": {
       "enum": [
@@ -131,7 +131,7 @@
         },
         "url": {"type": "string", "maxLength": 2048, "pattern": "^[Hh][Tt][Tt][Pp][Ss]://"},
         "sources": {
-          "description": "实验。每个来源的 key 须唯一。URL 占位符只能出现在路径和查询串。",
+          "description": "實驗。每個來源的 key 須唯一。URL 佔位符只能出現在路徑和查詢串。",
           "type": "array", "minItems": 1, "maxItems": 3,
           "items": {
             "type": "object",
@@ -160,7 +160,7 @@
       "additionalProperties": false
     },
     "attribution": {
-      "description": "实验。HTTPS 数据来源标注，链接域名须在 network.hosts 内。",
+      "description": "實驗。HTTPS 數據來源標註，鏈接域名須在 network.hosts 內。",
       "type": "object",
       "properties": {
         "label": {"type": "string", "minLength": 1, "maxLength": 80},
@@ -171,7 +171,7 @@
     },
     "statusLayout": {
       "type": "object",
-      "description": "状态详情页的组件顺序与样式。缺省时使用默认模板。",
+      "description": "狀態詳情頁的組件順序與樣式。缺省時使用默認模板。",
       "properties": {
         "components": {
           "type": "array",
@@ -265,11 +265,11 @@
       "additionalProperties": false
     },
     "events": {
-      "description": "订阅宿主事件，声明 event 能力时必填。",
+      "description": "訂閱宿主事件，聲明 event 能力時必填。",
       "const": ["focus.finished"]
     },
     "actions": {
-      "description": "待宿主实现。列出可供用户点击或提交的动作名称。",
+      "description": "待宿主實現。列出可供用戶點擊或提交的動作名稱。",
       "type": "array", "uniqueItems": true, "maxItems": 32,
       "items": {"type":"string","pattern":"^[a-z][a-z0-9_-]{0,39}$"}
     },
@@ -282,7 +282,7 @@
       "properties": {
         "source.read": {
           "enum": ["file", "loopback", "https"],
-          "description": "Windows 试用版 JS 插件的单一只读来源，由用户在安装后授权本地文件、本机 HTTP 或白名单内的 HTTPS 地址。"
+          "description": "Windows 試用版 JS 插件的單一隻讀來源，由用戶在安裝後授權本地文件、本機 HTTP 或白名單內的 HTTPS 地址。"
         },
         "hosts": {
           "type": "array",
@@ -340,11 +340,11 @@
       "type": "array",
       "uniqueItems": true,
       "items": {"type": "string", "pattern": "^[^./\\\\:*?\"<>|][^/\\\\:*?\"<>|]*\\.json$"},
-      "description": "实验。包根目录的 UTF-8 JSON 文件，单个最多 64 KiB，合计最多 256 KiB。"
+      "description": "實驗。包根目錄的 UTF-8 JSON 文件，單個最多 64 KiB，合計最多 256 KiB。"
     },
     "timezones": {
       "type": "boolean",
-      "description": "实验。为设置中的 IANA 时区名提供当前偏移和夏令时状态。"
+      "description": "實驗。為設置中的 IANA 時區名提供當前偏移和夏令時狀態。"
     },
     "assets": {
       "type": "array",
@@ -380,14 +380,14 @@
             "type": "object", "required": ["name", "file"], "additionalProperties": false,
             "properties": {
               "name": {"type": "string", "minLength": 1},
-              "file": {"type": "string", "description": "包内相对路径，用 / 分隔。文件格式为 TTF 或 OTF。"}
+              "file": {"type": "string", "description": "包內相對路徑，用 / 分隔。文件格式為 TTF 或 OTF。"}
             }
           }
         }
       }
     },
     "canvas": {
-      "description": "脚本输出的 canvas 字段。全画布节点数、嵌套深度、文字总量、绑定关联和包内图片由宿主进一步校验。",
+      "description": "腳本輸出的 canvas 字段。全畫布節點數、嵌套深度、文字總量、綁定關聯和包內圖片由宿主進一步校驗。",
       "type": "object",
       "required": ["height", "nodes"],
       "additionalProperties": false,
@@ -622,7 +622,7 @@
         "font": {"type": "string", "minLength": 1},
         "image": {
           "type": "string",
-          "description": "包内相对路径，使用 / 分隔，单张最多 1024×1024。可引用尺寸合规的 cover.png。",
+          "description": "包內相對路徑，使用 / 分隔，單張最多 1024×1024。可引用尺寸合規的 cover.png。",
           "pattern": "^(?!.*\\.\\.)(?!.*[. ]/)(?!.*[\\u0000-\\u001F\\u007F-\\u009F])[^/\\\\:<>\"|?*]+(?:/[^/\\\\:<>\"|?*]+)*\\.(?:[Pp][Nn][Gg]|[Ss][Vv][Gg])$"
         },
         "fit": {"enum": ["cover", "contain"], "default": "contain"},
@@ -711,7 +711,7 @@
     "settingIcon": {"enum": ["heart", "cake", "ring", "plane", "star", "gift", "flag", "calendar", "coffee", "coin", "sun", "moon"]},
     "settingColor": {"enum": ["red", "orange", "yellow", "green", "teal", "blue", "purple", "pink"]},
     "statusField": {
-      "description": "脚本输出的 status.fields 子项。初始值的长度须符合 max。",
+      "description": "腳本輸出的 status.fields 子項。初始值的長度須符合 max。",
       "type": "object",
       "required": ["key", "label", "max"],
       "additionalProperties": false,

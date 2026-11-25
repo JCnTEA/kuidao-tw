@@ -71,7 +71,7 @@ pub(super) fn loopback_ips(url:&url::Url)->&'static [std::net::IpAddr] {
 }
 
 pub fn request(agent:&ureq::Agent,base:&str,credential:&Credential,cancelled:impl Fn()->bool)->Result<Snapshot,(String,u64)>{
-    if cancelled(){return Err(("已取消連接".into(),0));}
+    if cancelled(){return Err(("已取消連線".into(),0));}
     let base=super::site_url(base,true).map_err(|e|(e,0))?;
     if credential.script.trim().is_empty()||credential.script.len()>65536{return Err(("請輸入 64 KB 以內的查詢腳本".into(),0));}
     let mut code=credential.script.clone();

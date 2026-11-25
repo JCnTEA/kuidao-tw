@@ -35,7 +35,7 @@ fn settings_accept_declared_formats_and_reject_invalid_defaults() -> Result<()> 
     ];
     for (mut spec, good, bad) in cases {
         spec["key"] = json!("example");
-        spec["label"] = json!("设置");
+        spec["label"] = json!("設置");
         spec["default"] = json!(good);
         let field: Field = serde_json::from_value(spec.clone())?;
         assert!(valid_fields(&[field.clone()], false), "{spec}");
@@ -46,8 +46,8 @@ fn settings_accept_declared_formats_and_reject_invalid_defaults() -> Result<()> 
     }
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("spike/examples/payday/plugin.json");
     let old = Package::read(&path)?;
-    let settings = old.settings_values(&Values::from([("title".into(), "工资".into())]));
-    assert_eq!(settings["title"], "工资");
+    let settings = old.settings_values(&Values::from([("title".into(), "工資".into())]));
+    assert_eq!(settings["title"], "工資");
     assert_eq!(settings["target"], "2026-12-25");
     Ok(())
 }
@@ -59,25 +59,25 @@ fn canvas_settings_search_chinese_timezones_and_validate_list_choices() -> Resul
     let cities: Vec<_> = timezone_cities("").collect();
     assert!(cities.len() >= 300);
     assert!(cities.iter().all(|city| city.zone.parse::<chrono_tz::Tz>().is_ok()));
-    assert!(timezone_cities("纽约").any(|city| city.zone == "America/New_York"));
-    assert!(timezone_cities("美国").any(|city| city.zone == "America/Chicago"));
-    assert!(timezone_cities("europe/london").any(|city| city.city == "伦敦"));
+    assert!(timezone_cities("紐約").any(|city| city.zone == "America/New_York"));
+    assert!(timezone_cities("美國").any(|city| city.zone == "America/Chicago"));
+    assert!(timezone_cities("europe/london").any(|city| city.city == "倫敦"));
     assert!(timezone_cities("不存在的地方").next().is_none());
 
     let spec = json!({
-        "key":"rows", "label":"项目", "type":"list", "default":"[]", "maxItems":20,
+        "key":"rows", "label":"項目", "type":"list", "default":"[]", "maxItems":20,
         "item":[
-            {"key":"zone","label":"时区","type":"timezone","default":"Asia/Shanghai"},
-            {"key":"icon","label":"图标","type":"icon","default":"heart"},
-            {"key":"color","label":"颜色","type":"color","default":"red"},
-            {"key":"enabled","label":"启用","type":"switch","default":"true"}
+            {"key":"zone","label":"時區","type":"timezone","default":"Asia/Shanghai"},
+            {"key":"icon","label":"圖標","type":"icon","default":"heart"},
+            {"key":"color","label":"顏色","type":"color","default":"red"},
+            {"key":"enabled","label":"啟用","type":"switch","default":"true"}
         ]
     });
     let field: Field = serde_json::from_value(spec)?;
     assert!(valid_fields(std::slice::from_ref(&field), false));
     let good = json!({"zone":"America/New_York","icon":"cake","color":"purple","enabled":"false"});
     assert!(valid_field(&field, &json!([good.clone()]).to_string()));
-    for (key, value) in [("zone", "纽约"), ("icon", "missing"), ("color", "#ffffff"), ("enabled", "on")] {
+    for (key, value) in [("zone", "紐約"), ("icon", "missing"), ("color", "#ffffff"), ("enabled", "on")] {
         let mut bad = good.clone();
         bad[key] = json!(value);
         assert!(!valid_field(&field, &json!([bad]).to_string()));
@@ -129,15 +129,15 @@ fn schedule_selects_early_refresh_and_clamps_near_past_or_distant_dates() {
 
 #[test]
 fn output_and_storage_have_independent_limits() -> Result<()> {
-    let raw = json!({"card":"测试", "storage":"a".repeat(256 * 1024 - 2)}).to_string();
+    let raw = json!({"card":"測試", "storage":"a".repeat(256 * 1024 - 2)}).to_string();
     let (output, storage) = script_settings::split_output(&raw)?;
-    assert_eq!(output["card"], "测试");
+    assert_eq!(output["card"], "測試");
     assert_eq!(storage.as_str().unwrap().len(), 256 * 1024 - 2);
-    let raw = json!({"card":"测试", "storage":"a".repeat(256 * 1024)}).to_string();
+    let raw = json!({"card":"測試", "storage":"a".repeat(256 * 1024)}).to_string();
     assert!(script_settings::split_output(&raw)
         .unwrap_err()
         .to_string()
-        .contains("私有存储已满"));
+        .contains("私有存儲已滿"));
     let raw = json!({"card":"x".repeat(16 * 1024)}).to_string();
     assert!(script_settings::split_output(&raw).is_err());
     Ok(())
@@ -170,24 +170,24 @@ fn package_data_validates_names_limits_and_examples() -> Result<()> {
     let examples = Path::new(env!("CARGO_MANIFEST_DIR")).join("spike/examples");
     let holidays = Package::read(&examples.join("holidays/plugin.json"))?;
     let result = holidays.render(&Values::new(), &Value::Null, "2026-10-10")?;
-    assert_eq!(result.marker, "调休上班");
+    assert_eq!(result.marker, "調休上班");
     assert!(result.next_refresh_at.is_some());
     let countdown = Package::read(&examples.join("countdown/plugin.json"))?;
     let mut settings = countdown.settings_values(&Values::new());
     let result = countdown.render(&settings, &Value::Null, "2026-12-31")?;
-    assert_eq!(result.marker, "纪念日");
+    assert_eq!(result.marker, "紀念日");
     assert_eq!(
         countdown
             .render(&settings, &Value::Null, "2027-01-02")?
             .card,
-        "纪念日已到期"
+        "紀念日已到期"
     );
     settings.insert("mode".into(), "since".into());
     assert_eq!(
         countdown
             .render(&settings, &Value::Null, "2027-01-02")?
             .card,
-        "纪念日已过 2 天"
+        "紀念日已過 2 天"
     );
     Ok(())
 }

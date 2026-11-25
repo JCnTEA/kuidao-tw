@@ -1,4 +1,4 @@
-//! 画布专用字体资源的声明、校验和安装快照。
+//! 畫布專用字體資源的聲明、校驗和安裝快照。
 
 use super::{cover::open_plain_file, fail, LocalPlugins, Manifest, Result};
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -44,7 +44,7 @@ impl Entry {
             })
         {
             return Err(fail(
-                "字体包需要 1 至 4 个名称和文件各不相同的包内 TTF 或 OTF 字体",
+                "字體包需要 1 至 4 個名稱和文件各不相同的包內 TTF 或 OTF 字體",
             ));
         }
         Ok(entry)
@@ -97,7 +97,7 @@ impl<'de> Deserialize<'de> for Blob {
         use serde::de::Error;
         let encoded = String::deserialize(deserializer)?;
         if encoded.len() as u64 > PACKAGE_LIMIT.div_ceil(3) * 4 {
-            return Err(Error::custom("字体包资源超过 16 MiB"));
+            return Err(Error::custom("字體包資源超過 16 MiB"));
         }
         let bytes = STANDARD.decode(encoded).map_err(Error::custom)?;
         Ok(Self(Arc::new(egui::FontData::from_owned(bytes))))
@@ -114,7 +114,7 @@ pub(super) fn read_local(entry: &Entry, base: &Path, used: u64) -> Result<Bundle
     let licenses = LICENSES.into_iter().filter(|name| base.join(name).exists());
     read(entry, licenses, used, |name, limit| {
         let mut bytes = Vec::new();
-        open_plain_file(&base.join(name), "字体和许可文件必须是包内普通文件")?
+        open_plain_file(&base.join(name), "字體和許可文件必須是包內普通文件")?
             .take(limit + 1)
             .read_to_end(&mut bytes)?;
         Ok(bytes)
@@ -129,11 +129,11 @@ pub(super) fn read(
 ) -> Result<Bundle> {
     let licenses: Vec<_> = licenses.collect();
     if licenses.is_empty() {
-        return Err(fail("字体包缺少 LICENSE 或 OFL.txt"));
+        return Err(fail("字體包缺少 LICENSE 或 OFL.txt"));
     }
     let mut remaining = PACKAGE_LIMIT
         .checked_sub(used)
-        .ok_or_else(|| fail("字体包超过 16 MiB"))?;
+        .ok_or_else(|| fail("字體包超過 16 MiB"))?;
     let mut files = BTreeMap::new();
     for (name, is_font) in entry
         .files()
@@ -147,13 +147,13 @@ pub(super) fn read(
         };
         let bytes = load(name, limit)?;
         if bytes.len() as u64 > limit {
-            return Err(fail("单个字体最多 8 MiB，整包最多 16 MiB"));
+            return Err(fail("單個字體最多 8 MiB，整包最多 16 MiB"));
         }
         remaining -= bytes.len() as u64;
         let blob = Blob(Arc::new(egui::FontData::from_owned(bytes)));
         if is_font && !blob.is_font() {
             return Err(fail(&format!(
-                "无法读取字体 {name}，请使用有效的 TTF 或 OTF 文件"
+                "無法讀取字體 {name}，請使用有效的 TTF 或 OTF 文件"
             )));
         }
         files.insert(name.to_owned(), blob);

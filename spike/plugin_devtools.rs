@@ -1,4 +1,4 @@
-//! 本地插件监视、脚本日志和离线试跑。
+//! 本地插件監視、腳本日誌和離線試跑。
 
 use super::*;
 use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::Mutex, time::SystemTime};
@@ -61,7 +61,7 @@ impl WatchedPackage {
 
     fn files(base: &Path, origin: &Path, entry: &str, manifest: &Value) -> Vec<PathBuf> {
         let mut files = vec![origin.to_owned(), base.join(entry)];
-        // 只监视已校验清单声明的包内数据文件。
+        // 只監視已校驗清單聲明的包內數據文件。
         if let Some(data) = manifest["data"].as_array() {
             files.extend(
                 data.iter()
@@ -176,7 +176,7 @@ impl LocalPlugins {
                         .insert(id, WatchedPackage::new(record, package));
                 }
                 Err(error) => {
-                    let message = format!("自动重载失败：{error}");
+                    let message = format!("自動重載失敗：{error}");
                     self.errors.insert(id.clone(), message.clone());
                     self.devtools.logs.append(&id, vec![message]);
                 }
@@ -189,7 +189,7 @@ impl LocalPlugins {
         let previous = &record.package.as_ref().unwrap().manifest;
         let package = Package::read(&record.origin)?;
         if package.manifest.id != id || previous.runtime != package.manifest.runtime {
-            return Err(fail("已安装插件的 ID 和运行环境须保持一致"));
+            return Err(fail("已安裝插件的 ID 和運行環境須保持一致"));
         }
         #[cfg(windows)]
         let previous_network = previous.network.clone();
@@ -246,7 +246,7 @@ impl MockInput {
         let sources = self.sources.as_ref()?;
         input["sources"] = json!(sources);
         if input.get("source").is_some() {
-            // 单来源插件仍从 source 取值。命名来源使用 sources。
+            // 單來源插件仍從 source 取值。命名來源使用 sources。
             let source = sources.get("default").or_else(|| {
                 if sources.len() == 1 {
                     sources.values().next()
@@ -338,7 +338,7 @@ pub(super) fn run_script(
                             None => format!("{entry}：{message}"),
                         }
                     })
-                    .unwrap_or_else(|| format!("{entry}：脚本抛出异常"));
+                    .unwrap_or_else(|| format!("{entry}：腳本拋出異常"));
                 Err(fail(&detail))
             }
             Err(other) => Err(fail(&format!("{entry}：{other}"))),
@@ -359,7 +359,7 @@ fn script_location(stack: &str) -> Option<(u32, u32)> {
 #[cfg(windows)]
 pub(super) fn capability_report(manifest: &Value) -> String {
     let runtime = manifest["runtime"].as_str().unwrap_or("");
-    let mut report = String::from("能力自检");
+    let mut report = String::from("能力自檢");
     for name in manifest["capabilities"]
         .as_array()
         .into_iter()
@@ -378,7 +378,7 @@ pub(super) fn capability_report(manifest: &Value) -> String {
                     | "appearance.material"
                     | "navigation.shortcuts"
                     | "wireless.receivers" => "可用",
-                    _ => "实验",
+                    _ => "實驗",
                 }
             }
             _ => "未支持",

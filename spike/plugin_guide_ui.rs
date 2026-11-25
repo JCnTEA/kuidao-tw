@@ -1,19 +1,19 @@
-//! 集市顶部的「做插件」入口和新手教程抽屉。
+//! 集市頂部的「做插件」入口和新手教程抽屜。
 //!
-//! 教程分「还没做好」「已经做好了」两种情况，同一位置、同一结构：已开放能力、
-//! 一句话交给 AI 的卡片、可展开的完整步骤，底部固定开发者工具和投稿指南。
+//! 教程分「還沒做好」「已經做好了」兩種情況，同一位置、同一結構：已開放能力、
+//! 一句話交給 AI 的卡片、可展開的完整步驟，底部固定開發者工具和投稿指南。
 
 use super::*;
 use std::path::{Path, PathBuf};
 
-/// 岛仔插件投稿仓，AI 助手从这里读规范和投稿要求。
+/// 島仔插件投稿倉，AI 助手從這裡讀規範和投稿要求。
 const REPO: &str = "https://github.com/Renly1994/xiaotang-daozai-plugins";
 
 fn guide_id() -> egui::Id {
     egui::Id::new("plugin-guide")
 }
 
-/// 「从模板创建」生成的插件文件夹，教程里的那段话会自动填上。
+/// 「從模板創建」生成的插件文件夾，教程裡的那段話會自動填上。
 pub(super) fn template_dir_id() -> egui::Id {
     guide_id().with("template")
 }
@@ -26,8 +26,8 @@ struct GuideState {
     copied: Option<f64>,
 }
 
-const IDEA_EXAMPLE: &str = "在待办里显示离下次还信用卡还有几天";
-const EXISTING_EXAMPLE: &str = "我写的番茄钟统计脚本，代码在 D:\\我的工具\\pomodoro";
+const IDEA_EXAMPLE: &str = "在待辦裡顯示離下次還信用卡還有幾天";
+const EXISTING_EXAMPLE: &str = "我寫的番茄鍾統計腳本，代碼在 D:\\我的工具\\pomodoro";
 
 pub(super) fn open_guide(ui: &egui::Ui) {
     let now = ui.input(|input| input.time);
@@ -39,7 +39,7 @@ fn close_guide(ui: &egui::Ui) {
     ui.data_mut(|data| data.remove::<f64>(guide_id().with("opened")));
 }
 
-/// 发给 AI 助手的那段话。`idea` 为空时用示例占位。
+/// 發給 AI 助手的那段話。`idea` 為空時用示例佔位。
 pub(super) fn prompt(have: bool, idea: &str, template: Option<&Path>, exe: Option<&Path>) -> (String, std::ops::Range<usize>) {
     let idea = if idea.trim().is_empty() {
         if have { EXISTING_EXAMPLE } else { IDEA_EXAMPLE }
@@ -47,41 +47,41 @@ pub(super) fn prompt(have: bool, idea: &str, template: Option<&Path>, exe: Optio
         idea.trim()
     };
     let mut text = if have {
-        "帮我把已有的功能改造成岛仔（Windows 灵动岛工具）插件：".to_owned()
+        "幫我把已有的功能改造成島仔（Windows 靈動島工具）插件：".to_owned()
     } else {
-        "帮我做一个岛仔（Windows 灵动岛工具）插件：".to_owned()
+        "幫我做一個島仔（Windows 靈動島工具）插件：".to_owned()
     };
     let start = text.len();
     text.push_str(idea);
     let range = start..text.len();
     text.push('。');
     if have {
-        text.push_str("先判断它需要的能力岛仔现在支不支持，不支持的部分先告诉我。");
+        text.push_str("先判斷它需要的能力島仔現在支不支持，不支持的部分先告訴我。");
     }
     text.push('\n');
     match template {
         Some(dir) => text.push_str(&format!(
-            "插件模板在 {}（岛仔「从模板创建」生成）。",
+            "插件模板在 {}（島仔「從模板創建」生成）。",
             dir.display()
         )),
         None => text.push_str(
-            "插件模板我会在岛仔「设置 › 插件 › 开发者工具 › 从模板创建」生成，再告诉你文件夹位置。",
+            "插件模板我會在島仔「設置 › 插件 › 開發者工具 › 從模板創建」生成，再告訴你文件夾位置。",
         ),
     }
-    text.push_str(&format!("规范和投稿要求看 {REPO} 。\n要求：\n"));
-    text.push_str("- 只改模板里的 main.js、plugin.json 和 cover.png，用 JavaScript\n");
-    text.push_str("- refresh 每次从头运行，需要记住的内容放进返回的 storage\n");
-    text.push_str("- 让用户填的名字、日期写成 plugin.json 里的设置项\n");
+    text.push_str(&format!("規範和投稿要求看 {REPO} 。\n要求：\n"));
+    text.push_str("- 只改模板裡的 main.js、plugin.json 和 cover.png，用 JavaScript\n");
+    text.push_str("- refresh 每次從頭運行，需要記住的內容放進返回的 storage\n");
+    text.push_str("- 讓用戶填的名字、日期寫成 plugin.json 裡的設置項\n");
     let exe = exe.map_or_else(|| "daozai.exe".to_owned(), |exe| exe.display().to_string());
     text.push_str(&format!(
-        "- 改完运行 \"{exe}\" --plugin-test plugin.json，直到校验通过\n"
+        "- 改完運行 \"{exe}\" --plugin-test plugin.json，直到校驗通過\n"
     ));
-    text.push_str("- 可追加 --input mock.json，模拟设置、私有数据、当前时间和网络响应\n");
-    text.push_str("- 最后告诉我怎么在岛仔里安装试用");
+    text.push_str("- 可追加 --input mock.json，模擬設置、私有數據、當前時間和網絡響應\n");
+    text.push_str("- 最後告訴我怎麼在島仔裡安裝試用");
     (text, range)
 }
 
-/// 集市顶部的教程入口：虚线框横幅，整块可点。
+/// 集市頂部的教程入口：虛線框橫幅，整塊可點。
 pub(super) fn guide_banner(ui: &mut egui::Ui) -> bool {
     let ctx = ui.ctx().clone();
     let width = ui.available_width();
@@ -150,8 +150,8 @@ pub(super) fn guide_banner(ui: &mut egui::Ui) -> bool {
         job.wrap.break_anywhere = true;
         ui.fonts(|fonts| fonts.layout_job(job))
     };
-    let title = line("把你做的功能变成插件，放到集市给大家用", 13.5, strong);
-    let sub = line("不会写代码也能跟着做，已经做好的功能也能搬进来", 12.0, muted);
+    let title = line("把你做的功能變成插件，放到集市給大家用", 13.5, strong);
+    let sub = line("不會寫代碼也能跟著做，已經做好的功能也能搬進來", 12.0, muted);
     let total = title.size().y + 3.0 + sub.size().y;
     let top = rect.center().y - total / 2.0;
     painter.galley(egui::pos2(text_left, top), title.clone(), strong);
@@ -160,8 +160,8 @@ pub(super) fn guide_banner(ui: &mut egui::Ui) -> bool {
     response.clicked()
 }
 
-/// 右侧整窗抽屉外壳：盖住整个设置窗口并置灰背后，从右侧滑入。Esc 和点背景都会关；
-/// 上面另有弹窗时交给弹窗处理，免得一次 Esc 关掉两层。`content` 返回真也表示关闭。
+/// 右側整窗抽屜外殼：蓋住整個設置窗口並置灰背後，從右側滑入。Esc 和點背景都會關；
+/// 上面另有彈窗時交給彈窗處理，免得一次 Esc 關掉兩層。`content` 返回真也表示關閉。
 pub(super) fn side_drawer(
     ui: &mut egui::Ui,
     salt: &str,
@@ -214,43 +214,43 @@ pub(super) fn side_drawer(
     close
 }
 
-/// 抽屉右上角的 ×。
+/// 抽屜右上角的 ×。
 pub(super) fn drawer_close(ui: &mut egui::Ui) -> bool {
     ui.add(egui::Button::new(egui::RichText::new("×").size(18.0)).frame(false))
-        .on_hover_text("关闭")
+        .on_hover_text("關閉")
         .clicked()
 }
 
 fn sdk_capabilities(ui: &mut egui::Ui) {
     let groups: &[(&str, &[(&str, &str)])] = &[
-        ("岛上显示", &[
-            ("卡片与标注", "待办信息卡、日历日期标注，可在各自的功能页显示。"),
-            ("功能页", "可做独立状态页，支持指标、进度、列表、折线、标签、告警和双色标题。"),
-            ("自绘画布", "用文字、图形和图片自由排版，可铺满状态页，也可与标准组件混排。"),
-            ("岛上常驻", "开启常驻的插件在岛收起时一起显示，可在「页面管理 › 岛上显示」排序。同一插件可提供多张轮播画布。"),
+        ("島上顯示", &[
+            ("卡片與標註", "待辦信息卡、日曆日期標註，可在各自的功能頁顯示。"),
+            ("功能頁", "可做獨立狀態頁，支持指標、進度、列表、折線、標籤、告警和雙色標題。"),
+            ("自繪畫布", "用文字、圖形和圖片自由排版，可鋪滿狀態頁，也可與標準組件混排。"),
+            ("島上常駐", "開啟常駐的插件在島收起時一起顯示，可在「頁面管理 › 島上顯示」排序。同一插件可提供多張輪播畫布。"),
         ]),
-        ("交互与数据", &[
-            ("设置与刷新", "支持文本、日期、开关、选项、数字、时刻、星期、时区与列表，可保存私有数据、读取包内 JSON 并定时刷新。"),
-            ("页面交互", "支持按钮、单行或多行输入、可点列表和画布交互，可打开 HTTPS 链接或复制文字。"),
-            ("实时组件", "岛仔计算时钟、倒计时和跳动数字，可将敏感值默认打码。"),
-            ("专注事件", "可订阅专注计时结束事件，由岛仔调用插件脚本。"),
+        ("交互與數據", &[
+            ("設置與刷新", "支持文本、日期、開關、選項、數字、時刻、星期、時區與列表，可保存私有數據、讀取包內 JSON 並定時刷新。"),
+            ("頁面交互", "支持按鈕、單行或多行輸入、可點列表和畫布交互，可打開 HTTPS 鏈接或複製文字。"),
+            ("實時組件", "島仔計算時鐘、倒計時和跳動數字，可將敏感值默認打碼。"),
+            ("專注事件", "可訂閱專注計時結束事件，由島仔調用插件腳本。"),
             #[cfg(windows)]
-            ("一次性提醒", "可发出提醒，由岛仔按用户的通知和正文设置显示。"),
+            ("一次性提醒", "可發出提醒，由島仔按用戶的通知和正文設置顯示。"),
             #[cfg(windows)]
-            ("授权取数", "只读用户选定的文件、本机 HTTP 或白名单内的 HTTPS。HTTPS 最多 3 个 GET 来源，可调刷新间隔，密钥由 Windows 托管。"),
-            ("AI 额度", "为现有 AI 额度面板添加自定义数据来源。"),
+            ("授權取數", "只讀用戶選定的文件、本機 HTTP 或白名單內的 HTTPS。HTTPS 最多 3 個 GET 來源，可調刷新間隔，密鑰由 Windows 託管。"),
+            ("AI 額度", "為現有 AI 額度面板添加自定義數據來源。"),
         ]),
-        ("资源与接入", &[
-            ("外观资源", "可提供皮肤、功能图标、吉祥物表情和画布字体。"),
-            ("快捷导航", "为已启用的功能页提供底部快捷入口，可配置选中颜色。"),
-            ("无线接收器", "可为兼容的 USB 无线接收器提供识别配置和电量读取规则。"),
+        ("資源與接入", &[
+            ("外觀資源", "可提供皮膚、功能圖標、吉祥物表情和畫布字體。"),
+            ("快捷導航", "為已啟用的功能頁提供底部快捷入口，可配置選中顏色。"),
+            ("無線接收器", "可為兼容的 USB 無線接收器提供識別配置和電量讀取規則。"),
             #[cfg(all(windows, feature = "sdk-material"))]
-            ("GPU 材质", "可安装自定义材质，需开启 DX12 兼容渲染。"),
+            ("GPU 材質", "可安裝自定義材質，需開啟 DX12 兼容渲染。"),
             #[cfg(windows)]
-            ("本机接入", "独立接入端可发通知、更新状态卡，并接收用户点击发出的操作。"),
+            ("本機接入", "獨立接入端可發通知、更新狀態卡，並接收用戶點擊發出的操作。"),
         ]),
-        ("开发调试", &[
-            ("本地工具", "可从模板创建、安装、监听文件变化和查看脚本日志，并用模拟数据校验及本地打包。"),
+        ("開發調試", &[
+            ("本地工具", "可從模板創建、安裝、監聽文件變化和查看腳本日誌，並用模擬數據校驗及本地打包。"),
         ]),
     ];
     egui::Frame::new()
@@ -264,7 +264,7 @@ fn sdk_capabilities(ui: &mut egui::Ui) {
             spacing.item_spacing.y = 4.0;
             spacing.button_padding.y = 2.0;
             spacing.interact_size.y = 24.0;
-            egui::CollapsingHeader::new(egui::RichText::new("当前版本已开放的 SDK 能力").size(13.5).strong())
+            egui::CollapsingHeader::new(egui::RichText::new("當前版本已開放的 SDK 能力").size(13.5).strong())
                 .id_salt("plugin-guide-sdk-capabilities")
                 .show_background(false)
                 .show(ui, |ui| {
@@ -289,7 +289,7 @@ fn sdk_capabilities(ui: &mut egui::Ui) {
         });
 }
 
-/// 步骤说明里用 `反引号` 包起来的路径和文件名，显示成小底色块。
+/// 步驟說明裡用 `反引號` 包起來的路徑和文件名，顯示成小底色塊。
 fn step_text(ui: &egui::Ui, text: &str) -> egui::text::LayoutJob {
     let mut job = egui::text::LayoutJob::default();
     let muted = muted_color(ui);
@@ -355,22 +355,22 @@ fn steps(ui: &mut egui::Ui, items: &[(&str, &str)]) {
 }
 
 const NEW_STEPS: [(&str, &str); 5] = [
-    ("想好要显示什么", "用一句话写下来，比如「收起时显示距离发薪还有几天」。先选好内容放在哪个功能页，或者是否要在岛上常驻。"),
-    ("用模板生成插件", "到 `开发者工具 › 从模板创建`，填插件 ID、名称和作者，选一个文件夹。岛仔会生成可直接运行的样例。"),
-    ("改成你的内容", "用记事本或 VS Code 打开文件夹。`main.js` 写显示逻辑，`plugin.json` 声明要用的能力与设置。把封面换成你的 `cover.png`（16:9，不超过 256 KB）。"),
-    ("装到自己的岛仔上试", "在开发者工具点「安装本地插件…」，选 plugin.json，打开插件开关。勾选「监视文件变化」后保存本地文件即可重载，运行信息可在「脚本日志」里查看。"),
-    ("校验并投稿到集市", "点「本地校验」通过后，按投稿指南提交到岛仔插件仓库。审核通过后，大家就能在集市里搜到并安装。"),
+    ("想好要顯示什麼", "用一句話寫下來，比如「收起時顯示距離發薪還有幾天」。先選好內容放在哪個功能頁，或者是否要在島上常駐。"),
+    ("用模板生成插件", "到 `開發者工具 › 從模板創建`，填插件 ID、名稱和作者，選一個文件夾。島仔會生成可直接運行的樣例。"),
+    ("改成你的內容", "用記事本或 VS Code 打開文件夾。`main.js` 寫顯示邏輯，`plugin.json` 聲明要用的能力與設置。把封面換成你的 `cover.png`（16:9，不超過 256 KB）。"),
+    ("裝到自己的島仔上試", "在開發者工具點「安裝本地插件…」，選 plugin.json，打開插件開關。勾選「監視文件變化」後保存本地文件即可重載，運行信息可在「腳本日誌」裡查看。"),
+    ("校驗並投稿到集市", "點「本地校驗」通過後，按投稿指南提交到島仔插件倉庫。審核通過後，大家就能在集市裡搜到並安裝。"),
 ];
 
 const HAVE_STEPS: [(&str, &str); 5] = [
-    ("用模板生成插件外壳", "到 `开发者工具 › 从模板创建` 生成样例，里面包含清单、入口和封面。"),
-    ("把逻辑搬进 refresh", "打开 `main.js`，把你原来计算结果的部分放进 `refresh`：它拿到设置、今天日期和上次保存的数据，返回要显示的文字和要保存的数据。其他语言写的，可以让 AI 助手改写成 JavaScript。"),
-    ("把要用户填的东西变成设置", "原来写死在代码里的名字、日期，改成 `plugin.json` 里的设置项。用户在设置页填，插件刷新时读到。"),
-    ("配一张封面", "放一张 16:9 的 `cover.png`，不超过 256 KB、1920×1080。集市卡片和详情会原样显示它。"),
-    ("试装、校验、投稿", "「安装本地插件…」装上试用，「本地校验」通过后按投稿指南提交。之后发新版本只要改版本号再提交一次，用户会看到「更新」。"),
+    ("用模板生成插件外殼", "到 `開發者工具 › 從模板創建` 生成樣例，裡面包含清單、入口和封面。"),
+    ("把邏輯搬進 refresh", "打開 `main.js`，把你原來計算結果的部分放進 `refresh`：它拿到設置、今天日期和上次保存的數據，返回要顯示的文字和要保存的數據。其他語言寫的，可以讓 AI 助手改寫成 JavaScript。"),
+    ("把要用戶填的東西變成設置", "原來寫死在代碼裡的名字、日期，改成 `plugin.json` 裡的設置項。用戶在設置頁填，插件刷新時讀到。"),
+    ("配一張封面", "放一張 16:9 的 `cover.png`，不超過 256 KB、1920×1080。集市卡片和詳情會原樣顯示它。"),
+    ("試裝、校驗、投稿", "「安裝本地插件…」裝上試用，「本地校驗」通過後按投稿指南提交。之後發新版本只要改版本號再提交一次，用戶會看到「更新」。"),
 ];
 
-/// 打开开发者工具；`template` 为真时直接进入「从模板创建」表单。
+/// 打開開發者工具；`template` 為真時直接進入「從模板創建」表單。
 fn open_developer_tools(ui: &egui::Ui, template: bool) {
     let key = egui::Id::new("plugin-developer-tools");
     ui.data_mut(|data| {
@@ -383,7 +383,7 @@ fn open_developer_tools(ui: &egui::Ui, template: bool) {
 }
 
 impl LocalPlugins {
-    /// 教程抽屉。打开时盖住整个设置窗口。
+    /// 教程抽屜。打開時蓋住整個設置窗口。
     pub(super) fn guide_drawer(&mut self, ui: &mut egui::Ui) {
         let Some(opened) = ui.data(|data| data.get_temp::<f64>(guide_id().with("opened"))) else {
             return;
@@ -396,10 +396,10 @@ impl LocalPlugins {
         let close = side_drawer(ui, "plugin-guide", opened, |ui| {
             let mut close = false;
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("做一个岛仔插件").size(17.0).strong());
+                ui.label(egui::RichText::new("做一個島仔插件").size(17.0).strong());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     close |= drawer_close(ui);
-                    let options = ["还没做好".to_owned(), "已经做好了".to_owned()];
+                    let options = ["還沒做好".to_owned(), "已經做好了".to_owned()];
                     if let Some(index) = segmented(ui, "plugin-guide-mode", &options, usize::from(state.have), &[false, false], 12.0) {
                         state.have = index == 1;
                         state.copied = None;
@@ -418,7 +418,7 @@ impl LocalPlugins {
                     ui.add_space(8.0);
                     self.guide_ai_card(ui, &mut state, template.as_deref(), exe.as_deref(), now);
                     ui.add_space(6.0);
-                    egui::CollapsingHeader::new(egui::RichText::new("想自己动手，看完整步骤").size(13.0))
+                    egui::CollapsingHeader::new(egui::RichText::new("想自己動手，看完整步驟").size(13.0))
                         .id_salt(("plugin-guide-manual", state.have))
                         .default_open(false)
                         .show(ui, |ui| {
@@ -436,7 +436,7 @@ impl LocalPlugins {
                 if ui.add(market_button(ui, "投稿指南")).clicked() {
                     ui.ctx().open_url(egui::OpenUrl::new_tab(plugin_author_ui::GUIDE));
                 }
-                if ui.button("打开开发者工具").clicked() {
+                if ui.button("打開開發者工具").clicked() {
                     open_developer_tools(ui, false);
                 }
             });
@@ -468,14 +468,14 @@ impl LocalPlugins {
                 ui.spacing_mut().item_spacing.y = 8.0;
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 8.0;
-                    let title = if state.have { "一句话交给 AI 改造" } else { "一句话交给 AI 做" };
+                    let title = if state.have { "一句話交給 AI 改造" } else { "一句話交給 AI 做" };
                     ui.label(egui::RichText::new(title).size(13.5).strong());
                     small_tag(ui, "JS 卡片模板");
                 });
                 let hint = if state.have {
-                    "把原代码的文件夹位置也告诉 AI，请它对照当前 SDK 判断哪些能力适合迁移到插件。"
+                    "把原代碼的文件夾位置也告訴 AI，請它對照當前 SDK 判斷哪些能力適合遷移到插件。"
                 } else {
-                    "先点下方「从模板创建」生成插件文件夹，再把这段话发给 Claude Code、Cursor 等 AI 编程助手。模板位置和校验命令岛仔已经帮你填好。"
+                    "先點下方「從模板創建」生成插件文件夾，再把這段話發給 Claude Code、Cursor 等 AI 編程助手。模板位置和校驗命令島仔已經幫你填好。"
                 };
                 ui.add(egui::Label::new(egui::RichText::new(hint).size(12.0).color(muted_color(ui))).wrap());
                 let (value, example, salt) = if state.have {
@@ -530,7 +530,7 @@ impl LocalPlugins {
                         |ui| {
                             ui.add(
                                 egui::Label::new(
-                                    egui::RichText::new("AI 改完后，回来点「安装本地插件…」试用")
+                                    egui::RichText::new("AI 改完後，回來點「安裝本地插件…」試用")
                                         .size(11.5)
                                         .color(muted_color(ui)),
                                 )
@@ -543,12 +543,12 @@ impl LocalPlugins {
                         if copied {
                             ui.ctx().request_repaint_after(std::time::Duration::from_millis(200));
                         }
-                        let label = if copied { "已复制" } else { "复制这段话" };
+                        let label = if copied { "已複製" } else { "複製這段話" };
                         if ui.add(market_button(ui, label)).clicked() {
                             ui.ctx().copy_text(text.clone());
                             state.copied = Some(now);
                         }
-                        if ui.button("从模板创建").clicked() {
+                        if ui.button("從模板創建").clicked() {
                             open_developer_tools(ui, true);
                         }
                     });
@@ -565,16 +565,16 @@ mod tests {
     fn prompt_fills_the_idea_template_and_validator() {
         let (text, range) = prompt(
             false,
-            "  显示离周末还有几天 ",
+            "  顯示離週末還有幾天 ",
             Some(Path::new(r"D:\插件\weekend")),
             Some(Path::new(r"C:\Daozai\daozai.exe")),
         );
-        assert_eq!(&text[range], "显示离周末还有几天");
+        assert_eq!(&text[range], "顯示離週末還有幾天");
         assert!(text.contains(r"插件模板在 D:\插件\weekend"));
         assert!(text.contains(r#""C:\Daozai\daozai.exe" --plugin-test plugin.json"#));
         let (text, range) = prompt(true, "", None, None);
         assert_eq!(&text[range], EXISTING_EXAMPLE);
-        assert!(text.contains("不支持的部分先告诉我"));
-        assert!(text.contains("从模板创建」生成，再告诉你文件夹位置"));
+        assert!(text.contains("不支持的部分先告訴我"));
+        assert!(text.contains("從模板創建」生成，再告訴你文件夾位置"));
     }
 }

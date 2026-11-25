@@ -1,6 +1,6 @@
 # 本地試裝與測試集市
 
-在 Windows 上，用啟用了 `sdk-js` 的島仔打開「設置 → 插件」。已在使用島仔時，可先從托盤退出當前實例，再啟動試用版。可以雙擊[試用本地插件.cmd](../../spike/試用本地插件.cmd)編譯並啟動。等價的 PowerShell 命令在工作樹根目錄運行，試用數據放進 `target/local-trial`。
+在 Windows 上，用啟用了 `sdk-js` 的島仔打開「設置 → 插件」。已在使用島仔時，可先從託盤退出當前實例，再啟動試用版。可以雙擊[試用本地插件.cmd](../../spike/試用本地插件.cmd)編譯並啟動。等價的 PowerShell 命令在工作樹根目錄運行，試用數據放進 `target/local-trial`。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File spike/cargo-serial.ps1 build --locked --features sdk-js --bin daozai --target x86_64-pc-windows-msvc

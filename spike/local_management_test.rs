@@ -9,7 +9,7 @@ pub(super) fn frame(
     frame_in(ctx, egui::vec2(500., 550.), events, draw)
 }
 
-/// 与真实设置窗口差不多大的画布，教程抽屉这类长内容用。
+/// 與真實設置窗口差不多大的畫布，教程抽屜這類長內容用。
 fn frame_in(
     ctx: &egui::Context,
     size: egui::Vec2,
@@ -42,16 +42,16 @@ pub(super) fn click(ctx: &egui::Context, label: &str, mut draw: impl FnMut(&mut 
         })
         .or_else(|| {
             let id = match label {
-                "启用" | "停用" => ["example.payday", "example.material"]
+                "啟用" | "停用" => ["example.payday", "example.material"]
                     .into_iter()
                     .map(|plugin| egui::Id::new(("settings-plugin-switch", plugin)))
                     .find(|id| ctx.read_response(*id).is_some())?,
-                "刷新目录" => egui::Id::new("plugin-market-refresh"),
+                "刷新目錄" => egui::Id::new("plugin-market-refresh"),
                 _ => return None,
             };
             ctx.read_response(id).map(|response| response.rect.center())
         })
-        .unwrap_or_else(|| panic!("找不到按钮 {label}"));
+        .unwrap_or_else(|| panic!("找不到按鈕 {label}"));
     click_at(ctx, pos, draw);
 }
 
@@ -95,22 +95,22 @@ fn script_settings_controls_save_values_in_the_owner_page() -> Result<()> {
     let mut record = host.records["example.payday"].clone();
     let package = record.package.as_mut().unwrap();
     package.manifest.id = ID.into();
-    package.manifest.name = "设置控件测试".into();
+    package.manifest.name = "設置控件測試".into();
     package.manifest.owner = "tasks".into();
     package.manifest.capabilities = vec!["card".into(), "settings".into()];
     package.manifest.settings = serde_json::from_value(json!([
-        {"key":"switch", "label":"启用选项", "type":"switch", "default":"false"},
-        {"key":"choice", "label":"计数方式", "type":"choice", "default":"remain",
-         "choices":[{"value":"remain","label":"剩余天数"},{"value":"elapsed","label":"累计天数"}]},
-        {"key":"number", "label":"计数步长", "type":"number", "default":"4",
+        {"key":"switch", "label":"啟用選項", "type":"switch", "default":"false"},
+        {"key":"choice", "label":"計數方式", "type":"choice", "default":"remain",
+         "choices":[{"value":"remain","label":"剩餘天數"},{"value":"elapsed","label":"累計天數"}]},
+        {"key":"number", "label":"計數步長", "type":"number", "default":"4",
          "min":1, "max":10, "step":1, "unit":"天", "precision":0},
-        {"key":"time", "label":"提醒时间", "type":"time", "default":"08:00"},
-        {"key":"weekdays", "label":"重复日期", "type":"weekdays", "default":"1,3"},
-        {"key":"note", "label":"说明", "type":"text", "default":"第一行\n第二行", "multiline":true},
+        {"key":"time", "label":"提醒時間", "type":"time", "default":"08:00"},
+        {"key":"weekdays", "label":"重複日期", "type":"weekdays", "default":"1,3"},
+        {"key":"note", "label":"說明", "type":"text", "default":"第一行\n第二行", "multiline":true},
         {"key":"list", "label":"城市列表", "type":"list", "default":"[]", "maxItems":2,
          "item":[{"key":"city","label":"城市","type":"text","default":"北京"}]}
     ]))?;
-    package.source = "function refresh() { return {card: '设置控件测试'}; }".into();
+    package.source = "function refresh() { return {card: '設置控件測試'}; }".into();
     package.manifest.validate()?;
     record.values = package.settings_values(&Values::new());
     host.put(ID, record)?;
@@ -120,15 +120,15 @@ fn script_settings_controls_save_values_in_the_owner_page() -> Result<()> {
     crate::theme::load_fonts(&ctx);
     let mut draw = |ui: &mut egui::Ui| host.settings(ui, "tasks", true);
     let first = frame(&ctx, vec![], &mut draw);
-    assert!(has_text(&first, "设置控件测试"));
+    assert!(has_text(&first, "設置控件測試"));
     assert!(has_text(&first, "插件"));
     let switch = ctx
         .read_response(egui::Id::new(("settings-plugin-switch", format!("{ID}:switch"))))
-        .expect("脚本插件设置开关")
+        .expect("腳本插件設置開關")
         .rect
         .center();
     click_at(&ctx, switch, &mut draw);
-    click(&ctx, "累计天数", &mut draw);
+    click(&ctx, "累計天數", &mut draw);
     click(&ctx, "4天", &mut draw);
     frame(&ctx, vec![], &mut draw);
     frame(&ctx, vec![egui::Event::Text("7".into())], &mut draw);
@@ -142,10 +142,10 @@ fn script_settings_controls_save_values_in_the_owner_page() -> Result<()> {
     click(&ctx, "+", &mut draw);
     click(&ctx, "日", &mut draw);
     click(&ctx, "添加一行", &mut draw);
-    click(&ctx, "保存设置", &mut draw);
+    click(&ctx, "保存設置", &mut draw);
 
     let mut changed = host.records[ID].values.clone();
-    changed.insert("note".into(), "改过的第一行\n保留第二行".into());
+    changed.insert("note".into(), "改過的第一行\n保留第二行".into());
     host.save(ID, changed)?;
     drop(host);
     let host = LocalPlugins::open(dir.clone());
@@ -155,7 +155,7 @@ fn script_settings_controls_save_values_in_the_owner_page() -> Result<()> {
     assert_eq!(values["number"], "7");
     assert_eq!(values["time"], "08:15");
     assert_eq!(values["weekdays"], "1,3,7");
-    assert_eq!(values["note"], "改过的第一行\n保留第二行");
+    assert_eq!(values["note"], "改過的第一行\n保留第二行");
     assert_eq!(serde_json::from_str::<Value>(&values["list"])?, json!([{"city":"北京"}]));
     drop(host);
     fs::remove_dir_all(dir)?;
@@ -166,7 +166,7 @@ fn script_settings_controls_save_values_in_the_owner_page() -> Result<()> {
 #[test]
 fn storage_limit_error_is_visible_in_local_plugin_details() -> Result<()> {
     const ID: &str = "example.payday";
-    const ERROR: &str = "私有存储已满，上限为 256 KiB";
+    const ERROR: &str = "私有存儲已滿，上限為 256 KiB";
     let dir = std::env::temp_dir().join(format!(
         "daozai-storage-detail-{}-{}",
         std::process::id(),
@@ -178,19 +178,19 @@ fn storage_limit_error_is_visible_in_local_plugin_details() -> Result<()> {
     let sample = Path::new(env!("CARGO_MANIFEST_DIR")).join("spike/examples/payday/plugin.json");
     host.install(&sample)?;
     let mut record = host.records[ID].clone();
-    record.storage = json!("已保存的数据");
+    record.storage = json!("已保存的數據");
     record.package.as_mut().unwrap().source =
-        r#"function refresh() {return {card:"待办",storage:"x".repeat(256*1024)};}"#.into();
+        r#"function refresh() {return {card:"待辦",storage:"x".repeat(256*1024)};}"#.into();
     host.put(ID, record)?;
     host.enable(ID, true)?;
     let deadline = Instant::now() + Duration::from_secs(5);
     while !host.errors.contains_key(ID) {
         host.tick_features(true, false, false, "2026-11-23");
-        assert!(Instant::now() < deadline, "等待插件存储错误超时");
+        assert!(Instant::now() < deadline, "等待插件存儲錯誤超時");
         std::thread::sleep(Duration::from_millis(2));
     }
     assert_eq!(host.errors[ID], ERROR);
-    assert_eq!(host.records[ID].storage, json!("已保存的数据"));
+    assert_eq!(host.records[ID].storage, json!("已保存的數據"));
 
     let ctx = egui::Context::default();
     crate::theme::load_fonts(&ctx);
@@ -205,7 +205,7 @@ fn storage_limit_error_is_visible_in_local_plugin_details() -> Result<()> {
         );
     };
     click(&ctx, "···", &mut draw);
-    click(&ctx, "查看详情", &mut draw);
+    click(&ctx, "查看詳情", &mut draw);
     for _ in 0..20 {
         let _ = frame(&ctx, vec![], &mut draw);
     }
@@ -221,7 +221,7 @@ fn storage_limit_error_is_visible_in_local_plugin_details() -> Result<()> {
             )
         })
         .count();
-    assert!(count >= 2, "已安装列表和详情都应显示存储超限原因");
+    assert!(count >= 2, "已安裝列表和詳情都應顯示存儲超限原因");
     let record_path = host.path(ID);
     drop(host);
     fs::remove_file(record_path)?;
@@ -232,7 +232,7 @@ fn storage_limit_error_is_visible_in_local_plugin_details() -> Result<()> {
 #[test]
 fn status_page_management_opens_and_switches_independently() -> Result<()> {
     const ID: &str = "example.status-management";
-    const NAME: &str = "模拟状态详情";
+    const NAME: &str = "模擬狀態詳情";
     let dir = std::env::temp_dir().join(format!(
         "daozai-status-management-{}-{}",
         std::process::id(),
@@ -276,7 +276,7 @@ fn status_page_management_opens_and_switches_independently() -> Result<()> {
         }
         let switch = installed_ctx
             .read_response(egui::Id::new(("settings-plugin-switch", ID)))
-            .expect("已安装中的插件开关")
+            .expect("已安裝中的插件開關")
             .rect
             .center();
         click_at(&installed_ctx, switch, |ui| {
@@ -287,15 +287,15 @@ fn status_page_management_opens_and_switches_independently() -> Result<()> {
     assert!(!host.records[ID].enabled);
     let disabled = frame(&ctx, vec![], |ui| draw(ui, &mut host));
     assert!(!has_text(&disabled, NAME));
-    assert!(!has_text(&disabled, "独立插件功能"));
-    assert!(!has_text(&disabled, "打开"));
+    assert!(!has_text(&disabled, "獨立插件功能"));
+    assert!(!has_text(&disabled, "打開"));
     assert!(host.standalone_settings_pages().next().is_none());
     assert!(host.status_pages().next().is_none());
     assert!(host.settings_destination(ID).is_none());
     let direct = frame(&ctx, vec![], |ui| host.standalone_settings(ui, ID));
-    assert!(!has_text(&direct, "倒计时名称"));
+    assert!(!has_text(&direct, "倒計時名稱"));
 
-    let settings_link = format!("设置 › {NAME} ›");
+    let settings_link = format!("設置 › {NAME} ›");
     let mut route = None;
     let mut draw_installed = |ui: &mut egui::Ui| {
         route = installed(ui, &mut host).or(route.take());
@@ -308,12 +308,12 @@ fn status_page_management_opens_and_switches_independently() -> Result<()> {
         .shapes
         .iter()
         .find_map(|shape| match &shape.shape {
-            egui::Shape::Text(text) if text.galley.text() == "启用后显示功能页" => {
+            egui::Shape::Text(text) if text.galley.text() == "啟用後顯示功能頁" => {
                 Some(text.visual_bounding_rect().center())
             }
             _ => None,
         })
-        .expect("停用的插件应提示启用后显示功能页");
+        .expect("停用的插件應提示啟用後顯示功能頁");
     click_at(&ctx, hint, draw_installed);
     assert_eq!(route, None);
 
@@ -326,29 +326,29 @@ fn status_page_management_opens_and_switches_independently() -> Result<()> {
     });
     assert_eq!(route, Some(SettingsNavigation::Plugin(ID.into())));
     let standalone = frame(&ctx, vec![], |ui| host.standalone_settings(ui, ID));
-    assert!(has_text(&standalone, &format!("启用{NAME}")));
+    assert!(has_text(&standalone, &format!("啟用{NAME}")));
     let mut opened = None;
-    click(&ctx, "打开", |ui| {
+    click(&ctx, "打開", |ui| {
         opened = host.status_page_settings(ui).or(opened.take());
     });
     assert_eq!(opened, Some(SettingsNavigation::OpenStatus(ID.into())));
     let mut settings = None;
-    click(&ctx, "设置", |ui| {
+    click(&ctx, "設置", |ui| {
         settings = host.status_page_settings(ui).or(settings.take());
     });
     assert_eq!(settings, Some(SettingsNavigation::Plugin(ID.into())));
     frame(&ctx, vec![], |ui| host.standalone_settings(ui, ID));
-    host.drafts.get_mut(ID).unwrap().insert("title".into(), "未保存的设置".into());
+    host.drafts.get_mut(ID).unwrap().insert("title".into(), "未保存的設置".into());
     let switch = ctx
         .read_response(egui::Id::new(("settings-plugin-switch", format!("{ID}:status-page"))))
-        .expect("独立设置页开关")
+        .expect("獨立設置頁開關")
         .rect
         .center();
     click_at(&ctx, switch, |ui| host.standalone_settings(ui, ID));
     assert!(host.records[ID].enabled);
     assert!(host.status_pages().next().is_none());
-    assert_eq!(host.drafts[ID]["title"], "未保存的设置");
-    assert!(!has_text(&frame(&ctx, vec![], |ui| draw(ui, &mut host)), "打开"));
+    assert_eq!(host.drafts[ID]["title"], "未保存的設置");
+    assert!(!has_text(&frame(&ctx, vec![], |ui| draw(ui, &mut host)), "打開"));
     assert_eq!(host.standalone_settings_pages().next(), Some((ID, NAME)));
     assert!(has_text(&frame(&ctx, vec![], |ui| draw(ui, &mut host)), NAME));
 
@@ -365,14 +365,14 @@ fn status_page_management_opens_and_switches_independently() -> Result<()> {
     host.enable(ID, true)?;
     assert_eq!(host.status_page_preferences().next(), Some((ID, NAME, true, false)));
     let mut record = host.records[ID].clone();
-    record.package.as_mut().unwrap().manifest.name = "独立功能模块".repeat(13);
+    record.package.as_mut().unwrap().manifest.name = "獨立功能模塊".repeat(13);
     host.put(ID, record)?;
     let size = egui::vec2(310.0, 550.0);
     frame_in(&ctx, size, vec![], |ui| host.standalone_settings(ui, ID));
     let switch = ctx
         .read_response(egui::Id::new(("settings-plugin-switch", format!("{ID}:status-page"))))
-        .expect("长名称的独立设置页开关");
-    assert!(switch.rect.right() <= size.x, "插件名不能把开关挤出页面");
+        .expect("長名稱的獨立設置頁開關");
+    assert!(switch.rect.right() <= size.x, "插件名不能把開關擠出頁面");
     drop(host);
     let _ = fs::remove_dir_all(dir);
     Ok(())
@@ -408,7 +408,7 @@ fn management_buttons_jump_disable_and_confirm_uninstall() -> Result<()> {
             None,
         );
     });
-    assert!(has_text(&first, "暂无封面"));
+    assert!(has_text(&first, "暫無封面"));
     let mut jumped = false;
     let mut click = |host: &mut LocalPlugins, label: &str| {
         click(&ctx, label, |ui| {
@@ -425,19 +425,19 @@ fn management_buttons_jump_disable_and_confirm_uninstall() -> Result<()> {
             }
         });
     };
-    click(&mut host, "启用");
+    click(&mut host, "啟用");
     assert!(host.records["example.payday"].enabled);
-    click(&mut host, "设置 › 待办与置物 ›");
+    click(&mut host, "設置 › 待辦與置物 ›");
     assert_eq!(host.focus.as_deref(), Some("example.payday"));
     click(&mut host, "停用");
     assert!(!host.records["example.payday"].enabled);
     click(&mut host, "···");
-    click(&mut host, "卸载…");
+    click(&mut host, "卸載…");
     click(&mut host, "取消");
     assert!(host.records["example.payday"].package.is_some());
     click(&mut host, "···");
-    click(&mut host, "卸载…");
-    click(&mut host, "删除数据");
+    click(&mut host, "卸載…");
+    click(&mut host, "刪除數據");
     assert!(!host.records.contains_key("example.payday"));
     assert!(jumped);
     fs::remove_dir(dir)?;
@@ -470,19 +470,19 @@ fn management_module_pause_and_plugin_switch_keep_their_own_choices() -> Result<
             None,
         )
     };
-    assert!(!has_text(&settings(&mut host, true), "倒计时名称"));
-    click(&ctx, "启用", |ui| {
+    assert!(!has_text(&settings(&mut host, true), "倒計時名稱"));
+    click(&ctx, "啟用", |ui| {
         let _ = manage(&mut host, ui, true);
     });
-    assert!(has_text(&settings(&mut host, true), "倒计时名称"));
-    assert!(!has_text(&settings(&mut host, false), "倒计时名称"));
+    assert!(has_text(&settings(&mut host, true), "倒計時名稱"));
+    assert!(!has_text(&settings(&mut host, false), "倒計時名稱"));
     let paused = frame(&ctx, vec![], |ui| {
         let _ = manage(&mut host, ui, false);
     });
-    assert!(has_text(&paused, "页面管理 › 待办与置物 ›"));
-    assert!(!has_text(&paused, "设置 › 待办与置物 ›"));
+    assert!(has_text(&paused, "頁面管理 › 待辦與置物 ›"));
+    assert!(!has_text(&paused, "設置 › 待辦與置物 ›"));
     let mut jump = None;
-    click(&ctx, "页面管理 › 待办与置物 ›", |ui| {
+    click(&ctx, "頁面管理 › 待辦與置物 ›", |ui| {
         jump = manage(&mut host, ui, false).or(jump.take());
     });
     assert_eq!(jump, Some(SettingsNavigation::Tab(crate::extras::SETTINGS_TAB_PAGES)));
@@ -490,15 +490,15 @@ fn management_module_pause_and_plugin_switch_keep_their_own_choices() -> Result<
     click(&ctx, "停用", |ui| {
         let _ = manage(&mut host, ui, false);
     });
-    assert!(!has_text(&settings(&mut host, true), "倒计时名称"));
-    click(&ctx, "启用", |ui| {
+    assert!(!has_text(&settings(&mut host, true), "倒計時名稱"));
+    click(&ctx, "啟用", |ui| {
         let _ = manage(&mut host, ui, false);
     });
-    assert!(!has_text(&settings(&mut host, false), "倒计时名称"));
-    assert!(has_text(&settings(&mut host, true), "倒计时名称"));
+    assert!(!has_text(&settings(&mut host, false), "倒計時名稱"));
+    assert!(has_text(&settings(&mut host, true), "倒計時名稱"));
 
     host.cards
-        .insert("example.payday".into(), "发薪倒计时".into());
+        .insert("example.payday".into(), "發薪倒計時".into());
     let mut opened = false;
     let mut draw = |ui: &mut egui::Ui| {
         let card = crate::paint::Card::new(ui, egui::Pos2::ZERO, ui.max_rect());
@@ -541,8 +541,8 @@ fn invalid_record_can_be_removed_from_the_installed_list() -> Result<()> {
             None,
         );
     };
-    assert!(has_text(&frame(&ctx, vec![], &mut draw), "需要处理"));
-    click(&ctx, "移除记录", &mut draw);
+    assert!(has_text(&frame(&ctx, vec![], &mut draw), "需要處理"));
+    click(&ctx, "移除記錄", &mut draw);
     assert!(host.invalid.is_empty());
     assert!(!record.exists());
     fs::remove_dir_all(dir)?;
@@ -592,30 +592,30 @@ fn market_buttons_install_and_update_an_existing_sample() -> Result<()> {
             frame(&ctx, vec![], |ui| draw(host, ui));
             std::thread::sleep(Duration::from_millis(2));
         }
-        assert!(!host.market_busy(), "测试集市操作未完成");
+        assert!(!host.market_busy(), "測試集市操作未完成");
     };
     let official = frame(&ctx, vec![], |ui| draw(&mut host, ui));
     assert!(ctx
         .read_response(egui::Id::new("plugin-market-refresh"))
         .is_some());
-    assert!(!has_text(&official, "发薪倒计时"));
-    assert!(!has_text(&official, "导入测试集市目录…"));
-    click_button(&mut host, "已安装");
-    click_button(&mut host, "开发者工具");
+    assert!(!has_text(&official, "發薪倒計時"));
+    assert!(!has_text(&official, "導入測試集市目錄…"));
+    click_button(&mut host, "已安裝");
+    click_button(&mut host, "開發者工具");
     let developers = frame(&ctx, vec![], |ui| draw(&mut host, ui));
-    assert!(has_text(&developers, "导入测试集市目录…"));
-    click_button(&mut host, "关闭");
+    assert!(has_text(&developers, "導入測試集市目錄…"));
+    click_button(&mut host, "關閉");
     click_button(&mut host, "集市");
-    click_button(&mut host, "本地测试");
+    click_button(&mut host, "本地測試");
     assert!(has_text(
         &frame(&ctx, vec![], |ui| draw(&mut host, ui)),
-        "本地测试集市"
+        "本地測試集市"
     ));
-    click_button(&mut host, "安装");
+    click_button(&mut host, "安裝");
     finish(&mut host);
     assert!(!host.records["example.payday"].enabled);
-    click_button(&mut host, "已安装");
-    click_button(&mut host, "启用");
+    click_button(&mut host, "已安裝");
+    click_button(&mut host, "啟用");
     assert!(host.records["example.payday"].enabled);
 
     let mut manifest: Value = serde_json::from_slice(&fs::read(&sample)?)?;
@@ -628,8 +628,8 @@ fn market_buttons_install_and_update_an_existing_sample() -> Result<()> {
     market::pack(&updated, &second)?;
     market::submit(&second, &catalog)?;
     click_button(&mut host, "集市");
-    click_button(&mut host, "本地测试");
-    click_button(&mut host, "刷新目录");
+    click_button(&mut host, "本地測試");
+    click_button(&mut host, "刷新目錄");
     let available = frame(&ctx, vec![], |ui| draw(&mut host, ui));
     assert!(has_text(&available, "更新"));
     click_button(&mut host, "更新");
@@ -640,7 +640,7 @@ fn market_buttons_install_and_update_an_existing_sample() -> Result<()> {
     assert!(record.enabled);
     assert!(has_text(
         &frame(&ctx, vec![], |ui| draw(&mut host, ui)),
-        "已安装"
+        "已安裝"
     ));
     fs::remove_dir_all(dir)?;
     Ok(())
@@ -706,13 +706,13 @@ fn official_market_only_requests_uncached_data_or_explicit_refresh() -> Result<(
             };
             let (kind, body) = match line {
                 "GET /contents/preview/catalog.json?ref=master HTTP/1.1" => {
-                    ("目录 GET", index_body.clone())
+                    ("目錄 GET", index_body.clone())
                 }
                 "GET /contents/preview/plugin-example.payday-1.0.0.zip?ref=master HTTP/1.1" => {
                     ("ZIP GET", zip_body.clone())
                 }
                 "GET /v1/stats?channel=preview HTTP/1.1" => {
-                    ("统计 GET", snapshot(downloads, favorites))
+                    ("統計 GET", snapshot(downloads, favorites))
                 }
                 "POST /v1/events HTTP/1.1" => {
                     assert_eq!(data["channel"], "preview");
@@ -724,7 +724,7 @@ fn official_market_only_requests_uncached_data_or_explicit_refresh() -> Result<(
                         "download" => {
                             assert_eq!(event["version"], "1.0.0");
                             downloads += 1;
-                            "下载 POST"
+                            "下載 POST"
                         }
                         "favorite" => {
                             favorites = u64::from(event["saved"].as_bool().unwrap());
@@ -734,11 +734,11 @@ fn official_market_only_requests_uncached_data_or_explicit_refresh() -> Result<(
                                 "取消收藏 POST"
                             }
                         }
-                        kind => panic!("未预期的事件 {kind}"),
+                        kind => panic!("未預期的事件 {kind}"),
                     };
                     (kind, snapshot(downloads, favorites))
                 }
-                line => panic!("未预期的请求 {line}"),
+                line => panic!("未預期的請求 {line}"),
             };
             log_request.send(kind).unwrap();
             write!(
@@ -801,18 +801,18 @@ fn official_market_only_requests_uncached_data_or_explicit_refresh() -> Result<(
     let mut host = open()?;
     host.set_market_catalog(&index_file)?;
     finish(&mut host);
-    assert_requests("首次打开", &["目录 GET", "统计 GET", "ZIP GET"]);
+    assert_requests("首次打開", &["目錄 GET", "統計 GET", "ZIP GET"]);
     assert!(
         host.market_stats_repaint_delay().is_none(),
-        "空闲集市无需定时刷新"
+        "空閒集市無需定時刷新"
     );
     click_button(&mut host, "收藏 0");
     click_button(&mut host, "全部");
-    click_button(&mut host, "已安装");
+    click_button(&mut host, "已安裝");
     click_button(&mut host, "去插件集市");
-    click_button(&mut host, "本地测试");
+    click_button(&mut host, "本地測試");
     click_button(&mut host, "官方");
-    click_button(&mut host, "发薪倒计时");
+    click_button(&mut host, "發薪倒計時");
     let detail = egui::Id::new("plugin-market-details");
     assert_eq!(
         ctx.data(|data| data.get_temp::<String>(detail)).as_deref(),
@@ -831,22 +831,22 @@ fn official_market_only_requests_uncached_data_or_explicit_refresh() -> Result<(
     );
     assert!(ctx.data(|data| data.get_temp::<String>(detail)).is_none());
     let _ = frame(&ctx, vec![], |ui| {
-        ui.label("其他设置");
+        ui.label("其他設置");
     });
     finish(&mut host);
-    assert_requests("切标签、从详情返回及重新打开设置", &[]);
+    assert_requests("切標籤、從詳情返回及重新打開設置", &[]);
 
-    click_button(&mut host, "刷新目录");
+    click_button(&mut host, "刷新目錄");
     finish(&mut host);
-    assert_requests("手动刷新", &["目录 GET", "统计 GET"]);
-    click_button(&mut host, "安装");
+    assert_requests("手動刷新", &["目錄 GET", "統計 GET"]);
+    click_button(&mut host, "安裝");
     finish(&mut host);
     assert_eq!(
         host.records[ID].package.as_ref().unwrap().manifest.version,
         "1.0.0"
     );
     assert_eq!(host.market_counts(ID).unwrap().downloads, 1);
-    assert_requests("安装", &["ZIP GET", "下载 POST"]);
+    assert_requests("安裝", &["ZIP GET", "下載 POST"]);
     let catalog = host.market_catalog(true).unwrap();
     let entry = &catalog.entries[0];
     host.set_favorite(entry, true)?;
@@ -864,7 +864,7 @@ fn official_market_only_requests_uncached_data_or_explicit_refresh() -> Result<(
     assert_eq!(host.market_counts(ID).unwrap().downloads, 1);
     assert!(host.market_catalog(true).is_some());
     assert!(!host.market_pending());
-    assert_requests("重启后恢复目录和统计", &[]);
+    assert_requests("重啟後恢復目錄和統計", &[]);
     stop.send(())?;
     server.join().unwrap();
     fs::remove_dir_all(dir)?;
@@ -896,8 +896,8 @@ fn material_management_waits_for_permission_and_offers_to_enable_compatibility()
         &manifest,
         serde_json::to_vec(&json!({
             "id": "example.material",
-            "name": "测试材质",
-            "author": "测试",
+            "name": "測試材質",
+            "author": "測試",
             "version": "1.0.0",
             "api": 1,
             "runtime": "material",
@@ -909,9 +909,9 @@ fn material_management_waits_for_permission_and_offers_to_enable_compatibility()
             "permissions": {"screen.backdrop": true},
             "material": {"controls": true, "spring": {"stiffness": 1.0, "damping": 0.5}},
             "settings": [
-                {"key": "tint", "label": "着色量", "type": "number", "min": 0, "max": 1, "step": 0.1, "default": "0.5", "unit": "px", "precision": 2},
+                {"key": "tint", "label": "著色量", "type": "number", "min": 0, "max": 1, "step": 0.1, "default": "0.5", "unit": "px", "precision": 2},
                 {"key": "blur", "label": "模糊", "type": "number", "min": 0, "max": 1, "step": 0.005, "default": "0.5"},
-                {"key": "strength", "label": "强度", "type": "number", "min": 0, "max": 1, "step": 0.05, "default": "0.54", "precision": 0}
+                {"key": "strength", "label": "強度", "type": "number", "min": 0, "max": 1, "step": 0.05, "default": "0.54", "precision": 0}
             ]
         }))?,
     )?;
@@ -923,10 +923,10 @@ fn material_management_waits_for_permission_and_offers_to_enable_compatibility()
             assert!(!host.material_settings(ui, None, false));
         })
     };
-    assert!(!has_text(&appearance(&mut host), "材质"));
+    assert!(!has_text(&appearance(&mut host), "材質"));
     host.install(&manifest)?;
     assert!(!host.material_permission_granted("example.material"));
-    assert!(has_text(&appearance(&mut host), "材质"));
+    assert!(has_text(&appearance(&mut host), "材質"));
     let manage_click = |host: &mut LocalPlugins, label: &str| {
         let mut jump = None;
         click(&ctx, label, |ui| {
@@ -935,20 +935,20 @@ fn material_management_waits_for_permission_and_offers_to_enable_compatibility()
         jump
     };
 
-    assert!(manage_click(&mut host, "启用").is_none());
+    assert!(manage_click(&mut host, "啟用").is_none());
     assert!(host.selected_material_id().is_none());
     assert!(!host.material_permission_granted("example.material"));
     assert!(manage_click(&mut host, "取消").is_none());
     assert!(host.selected_material_id().is_none());
-    assert!(manage_click(&mut host, "启用").is_none());
+    assert!(manage_click(&mut host, "啟用").is_none());
     assert_eq!(
-        manage_click(&mut host, "允许并启用"),
+        manage_click(&mut host, "允許並啟用"),
         Some(SettingsNavigation::Tab(crate::extras::SETTINGS_TAB_APPEARANCE))
     );
     assert_eq!(host.selected_material_id(), Some("example.material"));
 
     let mut restart = false;
-    click(&ctx, "开启并重启", |ui| {
+    click(&ctx, "開啟並重啟", |ui| {
         restart |= host.material_settings(ui, None, false)
     });
     assert!(restart);
@@ -966,7 +966,7 @@ fn material_management_waits_for_permission_and_offers_to_enable_compatibility()
     }
     assert_eq!(host.records["example.material"].values["strength"], "0.54");
     host.uninstall("example.material", true)?;
-    assert!(!has_text(&appearance(&mut host), "材质"));
+    assert!(!has_text(&appearance(&mut host), "材質"));
     fs::remove_dir_all(dir)?;
     Ok(())
 }
@@ -994,7 +994,7 @@ fn header_tabs_keep_market_on_the_left_in_a_right_aligned_title_row() {
             })
             .unwrap_or_else(|| panic!("找不到 {label}"))
     };
-    assert!(x("集市") < x("已安装"));
+    assert!(x("集市") < x("已安裝"));
     let _ = fs::remove_dir_all(dir);
 }
 
@@ -1005,13 +1005,13 @@ fn market_channel_toolbar_keeps_categories_clickable_at_narrow_width() -> Result
     fs::create_dir_all(&dir)?;
     let catalog = dir.join("catalog.json");
     let entries = [
-        ("example.appearance", "外观样例", "appearance"),
-        ("example.pages", "页面样例", "pages"),
-        ("example.status", "功能样例", "status"),
-        ("example.calendar", "日程样例", "calendar"),
-        ("example.tasks", "待办样例", "tasks"),
-        ("example.quota", "额度样例", "quota"),
-        ("example.wireless", "无线样例", "wireless"),
+        ("example.appearance", "外觀樣例", "appearance"),
+        ("example.pages", "頁面樣例", "pages"),
+        ("example.status", "功能樣例", "status"),
+        ("example.calendar", "日程樣例", "calendar"),
+        ("example.tasks", "待辦樣例", "tasks"),
+        ("example.quota", "額度樣例", "quota"),
+        ("example.wireless", "無線樣例", "wireless"),
     ]
     .map(|(id, name, owner)| {
         serde_json::json!({
@@ -1038,7 +1038,7 @@ fn market_channel_toolbar_keeps_categories_clickable_at_narrow_width() -> Result
             None,
         );
     };
-    click_in(&ctx, size, "本地测试", &mut draw);
+    click_in(&ctx, size, "本地測試", &mut draw);
     let output = frame_in(&ctx, size, vec![], &mut draw);
     let bounds = |label| {
         output.shapes.iter().find_map(|shape| match &shape.shape {
@@ -1050,16 +1050,16 @@ fn market_channel_toolbar_keeps_categories_clickable_at_narrow_width() -> Result
             _ => None,
         }).unwrap_or_else(|| panic!("找不到 {label}"))
     };
-    let online = if option_env!("DAOZAI_TEST_BUILD").is_some() { "预览集市" } else { "官方" };
-    let channel_bottom = bounds(online).bottom().max(bounds("本地测试").bottom());
-    for label in ["全部", "外观", "页面管理", "独立功能", "日程", "待办与置物", "AI 额度", "无线设备"] {
-        assert!(bounds(label).top() > channel_bottom, "{label} 与频道工具行重叠");
+    let online = if option_env!("DAOZAI_TEST_BUILD").is_some() { "預覽集市" } else { "官方" };
+    let channel_bottom = bounds(online).bottom().max(bounds("本地測試").bottom());
+    for label in ["全部", "外觀", "頁面管理", "獨立功能", "日程", "待辦與置物", "AI 額度", "無線設備"] {
+        assert!(bounds(label).top() > channel_bottom, "{label} 與頻道工具行重疊");
     }
 
-    click_in(&ctx, size, "独立功能", &mut draw);
+    click_in(&ctx, size, "獨立功能", &mut draw);
     let filtered = frame_in(&ctx, size, vec![], &mut draw);
-    assert!(has_text(&filtered, "功能样例"));
-    assert!(!has_text(&filtered, "外观样例"));
+    assert!(has_text(&filtered, "功能樣例"));
+    assert!(!has_text(&filtered, "外觀樣例"));
     fs::remove_dir_all(dir)?;
     Ok(())
 }
@@ -1078,7 +1078,7 @@ fn click_in(ctx: &egui::Context, size: egui::Vec2, label: &str, mut draw: impl F
             }
             _ => None,
         })
-        .unwrap_or_else(|| panic!("找不到按钮 {label}"));
+        .unwrap_or_else(|| panic!("找不到按鈕 {label}"));
     for pressed in [true, false] {
         let _ = frame_in(
             ctx,
@@ -1117,17 +1117,17 @@ fn guide_opens_from_the_market_copies_a_prompt_and_stacks_the_template_form() {
     };
     let market = frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui));
     assert!(has_text(&market, "看教程"));
-    assert!(!has_text(&market, "做一个岛仔插件"));
+    assert!(!has_text(&market, "做一個島仔插件"));
     click_in(&ctx, WINDOW, "看教程", |ui| draw(&mut host, ui));
     let guide = frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui));
-    let capabilities_title = "当前版本已开放的 SDK 能力";
+    let capabilities_title = "當前版本已開放的 SDK 能力";
     for expected in [
-        "做一个岛仔插件", capabilities_title, "一句话交给 AI 做", "JS 卡片模板",
-        "复制这段话", "从模板创建", "投稿指南",
+        "做一個島仔插件", capabilities_title, "一句話交給 AI 做", "JS 卡片模板",
+        "複製這段話", "從模板創建", "投稿指南",
     ] {
         assert!(has_text(&guide, expected), "{expected}");
     }
-    assert!(!has_text(&guide, "卡片与标注"));
+    assert!(!has_text(&guide, "卡片與標註"));
 
     click_in(&ctx, WINDOW, capabilities_title, |ui| draw(&mut host, ui));
     let expanded = frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui));
@@ -1140,32 +1140,32 @@ fn guide_opens_from_the_market_copies_a_prompt_and_stacks_the_template_form() {
         }).unwrap_or_else(|| panic!("找不到教程文字 {label}"))
     };
     assert!(
-        text_rect("卡片与标注").bottom() <= text_rect("待办信息卡、日历日期标注").top(),
-        "能力说明应排在标题下方",
+        text_rect("卡片與標註").bottom() <= text_rect("待辦信息卡、日曆日期標註").top(),
+        "能力說明應排在標題下方",
     );
-    for expected in ["卡片与标注", "自绘画布", "岛上常驻", "交互与数据", "页面交互"] {
+    for expected in ["卡片與標註", "自繪畫布", "島上常駐", "交互與數據", "頁面交互"] {
         assert!(has_text(&expanded, expected), "{expected}");
     }
-    let pinned_description = "开启常驻的插件在岛收起时一起显示，可在「页面管理 › 岛上显示」排序。同一插件可提供多张轮播画布。";
+    let pinned_description = "開啟常駐的插件在島收起時一起顯示，可在「頁面管理 › 島上顯示」排序。同一插件可提供多張輪播畫布。";
     assert!(has_text(&expanded, pinned_description));
-    assert!(text_rect("岛上常驻").bottom() <= text_rect(pinned_description).top());
+    assert!(text_rect("島上常駐").bottom() <= text_rect(pinned_description).top());
     click_in(&ctx, WINDOW, capabilities_title, |ui| draw(&mut host, ui));
     let collapsed = frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui));
-    assert!(!has_text(&collapsed, "卡片与标注"));
+    assert!(!has_text(&collapsed, "卡片與標註"));
 
-    // 复制出来的那段话带示例想法和校验命令。
+    // 複製出來的那段話帶示例想法和校驗命令。
     let _ = frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui));
     let out = frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui));
     let pos = out
         .shapes
         .iter()
         .find_map(|shape| match &shape.shape {
-            egui::Shape::Text(text) if text.galley.text() == "复制这段话" => {
+            egui::Shape::Text(text) if text.galley.text() == "複製這段話" => {
                 Some(text.visual_bounding_rect().center())
             }
             _ => None,
         })
-        .expect("复制按钮");
+        .expect("複製按鈕");
     let mut copied = String::new();
     for pressed in [true, false] {
         let out = frame_in(
@@ -1188,21 +1188,21 @@ fn guide_opens_from_the_market_copies_a_prompt_and_stacks_the_template_form() {
             }
         }
     }
-    assert!(copied.contains("在待办里显示离下次还信用卡还有几天"), "{copied}");
+    assert!(copied.contains("在待辦裡顯示離下次還信用卡還有幾天"), "{copied}");
     assert!(copied.contains("--plugin-test plugin.json"), "{copied}");
-    assert!(has_text(&frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui)), "已复制"));
+    assert!(has_text(&frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui)), "已複製"));
 
-    click_in(&ctx, WINDOW, "已经做好了", |ui| draw(&mut host, ui));
+    click_in(&ctx, WINDOW, "已經做好了", |ui| draw(&mut host, ui));
     assert!(has_text(
         &frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui)),
-        "一句话交给 AI 改造"
+        "一句話交給 AI 改造"
     ));
 
-    // 「从模板创建」的表单盖在教程上面；Esc 先关表单，再关教程。
-    click_in(&ctx, WINDOW, "从模板创建", |ui| draw(&mut host, ui));
+    // 「從模板創建」的表單蓋在教程上面；Esc 先關表單，再關教程。
+    click_in(&ctx, WINDOW, "從模板創建", |ui| draw(&mut host, ui));
     let form = frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui));
-    assert!(has_text(&form, "选择位置并创建…"));
-    assert!(has_text(&form, "做一个岛仔插件"));
+    assert!(has_text(&form, "選擇位置並創建…"));
+    assert!(has_text(&form, "做一個島仔插件"));
     let escape = || {
         vec![egui::Event::Key {
             key: egui::Key::Escape,
@@ -1214,12 +1214,12 @@ fn guide_opens_from_the_market_copies_a_prompt_and_stacks_the_template_form() {
     };
     let _ = frame_in(&ctx, WINDOW, escape(), |ui| draw(&mut host, ui));
     let after = frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui));
-    assert!(!has_text(&after, "选择位置并创建…"));
-    assert!(has_text(&after, "做一个岛仔插件"));
+    assert!(!has_text(&after, "選擇位置並創建…"));
+    assert!(has_text(&after, "做一個島仔插件"));
     let _ = frame_in(&ctx, WINDOW, escape(), |ui| draw(&mut host, ui));
     assert!(!has_text(
         &frame_in(&ctx, WINDOW, vec![], |ui| draw(&mut host, ui)),
-        "做一个岛仔插件"
+        "做一個島仔插件"
     ));
     let _ = fs::remove_dir_all(dir);
 }

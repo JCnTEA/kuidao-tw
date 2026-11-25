@@ -1,4 +1,4 @@
-//! 插件详情和已安装列表共用的反馈入口。
+//! 插件詳情和已安裝列表共用的反饋入口。
 use eframe::egui;
 
 const PRIVATE_REPORT: &str =
@@ -15,9 +15,9 @@ enum Topic {
 impl Topic {
     fn title(self) -> &'static str {
         match self {
-            Self::Plugin => "问题或建议",
-            Self::Install => "安装与更新",
-            Self::Private => "安全或隐私",
+            Self::Plugin => "問題或建議",
+            Self::Install => "安裝與更新",
+            Self::Private => "安全或隱私",
         }
     }
 }
@@ -38,7 +38,7 @@ impl Feedback {
 
     fn draft(&self) -> String {
         format!(
-            "插件：{}\n插件 ID：{}\n插件版本：{}\n岛仔版本：{}\n\n## {}\n\n## 复现步骤\n",
+            "插件：{}\n插件 ID：{}\n插件版本：{}\n島仔版本：{}\n\n## {}\n\n## 復現步驟\n",
             self.name,
             self.id,
             self.version,
@@ -49,11 +49,11 @@ impl Feedback {
 
     fn form_url(&self) -> url::Url {
         if self.topic == Topic::Private {
-            return url::Url::parse(PRIVATE_REPORT).expect("私密报告地址有效");
+            return url::Url::parse(PRIVATE_REPORT).expect("私密報告地址有效");
         }
         let mut url =
             url::Url::parse("https://github.com/Renly1994/xiaotang-daozai-plugins/issues/new")
-                .expect("插件反馈地址有效");
+                .expect("插件反饋地址有效");
         url.query_pairs_mut()
             .append_pair("title", &self.title())
             .append_pair("body", &self.draft());
@@ -73,8 +73,8 @@ pub(super) fn request_plugin_feedback(ui: &egui::Ui, id: &str, name: &str, versi
     ui.ctx().request_repaint();
 }
 
-/// 插件反馈弹窗：三种反馈各是一张可点的选项卡，点了直接去对应入口；
-/// 没有 GitHub 账号时可以复制反馈信息转交。
+/// 插件反饋彈窗：三種反饋各是一張可點的選項卡，點了直接去對應入口；
+/// 沒有 GitHub 賬號時可以複製反饋信息轉交。
 pub(super) fn plugin_feedback(ui: &egui::Ui) {
     use crate::extras::{settings_apply_style, settings_hint, settings_modal_frame, settings_modal_title};
     let id = egui::Id::new("plugin-feedback");
@@ -89,11 +89,11 @@ pub(super) fn plugin_feedback(ui: &egui::Ui) {
         .show(&ctx, |ui| {
             ui.set_width(360.0);
             settings_apply_style(ui);
-            let mut close = settings_modal_title(ui, "插件反馈");
+            let mut close = settings_modal_title(ui, "插件反饋");
             settings_hint(
                 ui,
                 &format!(
-                    "{} · v{}，插件 ID 和岛仔版本会自动填好。",
+                    "{} · v{}，插件 ID 和島仔版本會自動填好。",
                     feedback.name, feedback.version
                 ),
             );
@@ -101,10 +101,10 @@ pub(super) fn plugin_feedback(ui: &egui::Ui) {
             for (topic, detail) in [
                 (
                     Topic::Plugin,
-                    "在 GitHub 补充使用场景或复现步骤，提交后通知插件维护者。问题单公开可见。",
+                    "在 GitHub 補充使用場景或復現步驟，提交後通知插件維護者。問題單公開可見。",
                 ),
-                (Topic::Install, "装不上、更新失败，由岛仔维护者跟进。"),
-                (Topic::Private, "复制插件信息并打开私密报告，只有维护者能看到。"),
+                (Topic::Install, "裝不上、更新失敗，由島仔維護者跟進。"),
+                (Topic::Private, "複製插件信息並打開私密報告，只有維護者能看到。"),
             ] {
                 if super::option_card(ui, topic.title(), detail, false) {
                     feedback.topic = topic;
@@ -119,9 +119,9 @@ pub(super) fn plugin_feedback(ui: &egui::Ui) {
             ui.add_space(4.0);
             ui.horizontal(|ui| {
                 let copy = if feedback.copied {
-                    "已复制反馈信息"
+                    "已複製反饋信息"
                 } else {
-                    "没有 GitHub？复制反馈信息"
+                    "沒有 GitHub？複製反饋信息"
                 };
                 if ui.add(egui::Button::new(copy).frame(false)).clicked() {
                     feedback.topic = Topic::Plugin;
@@ -129,7 +129,7 @@ pub(super) fn plugin_feedback(ui: &egui::Ui) {
                     feedback.copied = true;
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    close |= ui.button("关闭").clicked();
+                    close |= ui.button("關閉").clicked();
                 });
             });
             close
@@ -153,7 +153,7 @@ mod tests {
     fn issue_draft_preserves_plugin_context_in_query_values() {
         let feedback = Feedback {
             id: "example.payday".into(),
-            name: "发薪 & 旅行".into(),
+            name: "發薪 & 旅行".into(),
             version: "1.0.1".into(),
             topic: Topic::Install,
             copied: false,
@@ -162,7 +162,7 @@ mod tests {
         assert_eq!(url.host_str(), Some("github.com"));
         assert!(url.path().ends_with("/xiaotang-daozai-plugins/issues/new"));
         let query = url.query_pairs().collect::<BTreeMap<_, _>>();
-        assert_eq!(query.get("title").unwrap(), "[安装与更新] 发薪 & 旅行");
+        assert_eq!(query.get("title").unwrap(), "[安裝與更新] 發薪 & 旅行");
         assert_eq!(query.get("body").unwrap().as_ref(), feedback.draft());
         assert!(feedback.draft().contains("插件 ID：example.payday"));
     }
@@ -171,7 +171,7 @@ mod tests {
     fn private_feedback_keeps_draft_out_of_url() {
         let feedback = Feedback {
             id: "example.payday".into(),
-            name: "发薪倒计时".into(),
+            name: "發薪倒計時".into(),
             version: "1.0.1".into(),
             topic: Topic::Private,
             copied: false,
@@ -182,7 +182,7 @@ mod tests {
         assert!(form.query().is_none());
         assert!(feedback
             .draft()
-            .starts_with("插件：发薪倒计时\n插件 ID：example.payday\n插件版本：1.0.1\n"));
-        assert!(feedback.draft().contains("## 安全或隐私"));
+            .starts_with("插件：發薪倒計時\n插件 ID：example.payday\n插件版本：1.0.1\n"));
+        assert!(feedback.draft().contains("## 安全或隱私"));
     }
 }

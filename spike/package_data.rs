@@ -58,14 +58,14 @@ pub(super) fn valid_names(names: &[String]) -> bool {
 
 pub(super) fn read_file(dir: &Path, name: &str) -> Result<String> {
     let path = dir.join(name);
-    let message = format!("数据文件 {name} 必须是包根目录中的普通文件");
+    let message = format!("數據文件 {name} 必須是包根目錄中的普通文件");
     let file = open_plain_file(&path, &message)?;
     let mut bytes = Vec::new();
     file.take(DATA_FILE_LIMIT + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > DATA_FILE_LIMIT {
-        return Err(fail(&format!("数据文件 {name} 超过 64 KiB")));
+        return Err(fail(&format!("數據文件 {name} 超過 64 KiB")));
     }
-    String::from_utf8(bytes).map_err(|_| fail(&format!("数据文件 {name} 必须使用 UTF-8")))
+    String::from_utf8(bytes).map_err(|_| fail(&format!("數據文件 {name} 必須使用 UTF-8")))
 }
 
 pub(super) fn read_data(
@@ -78,10 +78,10 @@ pub(super) fn read_data(
         let text = read(name)?;
         total += text.len();
         if text.len() as u64 > DATA_FILE_LIMIT || total > DATA_TOTAL_LIMIT {
-            return Err(fail("插件数据文件上限为单个 64 KiB、合计 256 KiB"));
+            return Err(fail("插件數據文件上限為單個 64 KiB、合計 256 KiB"));
         }
         if serde_json::from_str::<Value>(&text).is_err() {
-            return Err(fail(&format!("数据文件 {name} 必须是有效的 JSON")));
+            return Err(fail(&format!("數據文件 {name} 必須是有效的 JSON")));
         }
         files.insert(name.clone(), text);
     }

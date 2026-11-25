@@ -17,7 +17,7 @@ enum MarketSort {
 impl MarketSort {
     fn label(self) -> &'static str {
         match self {
-            Self::Downloads => "下载量",
+            Self::Downloads => "下載量",
             Self::Latest => "最新",
         }
     }
@@ -58,7 +58,7 @@ pub(super) fn close_detail(ui: &egui::Ui) {
     ui.data_mut(|data| data.remove::<String>(detail_id()));
 }
 
-/// 集市切换的结果：留在原处、去「已安装」，或切换官方与本地测试目录。
+/// 集市切換的結果：留在原處、去「已安裝」，或切換官方與本地測試目錄。
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum MarketNav {
     Stay,
@@ -80,14 +80,14 @@ fn market_frame(ui: &egui::Ui) -> egui::Frame {
 pub(super) fn show_badge(ui: &mut egui::Ui, official: bool, sample: bool) {
     let label = match (official, sample) {
         (true, _) => "官方",
-        (false, true) => "验收样例",
+        (false, true) => "驗收樣例",
         _ => return,
     };
     small_tag(ui, label);
 }
 
 pub(super) fn display_author(author: &str, official: bool) -> &str {
-    if official && author == "岛仔" {
+    if official && author == "島仔" {
         "小唐"
     } else {
         author
@@ -121,8 +121,8 @@ fn entry_description<'a>(entry: &'a market::Entry) -> &'a str {
         .as_ref()
         .and_then(|details| details.description.as_deref())
         .unwrap_or(match entry.owner() {
-            Some("wireless") => "扩展 2.4G USB 接收器型号。",
-            _ => "在岛上显示信息。",
+            Some("wireless") => "擴展 2.4G USB 接收器型號。",
+            _ => "在島上顯示信息。",
         })
 }
 
@@ -138,7 +138,7 @@ fn compact(value: Option<u64>) -> String {
     format!("{}{}", rounded.strip_suffix(".0").unwrap_or(&rounded), suffix)
 }
 
-/// 下载量以托盘图标和简写数字展示。
+/// 下載量以托盤圖標和簡寫數字展示。
 fn download_count(ui: &mut egui::Ui, value: &str) -> egui::Response {
     let tint = muted_color(ui);
     let galley = ui.fonts(|fonts| {
@@ -175,7 +175,7 @@ fn download_count(ui: &mut egui::Ui, value: &str) -> egui::Response {
     response
 }
 
-/// 收藏用的心形图标：收藏后变红，不配文字。
+/// 收藏用的心形圖標：收藏後變紅，不配文字。
 fn heart(ui: &mut egui::Ui, id: &str, saved: bool) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), egui::Sense::click());
     let label = if saved { "取消收藏" } else { "收藏" };
@@ -186,7 +186,7 @@ fn heart(ui: &mut egui::Ui, id: &str, saved: bool) -> egui::Response {
     let idle = paint::mix(muted_color(ui), plugin_accent(ui), hover * 0.6);
     let red = color(ctx, Color32::from_rgb(240, 98, 120), Color32::from_rgb(214, 69, 93));
     let tint = paint::mix(idle, red, filled);
-    // 被点中时轻轻放大一下。
+    // 被點中時輕輕放大一下。
     let scale = 1.0 + 0.18 * (filled * (1.0 - filled) * 4.0);
     let c = rect.center();
     let s = 1.0 * scale;
@@ -213,7 +213,7 @@ fn heart(ui: &mut egui::Ui, id: &str, saved: bool) -> egui::Response {
     response.on_hover_text(label)
 }
 
-/// 刷新目录按钮：同步时图标自己转，失败时边框变琥珀色呼吸，悬停看原因。
+/// 刷新目錄按鈕：同步時圖標自己轉，失敗時邊框變琥珀色呼吸，懸停看原因。
 fn refresh_button(ui: &mut egui::Ui, enabled: bool, spinning: bool, failure: Option<&str>) -> egui::Response {
     let (rect, _) = ui.allocate_exact_size(egui::vec2(30.0, 26.0), egui::Sense::hover());
     let response = ui.interact(rect, egui::Id::new("plugin-market-refresh"), if enabled {
@@ -221,7 +221,7 @@ fn refresh_button(ui: &mut egui::Ui, enabled: bool, spinning: bool, failure: Opt
     } else {
         egui::Sense::hover()
     });
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, "刷新目录"));
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, "刷新目錄"));
     let ctx = ui.ctx().clone();
     let time = ui.input(|input| input.time) as f32;
     let amber = warn_color(ui);
@@ -279,8 +279,8 @@ fn refresh_button(ui: &mut egui::Ui, enabled: bool, spinning: bool, failure: Opt
         egui::Stroke::NONE,
     ));
     match failure {
-        Some(error) if !spinning => response.on_hover_text(format!("同步失败，正在显示上次的集市目录。点一下重试\n{error}")),
-        _ => response.on_hover_text("刷新目录"),
+        Some(error) if !spinning => response.on_hover_text(format!("同步失敗，正在顯示上次的集市目錄。點一下重試\n{error}")),
+        _ => response.on_hover_text("刷新目錄"),
     }
 }
 
@@ -288,7 +288,7 @@ const AVATAR_TEXTURES: &str = "plugin-market-avatar-textures";
 type AvatarTextures = std::collections::VecDeque<(egui::Id, Option<egui::TextureHandle>)>;
 
 impl LocalPlugins {
-    /// 集市页包含目录、排序、分类和插件卡片。
+    /// 集市頁包含目錄、排序、分類和插件卡片。
     pub(super) fn market(&mut self, ui: &mut egui::Ui, official: bool) -> MarketNav {
         if official {
             self.ensure_official_catalog();
@@ -342,9 +342,9 @@ impl LocalPlugins {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
             let preview_build = market::IS_PREVIEW_BUILD;
-            let online = if preview_build { "预览集市" } else { "官方" };
+            let online = if preview_build { "預覽集市" } else { "官方" };
             if has_test {
-                let options = [online.to_owned(), "本地测试".to_owned()];
+                let options = [online.to_owned(), "本地測試".to_owned()];
                 if let Some(index) = segmented(ui, "plugin-market-source", &options, usize::from(!official), &[false, false], 12.0) {
                     nav = MarketNav::Source { official: index == 0 };
                 }
@@ -366,7 +366,7 @@ impl LocalPlugins {
                 .width(72.0)
                 .selected_text(order.label())
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut order, MarketSort::Downloads, "按下载量");
+                    ui.selectable_value(&mut order, MarketSort::Downloads, "按下載量");
                     ui.selectable_value(&mut order, MarketSort::Latest, "按最新");
                 })
                 .response
@@ -376,7 +376,7 @@ impl LocalPlugins {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
             if !official {
-                ui.label(egui::RichText::new("本地测试集市").strong());
+                ui.label(egui::RichText::new("本地測試集市").strong());
             }
             if chip(ui, "全部", filter == "all").clicked() {
                 filter = "all".to_owned();
@@ -411,14 +411,14 @@ impl LocalPlugins {
                         settings_hint(ui, "正在同步插件集市…");
                     });
                 } else {
-                    ui.strong("暂时无法加载集市，请刷新重试");
+                    ui.strong("暫時無法加載集市，請刷新重試");
                 }
             });
         }
         if favorites && favorites_count == 0 {
             settings_card(ui, |ui| {
-                ui.strong("还没有收藏插件");
-                settings_hint(ui, "点卡片上的心形收藏，之后在这里找到它。");
+                ui.strong("還沒有收藏插件");
+                settings_hint(ui, "點卡片上的心形收藏，之後在這裡找到它。");
             });
         }
         if let Some(catalog) = &catalog {
@@ -440,7 +440,7 @@ impl LocalPlugins {
             });
             if entries.is_empty() && !favorites {
                 settings_card(ui, |ui| {
-                    ui.strong("目录中暂无插件");
+                    ui.strong("目錄中暫無插件");
                 });
             }
             let columns = if ui.available_width() >= 575.0 {
@@ -482,7 +482,7 @@ impl LocalPlugins {
                                 if catalog.is_some() {
                                     "已下架"
                                 } else {
-                                    "详情暂不可用"
+                                    "詳情暫不可用"
                                 },
                             );
                             if ui.button("取消收藏").clicked() {
@@ -513,7 +513,7 @@ impl LocalPlugins {
     ) -> bool {
         let key = egui::Id::new(("market", &catalog.path, &entry.sha256));
         let width = ui.available_width();
-        plugin_cover(ui, key, width, radius, "封面暂不可用", false, || {
+        plugin_cover(ui, key, width, radius, "封面暫不可用", false, || {
             if catalog.is_official() {
                 self.official_cover(catalog, entry)
                     .map(|cover| cover.map(|png| png.bytes().to_vec()))
@@ -574,7 +574,7 @@ impl LocalPlugins {
                         pixels.as_raw(),
                     );
                     ui.ctx()
-                        .load_texture("插件作者头像", image, egui::TextureOptions::LINEAR)
+                        .load_texture("插件作者頭像", image, egui::TextureOptions::LINEAR)
                 });
             ui.data_mut(|data| {
                 let cache = data.get_temp_mut_or_default::<AvatarTextures>(cache_id);
@@ -615,7 +615,7 @@ impl LocalPlugins {
         }
     }
 
-    /// 集市卡片：封面、名称、作者、两行简介、装到哪里，底部是下载量、收藏和安装。
+    /// 集市卡片：封面、名稱、作者、兩行簡介、裝到哪裡，底部是下載量、收藏和安裝。
     fn market_card(
         &mut self,
         ui: &mut egui::Ui,
@@ -660,7 +660,7 @@ impl LocalPlugins {
                 if ui
                     .interact(
                         cover.response.rect,
-                        ui.id().with("详情封面"),
+                        ui.id().with("詳情封面"),
                         egui::Sense::click(),
                     )
                     .on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -704,7 +704,7 @@ impl LocalPlugins {
                         let place = self
                             .entry_owner(entry)
                             .and_then(|owner| owner_label(&owner))
-                            .map_or_else(String::new, |label| format!("装到 {label}"));
+                            .map_or_else(String::new, |label| format!("裝到 {label}"));
                         ui.add(
                             egui::Label::new(egui::RichText::new(place).size(11.0).color(muted_color(ui)))
                                 .truncate(),
@@ -716,8 +716,8 @@ impl LocalPlugins {
                                 let downloads = self.market_counts(&entry.id).map(|counts| counts.downloads);
                                 download_count(ui, &compact(downloads))
                                     .on_hover_text(downloads.map_or_else(
-                                        || "暂无统计数据".to_owned(),
-                                        |count| format!("{count} 次下载"),
+                                        || "暫無統計數據".to_owned(),
+                                        |count| format!("{count} 次下載"),
                                     ));
                             }
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -738,7 +738,7 @@ impl LocalPlugins {
         card.inner
     }
 
-    /// 打开中的详情抽屉。集市页和已安装页都用它；返回真表示用户点了「已安装」要去管理。
+    /// 打開中的詳情抽屜。集市頁和已安裝頁都用它；返回真表示用戶點了「已安裝」要去管理。
     pub(super) fn detail_drawer(&mut self, ui: &mut egui::Ui, official_first: bool) -> bool {
         let Some(id) = ui.data(|data| data.get_temp::<String>(detail_id())) else {
             return false;
@@ -755,7 +755,7 @@ impl LocalPlugins {
         go
     }
 
-    /// 右侧详情抽屉：盖住整个设置窗口并把背后置灰，不离开原来的列表。
+    /// 右側詳情抽屜：蓋住整個設置窗口並把背後置灰，不離開原來的列表。
     fn market_drawer(
         &mut self,
         ui: &mut egui::Ui,
@@ -780,7 +780,7 @@ impl LocalPlugins {
                 .show(ui, |ui| {
                     ui.spacing_mut().item_spacing.y = 8.0;
                     if let Some(error) = self.errors.get(id) {
-                        settings_hint(ui, &format!("刷新失败 · {error}"));
+                        settings_hint(ui, &format!("刷新失敗 · {error}"));
                     }
                     match &found {
                         Some((catalog, entry)) => {
@@ -799,7 +799,7 @@ impl LocalPlugins {
                                 ui.strong(if self.market_catalog(true).is_some() {
                                     "此插件已下架"
                                 } else {
-                                    "暂时无法查看详情"
+                                    "暫時無法查看詳情"
                                 });
                             }
                             if self.is_favorite(id) && ui.button("取消收藏").clicked() {
@@ -853,12 +853,12 @@ impl LocalPlugins {
                 .as_ref()
                 .and_then(|details| details.updated_on.as_ref())
             {
-                meta.push_str(&format!(" · 更新于 {date}"));
+                meta.push_str(&format!(" · 更新於 {date}"));
             }
             if catalog.is_official() {
                 let counts = self.market_counts(&entry.id);
                 meta.push_str(&format!(
-                    " · 下载 {} · 收藏 {}",
+                    " · 下載 {} · 收藏 {}",
                     compact(counts.as_ref().map(|c| c.downloads)),
                     compact(counts.as_ref().map(|c| c.favorites))
                 ));
@@ -868,15 +868,15 @@ impl LocalPlugins {
         ui.label(if is_material == Some(true)
             && entry.presentation.as_ref().and_then(|details| details.description.as_ref()).is_none()
         {
-            "为主岛应用 GPU 材质。"
+            "為主島應用 GPU 材質。"
         } else {
             entry_description(entry)
         });
         let permissions = is_material.map(|is_material| {
             if is_material {
-                "首次启用时授权读取岛体背后的屏幕画面"
+                "首次啟用時授權讀取島體背後的屏幕畫面"
             } else {
-                "无需外部权限"
+                "無需外部權限"
             }
         });
         egui::Frame::new()
@@ -890,14 +890,14 @@ impl LocalPlugins {
                 let place = owner
                     .as_deref()
                     .and_then(owner_label)
-                    .map(|label| format!("设置 › {label}"));
+                    .map(|label| format!("設置 › {label}"));
                 let management = (owner.as_deref() == Some("wireless"))
-                    .then_some("设置 › 插件 › 已安装");
+                    .then_some("設置 › 插件 › 已安裝");
                 for (label, value) in [
-                    ("设置在", place.as_deref()),
+                    ("設置在", place.as_deref()),
                     ("管理在", management),
-                    ("新增页面", Some("不会")),
-                    ("权限", permissions),
+                    ("新增頁面", Some("不會")),
+                    ("權限", permissions),
                 ]
                 .into_iter()
                 .filter_map(|(label, value)| value.map(|value| (label, value)))
@@ -917,7 +917,7 @@ impl LocalPlugins {
             });
         if self.market_status(catalog, entry) == MarketStatus::Update {
             let package = self.records[&entry.id].package.as_ref().unwrap();
-            settings_hint(ui, &format!("已安装 v{}", package.manifest.version));
+            settings_hint(ui, &format!("已安裝 v{}", package.manifest.version));
         }
         ui.add_space(2.0);
         ui.horizontal(|ui| {
@@ -927,8 +927,8 @@ impl LocalPlugins {
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if entry.id == WIRELESS_PLUGIN_ID {
-                    ui.hyperlink_to("反馈设备适配", WIRELESS_FEEDBACK_URL);
-                } else if catalog.is_official() && ui.add(egui::Button::new("反馈问题").frame(false)).clicked() {
+                    ui.hyperlink_to("反饋設備適配", WIRELESS_FEEDBACK_URL);
+                } else if catalog.is_official() && ui.add(egui::Button::new("反饋問題").frame(false)).clicked() {
                     request_plugin_feedback(ui, &entry.id, &entry.name, &entry.version);
                 }
             });
@@ -955,8 +955,8 @@ impl LocalPlugins {
     ) -> bool {
         let state = self.market_status(catalog, entry);
         if self.market_job_id() == Some(entry.id.as_str()) {
-            // 安装中：按钮保持原位，文字换成转圈。
-            let label = if state == MarketStatus::Update { "更新" } else { "安装" };
+            // 安裝中：按鈕保持原位，文字換成轉圈。
+            let label = if state == MarketStatus::Update { "更新" } else { "安裝" };
             let button = egui::Button::new(egui::RichText::new(label).color(Color32::TRANSPARENT))
                 .fill(plugin_accent(ui))
                 .corner_radius(6.0);
@@ -970,26 +970,26 @@ impl LocalPlugins {
             return false;
         }
         let label = match state {
-            MarketStatus::Install => "安装",
+            MarketStatus::Install => "安裝",
             MarketStatus::Update => "更新",
             MarketStatus::Installed => {
                 let green = ok_color(ui);
                 let response = ui
                     .add(
-                        egui::Button::new(egui::RichText::new("已安装").color(green))
+                        egui::Button::new(egui::RichText::new("已安裝").color(green))
                             .fill(color(ui.ctx(), Color32::from_rgb(31, 53, 39), Color32::from_rgb(227, 243, 232)))
                             .stroke(egui::Stroke::NONE)
                             .corner_radius(6.0),
                     )
-                    .on_hover_text("在已安装里管理");
+                    .on_hover_text("在已安裝裡管理");
                 return response.clicked();
             }
             MarketStatus::OtherSource => {
-                settings_hint(ui, "已从其他来源安装");
+                settings_hint(ui, "已從其他來源安裝");
                 return false;
             }
             MarketStatus::Unavailable => {
-                settings_hint(ui, "已安装更高版本");
+                settings_hint(ui, "已安裝更高版本");
                 return false;
             }
             MarketStatus::Revoked => {
@@ -1000,7 +1000,7 @@ impl LocalPlugins {
         let mut response = ui.add_enabled(!self.market_busy() && has_cover, market_button(ui, label));
         if state == MarketStatus::Update {
             let installed = &self.records[&entry.id].package.as_ref().unwrap().manifest.version;
-            response = response.on_hover_text(format!("已安装 v{installed}，更新到 v{}", entry.version));
+            response = response.on_hover_text(format!("已安裝 v{installed}，更新到 v{}", entry.version));
         }
         if response.clicked() {
             self.notice = self
@@ -1013,7 +1013,7 @@ impl LocalPlugins {
         false
     }
 
-    /// 插件的设置归属：先看目录写明的，再看已安装插件自己的清单；都没有就不归类。
+    /// 插件的設置歸屬：先看目錄寫明的，再看已安裝插件自己的清單；都沒有就不歸類。
     fn entry_owner(&self, entry: &market::Entry) -> Option<String> {
         entry.owner().map(str::to_owned).or_else(|| {
             let manifest = &self.records.get(&entry.id)?.package.as_ref()?.manifest;
@@ -1021,7 +1021,7 @@ impl LocalPlugins {
         })
     }
 
-    /// 已安装插件在集市里有新版本时返回新版本号。
+    /// 已安裝插件在集市裡有新版本時返回新版本號。
     pub(super) fn market_update(&self, id: &str) -> Option<(bool, String)> {
         let record = self.records.get(id)?;
         if !record.from_market {
@@ -1058,7 +1058,7 @@ mod tests {
         let entry = |id: &str, date: Option<&str>| market::Entry {
             id: id.to_owned(),
             name: id.to_owned(),
-            author: "测试".to_owned(),
+            author: "測試".to_owned(),
             version: "1.0.0".to_owned(),
             size: 1,
             sha256: String::new(),

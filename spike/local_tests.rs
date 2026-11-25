@@ -22,7 +22,7 @@ fn write_shortcut_package(dir: &Path, id: &str, version: &str, colors: Value) ->
     fs::write(
         &path,
         serde_json::to_vec(&json!({
-            "id": id, "name": "快捷切换", "author": "示例", "version": version,
+            "id": id, "name": "快捷切換", "author": "示例", "version": version,
             "api": 1, "runtime": "assets", "entry": PAGE_SHORTCUT_ENTRY,
             "cover": COVER_FILE, "owner": "pages", "capabilities": ["navigation.shortcuts"],
             "dataVersion": 1, "permissions": {}, "settings": [],
@@ -47,10 +47,10 @@ fn one_plugin_fills_a_tasks_card_and_a_calendar_marker_under_separate_switches()
     fs::write(dir.join(COVER_FILE), include_bytes!("examples/payday/cover.png"))?;
     fs::write(
         dir.join("main.js"),
-        "function refresh(i){return {card:'发薪 '+i.today, marker:i.today==='2026-11-23'?'发薪日':''}}",
+        "function refresh(i){return {card:'發薪 '+i.today, marker:i.today==='2026-11-23'?'發薪日':''}}",
     )?;
     let manifest = json!({
-        "id": "example.payday-marker", "name": "发薪日", "author": "示例", "version": "1.0.0",
+        "id": "example.payday-marker", "name": "發薪日", "author": "示例", "version": "1.0.0",
         "api": 1, "runtime": "js", "entry": "main.js", "cover": COVER_FILE, "owner": "tasks",
         "capabilities": ["card", "calendar.marker", "timer"], "dataVersion": 1,
         "permissions": {}, "settings": [],
@@ -74,10 +74,10 @@ fn one_plugin_fills_a_tasks_card_and_a_calendar_marker_under_separate_switches()
     host.enable(id, true)?;
     assert!(host.calendar_annotation_enabled());
     settle(&mut host, DAY);
-    assert_eq!(host.cards.get(id).map(String::as_str), Some("发薪 2026-11-23"));
-    assert_eq!(host.calendar_annotation(DAY), Some("发薪日"));
+    assert_eq!(host.cards.get(id).map(String::as_str), Some("發薪 2026-11-23"));
+    assert_eq!(host.calendar_annotation(DAY), Some("發薪日"));
 
-    // 关日程只撤下日历标注，待办卡片照常更新。
+    // 關日程只撤下日曆標註，待辦卡片照常更新。
     host.tick(true, false, DAY);
     assert_eq!(host.calendar_annotation(DAY), None);
     assert!(host.has_card());
@@ -93,18 +93,18 @@ fn one_plugin_fills_a_tasks_card_and_a_calendar_marker_under_separate_switches()
     }
     assert!(host.markers.is_empty() && host.has_card());
 
-    // 再开日程，不用等定时刷新就补回标注。
+    // 再開日程，不用等定時刷新就補回標註。
     settle(&mut host, DAY);
-    assert_eq!(host.calendar_annotation(DAY), Some("发薪日"));
+    assert_eq!(host.calendar_annotation(DAY), Some("發薪日"));
 
-    // 换日后旧标注作废，新的一天没有标注时也不残留。
+    // 換日後舊標註作廢，新的一天沒有標註時也不殘留。
     host.tick(true, true, NEXT);
     assert_eq!(host.calendar_annotation(NEXT), None);
     settle(&mut host, NEXT);
     assert_eq!(host.calendar_annotation(NEXT), None);
-    assert_eq!(host.cards.get(id).map(String::as_str), Some("发薪 2026-11-24"));
+    assert_eq!(host.cards.get(id).map(String::as_str), Some("發薪 2026-11-24"));
 
-    // 关掉所属的待办模块，整个插件暂停，两处输出都撤下。
+    // 關掉所屬的待辦模塊，整個插件暫停，兩處輸出都撤下。
     host.tick(false, true, NEXT);
     assert!(!host.has_card());
     assert!(host.next.get(id).is_none() && host.jobs.is_empty());
@@ -315,7 +315,7 @@ mod test_market {
         assert!(host.is_favorite(ID));
         assert_eq!(host.favorites().len(), 1);
 
-        // 删除在线目录后，收藏仍可显示名称并取消。
+        // 刪除在線目錄後，收藏仍可顯示名稱並取消。
         fs::remove_file(&fixture.index)?;
         let mut host = LocalPlugins::open(storage.clone());
         assert_eq!(host.favorites().get(ID), Some(&entry.name));
@@ -333,7 +333,7 @@ mod test_market {
         let previous_index = fs::read(&fixture.index)?;
         host.enable(ID, true)?;
         let mut values = host.records[ID].values.clone();
-        values.insert("title".into(), "我的发薪日".into());
+        values.insert("title".into(), "我的發薪日".into());
         host.save(ID, values.clone())?;
         settle(&mut host, "2026-12-01");
         let saved = host.records[ID].storage.clone();
@@ -341,7 +341,7 @@ mod test_market {
         host.tick(false, true, "2026-12-02");
         assert!(host.records[ID].enabled && !host.has_card());
 
-        // 无封面的旧快照从磁盘恢复，在线更新后随包保存封面。
+        // 無封面的舊快照從磁盤恢復，在線更新後隨包保存封面。
         let mut old: Value = serde_json::from_slice(&fs::read(host.path(ID))?)?;
         let snapshot = old["package"].as_object_mut().unwrap();
         snapshot.remove("cover");
@@ -368,7 +368,7 @@ mod test_market {
         host.tick(true, true, "2026-12-02");
         host.market_action(false, ID)?;
         settle_market(&mut host);
-        assert!(host.jobs[ID].cancelled.load(Ordering::Acquire), "上个版本的迟到结果应作废");
+        assert!(host.jobs[ID].cancelled.load(Ordering::Acquire), "上個版本的遲到結果應作廢");
         assert_eq!(host.records[ID].storage, saved);
         assert_eq!(status(&host), MarketStatus::Installed);
         assert!(host.records[ID].enabled);
@@ -413,7 +413,7 @@ mod test_market {
         let mut host = LocalPlugins::open(installed.clone());
         let mut manifest: Value = serde_json::from_slice(&fs::read(&fixture.manifest_path)?)?;
         manifest["id"] = json!(LUNAR);
-        manifest["name"] = json!("今日农历");
+        manifest["name"] = json!("今日農曆");
         fs::write(&fixture.manifest_path, serde_json::to_vec(&manifest)?)?;
         fs::write(
             fixture.manifest_path.with_file_name("main.js"),
@@ -425,7 +425,7 @@ mod test_market {
         settle_market(&mut host);
         host.enable(LUNAR, true)?;
         let mut record = host.installed(LUNAR)?;
-        record.values.insert("title".into(), "自定义标题".into());
+        record.values.insert("title".into(), "自定義標題".into());
         record.storage = json!({"saved": true});
         host.put(LUNAR, record.clone())?;
         host.tick(true, true, TODAY);
@@ -500,21 +500,21 @@ mod test_market {
         host.refresh_market_catalog()?;
         host.market_action(false, ID)?;
         settle_market(&mut host);
-        assert!(host.notice.contains("更新失败"));
+        assert!(host.notice.contains("更新失敗"));
         assert_eq!(fs::read(host.path(ID))?, previous);
 
         fixture.publish("1.2.0", true)?;
         host.refresh_market_catalog()?;
         host.market_action(false, ID)?;
         settle_market(&mut host);
-        assert!(host.notice.contains("字段类型"));
+        assert!(host.notice.contains("字段類型"));
         assert_eq!(fs::read(host.path(ID))?, previous);
 
         host.market_action(false, ID)?;
         host.enable(ID, false)?;
         let disabled = fs::read(host.path(ID))?;
         settle_market(&mut host);
-        assert!(host.notice.contains("插件状态已变化"));
+        assert!(host.notice.contains("插件狀態已變化"));
         assert_eq!(fs::read(host.path(ID))?, disabled);
         assert!(!host.records[ID].enabled);
 
@@ -525,7 +525,7 @@ mod test_market {
         host.refresh_market_catalog()?;
         host.market_action(false, ID)?;
         settle_market(&mut host);
-        assert!(host.notice.contains("更新失败"));
+        assert!(host.notice.contains("更新失敗"));
         assert_eq!(fs::read(host.path(ID))?, disabled);
         Ok(())
     }
@@ -661,7 +661,7 @@ mod test_market {
         assert_eq!(status(&host), MarketStatus::OtherSource);
         host.enable(ID, true)?;
         let mut values = host.records[ID].values.clone();
-        values.insert("title".into(), "我的发薪日".into());
+        values.insert("title".into(), "我的發薪日".into());
         host.save(ID, values.clone())?;
         let installed = fs::read(host.path(ID))?;
 
@@ -700,7 +700,7 @@ mod test_market {
         assert!(host
             .official_catalog_error()
             .unwrap()
-            .contains("非预期跳转"));
+            .contains("非預期跳轉"));
         assert_eq!(remote.entries[0].version, "1.1.0");
         assert_eq!(fs::read(&remote.path)?, second);
         server.join().unwrap();
@@ -800,7 +800,7 @@ fn two_packages_survive_disable_restart_and_both_uninstall_choices() -> Result<(
     v.insert("target".into(), "2026-12-03".into());
     host.save(a, v)?;
     settle(&mut host, "2026-12-01");
-    assert_eq!(host.cards[a], "距离发薪还有 2 天");
+    assert_eq!(host.cards[a], "距離發薪還有 2 天");
     assert_eq!(host.cards[b], "旅行");
     host.enable(b, false)?;
     host.tick(false, false, "");
@@ -810,7 +810,7 @@ fn two_packages_survive_disable_restart_and_both_uninstall_choices() -> Result<(
     host.tick(false, false, "");
     assert!(host.cards.is_empty());
     settle(&mut host, "2026-12-02");
-    assert_eq!(host.cards[a], "距离发薪还有 1 天");
+    assert_eq!(host.cards[a], "距離發薪還有 1 天");
     assert!(!host.cards.contains_key(b));
     assert_eq!(host.records[b].storage, 1);
     host.enable(b, true)?;
@@ -859,7 +859,7 @@ fn deadline_work_never_blocks_frames_or_starts_twice() -> Result<()> {
     }
     assert!(
         start.elapsed() < Duration::from_millis(25),
-        "十次界面更新不应等待 30 毫秒的插件"
+        "十次界面更新不應等待 30 毫秒的插件"
     );
     settle(&mut host, "2026-11-19");
     assert!(host.errors.contains_key(id));
@@ -953,14 +953,14 @@ mod material_tests {
 
     fn manifest(id: &str) -> Value {
         json!({
-            "id": id, "name": "测试材质", "author": "测试", "version": "1.0.0", "api": 1,
+            "id": id, "name": "測試材質", "author": "測試", "version": "1.0.0", "api": 1,
             "runtime": "material", "entry": "shaders/material.wgsl", "cover": COVER_FILE,
             "owner": "appearance",
             "capabilities": ["appearance.material", "settings"], "dataVersion": 1,
             "permissions": {"screen.backdrop": true},
             "material": {"controls": true, "spring": {"stiffness": 1.0, "damping": 0.5}},
             "settings": [
-                {"key": "strength", "label": "强度", "type": "number", "min": 0, "max": 120, "step": 1, "default": "48"},
+                {"key": "strength", "label": "強度", "type": "number", "min": 0, "max": 120, "step": 1, "default": "48"},
                 {"key": "blur", "label": "模糊", "type": "number", "min": 0, "max": 10, "step": 0.5, "default": "1.5"}
             ]
         })
@@ -975,7 +975,7 @@ mod material_tests {
             include_bytes!("examples/liquid-glass/cover.png"),
         )?;
         fs::create_dir_all(dir.join("docs"))?;
-        fs::write(dir.join("docs/README.md"), "材质说明")?;
+        fs::write(dir.join("docs/README.md"), "材質說明")?;
         let path = dir.join("plugin.json");
         fs::write(&path, serde_json::to_vec(&manifest(id))?)?;
         Ok(path)
@@ -1038,7 +1038,7 @@ mod material_tests {
         }
         let mut too_many = valid;
         too_many["settings"] = Value::Array((0..33).map(|index| {
-            json!({"key":format!("param{index}"),"label":"参数","type":"number","min":0,"max":1,"step":0.1,"default":"0"})
+            json!({"key":format!("param{index}"),"label":"參數","type":"number","min":0,"max":1,"step":0.1,"default":"0"})
         }).collect());
         assert!(serde_json::from_value::<Manifest>(too_many.clone())?
             .validate()
@@ -1052,13 +1052,13 @@ mod material_tests {
     fn material_manifest_accepts_optional_units_and_display_precision() -> Result<()> {
         let mut valid = manifest("example.material");
         serde_json::from_value::<Manifest>(valid.clone())?.validate()?;
-        for (unit, precision) in [("px", 0), ("毫秒单位", 3)] {
+        for (unit, precision) in [("px", 0), ("毫秒單位", 3)] {
             valid["settings"][0]["unit"] = json!(unit);
             valid["settings"][0]["precision"] = json!(precision);
             serde_json::from_value::<Manifest>(valid.clone())?.validate()?;
         }
         for (key, value) in [
-            ("unit", json!("毫秒单位符")),
+            ("unit", json!("毫秒單位符")),
             ("unit", json!(3)),
             ("unit", Value::Null),
             ("precision", json!(-1)),
@@ -1090,7 +1090,7 @@ mod material_tests {
             .install(&path)
             .unwrap_err()
             .to_string()
-            .contains("需要更新岛仔"));
+            .contains("需要更新島仔"));
 
         future["api"] = json!(2);
         fs::write(&path, serde_json::to_vec(&future)?)?;
@@ -1098,7 +1098,7 @@ mod material_tests {
             .install(&path)
             .unwrap_err()
             .to_string()
-            .contains("需要更新岛仔"));
+            .contains("需要更新島仔"));
         assert!(!host.records.contains_key("example.material"));
         fs::remove_dir_all(root)?;
         Ok(())
@@ -1151,7 +1151,7 @@ mod material_tests {
             "docs/plugin.json",
         ] {
             let extra = root.join(name);
-            fs::write(&extra, "多余文件")?;
+            fs::write(&extra, "多餘文件")?;
             assert!(Package::read(&path).is_err(), "{name}");
             fs::remove_file(extra)?;
         }

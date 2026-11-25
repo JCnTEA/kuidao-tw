@@ -32,7 +32,7 @@ impl Fixtures {
         )?;
         fs::write(dir.join(kind.entry()), source.to_string())?;
         fs::write(&manifest, json!({
-            "id": id, "name": "外观资源", "author": "岛仔", "version": "1.0.0", "api": 1,
+            "id": id, "name": "外觀資源", "author": "島仔", "version": "1.0.0", "api": 1,
             "runtime": "assets", "entry": kind.entry(), "cover": "cover.png", "owner": "appearance",
             "capabilities": [kind.capability()], "dataVersion": 1, "permissions": {}, "settings": []
         }).to_string())?;
@@ -88,7 +88,7 @@ fn sdk_spike_canvas_font_pack_registers_falls_back_and_survives_restart() -> Res
     let fixture = Fixtures::new()?;
     let dir = fixture.0.join("installed");
     let id = "example.zcool-kuaile";
-    let name = "站酷快乐体";
+    let name = "站酷快樂體";
     let family = egui::FontFamily::Name(format!("plugin:{name}").into());
     let mut host = LocalPlugins::open(dir.clone());
     host.install(example_font())?;
@@ -106,11 +106,11 @@ fn sdk_spike_canvas_font_pack_registers_falls_back_and_survives_restart() -> Res
         let font = theme::canvas_font(20.0, W::Regular, Some(name), &installed);
         assert_eq!(font.family, family);
         ctx.fonts(|fonts| {
-            assert!(fonts.has_glyph(&font, '岛'));
+            assert!(fonts.has_glyph(&font, '島'));
             assert!(fonts.has_glyph(&font, '→'));
             assert_eq!(fonts.glyph_width(&font, '→'), fonts.glyph_width(&fallback, '→'));
-            let galley = fonts.layout_no_wrap("岛→".into(), font, egui::Color32::WHITE);
-            assert_eq!(galley.text(), "岛→");
+            let galley = fonts.layout_no_wrap("島→".into(), font, egui::Color32::WHITE);
+            assert_eq!(galley.text(), "島→");
         });
     });
     if let Some(dir) = std::env::var_os("DAOZAI_CANVAS_SCREENSHOTS") {
@@ -142,9 +142,9 @@ fn save_font_preview(host: &LocalPlugins, dir: &Path) -> Result<()> {
     let canvas = Arc::new(Canvas::parse(json!({
         "height":172,"nodes":[
             {"rect":[0,0,387,172],"r":12,"fill":"#202A23"},
-            {"text":"站酷快乐体","at":[18,66],"size":36,"font":"站酷快乐体","fill":"#F7EACF"},
-            {"text":"岛仔画布 · 趋势与进度","at":[18,108],"size":24,"font":"站酷快乐体","fill":"#C8D97B"},
-            {"text":"中文至箭头 →","at":[18,145],"size":18,"font":"站酷快乐体","fill":"#F7EACF"}
+            {"text":"站酷快樂體","at":[18,66],"size":36,"font":"站酷快樂體","fill":"#F7EACF"},
+            {"text":"島仔畫布 · 趨勢與進度","at":[18,108],"size":24,"font":"站酷快樂體","fill":"#C8D97B"},
+            {"text":"中文至箭頭 →","at":[18,145],"size":18,"font":"站酷快樂體","fill":"#F7EACF"}
         ]
     })).map_err(|error| fail(&error))?);
     let first = ctx.run(Default::default(), |ctx| host.sync_canvas_fonts(ctx));
@@ -152,7 +152,7 @@ fn save_font_preview(host: &LocalPlugins, dir: &Path) -> Result<()> {
         egui::CentralPanel::default().frame(egui::Frame::NONE).show(ctx, |ui| {
             let card = Card::new(ui, bounds.min, bounds);
             card.painter.rect_filled(bounds, 16.0, egui::Color32::from_rgb(15, 18, 15));
-            card.painter.text(egui::pos2(16.0, 21.0), egui::Align2::LEFT_CENTER, "画布字体",
+            card.painter.text(egui::pos2(16.0, 21.0), egui::Align2::LEFT_CENTER, "畫布字體",
                 crate::theme::font(15.0, crate::theme::W::Semibold), egui::Color32::WHITE);
             plugin_canvas_ui::draw(&card, "font-preview", &canvas, card.rect(16.0, 42.0, 387.0, 172.0),
                 plugin_canvas_ui::CanvasTheme { palette: None, accent: None, background: egui::Color32::BLACK },
@@ -201,7 +201,7 @@ fn appearance_theme_rejects_invalid_colors_fields_and_size() -> Result<()> {
     }
     let valid = r##"{"base":"cream","colors":{"accent":"#113355"}}"##;
     let Pack::Skin(skin) = Pack::decode(Kind::Skin, valid)? else {
-        panic!("应解析出皮肤包")
+        panic!("應解析出皮膚包")
     };
     assert_eq!(skin.base, Skin::Cream);
     assert_eq!(

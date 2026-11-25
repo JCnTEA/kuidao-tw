@@ -16,16 +16,16 @@ function refresh({settings, now, tz}) {
     const end = parseTime(settings.end);
     const workdays = settings.days ? settings.days.split(",").map(Number) : [];
     if (!Number.isFinite(salary) || salary < 0) {
-        return {status:{state:"idle", label:"今日工资", summary:"请输入有效的月薪"}};
+        return {status:{state:"idle", label:"今日工資", summary:"請輸入有效的月薪"}};
     }
     if (start === null || end === null || start >= end) {
-        return {status:{state:"idle", label:"今日工资", summary:"下班时间须晚于当天上班时间"}};
+        return {status:{state:"idle", label:"今日工資", summary:"下班時間須晚於當天上班時間"}};
     }
     if (!workdays.length || !workdays.every(day => Number.isInteger(day) && day >= 1 && day <= 7)) {
-        return {status:{state:"idle", label:"今日工资", summary:"请先选择工作日"}};
+        return {status:{state:"idle", label:"今日工資", summary:"請先選擇工作日"}};
     }
 
-    // 用宿主的本机偏移换算墙钟时间，日期运算统一使用 UTC 方法。
+    // 用宿主的本機偏移換算牆鍾時間，日期運算統一使用 UTC 方法。
     const seconds = Math.floor(now / 1000);
     const offset = tz.offset_minutes * 60;
     const local = new Date((seconds + offset) * 1000);
@@ -61,7 +61,7 @@ function refresh({settings, now, tz}) {
     return {
         status:{
             state:working ? "running" : "idle",
-            label:"今日工资",
+            label:"今日工資",
             counter:{
                 start_value:0,
                 start_at:afterStart ? startAt : seconds,

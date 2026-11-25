@@ -20,7 +20,7 @@ impl Bridge {
             dispatched: Cell::new(0),
         }
     }
-    // 仅在权限检查之后进入确定性的内存传输端，测试机不会向公网发送请求。
+    // 僅在權限檢查之後進入確定性的內存傳輸端，測試機不會向公網發送請求。
     fn request(&self, value: &str) -> i32 {
         let Ok(url) = url::Url::parse(value) else {
             return -1;
@@ -56,7 +56,7 @@ pub enum Engine {
 impl Engine {
     pub fn load(kind: &str, bytes: &[u8], bridge: Rc<Bridge>) -> Result<Self> {
         if bytes.len() > 256 * 1024 {
-            return Err(fail("插件超过 256 KiB"));
+            return Err(fail("插件超過 256 KiB"));
         }
         match kind {
             #[cfg(feature = "sdk-js")]
@@ -135,7 +135,7 @@ impl Engine {
                 let instance = linker.instantiate(&mut store, &module)?.start(&mut store)?;
                 Ok(Self::Wasm { store, instance })
             }
-            _ => Err(fail("构建没有启用所选运行环境")),
+            _ => Err(fail("構建沒有啟用所選運行環境")),
         }
     }
     pub fn call(&mut self, target: i32, today: i32, fault: Option<i32>) -> Result<i32> {

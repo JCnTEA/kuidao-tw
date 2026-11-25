@@ -18,7 +18,7 @@ pub(super) struct CoverPng(Arc<[u8]>);
 
 impl CoverPng {
     pub(super) fn read(path: &Path) -> Result<Self> {
-        let file = open_plain_file(path, "cover.png 必须是插件根目录里的普通文件")?;
+        let file = open_plain_file(path, "cover.png 必須是插件根目錄裡的普通文件")?;
         let mut bytes = Vec::new();
         file.take(COVER_LIMIT + 1).read_to_end(&mut bytes)?;
         Self::decode(bytes)
@@ -26,10 +26,10 @@ impl CoverPng {
 
     pub(super) fn decode(bytes: Vec<u8>) -> Result<Self> {
         if bytes.len() as u64 > COVER_LIMIT {
-            return Err(fail("封面 cover.png 不能超过 256 KiB"));
+            return Err(fail("封面 cover.png 不能超過 256 KiB"));
         }
         if !bytes.ends_with(b"\0\0\0\0IEND\xaeB`\x82") {
-            return Err(fail("封面 cover.png 必须是完整的 PNG 图片"));
+            return Err(fail("封面 cover.png 必須是完整的 PNG 圖片"));
         }
         let mut reader =
             image::ImageReader::with_format(Cursor::new(&bytes), image::ImageFormat::Png);
@@ -40,7 +40,7 @@ impl CoverPng {
         reader.limits(limits);
         reader.decode().map_err(|error| {
             fail(&format!(
-                "封面必须是尺寸不超过 {COVER_WIDTH} × {COVER_HEIGHT} 的有效 PNG：{error}"
+                "封面必須是尺寸不超過 {COVER_WIDTH} × {COVER_HEIGHT} 的有效 PNG：{error}"
             ))
         })?;
         Ok(Self(bytes.into()))
@@ -66,7 +66,7 @@ impl<'de> Deserialize<'de> for CoverPng {
 
         let encoded = String::deserialize(input)?;
         if encoded.len() as u64 > COVER_LIMIT.div_ceil(3) * 4 {
-            return Err(Error::custom("插件快照中的封面超过 256 KiB"));
+            return Err(Error::custom("插件快照中的封面超過 256 KiB"));
         }
         let bytes = STANDARD.decode(encoded).map_err(Error::custom)?;
         Self::decode(bytes).map_err(Error::custom)

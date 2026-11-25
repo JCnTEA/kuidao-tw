@@ -97,7 +97,7 @@ impl<'de> Deserialize<'de> for CanvasImage {
         use serde::de::Error;
         let encoded = String::deserialize(deserializer)?;
         if encoded.len() as u64 > IMAGE_LIMIT.div_ceil(3) * 4 {
-            return Err(Error::custom("插件画布图片超过 512 KiB"));
+            return Err(Error::custom("插件畫布圖片超過 512 KiB"));
         }
         let bytes = STANDARD.decode(encoded).map_err(Error::custom)?;
         Ok(Self {
@@ -127,7 +127,7 @@ pub(super) fn names(base: &Path) -> Result<Vec<String>> {
                     .to_string_lossy()
                     .replace('\\', "/");
                 if !valid_image_path(&name) {
-                    return Err(fail(&format!("插件画布图片路径无效：{name}")));
+                    return Err(fail(&format!("插件畫布圖片路徑無效：{name}")));
                 }
                 names.push(name);
             }
@@ -139,7 +139,7 @@ pub(super) fn names(base: &Path) -> Result<Vec<String>> {
 pub(super) fn read(base: &Path) -> Result<CanvasImages> {
     decode_all(names(base)?, |name, remaining| {
         let mut bytes = Vec::new();
-        open_plain_file(&base.join(name), "插件画布图片必须是包内普通文件")?
+        open_plain_file(&base.join(name), "插件畫布圖片必須是包內普通文件")?
             .take(remaining + 1)
             .read_to_end(&mut bytes)?;
         Ok(bytes)
@@ -152,11 +152,11 @@ pub(super) fn decode_all(
 ) -> Result<CanvasImages> {
     let mut remaining = IMAGE_LIMIT;
     let mut images = BTreeMap::new();
-    // 封面是集市的独立资源，先给专用画布图片留出额度。
+    // 封面是集市的獨立資源，先給專用畫布圖片留出額度。
     names.sort_by_key(|name| name == COVER_FILE);
     for name in names {
         if !valid_image_path(&name) {
-            return Err(fail(&format!("插件画布图片路径无效：{name}")));
+            return Err(fail(&format!("插件畫布圖片路徑無效：{name}")));
         }
         let limit = if name == COVER_FILE {
             COVER_LIMIT
@@ -165,14 +165,14 @@ pub(super) fn decode_all(
         };
         let bytes = load(&name, limit)?;
         if bytes.len() as u64 > limit {
-            return Err(fail("插件画布图片合计超过 512 KiB"));
+            return Err(fail("插件畫布圖片合計超過 512 KiB"));
         }
         if name == COVER_FILE && bytes.len() as u64 > remaining {
             continue;
         }
         let image = match CanvasImage::checked(&name, bytes) {
             Ok(image) => image,
-            // 合规的集市封面可能超过画布图元的尺寸。
+            // 合規的集市封面可能超過畫布圖元的尺寸。
             Err(_) if name == COVER_FILE => continue,
             Err(error) => return Err(error),
         };
@@ -220,7 +220,7 @@ mod tests {
             .is_err()
         );
         assert!(decode_all(vec!["../other.svg".into()], |_, _| panic!(
-            "越界路径不得交给读取器"
+            "越界路徑不得交給讀取器"
         ))
         .is_err());
     }

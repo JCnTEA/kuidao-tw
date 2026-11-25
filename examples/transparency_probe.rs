@@ -1,4 +1,4 @@
-//! 本机合成回归探针：模拟创建时未启用透明，检查原生初始化能否恢复。
+//! 本機合成迴歸探針：模擬創建時未啟用透明，檢查原生初始化能否恢復。
 #[cfg(windows)]
 fn main()->eframe::Result<()> {
     use eframe::egui;
@@ -13,7 +13,7 @@ fn main()->eframe::Result<()> {
                 ui.painter().rect_filled(egui::Rect::from_min_max(egui::pos2(60.0,30.0),egui::pos2(260.0,130.0)),25.0,egui::Color32::BLACK);
             });
             self.native.update((0.0,0.0,320.0,160.0),(60.0,30.0,200.0,100.0),None,None,None,false,ctx.pixels_per_point(),false,false,None);
-            // 隐藏创建的窗口首次显示时可能被系统重新定位，白色测试背景需跟随实际位置和层级。
+            // 隱藏創建的窗口首次顯示時可能被系統重新定位，白色測試背景需跟隨實際位置和層級。
             unsafe {
                 let mut rect=RECT::default();GetWindowRect(self.hwnd,&mut rect).unwrap();
                 SetWindowPos(self.back,self.hwnd,rect.left,rect.top,rect.right-rect.left,rect.bottom-rect.top,SWP_NOACTIVATE).unwrap();
@@ -26,8 +26,8 @@ fn main()->eframe::Result<()> {
                     let inside=GetPixel(dc,origin.x+160,origin.y+80).0;
                     ReleaseDC(None,dc);
                     println!("outside={outside:06x} inside={inside:06x}");
-                    assert_eq!(outside,0x00ffffff,"透明区域应透出背后的白色窗口");
-                    assert_eq!(inside,0,"黑色岛体不能被当作透明色挖掉");
+                    assert_eq!(outside,0x00ffffff,"透明區域應透出背後的白色窗口");
+                    assert_eq!(inside,0,"黑色島體不能被當作透明色挖掉");
                 }
                 self.checked=true;
             }
@@ -49,8 +49,8 @@ fn main()->eframe::Result<()> {
         }
     }
     let hidden_start=std::env::args().any(|arg|arg=="--hidden-start");
-    let opts=eframe::NativeOptions{viewport:egui::ViewportBuilder::default().with_title("岛仔透明合成回归检查").with_inner_size([320.0,160.0]).with_position([100.0,100.0]).with_decorations(false).with_transparent(std::env::args().any(|arg|arg=="--transparent")).with_visible(!hidden_start).with_active(false),..Default::default()};
-    eframe::run_native("透明合成回归检查",opts,Box::new(move |cc|{
+    let opts=eframe::NativeOptions{viewport:egui::ViewportBuilder::default().with_title("島仔透明合成迴歸檢查").with_inner_size([320.0,160.0]).with_position([100.0,100.0]).with_decorations(false).with_transparent(std::env::args().any(|arg|arg=="--transparent")).with_visible(!hidden_start).with_active(false),..Default::default()};
+    eframe::run_native("透明合成迴歸檢查",opts,Box::new(move |cc|{
         cc.egui_ctx.set_pixels_per_point(1.0);
         let RawWindowHandle::Win32(raw)=cc.window_handle().unwrap().as_raw() else {unreachable!()};
         let hwnd=HWND(raw.hwnd.get() as *mut _);

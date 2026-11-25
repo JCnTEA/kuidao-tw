@@ -1,7 +1,7 @@
 {
   "id": "example.https-repository",
-  "name": "Rust 仓库动态",
-  "author": "岛仔",
+  "name": "Rust 倉庫動態",
+  "author": "島仔",
   "version": "1.0.0",
   "api": 1,
   "runtime": "js",

@@ -1,5 +1,5 @@
-//! 把鬼島图标作为 RT_GROUP_ICON #1 编进 exe，供 LoadImageW(hInst, 1, ...) 取用。
-//! 不引入额外依赖：直接调用 Windows SDK 的 rc.exe，把 .res 交给链接器。
+//! 把鬼島圖標作為 RT_GROUP_ICON #1 編進 exe，供 LoadImageW(hInst, 1, ...) 取用。
+//! 不引入額外依賴：直接調用 Windows SDK 的 rc.exe，把 .res 交給鏈接器。
 
 use std::env;
 use std::fs;
@@ -59,7 +59,7 @@ fn main() {
             }
             return;
         }
-        println!("cargo:warning=rc.exe / windres 均未找到，跳过图标资源");
+        println!("cargo:warning=rc.exe / windres 均未找到，跳過圖標資源");
         return;
     };
     let status = Command::new(&rc)
@@ -69,7 +69,7 @@ fn main() {
         .arg(&rc_source)
         .status();
     if !status.map(|s| s.success()).unwrap_or(false) {
-        println!("cargo:warning=rc.exe 编译 app.rc 失败");
+        println!("cargo:warning=rc.exe 編譯 app.rc 失敗");
         return;
     }
     println!("cargo:rustc-link-arg={}", out.display());
