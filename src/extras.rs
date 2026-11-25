@@ -3859,19 +3859,20 @@ pub(crate) const SETTINGS_TAB_POSITION: usize = 14;
 pub(crate) const SETTINGS_TAB_PAGES: usize = 10;
 pub(crate) const SETTINGS_TAB_WIRELESS: usize = 16;
 #[cfg_attr(not(feature="sdk-js"),allow(dead_code))]
-pub(crate) const SETTINGS_TAB_PLUGINS: usize = 17;
+pub(crate) const SETTINGS_TAB_PLUGINS: usize = 19;
 #[cfg(feature="sdk-js")]
-pub(crate) const SETTINGS_TAB_PLUGIN_DETAIL: usize = 18;
+pub(crate) const SETTINGS_TAB_PLUGIN_DETAIL: usize = 20;
 /// 側欄：一項就是一頁，不再有頁內子標籤。專注與健康（2、3）、待辦與置物（4、5）各合成一頁；
 /// 插件和關於固定在左下角，上方一條細線和功能頁分開。
 /// 第四列是這一項之前的分組標題。
-const SETTINGS_GROUPS: [(&str,usize,usize,&str);15 + cfg!(feature="sdk-js") as usize] = [
+const SETTINGS_GROUPS: [(&str,usize,usize,&str);16 + cfg!(feature="sdk-js") as usize] = [
     ("通用",0,0,"島仔"), ("外觀",SETTINGS_TAB_APPEARANCE,SETTINGS_TAB_APPEARANCE,""), ("位置",SETTINGS_TAB_POSITION,SETTINGS_TAB_POSITION,""), ("頁面管理",SETTINGS_TAB_PAGES,SETTINGS_TAB_PAGES,""),
-    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("消息提醒",6,6,""), ("郵箱",7,7,""), ("日程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("系統性能",15,15,""), ("無線設備",SETTINGS_TAB_WIRELESS,SETTINGS_TAB_WIRELESS,""),
-    #[cfg(feature="sdk-js")] ("插件",SETTINGS_TAB_PLUGINS,SETTINGS_TAB_PLUGINS,""),
+    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("郵箱",7,7,""), ("日程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("系統性能",15,15,""), ("無線設備",SETTINGS_TAB_WIRELESS,SETTINGS_TAB_WIRELESS,""),
+    ("贊助",SETTINGS_TAB_SUPPORT,SETTINGS_TAB_SUPPORT,""),
     ("關於",9,9,""),
+    #[cfg(feature="sdk-js")] ("插件",SETTINGS_TAB_PLUGINS,SETTINGS_TAB_PLUGINS,""),
 ];
-const SETTINGS_BOTTOM_ROWS: usize = if cfg!(feature="sdk-js") { 2 } else { 1 };
+const SETTINGS_BOTTOM_ROWS: usize = if cfg!(feature="sdk-js") { 3 } else { 2 };
 /// 分頁標題；合併頁（3→2、5→4）顯示合併後的名字。
 fn settings_tab_title(tab: usize) -> &'static str {
     SETTINGS_GROUPS
@@ -3955,6 +3956,7 @@ impl App {
             8=>egui::include_image!("../assets/settings-icons/system/calendar.svg"),
             SETTINGS_TAB_APPEARANCE=>egui::include_image!("../assets/settings-icons/system/appearance.svg"),
             SETTINGS_TAB_POSITION=>egui::include_image!("../assets/settings-icons/system/position.svg"),
+            SETTINGS_TAB_SUPPORT=>egui::include_image!("../assets/settings-icons/system/support.svg"),
             #[cfg(feature="sdk-js")]
             SETTINGS_TAB_PLUGINS=>egui::include_image!("../assets/settings-icons/system/shelf.svg"),
             _=>egui::include_image!("../assets/settings-icons/system/about.svg"),
@@ -4136,6 +4138,7 @@ impl App {
                 egui::ScrollArea::vertical().id_salt("settings-sidebar-scroll").max_height(main_height)
                     .auto_shrink([false,false]).show(ui, |ui| {
                         for &(name, start, end, section) in main {
+                            if start == SETTINGS_TAB_SUPPORT && !support_page_enabled() { continue; }
                             if !section.is_empty() {
                                 ui.add_space(if start == 0 { 2.0 } else { 8.0 });
                                 let color = settings_color(ui.ctx(), Color32::from_gray(150), Color32::from_gray(105));
@@ -4169,6 +4172,7 @@ impl App {
                     settings_color(ctx, Color32::from_rgb(46,46,51), Color32::from_rgb(218,222,229))));
                 ui.add_space(9.0);
                 for &(name, start, end, _) in bottom {
+                    if start == SETTINGS_TAB_SUPPORT && !support_page_enabled() { continue; }
                     self.settings_sidebar_builtin(ui, (name, start, end), row_h, row_gap);
                 }
             });
