@@ -190,7 +190,7 @@ impl State {
                         self.message = "已交給更新啟動器，稍後會自動換版並重新開啟。".into();
                         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
-                    Err(_) => self.begin_check(ui.ctx(), None, check),
+                    Err(_) => { self.begin_check(ui.ctx(), None, check); }
                 }
             } else {
                 self.auto_download = true;
