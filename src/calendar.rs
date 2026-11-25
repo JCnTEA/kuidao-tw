@@ -161,6 +161,20 @@ pub fn normalize_password(provider: Provider, raw: &str) -> String {
     }
 }
 
+/// 應用程式密碼長度檢查：Google／iCloud 的應用程式密碼固定 16 碼。
+/// 少複製（例如只貼到 14 碼）或多打了字元時，伺服器只會回一個沒有線索的 401，
+/// 這裡先在介面上擋下來，直接說「你填了幾碼、要去哪裡重拿」。
+pub fn app_password_problem(provider: Provider, password: &str) -> Option<String> {
+    if !matches!(provider, Provider::Google | Provider::ICloud) { return None; }
+    let length = password.chars().count();
+    if length == 16 { return None; }
+    let missing = if length < 16 { "少複製了字元" } else { "多打了字元" };
+    Some(format!(
+        "{}應用程式密碼固定 16 碼，你填的是 {length} 碼（{missing}）：請回到帳號安全性頁重新複製整組 16 碼，不要手動輸入。若帳號產不出應用程式密碼，代表還沒開啟兩步驟驗證。",
+        provider.label()
+    ))
+}
+
 /// 自定义 CalDAV 地址：去掉空白，补全 https://；只接受 https（本机回环地址允许 http）。
 pub fn normalize_server(raw: &str) -> Option<String> {
     let raw = raw.trim();
@@ -1302,6 +1316,18 @@ pub fn human_error(provider: Provider, status: Option<u16>) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn short_app_password_is_caught_before_the_401() {
+        use super::{app_password_problem, Provider};
+        assert!(app_password_problem(Provider::Google, "sjvxcqxbkfzstuk").is_none(), "16 碼不該被擋");
+        let problem = app_password_problem(Provider::Google, "psnxxvzlhxrzyn").expect("14 碼要擋下來");
+        assert!(problem.contains("16 碼") && problem.contains("14 碼"), "要說清楚幾碼：{problem}");
+        assert!(problem.contains("兩步驟驗證"));
+        let long = app_password_problem(Provider::ICloud, "sjvxcqxbkfzstukxx").expect("17 碼要擋下來");
+        assert!(long.contains("多打"));
+        assert!(app_password_problem(Provider::Custom, "anything").is_none(), "自訂伺服器不套用 16 碼規則");
+    }
+
     #[test]
     fn generated_passwords_lose_grouping_spaces() {
         use super::{normalize_password, Provider};

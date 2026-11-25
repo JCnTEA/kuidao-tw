@@ -521,6 +521,8 @@ pub struct FrameOut {
     pub animating: bool,
     /// 当前帧正在绘制翻页过渡。
     pub page_transition: bool,
+    /// 这一帧为什么要求高频重绘（诊断用）：空白代表靜止，每秒核对一次。
+    pub pace_why: &'static str,
     pub repaint_after: std::time::Duration,
     pub cmds: Vec<Cmd>,
 }
@@ -2429,6 +2431,19 @@ impl App {
             || self.media.playing && (self.open && self.page==0 || !self.open && !minimal_pill && self.notice.is_none() && self.media.is_music())
             || self.notice.as_ref().is_some_and(|notice|notice.meeting.is_some());
         let animating=transitioning || ambient || pet_visible && self.pet.state!=PetState::Sleeping;
+        // 診斷：說清楚這一幀是被哪一項要求高頻重繪，否則只看到「一直 58 幀」卻不知道誰在空轉。
+        let pace_why: &'static str =
+            if self.position_drag.is_some() || self.drag_glide.is_some() || !self.drag_lift.settled(1.0) || !self.drag_stretch.settled(1.0) { "拖曳" }
+            else if !self.h.settled(self.expanded_height()) || self.page_e() < 0.7 || self.center_guide > 0.002 || self.center_lock_a > 0.002 || self.t - self.center_lock_at < CENTER_SWEEP { "開合翻頁" }
+            else if !self.w.settled(PW) || !self.resident.settled() || self.dots.iter().any(|d| !d.settled(16.0)) || !self.notice_width.settled(1.0) { "尺寸收斂" }
+            else if self.drag_a > 0.001 && self.drag_a < 0.999 || self.pet_a > 0.001 && self.pet_a < 0.999 || self.hud_alpha > 0.003 && self.hud_alpha < 0.997 { "淡入淡出" }
+            else if self.hover_since.is_some() && !self.open || self.leave_since.is_some() || self.drag_hot { "懸停" }
+            else if self.open && self.page==3 && self.shelf_x.values().any(|s| !s.settled(68.0)) { "置物架滑動" }
+            else if self.open && self.page==2 && (!self.water_ring.settled(1.0) || !self.sit_view_t.settled(1.0) || !self.sit_t.settled(1.0)) { "水位動畫" }
+            else if self.toast.is_some() || self.t < self.notification_bell_until && self.t - self.notification_bell_at < 0.95 || self.notice.as_ref().is_some_and(|a| a.source != crate::extras::AlertSource::Internal && self.t - a.at < 0.95) { "提示彈出" }
+            else if ambient { "播放/流體" }
+            else if pet_visible { "小表情" }
+            else { "" };
         // 交互形变保持 60 帧，媒体 30 帧；小表情 20 帧，睡眠 10 帧，静态界面每秒核对提醒。
         let repaint_after=std::time::Duration::from_secs_f64(if transitioning{1.0/60.0}else if ambient{1.0/30.0}else if pet_visible{if self.pet.state==PetState::Sleeping{0.1}else{0.05}}else{1.0});
         cmds.append(&mut self.pending);
@@ -2460,6 +2475,7 @@ impl App {
             editing: self.is_editing(),
             animating,
             page_transition,
+            pace_why,
             repaint_after,
             cmds,
         }

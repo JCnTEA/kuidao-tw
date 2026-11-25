@@ -1426,6 +1426,23 @@ pub fn pick_files() -> Result<Vec<std::path::PathBuf>> {
 }
 
 pub fn pick_files_for(title: &str, multiple: bool) -> Result<Vec<std::path::PathBuf>> {
+    // 對話框要求單執行緒公寓：放到背景執行緒跑時，沒有先初始化 COM 會直接失敗。
+    // 主執行緒早就初始化過，這裡的配對釋放不會影響它（引用計數逐執行緒計算）。
+    let initialized = unsafe {
+        windows::Win32::System::Com::CoInitializeEx(
+            None,
+            windows::Win32::System::Com::COINIT_APARTMENTTHREADED,
+        )
+        .is_ok()
+    };
+    let picked = pick_files_dialog(title, multiple);
+    if initialized {
+        unsafe { windows::Win32::System::Com::CoUninitialize() };
+    }
+    picked
+}
+
+fn pick_files_dialog(title: &str, multiple: bool) -> Result<Vec<std::path::PathBuf>> {
     unsafe {
         use windows::Win32::UI::Shell::*;
         let dialog: IFileOpenDialog = CoCreateInstance(&FileOpenDialog, None, CLSCTX_ALL)?;

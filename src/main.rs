@@ -93,7 +93,17 @@ struct Shell {
     quota: daozai::quota::Service,
     quota_sig: Option<(bool,Vec<daozai::quota::Account>)>,
     quota_at: PollClock,
+    pace_at: PollClock,
+    /// 檔案選擇視窗在背景執行緒開：系統對話框是模態的，留在主執行緒會把整個島體凍住
+    /// （實測開著對話框的幀長達 23 秒），期間點擊、動畫、計時全部停擺。
+    #[cfg(windows)]
+    pick_rx: Option<std::sync::mpsc::Receiver<(PickTarget,windows::core::Result<Vec<std::path::PathBuf>>)>>,
 }
+
+/// 檔案選擇視窗拿回來的檔案要交給誰。
+#[cfg(windows)]
+#[derive(Clone,Copy,PartialEq,Eq)]
+enum PickTarget { Shelf, Quota }
 
 const MODULE_OFF:&str="該功能已在「頁面管理」中關閉";
 
@@ -107,6 +117,38 @@ impl Shell {
         let clipboard_on=self.app.clipboard_active();
         if clipboard_on!=self.clipboard_watch.is_some() {
             self.clipboard_watch=if clipboard_on {let ctx=ctx.clone();daozai::clipboard::watch(self.app.clipboard.clone(),move||ctx.request_repaint())}else{None};
+        }
+    }
+
+    #[cfg(windows)]
+    fn pick_files_async(&mut self,ctx:&egui::Context,target:PickTarget,title:&'static str,multiple:bool){
+        if self.pick_rx.is_some() {self.app.say("先前開啟的檔案選擇視窗還沒關閉");return;}
+        let (tx,rx)=std::sync::mpsc::channel();
+        let ctx=ctx.clone();
+        match daozai::resources::PICKER.spawn(move||{
+            // 系統對話框要 STA；結果與錯誤都帶回主執行緒，介面不跟著停。
+            let picked=daozai::system::pick_files_for(title,multiple);
+            let _=tx.send((target,picked));
+            ctx.request_repaint();
+        }) {
+            Some(_)=>self.pick_rx=Some(rx),
+            None=>self.app.say("無法開啟檔案選擇視窗"),
+        }
+    }
+
+    #[cfg(windows)]
+    fn poll_pick_files(&mut self){
+        let Some(rx)=self.pick_rx.take() else {return};
+        match rx.try_recv(){
+            Ok((target,Ok(files)))=>{
+                match target {
+                    PickTarget::Shelf=>if !files.is_empty(){self.app.on_drop(files);self.app.show_page(3);},
+                    PickTarget::Quota=>if let Some(path)=files.into_iter().next(){self.app.quota_set_source(path);},
+                }
+            }
+            Ok((_,Err(error)))=>self.app.say(format!("無法選擇檔案：{}",error.code())),
+            Err(std::sync::mpsc::TryRecvError::Empty)=>self.pick_rx=Some(rx),
+            Err(std::sync::mpsc::TryRecvError::Disconnected)=>self.app.say("檔案選擇視窗已結束"),
         }
     }
 
@@ -233,6 +275,8 @@ impl Shell {
             cal_sig: None,
             clipboard_watch: None,
             quota: daozai::quota::Service::start(), quota_sig: None, quota_at: PollClock::default(),
+            pace_at: PollClock::default(),
+            #[cfg(windows)] pick_rx: None,
         }
     }
 
@@ -556,6 +600,8 @@ impl eframe::App for Shell {
                 }
             }
         }
+        // 背景開啟的檔案選擇視窗有結果了就交給介面，主執行緒全程不被對話框卡住。
+        #[cfg(windows)] self.poll_pick_files();
         if let Some((message,rx))=&self.seek_rx {
             if let Some(success)=match rx.try_recv(){Ok(success)=>Some(success),Err(std::sync::mpsc::TryRecvError::Disconnected)=>Some(false),Err(_)=>None}{
                 let message=*message;
@@ -563,6 +609,7 @@ impl eframe::App for Shell {
                 if !success{self.app.say(message);}
             }
         }
+        let mark_prep=Instant::now();
         let env = self.env(ctx);
         #[cfg(windows)]
         if self.native.as_ref().is_some_and(|w|w.page_scroll_cancelled()) {self.app.cancel_page_scroll();}
@@ -616,6 +663,7 @@ impl eframe::App for Shell {
                 out = Some(self.app.frame(ui, win, &env));
             });
         let Some(out) = out else { return };
+        let mark_draw=Instant::now();
 
         #[cfg(windows)]
         {
@@ -754,7 +802,7 @@ impl eframe::App for Shell {
                     }
                 },
                 Cmd::AddFiles=>{
-                    #[cfg(windows)] match daozai::system::pick_files(){Ok(files)=>if !files.is_empty(){self.app.on_drop(files);self.app.show_page(3);},Err(e)=>self.app.say(format!("無法選擇檔案：{}",e.code()))}
+                    #[cfg(windows)] self.pick_files_async(ctx,PickTarget::Shelf,"新增檔案到置物架",true);
                 },
                 Cmd::DragFile(p)=>{
                     #[cfg(windows)] if let Err(e)=daozai::system::drag_file(&p){self.app.say(format!("無法拖出檔案：{}",e.code()));}
@@ -763,7 +811,7 @@ impl eframe::App for Shell {
                 Cmd::DisconnectNotifications=>{#[cfg(windows)]{self.incoming=None;self.app.settings.read_notifications=false;self.app.settings.save();self.app.listener_status="已斷開，不再讀取 Windows 通知".into();}},
                 Cmd::Reveal(p)=>{let _=daozai::child_process::spawn(std::process::Command::new("explorer.exe").arg(format!("/select,{}",p.display())));},
                 Cmd::QuotaChooseFile=>{
-                    #[cfg(windows)] match daozai::system::pick_files_for("選擇 AI 帳號的登入 JSON 檔案",false){Ok(files)=>if let Some(path)=files.into_iter().next(){self.app.quota_set_source(path);},Err(_)=>self.app.say("無法選擇登入檔案")}
+                    #[cfg(windows)] self.pick_files_async(ctx,PickTarget::Quota,"選擇 AI 帳號的登入 JSON 檔案",false);
                 },
                 Cmd::QuotaRefresh=>{
                     if self.quota_at.ready(Duration::from_secs(15)) {
@@ -821,6 +869,8 @@ impl eframe::App for Shell {
 
         #[cfg(windows)] let autostart = self.autostart;
         #[cfg(not(windows))] let autostart = false;
+        // 慢幀要拆得出是哪一段：設定視窗（含拖曳控制、卡片動畫）常常是隱形的大頭。
+        let mark_settings=Instant::now();
         self.app.settings_ui(ctx, autostart);
         self.app.mail_reader_ui(ctx);
         // 翻页以帧起点为准，扣掉本帧已花的时间；入口处的限帧仍然生效。
@@ -834,7 +884,20 @@ impl eframe::App for Shell {
         if elapsed>=Duration::from_millis(60) {
             let (page,open)=self.app.debug_state();
             daozai::resources::append_log(&daozai::model::config_dir().join("diagnostics"),"frames",
-                &format!("幀 {:.0} ms｜頁面 {}｜展開 {}",elapsed.as_secs_f64()*1000.0,page,open));
+                &format!("幀 {:.0} ms｜頁面 {}｜展開 {}｜階段 前置 {:.0}／繪製 {:.0}／視窗與郵件 {:.0}／設定 {:.0}｜節奏 {}",
+                    elapsed.as_secs_f64()*1000.0,page,open,
+                    (mark_prep-frame_start).as_secs_f64()*1000.0,
+                    (mark_draw-mark_prep).as_secs_f64()*1000.0,
+                    (mark_settings-mark_draw).as_secs_f64()*1000.0,
+                    (Instant::now()-mark_settings).as_secs_f64()*1000.0,
+                    out.pace_why));
+        }
+        // 節奏診斷：閒置卻一直約 16ms 重繪就是有東西在空轉，每 10 秒留一筆說明是誰要求的。
+        if repaint_after<Duration::from_secs(1) && self.pace_at.ready(Duration::from_secs(10)) {
+            let (page,open)=self.app.debug_state();
+            daozai::resources::append_log(&daozai::model::config_dir().join("diagnostics"),"frames",
+                &format!("節奏 {:.0} ms｜頁面 {}｜展開 {}｜原因 {}",repaint_after.as_secs_f64()*1000.0,page,open,out.pace_why));
+            self.pace_at=PollClock::now();
         }
     }
 }

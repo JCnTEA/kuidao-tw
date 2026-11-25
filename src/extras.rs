@@ -3703,10 +3703,10 @@ fn support_author(ui: &mut egui::Ui) {
             ui.columns(2, |columns| {
                 for (i, (name, bytes, crop, color)) in [
                     (
-                        "綠界贊助",
-                        include_bytes!("../assets/support/support-ecpay-qr.png").as_slice(),
-                        [0.0, 0.0, 200.0],
-                        Color32::from_rgb(0, 150, 105),
+                        "街口支付",
+                        include_bytes!("../assets/support/support-jkopay-qr.png").as_slice(),
+                        [0.0, 0.0, 600.0],
+                        Color32::from_rgb(214, 0, 40),
                     ),
                     (
                         "支付寶",
@@ -3736,7 +3736,7 @@ fn support_author(ui: &mut egui::Ui) {
                         ui.add(egui::Image::new((texture.id(), egui::vec2(side, side))).uv(uv));
                         ui.label(
                             egui::RichText::new(if i == 0 {
-                                "掃碼前往綠界贊助頁"
+                                "用街口支付掃一掃"
                             } else {
                                 "打開支付寶掃一掃"
                             })
@@ -5128,12 +5128,17 @@ impl App {
                                     // Google／iCloud 的 16 碼應用程式密碼常被複製成四組、夾著空白，清掉才驗得過。
                                     let password=crate::calendar::normalize_password(self.calendar.form.provider,&self.calendar.form.password);
                                     self.calendar.form.password=password.clone();
+                                    // 長度不對時先說清楚，不要送出去換一個沒有線索的 401。
+                                    if let Some(problem)=crate::calendar::app_password_problem(self.calendar.form.provider,&password){
+                                        self.calendar.note=problem;self.calendar.note_error=true;
+                                    }else{
                                     let cfg=crate::calendar::Config{provider:self.calendar.form.provider,username:user,href:None,server:if custom{server}else{None}};
                                     self.calendar.testing=true;
                                     self.calendar.test_password=password.clone();
                                     self.calendar.note="正在連線行事曆…".into();
                                     self.calendar.note_error=false;
                                     self.pending.push(Cmd::CalendarTest(cfg,password));
+                                    }
                                 }
                             }
                             ui.add_space(5.0);
@@ -5301,8 +5306,8 @@ fn support_code_image(bytes: &[u8], crop: [f32; 3], pixels: u32) -> egui::ColorI
 fn support_codes_are_cropped_small_and_released_when_hidden() {
     for (bytes, crop) in [
         (
-            include_bytes!("../assets/support/support-ecpay-qr.png").as_slice(),
-            [0.0, 0.0, 200.0],
+            include_bytes!("../assets/support/support-jkopay-qr.png").as_slice(),
+            [0.0, 0.0, 600.0],
         ),
         (
             include_bytes!("../assets/support/support-alipay-qr.png").as_slice(),

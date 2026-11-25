@@ -32,6 +32,8 @@ pub static CONTROL:Lane=Lane::new("daozai-control",1);
 pub static VOLUME:Lane=Lane::new("daozai-volume",1);
 pub static ASYNC:Lane=Lane::new("winrt-request",4);
 pub static ASYNC_ARTWORK:Lane=Lane::new("winrt-artwork",2);
+/// 系統檔案選擇視窗：模態對話框放到背景執行緒，介面才不會整段凍住；一次只開一個。
+pub static PICKER:Lane=Lane::new("daozai-file-picker",1);
 static MONITOR:Lane=Lane::new("daozai-diagnostics",1);
 pub static TIMEOUTS:AtomicUsize=AtomicUsize::new(0);
 pub static REJECTED_DATA:AtomicUsize=AtomicUsize::new(0);

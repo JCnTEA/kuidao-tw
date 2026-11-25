@@ -6740,7 +6740,7 @@ fn about_support_preview() {
             let child=output.lock().unwrap().take().unwrap();
             raster.update_textures(&root.textures_delta);raster.update_textures(&child.textures_delta);
             if frame==3 {
-                let has_wechat=child.shapes.iter().any(|shape|matches!(&shape.shape,egui::Shape::Text(text) if text.galley.text()=="綠界贊助"));
+                let has_wechat=child.shapes.iter().any(|shape|matches!(&shape.shape,egui::Shape::Text(text) if text.galley.text()=="街口支付"));
                 assert_eq!(has_wechat,open);
                 for label in [if open{"返回"}else{"請喝咖啡 · 支援作者"},"完全自願 · 感謝每一份支援 · 不影響功能使用"] {
                     let shape=child.shapes.iter().find(|shape|matches!(&shape.shape,egui::Shape::Text(text) if text.galley.text()==label)).expect("按鈕和說明必須可見");
