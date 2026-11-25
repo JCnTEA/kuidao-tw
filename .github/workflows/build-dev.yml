@@ -47,7 +47,13 @@ jobs:
         shell: pwsh
         run: |
           $ver = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
-          Compress-Archive -Path 'dist\*' -DestinationPath "Kuidao-Dev-v$ver-tw-windows-x64.zip" -Force
+          # 壓縮包另外放一份固定檔名 kuidao.exe，程式內更新腳本只認這個 entry。
+          $stage = Join-Path $env:RUNNER_TEMP 'devzip'
+          Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item 'dist\*' $stage -Recurse -Force
+          Copy-Item 'dist\鬼島 Kuidao 開發版.exe' (Join-Path $stage 'kuidao.exe') -Force
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath "Kuidao-Dev-v$ver-tw-windows-x64.zip" -Force
 
       - name: Install NSIS
         shell: pwsh

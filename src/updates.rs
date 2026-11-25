@@ -4,6 +4,8 @@ use std::{io::{Read, Write}, path::{Path, PathBuf}, sync::{mpsc::{self, Receiver
 
 const REPOSITORY: &str = "https://github.com/JCnTEA/kuidao-tw";
 const API: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases/latest";
+/// 開發版發布線：每次建置都出一個 `v<版本>-tw-dev`，程式內按檢查更新時從這裡挑最新。
+const API_DEV: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases?per_page=20";
 const RELEASES: &str = "https://github.com/JCnTEA/kuidao-tw/releases/latest";
 const STARTUP_WINDOW: Duration = Duration::from_secs(10);
 const CHECK_INTERVAL: Duration = Duration::from_secs(24 * 3600);
@@ -43,11 +45,6 @@ pub(crate) struct State {
 /// 開發版（建置時帶 KUIDAO_CHANNEL=dev）：更新由同資料夾的開發版啟動器統一套用整包。
 fn dev_channel() -> bool { matches!(option_env!("KUIDAO_CHANNEL"), Some("dev")) }
 
-fn dev_launcher() -> Option<PathBuf> {
-    if !dev_channel() || cfg!(test) { return None; }
-    let exe = std::env::current_exe().ok()?.parent()?.join("KuidaoDevLauncher.exe");
-    exe.is_file().then_some(exe)
-}
 
 impl Drop for State {
     fn drop(&mut self) { if let Some(cancel) = &self.cancel { cancel.store(true, Ordering::Relaxed); } }
@@ -180,22 +177,9 @@ impl State {
     pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
         let wait = self.manual_wait();
         if ui.add_enabled(self.rx.is_none() && wait.is_zero(), egui::Button::new("檢查更新")).clicked() {
-            // 開發版交給同資料夾的更新啟動器：檢查→有新版本就下載整包→換版→自動重開。
-            if let Some(launcher) = dev_launcher() {
-                let spawned = std::process::Command::new(&launcher)
-                    .arg("--update")
-                    .spawn();
-                match spawned {
-                    Ok(_) => {
-                        self.message = "已交給更新啟動器，稍後會自動換版並重新開啟。".into();
-                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                    Err(_) => { self.begin_check(ui.ctx(), None, check); }
-                }
-            } else {
-                self.auto_download = true;
-                self.begin_check(ui.ctx(), None, check);
-            }
+            // 按下去就是一條龍：檢查 → 有新版本就下載安裝包 → 安裝後自動重啟。
+            self.auto_download = true;
+            self.begin_check(ui.ctx(), None, check);
         }
         match &self.result {
             Some(Ok(Some(release))) => {
@@ -435,6 +419,7 @@ fn check_error(error: ureq::Error) -> String {
 }
 
 fn check() -> Result<Option<Release>, String> {
+    if dev_channel() { return check_dev(); }
     let response = http_agent()?
         .get(API).set("User-Agent", concat!("Kuidao/", env!("CARGO_PKG_VERSION")))
         .set("Accept", "application/vnd.github+json").call().map_err(check_error)?;
@@ -448,6 +433,43 @@ fn check() -> Result<Option<Release>, String> {
         }
     }
     Ok(update)
+}
+
+/// 開發版：從發布清單挑最新一個 `v<版本>-tw-dev`，只認裡面固定命名的整包 zip。
+fn check_dev() -> Result<Option<Release>, String> {
+    let response = http_agent()?
+        .get(API_DEV).set("User-Agent", concat!("Kuidao/", env!("CARGO_PKG_VERSION")))
+        .set("Accept", "application/vnd.github+json").call().map_err(check_error)?;
+    let list: serde_json::Value = serde_json::from_reader(response.into_reader())
+        .map_err(|_| "更新資訊格式異常，請稍後重試".to_owned())?;
+    let current = version(env!("CARGO_PKG_VERSION")).ok_or_else(|| "更新資訊格式異常，請稍後重試".to_owned())?;
+    let releases = list.as_array().ok_or_else(|| "更新資訊格式異常，請稍後重試".to_owned())?;
+    let mut best: Option<(&serde_json::Value, String, [u64; 3])> = None;
+    for value in releases {
+        if value["draft"].as_bool() == Some(true) { continue; }
+        let Some(tag) = value["tag_name"].as_str() else { continue };
+        if !tag.ends_with("-tw-dev") { continue; }
+        let stem = tag.trim_start_matches('v').trim_end_matches("-tw-dev");
+        let Some(numbers) = version(stem) else { continue };
+        if numbers <= current { continue; }
+        if best.as_ref().is_none_or(|(_, _, best_numbers)| numbers > *best_numbers) {
+            best = Some((value, stem.to_owned(), numbers));
+        }
+    }
+    let Some((value, stem, _)) = best else { return Ok(None) };
+    let tag = format!("v{stem}-tw-dev");
+    let name = format!("Kuidao-Dev-v{stem}-tw-windows-x64.zip");
+    let expected = format!("{REPOSITORY}/releases/download/{tag}/{name}");
+    let package = value["assets"].as_array().and_then(|assets| assets.iter().find(|asset| asset["name"] == name))
+        .and_then(|asset| {
+            let hash = asset["digest"].as_str()?.strip_prefix("sha256:")?;
+            let size = asset["size"].as_u64()?;
+            (asset["browser_download_url"].as_str()? == expected && size > 0 && size <= 200 * 1024 * 1024
+                && hash.len() == 64 && hash.bytes().all(|c| c.is_ascii_hexdigit()))
+                .then(|| Package { url: expected, size, hash: hash.to_ascii_lowercase() })
+        });
+    Ok(Some(Release { version: stem, notes: value["body"].as_str().unwrap_or("").to_owned(),
+        page: format!("{REPOSITORY}/releases/tag/{tag}"), package }))
 }
 
 fn notes_record(value: &serde_json::Value) -> Option<NotesRecord> {
