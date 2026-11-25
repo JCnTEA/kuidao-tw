@@ -59,9 +59,13 @@ jobs:
             # Chocolatey 社群源常 503，直接抓 NSIS 免安裝版解到標準路徑。
             $zip = Join-Path $env:RUNNER_TEMP 'nsis.zip'
             Invoke-WebRequest 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11.zip' -OutFile $zip -UseBasicParsing -TimeoutSec 180
-            Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'nsis') -Force
+            if (-not (Test-Path $zip) -or (Get-Item $zip).Length -lt 1MB) { throw 'NSIS 下載失敗' }
+            $dest = Join-Path $env:RUNNER_TEMP 'nsis'
+            New-Item -ItemType Directory -Force -Path $dest | Out-Null
+            tar -xf $zip -C $dest
+            if ($LASTEXITCODE -ne 0) { throw 'NSIS 解壓失敗' }
             New-Item -ItemType Directory -Force -Path $target | Out-Null
-            Copy-Item (Join-Path $env:RUNNER_TEMP 'nsis\nsis-3.11\*') $target -Recurse -Force
+            Copy-Item (Join-Path $dest 'nsis-3.11\*') $target -Recurse -Force
           }
           if (-not (Test-Path $makensis)) { throw 'NSIS 安裝失敗' }
 
