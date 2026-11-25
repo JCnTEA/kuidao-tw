@@ -14,6 +14,14 @@ use std::f32::consts::{FRAC_PI_2, TAU};
 pub(crate) const CLIP_ROWS: usize = 4;
 pub(crate) const MUSIC_VOLUME_RECT: Rect = Rect::from_min_max(Pos2::new(345.0,6.0),Pos2::new(389.0,104.0));
 
+/// 超過上限就截斷並補省略號：署名／長譯行不再每幀重新折行，島不會卡住。
+fn clip_chars(text:&str,limit:usize)->std::borrow::Cow<'_,str> {
+    if text.chars().count()<=limit {return std::borrow::Cow::Borrowed(text);}
+    let mut out:String=text.chars().take(limit).collect();
+    out.push('…');
+    std::borrow::Cow::Owned(out)
+}
+
 fn mmss(secs: f64) -> String {
     let s = secs.max(0.0) as u64;
     format!("{:02}:{:02}", s / 60, s % 60)
@@ -225,115 +233,132 @@ impl App {
 
     fn draw_music_lyrics(&mut self,c:&Card) {
         const X:f32=231.0; const W:f32=157.0; const TEXT_W:f32=153.0;
+        // 極長的署名／翻譯行在 153 點寬裡折行很貴，超過這個字數就截斷，避免一幀卡住整個島。
+        const MAX_SHOWN_CHARS:usize=110;
         let col=c.clipped(X,28.0,W,74.0);
         c.seg((X-7.0,32.0),(X-7.0,98.0),1.0,Color32::from_gray(35));
-        if let Some(lyrics)=&self.ly.lyrics {
-            if lyrics.lines.is_empty() {
-                let ink=col.ink(theme::GRAY);
-                let galley=col.painter.layout("暫無歌詞".into(),col.font(10.0,W::Regular),ink,TEXT_W*c.s);
-                col.painter.galley(col.pos(X+3.0,61.0-galley.size().y/(2.0*c.s)),galley,ink);
-                return;
-            }
-            let current=if lyrics.synced {lyrics.index_at(self.lyric_position())}else{Some(0)};
-            let target=current.unwrap_or(0);
-            let id=egui::Id::new("music-lyrics-scroll");
-            if !self.ly.scroll_animation_started {
-                c.ui.ctx().animate_value_with_time(id,target as f32,0.0);
-                self.ly.scroll_animation_started=true;
-            }
-            let position=c.ui.ctx().animate_value_with_time(id,target as f32,0.3);
-            struct Block {
-                index:usize,
-                active:bool,
-                galley:std::sync::Arc<egui::Galley>,
-                ink:Color32,
-                sub:Option<(std::sync::Arc<egui::Galley>,Color32)>,
-                total:f32,
-            }
-            let mut blocks=Vec::new();
-            let (start,end)=if lyrics.synced {
-                (target.saturating_sub(2),target.saturating_add(2).min(lyrics.lines.len().saturating_sub(1)))
-            } else {
-                // KKBOX 有些台語歌只給純文字：沒有時間軸時從頭排出多行，至少能讀完整段，而不是只顯示第一句。
-                (0,lyrics.lines.len().min(10).saturating_sub(1))
-            };
-            for index in start..=end {
-                let line=&lyrics.lines[index];
-                let active=current==Some(index);
-                let shown=self.ly.zh_lines.get(index).filter(|text|!text.trim().is_empty()).map_or(line.text.as_str(),|text|text.as_str());
-                let translated=self.ly.translation_lines.get(index).map(|text|text.trim()).filter(|text|!text.is_empty());
-                if !active && shown.trim().is_empty() && translated.is_none() {continue;}
-                let row=col.faded(if active {1.0}else{0.7});
-                let ink=row.ink(if active {theme::WHITE}else{theme::GRAY});
-                let font=row.font(if active {12.0}else{10.0},if active {W::Semibold}else{W::Regular});
-                // 维语等从右到左的歌词：先按阅读顺序分行再逐行转换（#200）。
-                let text=crate::rtl_text::display_wrapped(shown,TEXT_W*c.s,|s|row.painter.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x).into_owned();
-                let has_space=text.contains(' ');
-                let mut job=egui::text::LayoutJob::simple(text,font,ink,TEXT_W*c.s);
-                // 当前句完整折行；鄰句維持淡出的一行，避免長歌詞全部被省略號截斷。
-                job.wrap.max_rows=if active {3}else{1};
-                job.wrap.break_anywhere=!has_space;
-                let galley=row.painter.layout_job(job);
-                let sub=translated.filter(|_|active).map(|text|{
-                    let tfont=row.font(8.5,W::Regular);
-                    let tink=row.ink(Color32::from_rgb(188,197,214));
-                    let mut job=egui::text::LayoutJob::simple(text.to_owned(),tfont,tink,TEXT_W*c.s);
-                    job.wrap.max_rows=2;
-                    job.wrap.break_anywhere=!text.contains(' ');
-                    (row.painter.layout_job(job),tink)
-                });
-                let total=galley.size().y/c.s+sub.as_ref().map_or(0.0,|(g,_)|g.size().y/c.s)+if sub.is_some(){1.0}else{0.0};
-                blocks.push(Block{index,active,galley,ink,sub,total});
-            }
-            let Some(focus)=blocks.iter().position(|b|b.index==target) else{return;};
-            let active_y=64.0-blocks[focus].total/2.0+(target as f32-position)*26.0;
-            // 導唱外掛：目前這一句跟著播放進度逐字亮起；沒有時軸或關閉外掛時維持單色。
-            let karaoke=if self.settings.lyric_karaoke && lyrics.synced {
-                Some((crate::lyric_karaoke::resolve(&self.settings.lyric_karaoke_style,self.settings.lyric_gradient_preset,self.settings.lyric_gradient_shift),
-                    lyrics.line_progress(target,self.lyric_position(),self.media.duration as f32).unwrap_or(0.0)))
-            } else {None};
-            let paint=|block:&Block,y:f32,alpha:f32| {
-                let row=col.faded(alpha);
-                let at=row.pos(X+3.0,y);
-                let mut drawn_as_mesh=false;
-                if block.active {
-                    if let Some((style,progress))=&karaoke {
-                        let font_tex_size=row.painter.ctx().fonts(|f|{let img=f.image();[img.width() as f32,img.height() as f32]});
-                        let mesh=crate::lyric_karaoke::sweep_mesh(at,&block.galley,style,*progress,font_tex_size);
-                        row.painter.add(egui::Shape::Mesh(std::sync::Arc::new(mesh)));
-                        drawn_as_mesh=true;
-                    }
-                }
-                if !drawn_as_mesh {row.painter.galley(at,block.galley.clone(),block.ink);}
-                if let Some((sub,tink))=&block.sub {
-                    row.painter.galley(row.pos(X+3.0,y+block.galley.size().y/c.s+1.0),sub.clone(),*tink);
-                }
-            };
-            let mut top=active_y-4.0;
-            for block in blocks[..focus].iter().rev() {
-                if top-block.total < 28.0 {break;}
-                top-=block.total;
-                paint(block,top,(1.0-(target-block.index) as f32*0.34).clamp(0.35,0.7));
-                top-=4.0;
-            }
-            let mut bottom=active_y+blocks[focus].total+4.0;
-            for block in &blocks[focus+1..] {
-                if bottom+block.total > 102.0 {break;}
-                paint(block,bottom,(1.0-(block.index-target) as f32*0.34).clamp(0.35,0.7));
-                bottom+=block.total+4.0;
-            }
-            paint(&blocks[focus],active_y,if blocks[focus].active {1.0}else{0.6});
-            if !lyrics.synced {col.text(X+3.0,39.0,"文字歌詞",8.0,W::Regular,theme::GRAY,H::Left);}
-        } else {
-            let status=if self.ly.loading {"正在查詢歌詞…"}else if let Some(error)=&self.ly.error {error.label()}else{"暫無歌詞"};
+        // 換歌當下就切換：只有 key 對得上目前歌曲的歌詞才畫，上一首的歌詞（連署名行）一律不顯示。
+        let fresh=crate::app::lyric_key_matches(&self.ly.key,&self.media);
+        let lyrics=self.ly.lyrics.take();
+        let visible:Vec<usize>=lyrics.as_ref().filter(|_|fresh).map(|lyrics|{
+            lyrics.lines.iter().enumerate()
+                .filter(|(_,line)|!line.text.trim().is_empty() && !crate::lyrics::is_credit(&line.text))
+                .map(|(index,_)|index)
+                .collect()
+        }).unwrap_or_default();
+        if visible.is_empty() {
+            let status=if self.ly.loading {"正在查詢歌詞…"}else if let Some(error)=self.ly.error.as_ref(){error.label()}else{"暫無歌詞"};
             let ink=col.ink(theme::GRAY);
             let galley=col.painter.layout(status.into(),col.font(10.0,W::Regular),ink,TEXT_W*c.s);
             col.painter.galley(col.pos(X+3.0,61.0-galley.size().y/(2.0*c.s)),galley,ink);
-            if self.ly.error.is_some() {
+            if self.ly.error.is_some() && fresh {
                 col.text(X+3.0,87.0,"點選重試",9.0,W::Regular,theme::GRAY,H::Left);
                 if c.hit(X,28.0,W,74.0,"lyrics-retry").on_hover_text("重新查詢當前歌曲的歌詞").clicked(){self.ly.key.clear();self.ly.manual_retry=true;}
             }
+            self.ly.lyrics=lyrics;
+            return;
         }
+        let lyrics=lyrics.expect("visible 來自歌詞");
+        let synced=lyrics.synced;
+        let position_s=self.lyric_position();
+        // 目前這一句只在「有正文」的行裡找：署名行沒有歌可唱，跳過才不會停在一開始的作曲／作詞。
+        let current:Option<usize>=if synced {
+            visible.iter().rev().copied().find(|&index|lyrics.lines[index].t<=position_s)
+        } else {Some(visible[0])};
+        let focus_slot=current.and_then(|index|visible.iter().position(|&slot|slot==index)).unwrap_or(0);
+        let target=visible[focus_slot];
+        let id=egui::Id::new("music-lyrics-scroll");
+        if !self.ly.scroll_animation_started {
+            c.ui.ctx().animate_value_with_time(id,focus_slot as f32,0.0);
+            self.ly.scroll_animation_started=true;
+        }
+        let position=c.ui.ctx().animate_value_with_time(id,focus_slot as f32,0.3);
+        struct Block {
+            index:usize,
+            slot:usize,
+            active:bool,
+            galley:std::sync::Arc<egui::Galley>,
+            ink:Color32,
+            sub:Option<(std::sync::Arc<egui::Galley>,Color32)>,
+            total:f32,
+        }
+        let mut blocks=Vec::new();
+        let (start,end)=if synced {
+            (focus_slot.saturating_sub(2),focus_slot.saturating_add(2).min(visible.len().saturating_sub(1)))
+        } else {
+            // KKBOX 有些台語歌只給純文字：沒有時間軸時從頭排出多行，至少能讀完整段，而不是只顯示第一句。
+            (0,visible.len().min(10).saturating_sub(1))
+        };
+        for slot in start..=end {
+            let index=visible[slot];
+            let line=&lyrics.lines[index];
+            let active=current==Some(index);
+            let shown_full=self.ly.zh_lines.get(index).filter(|text|!text.trim().is_empty()).map_or(line.text.as_str(),|text|text.as_str());
+            let shown=clip_chars(shown_full,MAX_SHOWN_CHARS);
+            let translated=self.ly.translation_lines.get(index).map(|text|text.trim()).filter(|text|!text.is_empty());
+            if !active && shown.trim().is_empty() && translated.is_none() {continue;}
+            let row=col.faded(if active {1.0}else{0.7});
+            let ink=row.ink(if active {theme::WHITE}else{theme::GRAY});
+            let font=row.font(if active {12.0}else{10.0},if active {W::Semibold}else{W::Regular});
+            // 维语等从右到左的歌词：先按阅读顺序分行再逐行转换（#200）。
+            let text=crate::rtl_text::display_wrapped(&shown,TEXT_W*c.s,|s|row.painter.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x).into_owned();
+            let has_space=text.contains(' ');
+            let mut job=egui::text::LayoutJob::simple(text,font,ink,TEXT_W*c.s);
+            // 当前句完整折行；鄰句維持淡出的一行，避免長歌詞全部被省略號截斷。
+            job.wrap.max_rows=if active {3}else{1};
+            job.wrap.break_anywhere=!has_space;
+            let galley=row.painter.layout_job(job);
+            let sub=translated.filter(|_|active).map(|text|{
+                let tfont=row.font(8.5,W::Regular);
+                let tink=row.ink(Color32::from_rgb(188,197,214));
+                let mut job=egui::text::LayoutJob::simple(clip_chars(text,MAX_SHOWN_CHARS).into_owned(),tfont,tink,TEXT_W*c.s);
+                job.wrap.max_rows=2;
+                job.wrap.break_anywhere=!text.contains(' ');
+                (row.painter.layout_job(job),tink)
+            });
+            let total=galley.size().y/c.s+sub.as_ref().map_or(0.0,|(g,_)|g.size().y/c.s)+if sub.is_some(){1.0}else{0.0};
+            blocks.push(Block{index,slot,active,galley,ink,sub,total});
+        }
+        let Some(focus)=blocks.iter().position(|b|b.slot==focus_slot) else{self.ly.lyrics=Some(lyrics);return;};
+        let active_y=64.0-blocks[focus].total/2.0+(focus_slot as f32-position)*26.0;
+        // 導唱外掛：目前這一句跟著播放進度逐字亮起；沒有時軸或關閉外掛時維持單色。
+        let karaoke=if self.settings.lyric_karaoke && synced {
+            Some((crate::lyric_karaoke::resolve(&self.settings.lyric_karaoke_style,self.settings.lyric_gradient_preset,self.settings.lyric_gradient_shift),
+                lyrics.line_progress(target,position_s,self.media.duration as f32).unwrap_or(0.0)))
+        } else {None};
+        let paint=|block:&Block,y:f32,alpha:f32| {
+            let row=col.faded(alpha);
+            let at=row.pos(X+3.0,y);
+            let mut drawn_as_mesh=false;
+            if block.active {
+                if let Some((style,progress))=&karaoke {
+                    let font_tex_size=row.painter.ctx().fonts(|f|{let img=f.image();[img.width() as f32,img.height() as f32]});
+                    let mesh=crate::lyric_karaoke::sweep_mesh(at,&block.galley,style,*progress,font_tex_size);
+                    row.painter.add(egui::Shape::Mesh(std::sync::Arc::new(mesh)));
+                    drawn_as_mesh=true;
+                }
+            }
+            if !drawn_as_mesh {row.painter.galley(at,block.galley.clone(),block.ink);}
+            if let Some((sub,tink))=&block.sub {
+                row.painter.galley(row.pos(X+3.0,y+block.galley.size().y/c.s+1.0),sub.clone(),*tink);
+            }
+        };
+        let mut top=active_y-4.0;
+        for block in blocks[..focus].iter().rev() {
+            if top-block.total < 28.0 {break;}
+            top-=block.total;
+            paint(block,top,(1.0-(focus_slot-block.slot) as f32*0.34).clamp(0.35,0.7));
+            top-=4.0;
+        }
+        let mut bottom=active_y+blocks[focus].total+4.0;
+        for block in &blocks[focus+1..] {
+            if bottom+block.total > 102.0 {break;}
+            paint(block,bottom,(1.0-(block.slot-focus_slot) as f32*0.34).clamp(0.35,0.7));
+            bottom+=block.total+4.0;
+        }
+        paint(&blocks[focus],active_y,if blocks[focus].active {1.0}else{0.6});
+        if !synced {col.text(X+3.0,39.0,"文字歌詞",8.0,W::Regular,theme::GRAY,H::Left);}
+        self.ly.lyrics=Some(lyrics);
     }
 
     // ================= 专注（番茄钟） =================

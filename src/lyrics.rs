@@ -1271,9 +1271,11 @@ fn fetch_netease_song(base:&str,id:u64)->Result<Lyrics,FetchError>{
     Ok(lyrics_from_text(raw))
 }
 
-fn is_credit(text:&str)->bool {
+/// 署名行（作詞、作曲、製作等）不是歌詞，顯示端一律跳過；網易雲/QQ 的署名常寫成
+/// 「作曲 : A/B」「作詞人Lyrics：A」「製作人Music Producer｜A」，分隔符不只冒號。
+pub(crate) fn is_credit(text:&str)->bool {
     static CREDIT:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
-    CREDIT.get_or_init(||regex::Regex::new(r"^\s*(?:作詞|作曲|編曲|詞|曲|演唱|原唱|製作人|監製|混音|母帶|和聲|吉他|貝斯|鼓|絃樂|錄音|出品|發行|OP|SP|Lyrics?|Lyricist|Composer|Arranger|Producer)\s*[:：]").unwrap()).is_match(text)
+    CREDIT.get_or_init(||regex::Regex::new(r"^\s*(?:詞/曲|作詞人?|作曲人?|作詞Lyrics|作曲Composition|編曲人?|詞|曲|演唱|原唱|製作人?|監製人?|混音師?|母帶後期|母帶|和聲|吉他|貝斯|鼓|絃樂|錄音師?|出品人?|發行人?|作曲家|OP|SP|Lyrics?|Lyricist|Composer|Arranger|Producers?|Mixing|Mastering|Recording|Vocal|Guitar|Bass|Drums|Score)[A-Za-z ()/]{0,24}\s*[:：｜|]").unwrap()).is_match(text)
 }
 
 /// 网易云「暂无自动滚动」的歌常只有作词、作曲几行带时间，正文没有时间戳；这种不能当同步歌词，否则岛上会一直停在署名行。
@@ -2291,6 +2293,23 @@ mod tests {
             let lyrics=fetch_browser(track,artist,duration).unwrap_or_else(|error|panic!("{track} 抓詞失敗：{error:?}"));
             println!("瀏覽器→KKBOX：{track} / {} 行，同步={}",lyrics.lines.len(),lyrics.synced);
             assert!(lyrics.lines.len()>2,"至少要拿到歌詞行");
+        }
+    }
+
+    #[test]
+    fn credit_lines_with_any_separator_are_recognised() {
+        for text in [
+            "作曲 : Robert Williams/Billy Walsh/Austin Post",
+            "作詞：24/湯米·布朗",
+            "作詞人Lyrics：Juice Boy / 派偉俊",
+            "作曲家Composition：Juice Boy",
+            "製作人Music Producer｜王ADEN",
+            "詞/曲Lyricist/Composer：RĒD°芮德/ADEN",
+            "Producer: Max Martin",
+            "OP：環球音樂",
+        ] {assert!(is_credit(text),"{text} 應視為署名行");}
+        for text in ["曲終人散","作曲家的故事","Lyrics of the night","間奏"] {
+            assert!(!is_credit(text),"{text} 是正文不是署名行");
         }
     }
 

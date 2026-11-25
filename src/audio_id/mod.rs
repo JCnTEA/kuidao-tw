@@ -16,10 +16,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-/// 一次聆聽的長度。太短指紋不夠、太長辨識變慢；8 秒對 Shazam 已經足夠。
-const LISTEN_SECONDS: u32 = 8;
-/// 兩次辨識之間的間隔，避免一直佔用音訊裝置與網路。
-const INTERVAL: Duration = Duration::from_secs(12);
+/// 一次辨識的取樣階梯：先聽 5 秒，聽不出來再加長到 10 秒、15 秒。
+/// 三段都認不出來就當這輪失敗、下一輪重新從 5 秒開始，等於 30 秒內至少試三次，
+/// 不必等一段很長的錄音才回頭重試；有聲音但指紋不夠時，加長取樣才抓得到歌。
+const WINDOWS: [u32; 3] = [5, 10, 15];
+/// 兩輪辨識之間只留一點喘息：一輪最多 30 秒，認不出來要很快再重來一次；
+/// 實際的節流交給 `request()`，不會一直佔住音訊裝置。
+const INTERVAL: Duration = Duration::from_secs(2);
 /// 結果的有效期限；超過就當作沒有辨識結果。
 pub const FRESH: Duration = Duration::from_secs(75);
 
@@ -67,6 +70,7 @@ pub fn enabled() -> bool {
 }
 
 /// 請背景執行緒聽一段；重複呼叫不會排隊，最多一次待處理，且兩次之間至少隔 15 秒。
+/// 一輪內部是 5 秒 → 10 秒 → 15 秒的階梯，認到就停。
 pub fn request() {
     if !enabled() {
         return;
@@ -125,7 +129,7 @@ pub fn open_permission_settings() {
     }
 }
 
-/// 跳一次系統視窗，明確告訴使用者要去哪裡開權限；同一個程序只問一次，避免每 15 秒彈一輪。
+/// 跳一次系統視窗，明確告訴使用者要去哪裡開權限；同一個程序只問一次，避免每輪辨識彈一次。
 fn prompt_permission_once() {
     if PROMPTED.swap(true, Ordering::Relaxed) {
         return;
@@ -195,29 +199,57 @@ fn start() {
     });
 }
 
+/// 單一輪辨識的結果。
+enum Window {
+    /// 認出來了，結果已寫進共用狀態。
+    Found,
+    /// 這段取樣認不出來（或聲音太小），換下一個更長的取樣再試。
+    Miss(String),
+    /// 抓不到音訊或連不上，加長取樣也沒用，直接結束這一輪。
+    Fatal,
+}
+
+/// 一輪辨識：5 秒 → 10 秒 → 15 秒，認到就停；三段都不行才回報失敗。
 fn listen_once() {
-    let (samples, rate) = match capture::capture_mono(LISTEN_SECONDS) {
+    let mut last = "聽不出是哪首歌".to_string();
+    for (index, seconds) in WINDOWS.iter().enumerate() {
+        match listen_window(*seconds) {
+            Window::Found => return,
+            Window::Fatal => return,
+            Window::Miss(message) => {
+                last = message;
+                if let Some(next) = WINDOWS.get(index + 1) {
+                    set_status(format!("正在聽（下一段 {} 秒）…", next), false);
+                }
+            }
+        }
+    }
+    log(&format!("這一輪{}秒都認不出:{last}\n", WINDOWS.iter().sum::<u32>()));
+    set_status(format!("{last}（已試 5／10／15 秒）"), false);
+}
+
+fn listen_window(seconds: u32) -> Window {
+    let (samples, rate) = match capture::capture_mono(seconds) {
         Ok(samples) => samples,
         Err(error) => {
-            log(&format!("捕捉失敗:{}\n", error.label()));
+            log(&format!("捕捉失敗({seconds}秒):{}\n", error.label()));
             set_status(error.label(), error == capture::CaptureError::Denied);
             if error == capture::CaptureError::Denied {
                 prompt_permission_once();
             }
-            return;
+            return Window::Fatal;
         }
     };
     let pcm = fingerprint::resample_to_16k(&samples, rate);
     if pcm.len() < fingerprint::SAMPLE_RATE as usize * 3 {
-        set_status("音訊太短，稍後再試", false);
-        return;
+        return Window::Miss("音訊太短".into());
     }
     let signature = fingerprint::make_signature(&pcm);
     let peaks: usize = signature.bands.iter().map(|(_, peaks)| peaks.len()).sum();
+    log(&format!("聽 {seconds} 秒：峰值{peaks}\n"));
     if peaks < 40 {
-        // 幾乎沒有峰值：多半只是環境音或靜音，不必送出去。
-        set_status("聲音太小，等播放中的歌曲", false);
-        return;
+        // 幾乎沒有峰值：多半只是環境音或靜音，不必送出去，換長一點的取樣再聽。
+        return Window::Miss("聲音太小".into());
     }
     match shazam::identify(&signature) {
         Ok(Some(found)) => {
@@ -227,7 +259,7 @@ fn listen_once() {
             } else {
                 format!("{} - {}", found.title, found.artist)
             };
-            log(&format!("辨識成功:{label} 位置{:.1}s 峰值{peaks}\n", found.offset_seconds));
+            log(&format!("辨識成功({seconds}秒):{label} 位置{:.1}s 峰值{peaks}\n", found.offset_seconds));
             store(Recognized {
                 title: found.title,
                 artist: found.artist,
@@ -235,14 +267,16 @@ fn listen_once() {
                 captured: Instant::now(),
             });
             set_status(format!("已辨識：{label}"), false);
+            Window::Found
         }
         Ok(None) => {
-            log(&format!("認不出歌:峰值{peaks}\n"));
-            set_status("聽不出是哪首歌", false);
+            log(&format!("認不出歌({seconds}秒):峰值{peaks}\n"));
+            Window::Miss("聽不出是哪首歌".into())
         }
         Err(reason) => {
-            log(&format!("辨識失敗:{reason}\n"));
+            log(&format!("辨識失敗({seconds}秒):{reason}\n"));
             set_status(format!("連線失敗：{reason}"), false);
+            Window::Fatal
         }
     }
 }
@@ -284,6 +318,13 @@ mod tests {
             position: 63.0,
             captured: Instant::now(),
         }
+    }
+
+    #[test]
+    fn recognition_climbs_five_ten_fifteen_seconds() {
+        assert_eq!(WINDOWS, [5, 10, 15]);
+        assert_eq!(WINDOWS.iter().sum::<u32>(), 30, "一輪最多聽 30 秒就要換下一輪");
+        assert!(INTERVAL <= Duration::from_secs(5), "認不出來要很快重試，不能長時間佔住音訊裝置");
     }
 
     #[test]

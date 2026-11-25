@@ -551,7 +551,7 @@ const NATIVE_RETRIES:u32=12;
 const NETWORK_RETRIES:u32=10;
 
 /// 与 `format!("{title}|{artist}|{duration:.0}")` 等价，但不分配内存：界面每帧要比较好几次。
-fn lyric_key_matches(key:&str,media:&NowPlaying)->bool {
+pub(crate) fn lyric_key_matches(key:&str,media:&NowPlaying)->bool {
     use std::io::Write;
     let Some(rest)=key.strip_prefix(media.title.as_str()).and_then(|rest|rest.strip_prefix('|')) else{return false;};
     let Some(rest)=rest.strip_prefix(media.artist.as_str()).and_then(|rest|rest.strip_prefix('|')) else{return false;};
