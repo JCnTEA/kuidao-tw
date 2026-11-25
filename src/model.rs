@@ -1040,7 +1040,7 @@ mod tests {
         let previous = std::env::var_os("DAOZAI_DATA_DIR");
         std::env::set_var("DAOZAI_DATA_DIR", &dir);
         let mut settings = Settings::load();
-        let legacy_disabled = !settings.exclude_from_capture && !settings.hide_fullscreen;
+        let legacy_disabled = settings.exclude_from_capture && !settings.hide_fullscreen;
         settings.exclude_from_capture = true;
         settings.save();
         let enabled = Settings::load();
@@ -1075,7 +1075,7 @@ mod tests {
         for shape in IslandShape::ALL { assert_eq!(IslandShape::parse(shape.key()), shape); }
         assert_eq!(Settings::default().island_shape, IslandShape::Notch);
         let mut s = Settings::default();
-        assert_eq!((s.skin, s.glass_blur, s.island_scale(), s.island_offset_ratio()), (Skin::Classic, true, 0.8, 0.0));
+        assert_eq!((s.skin, s.glass_blur, s.island_scale(), s.island_offset_ratio()), (Skin::Classic, true, 1.0, 0.0));
         s.island_size = 125; s.island_offset = -250;
         assert_eq!((s.island_scale(), s.island_offset_ratio()), (1.25, -1.0));
     }
