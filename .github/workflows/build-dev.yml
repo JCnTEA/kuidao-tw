@@ -50,7 +50,15 @@ jobs:
           Compress-Archive -Path 'dist\*' -DestinationPath "Kuidao-Dev-v$ver-tw-windows-x64.zip" -Force
 
       - name: Install NSIS
-        run: choco install nsis --no-progress -y
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 3; $i++) {
+            choco install nsis --no-progress -y
+            if (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe') { break }
+            Write-Host "NSIS 安裝失敗，第 $i 次重試…"
+            Start-Sleep -Seconds 15
+          }
+          if (-not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) { throw 'NSIS 安裝失敗' }
 
       - name: Build dev launcher
         shell: pwsh
