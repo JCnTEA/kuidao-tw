@@ -4471,6 +4471,19 @@ impl App {
                                         None => settings_hint(ui,"聽歌辨識狀態：待瀏覽器開始播放"),
                                     }
                                 }
+                                // 本曲自動對齊：聽歌辨識學會的位移，歌詞用它換算成曲內時間（進度條不動）。
+                                let song_offset=crate::lyric_sync::offset_seconds(&self.media.title,&self.media.artist);
+                                if self.media.title.trim().is_empty() {
+                                    settings_hint(ui,"本曲自動對齊：播放並認出歌之後，會自動算出這首歌的位移。");
+                                } else if song_offset.abs()>=0.05 {
+                                    settings_hint(ui,&format!("本曲自動對齊：已校準，歌詞比播放器進度{} {:.1} 秒（例：影片前奏不算進歌詞）。",if song_offset>0.0{"慢"}else{"早"},song_offset.abs()));
+                                } else {
+                                    settings_hint(ui,"本曲自動對齊：這首歌還沒校準，播放幾秒後會自動學習。");
+                                }
+                                if !self.media.title.trim().is_empty() && settings_action_button(ui,"歸零本曲對齊",SettingsActionGlyph::Refresh,true,true,"lyric-sync-reset").clicked() {
+                                    crate::lyric_sync::forget(&self.media.title,&self.media.artist);
+                                }
+                                ui.separator();
                                 // 本機歌詞庫：抓過一次的歌詞就留在這台電腦，下次辨識完成立刻出詞。
                                 let library=crate::lyrics_library::stats();
                                 if library.songs==0 {

@@ -1861,7 +1861,11 @@ impl App {
     pub(crate) fn compact_notices(&self)->bool {self.island_lyrics_active()&&!self.open&&!self.notice.as_ref().is_some_and(|a|a.meeting.is_some()||self.settings.notification_preview&&matches!(a.source,crate::extras::AlertSource::External(_)))}
 
     /// 换句、分段和展开高亮共用时间调整；正数延后，负数提前。
-    pub(crate) fn lyric_position(&self)->f32 {(self.media.position-self.settings.lyric_delay_ms as f64/1000.0)as f32}
+    pub(crate) fn lyric_position(&self)->f32 {
+        // 播放器時間 + 這首歌學到的位移（聽歌辨識校準）→ 曲內時間；再套全域的時間調整。
+        let offset=crate::lyric_sync::offset_seconds(&self.media.title,&self.media.artist) as f64;
+        (self.media.position+offset-self.settings.lyric_delay_ms as f64/1000.0)as f32
+    }
 
     /// 導唱進度：目前這一句唱到幾成；尚未同步或對不上歌時回 None。
     pub(crate) fn lyric_line_progress(&self,index:usize)->Option<f32> {
@@ -3714,6 +3718,7 @@ impl App {
         // 网易云的 song_id 只来自本机日志，SMTC 那一路没有；None 与 Some 之间来回不是换歌，不能每次都清空歌词重查。
         let other_song=matches!((self.media.song_id,np.song_id),(Some(old),Some(new)) if old!=new);
         if self.media.source != np.source || other_song { self.ly=LyricsState::default(); }
+        crate::lyric_sync::tick(&np.title,&np.artist,np.position,np.playing);
         self.media = np;
         if let Some(image)=&self.media.artwork {
             if !self.music_artwork.as_ref().is_some_and(|(old,_)|std::sync::Arc::ptr_eq(old,image)) {

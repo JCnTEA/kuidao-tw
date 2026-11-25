@@ -24,7 +24,7 @@ pub fn key(title: &str, artist: &str) -> String {
 fn normalize(text: &str) -> String {
     text.chars()
         .filter(|c| {
-            !c.is_whitespace() && !"()[]{}（）【】「」《》<>.,，。!！?？:：;；/\\-_·|".contains(*c)
+            !c.is_whitespace() && !"()[]{}（）【】「」《》<>.,，。!！?？:：;；/\\-_·|…—～~'’＊".contains(*c)
         })
         .flat_map(|c| c.to_lowercase())
         .collect()

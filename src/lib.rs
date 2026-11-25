@@ -36,6 +36,7 @@ pub mod lyrics;
 pub mod lyrics_library;
 pub mod lyrics_zh;
 pub mod lyric_gradient;
+pub mod lyric_sync;
 pub mod lyric_karaoke;
 pub mod zh;
 pub mod mail;

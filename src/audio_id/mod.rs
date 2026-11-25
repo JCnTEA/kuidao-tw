@@ -32,6 +32,8 @@ pub struct Recognized {
     pub artist: String,
     /// 取樣結束時，歌曲大約播到第幾秒。
     pub position: f32,
+    /// 取樣起點在歌曲裡是第幾秒；校正歌詞位移要用這一個（跟 mark_capture 的時刻對齊）。
+    pub started: f32,
     pub captured: Instant,
 }
 
@@ -229,6 +231,8 @@ fn listen_once() {
 }
 
 fn listen_window(seconds: u32) -> Window {
+    // 這段音的起點就是「現在」：先記下播放器自己的秒數，辨識回來的曲內秒數才好對照。
+    crate::lyric_sync::mark_capture();
     let (samples, rate) = match capture::capture_mono(seconds) {
         Ok(samples) => samples,
         Err(error) => {
@@ -264,6 +268,7 @@ fn listen_window(seconds: u32) -> Window {
                 title: found.title,
                 artist: found.artist,
                 position: found.offset_seconds + listened,
+                started: found.offset_seconds,
                 captured: Instant::now(),
             });
             set_status(format!("已辨識：{label}"), false);
@@ -296,9 +301,11 @@ pub fn apply(target: &mut crate::smtc::NowPlaying, found: &Recognized) {
     // 標記「歌名是聽聲音認出來的」：歌詞查詢據此忽略影片長度。
     // YouTube 的長度是影片長度（含前奏、片尾、直播），拿它和唱片版比對會直接刷掉所有候選。
     target.identified = true;
+    // 以前這裡直接把播放進度改寫成「曲內秒數」，但播放卡幾乎每幀都沿用同一個辨識結果，
+    // 位置就被反覆釘在同一個值上，歌詞看起來像卡住不動。現在改成只記「這首歌在播放器上的位移」，
+    // 進度條維持播放器自己的真實時間，歌詞在繪製時再換算成曲內時間（見 lyric_sync）。
     if found.position > 0.0 {
-        target.position = found.position as f64;
-        target.sampled_at = Some(Instant::now());
+        crate::lyric_sync::anchor(&found.title, &found.artist, found.started.max(0.0));
     }
 }
 
@@ -316,6 +323,7 @@ mod tests {
             title: "稻香".into(),
             artist: "周杰倫".into(),
             position: 63.0,
+            started: 58.0,
             captured: Instant::now(),
         }
     }
