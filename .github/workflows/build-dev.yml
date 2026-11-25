@@ -65,7 +65,7 @@ jobs:
         run: |
           $ver = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
           $makensis = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
-          & $makensis /V2 /WX "/DPROJECT_DIR=$env:GITHUB_WORKSPACE" "/DBOOTSTRAP_EXE=target\release\kuidao-bootstrap.exe" "/DOUTPUT_FILE=KuidaoDev-Setup-TW-x64.exe" "/DDISPLAY_VERSION=$ver" "/DDISPLAY_VERSION_NUM=$ver.0" 'installer\setup-dev.nsi'
+          & $makensis /V2 /WX "/DPROJECT_DIR=$env:GITHUB_WORKSPACE" "/DBOOTSTRAP_EXE=$env:GITHUB_WORKSPACE\target\release\kuidao-bootstrap.exe" "/DOUTPUT_FILE=KuidaoDev-Setup-TW-x64.exe" "/DDISPLAY_VERSION=$ver" "/DDISPLAY_VERSION_NUM=$ver.0" 'installer\setup-dev.nsi'
           if ($LASTEXITCODE -ne 0) { throw 'Dev installer build failed' }
           if (-not (Test-Path 'installer\KuidaoDev-Setup-TW-x64.exe')) { throw 'Dev installer missing' }
           Copy-Item 'installer\KuidaoDev-Setup-TW-x64.exe' 'KuidaoDev-Setup-TW-x64.exe' -Force
