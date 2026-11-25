@@ -1904,6 +1904,7 @@ impl App {
         if page==CALENDAR_PAGE {self.mail_view=1;}
         else if page==MAIL_PAGE {self.mail_view=0;}
         let page=if page==CALENDAR_PAGE {MAIL_PAGE} else {page};
+        if page==MAIL_PAGE && self.mail_view==1 {self.request_calendar_month(false);}
         if !self.module_on(page) {
             self.open_page_settings(page);
             return;
@@ -4523,7 +4524,7 @@ impl App {
         let actions=header.shifted(-self.header_music_shift(),0.0);
         #[cfg(any(feature="sdk-js",feature="sdk-wasm"))]
         if page==4 && crate::sdk_spike::live_card(c){return;}
-        if page==MAIL_PAGE { self.mail_view_switch(header); }
+        if page==MAIL_PAGE { self.mail_view_switch(c); }
         match page {
             0 => self.page_music(c, env, cmds),
             1 => self.page_focus(c, header, env),
@@ -4549,14 +4550,21 @@ impl App {
     }
 
     /// 信箱與行程合併頁右上角的切換：兩個小膠囊，信箱頁顯示「行程」，行程頁顯示「信箱」。
-    fn mail_view_switch(&mut self, header:&Card) {
+    fn mail_view_switch(&mut self, c:&Card) {
         let (label,next)=if self.mail_view==1 {("信箱",0u8)} else {("行程",1u8)};
-        let (x,y,w,h)=(150.0,9.0,52.0,18.0);
-        header.fill(x,y,w,h,9.0,theme::BTN);
-        let hit=header.hit(x,y,w,h,"mail-view-switch");
-        if hit.hovered() {header.fill(x+2.0,y+2.0,w-4.0,h-4.0,7.0,theme::BTN_HOVER);}
-        header.centered_text(x+w/2.0,y+h/2.0,label,9.5,W::Semibold,theme::WHITE,H::Center);
-        if hit.clicked() {self.mail_view=next; self.notice=None;}
+        // 兩邊頁面在 y33..52 的中段都留白（信箱是「全部/未讀」，行程是「日曆/列表」），小膠囊放這裡不會壓到時鐘。
+        let (x,y,w,h)=(150.0,33.0,36.0,19.0);
+        c.fill(x,y,w,h,9.0,theme::BTN);
+        let hit=c.hit(x,y,w,h,"mail-view-switch");
+        if hit.hovered() {c.fill(x+2.0,y+2.0,w-4.0,h-4.0,7.0,theme::BTN_HOVER);}
+        c.centered_text(x+w/2.0,y+h/2.0,label,9.5,W::Semibold,theme::WHITE,H::Center);
+        if hit.clicked() {
+            self.mail_view=next;
+            self.notice=None;
+            if next==1 {self.request_calendar_month(false);}
+            let height=self.expanded_height();
+            self.h.target=height; self.page_height.target=height;
+        }
     }
 
     fn toast_layer(&mut self, c: &Card, base_y:f32)->Option<Rect> {
