@@ -357,17 +357,23 @@ pub fn detect(app: &str, id: &str) -> Option<Social> {
 /// 瀏覽器把網站通知送進 Windows 通知中心時，AUMID 只會是 Chrome／Edge，
 /// 因此改看標題（通知正文第一段）來判斷是哪一個社群網站。
 pub fn detect_browser_content(app: &str, text: &str) -> Option<Social> {
-    let app = app.trim().to_lowercase();
-    let browser = app.contains("chrome")
-        || app.contains("chromium")
-        || app.contains("edge")
-        || app.contains("firefox")
-        || app.contains("brave")
-        || app.contains("opera")
-        || app.contains("vivaldi");
-    if !browser {
+    if !is_browser(app) {
         return None;
     }
+    browser_title(text)
+}
+
+/// 瀏覽器送出的網站通知：應用名稱可能是 Chrome／Edge，也可能只剩 AUMID，兩種都認。
+fn is_browser(name: &str) -> bool {
+    let name = name.trim().to_lowercase();
+    [
+        "chrome", "chromium", "edge", "firefox", "brave", "opera", "vivaldi",
+    ]
+    .iter()
+    .any(|browser| name.contains(browser))
+}
+
+fn browser_title(text: &str) -> Option<Social> {
     let head = text
         .split(" · ")
         .next()
@@ -404,7 +410,8 @@ pub fn detect_relayed(app: &str, id: &str, text: &str) -> Option<Social> {
     match detect(app, id) {
         Some(Social::PhoneLink) => relayed_platform(text).or(Some(Social::PhoneLink)),
         Some(source) => Some(source),
-        None => detect_browser_content(app, text),
+        None => detect_browser_content(app, text)
+            .or_else(|| is_browser(id).then(|| browser_title(text)).flatten()),
     }
 }
 
@@ -732,6 +739,15 @@ mod tests {
         assert_eq!(
             detect_relayed("Google Chrome", "Chrome", "Instagram · 小美 傳送訊息"),
             Some(Social::Instagram)
+        );
+        assert_eq!(
+            detect_relayed("Windows 通知", "Chrome", "Instagram · 小美 傳送訊息"),
+            Some(Social::Instagram),
+            "應用名稱拿不到時，用瀏覽器的程式識別碼也認得"
+        );
+        assert_eq!(
+            detect_relayed("Windows 通知", "MSEdge", "Threads · 阿明 貼文"),
+            Some(Social::Threads)
         );
     }
 
