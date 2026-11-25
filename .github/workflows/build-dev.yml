@@ -51,15 +51,17 @@ jobs:
 
       - name: Install NSIS
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $target = 'C:\Program Files (x86)\NSIS'
           $makensis = Join-Path $target 'makensis.exe'
           if (-not (Test-Path $makensis)) { choco install nsis --no-progress -y }
           if (-not (Test-Path $makensis)) {
-            # Chocolatey 社群源常 503，直接抓 NSIS 免安裝版解到標準路徑。
-            $zip = Join-Path $env:RUNNER_TEMP 'nsis.zip'
-            Invoke-WebRequest 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11.zip' -OutFile $zip -UseBasicParsing -TimeoutSec 180
-            if (-not (Test-Path $zip) -or (Get-Item $zip).Length -lt 1MB) { throw 'NSIS 下載失敗' }
+            # Chocolatey 社群源常 503，改從自己的 release 取免安裝版（GitHub CDN 穩定）。
+            $zip = Join-Path $env:RUNNER_TEMP 'nsis-3.11.zip'
+            gh release download dev-latest -p 'nsis-3.11.zip' -D $env:RUNNER_TEMP --clobber
+            if ($LASTEXITCODE -ne 0 -or -not (Test-Path $zip)) { throw 'NSIS 下載失敗' }
             $dest = Join-Path $env:RUNNER_TEMP 'nsis'
             New-Item -ItemType Directory -Force -Path $dest | Out-Null
             tar -xf $zip -C $dest
