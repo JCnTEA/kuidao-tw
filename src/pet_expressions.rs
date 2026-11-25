@@ -176,7 +176,7 @@ impl Expressions {
         }
         let frame=if crate::bar_layout::animations_enabled(){expression.frame(time)}else{7};
         let uv=Rect::from_min_max(egui::pos2(0.0,frame as f32/16.0),egui::pos2(1.0,(frame+1) as f32/16.0));
-        c.painter.image(self.sheet.as_ref().unwrap().3.id(),c.rect(cx-24.0,0.0,48.0,30.0),uv,Color32::WHITE);
+        c.painter.image(self.sheet.as_ref().unwrap().2.id(),c.rect(cx-24.0,0.0,48.0,30.0),uv,Color32::WHITE);
         true
     }
 }

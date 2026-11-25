@@ -13,7 +13,7 @@ mod receivers;
 /// 仍在場的音訊裝置中，電量最低（最需要留意）的一台。
 pub fn audio_with_battery(devices: &[Device]) -> Option<&Device> {
     devices.iter()
-        .filter(|device| device.is_audio() && device.battery.is_some_and(|level| level <= 100))
+        .filter(|device| device.kind.is_audio() && device.battery.is_some_and(|level| level <= 100))
         .min_by_key(|device| device.battery.unwrap_or(101))
 }
 
