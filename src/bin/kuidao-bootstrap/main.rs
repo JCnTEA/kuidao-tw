@@ -17,12 +17,14 @@ const API: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases/latest
 const API_DEV: &str = "https://api.github.com/repos/JCnTEA/kuidao-tw/releases?per_page=20";
 const APP_EXE: &str = "kuidao.exe";
 /// 同一份啟動器原始碼，靠建置時的 `KUIDAO_BOOTSTRAP_CHANNEL=dev` 切成開發版啟動器。
-const IS_DEV: bool = matches!(option_env!("KUIDAO_BOOTSTRAP_CHANNEL"), Some("dev"));
+fn is_dev() -> bool {
+    option_env!("KUIDAO_BOOTSTRAP_CHANNEL") == Some("dev")
+}
 /// 開發版主程式在發佈包裡的檔名（中文名，跟正式版的 kuidao.exe 分開）。
 const APP_EXE_DEV: &str = "鬼島 Kuidao 開發版.exe";
 
 fn app_name() -> &'static str {
-    if IS_DEV {
+    if is_dev() {
         APP_EXE_DEV
     } else {
         APP_EXE
@@ -30,7 +32,7 @@ fn app_name() -> &'static str {
 }
 
 fn channel_title() -> &'static str {
-    if IS_DEV {
+    if is_dev() {
         "鬼島 · 開發版"
     } else {
         "鬼島 · 首次啟動"
@@ -56,7 +58,7 @@ fn set_status(status: impl Into<String>, detail: impl Into<String>, percent: u32
 
 #[cfg(windows)]
 mod gui {
-    use super::{channel_title, DETAIL, FAILED, PERCENT, QUIT, STATUS};
+    use super::{channel_title, is_dev, DETAIL, FAILED, PERCENT, QUIT, STATUS};
     use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
     use windows::Win32::Graphics::Gdi::{
         BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, DrawTextW, EndPaint, FillRect,
@@ -209,7 +211,7 @@ mod gui {
         unsafe {
             text(
                 hdc,
-                if IS_DEV {
+                if is_dev() {
                     "開發版啟動器：每次開啟自動更新到最新開發版。"
                 } else {
                     "安裝包不含主程式，下載完成後會自動開啟。"
@@ -453,13 +455,15 @@ fn main() {
     if app.is_file() && !force_update {
         // 正式版：主程式存在就直接開，日常開啟不經過網路。
         // 開發版：每次啟動都先問一次最新開發版，版本不同就自動換掉全部檔案（程式＋素材）。
-        let needs_update = IS_DEV && dev_update_needed(&install_dir);
+        let needs_update = is_dev() && dev_update_needed(&install_dir);
         if !needs_update {
             if !no_launch {
                 launch(&app, &install_dir, &forwarded);
             }
             return;
         }
+        // 開發版要換整包檔案前，先把自己正在跑的舊開發版關掉，避免 exe 被佔用換不掉。
+        close_running_app();
     }
 
     let Some(hwnd) = gui::create() else {
@@ -566,7 +570,7 @@ fn update(install_dir: &Path, app: &Path) -> Result<(), String> {
             return Err("安裝後仍找不到主程式，請重新安裝".into());
         }
         set_status("安裝完成", "正在開啟鬼島…", 100);
-        if IS_DEV {
+        if is_dev() {
             let _ = std::fs::write(install_dir.join("dev-version.txt"), &release.version);
         }
         update_uninstall_version(&release.version);
@@ -586,7 +590,7 @@ struct Release {
 }
 
 fn fetch_release() -> Result<Release, String> {
-    if IS_DEV {
+    if is_dev() {
         return fetch_dev_release();
     }
     let response = agent(20)?
@@ -713,6 +717,16 @@ fn fetch_dev_release() -> Result<Release, String> {
         });
     }
     Err("目前沒有可用的開發版".into())
+}
+
+/// 換版前先結束目前正在執行的開發版（只關程式，不動設定與歌詞庫）。
+fn close_running_app() {
+    let _ = std::process::Command::new("taskkill")
+        .args(["/F", "/T", "/IM", app_name()])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+    std::thread::sleep(std::time::Duration::from_millis(500));
 }
 
 /// 開發版版本記在這台電腦的安裝資料夾；跟線上最新開發版不同就換新版。
@@ -972,7 +986,7 @@ fn cache_dir() -> Result<PathBuf, String> {
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("TEMP").map(PathBuf::from))
         .ok_or_else(|| "找不到暫存資料夾".to_owned())?
-        .join(if IS_DEV {
+        .join(if is_dev() {
             "KuidaoDev/Bootstrap"
         } else {
             "Kuidao/Bootstrap"
@@ -989,12 +1003,12 @@ fn update_uninstall_version(version: &str) {
         RegCloseKey, RegOpenKeyExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE,
         KEY_SET_VALUE, REG_SZ,
     };
-    let key_path = if IS_DEV {
+    let key_path = if is_dev() {
         w!("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\KuidaoDev")
     } else {
         w!("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Kuidao")
     };
-    let root = if IS_DEV {
+    let root = if is_dev() {
         HKEY_CURRENT_USER
     } else {
         HKEY_LOCAL_MACHINE

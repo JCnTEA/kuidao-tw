@@ -56,6 +56,28 @@ VIAddVersionKey /LANG=1028 "LegalCopyright" "鬼島貢獻者"
 !insertmacro MUI_LANGUAGE "TradChinese"
 BrandingText " "
 
+; 正式版（kuidao.exe／kuidao-bootstrap.exe）可能在背景執行且常駐在島上，
+; 開發版要安裝就把正式版先關掉：只結束程序，不會移除正式版的安裝內容與設定。
+Function CloseOfficial
+  StrCpy $1 0
+  nsExec::ExecToStack 'taskkill /F /T /IM kuidao.exe'
+  Pop $0
+  ${If} $0 == 0
+    StrCpy $1 1
+  ${EndIf}
+  nsExec::ExecToStack 'taskkill /F /T /IM kuidao-bootstrap.exe'
+  Pop $0
+  ${If} $0 == 0
+    StrCpy $1 1
+  ${EndIf}
+  ${If} $1 == 1
+    Sleep 400
+    MessageBox MB_OK|MB_ICONINFORMATION "偵測到正式版正在執行，已先關閉正式版。$$
+$$
+正式版的安裝檔案與設定都會保留，之後仍可繼續使用正式版。"
+  ${EndIf}
+FunctionEnd
+
 Function .onInit
   ${IfNot} ${RunningX64}
     MessageBox MB_OK|MB_ICONSTOP "鬼島需要 Windows 10 或 Windows 11 的 64 位系統。" /SD IDOK
@@ -69,6 +91,7 @@ Function .onInit
   ${EndIf}
   SetShellVarContext current
   SetRegView 64
+  Call CloseOfficial
 FunctionEnd
 
 Section "Install"
