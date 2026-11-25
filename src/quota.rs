@@ -1,4 +1,4 @@
-//! Agent 额度。配置只保存登录引用，独立授权由系统安全保存。
+//! Agent 額度。配置只保存登錄引用，獨立授權由系統安全保存。
 use serde_json::{json, Value};
 use std::{collections::HashMap, fs, io::Read, path::{Path, PathBuf}, sync::mpsc, time::{Duration, Instant}};
 use base64::Engine;
@@ -28,7 +28,7 @@ pub(crate) mod antigravity;
 mod native_auth;
 
 pub struct Discovery {pub added:usize,pub notes:Vec<String>}
-pub(crate) const ZCODE_RECONNECT:&str="请用 GLM Coding Plan 套餐 Key 重新连接。ZCode 体验额度可在官方客户端查看。";
+pub(crate) const ZCODE_RECONNECT:&str="請用 GLM Coding Plan 套餐 Key 重新連接。ZCode 體驗額度可在官方客戶端查看。";
 impl Discovery {
     pub fn message(&self)->String{
         let mut text=if self.added>0{format!("新增 {} 個帳號",self.added)}else{"未發現新的本機帳號".into()};
@@ -40,7 +40,7 @@ impl Discovery {
 pub enum Provider { #[default] Codex, Claude, Kimi, GrokBot, Gemini, ZCode, WorkBuddy, DeepSeek, OpenCodeGo, MiniMax, Glm, NewApi, OneApi, Sub2Api, Kiro, Doubao, RelayGeneral, RelayCustom, Antigravity }
 impl Provider {
     pub const ALL: [Self; 19] = [Self::Codex, Self::Claude, Self::Kimi, Self::GrokBot, Self::Gemini, Self::ZCode, Self::WorkBuddy, Self::DeepSeek, Self::OpenCodeGo, Self::MiniMax, Self::Glm, Self::NewApi, Self::OneApi, Self::Sub2Api, Self::Kiro, Self::Doubao, Self::RelayGeneral, Self::RelayCustom, Self::Antigravity];
-    pub fn name(self) -> &'static str { match self {Self::Codex=>"Codex",Self::Claude=>"Claude",Self::Kimi=>"Kimi",Self::GrokBot=>"Grok Bot",Self::Gemini=>"Gemini",Self::ZCode=>"ZCode",Self::WorkBuddy=>"WorkBuddy",Self::DeepSeek=>"DeepSeek",Self::OpenCodeGo=>"OpenCode Go",Self::MiniMax=>"MiniMax",Self::Glm=>"GLM",Self::NewApi=>"New API",Self::OneApi=>"One API",Self::Sub2Api=>"Sub2API",Self::Kiro=>"Kiro",Self::Doubao=>"豆包",Self::RelayGeneral=>"通用余额",Self::RelayCustom=>"自定义查询",Self::Antigravity=>"Antigravity"} }
+    pub fn name(self) -> &'static str { match self {Self::Codex=>"Codex",Self::Claude=>"Claude",Self::Kimi=>"Kimi",Self::GrokBot=>"Grok Bot",Self::Gemini=>"Gemini",Self::ZCode=>"ZCode",Self::WorkBuddy=>"WorkBuddy",Self::DeepSeek=>"DeepSeek",Self::OpenCodeGo=>"OpenCode Go",Self::MiniMax=>"MiniMax",Self::Glm=>"GLM",Self::NewApi=>"New API",Self::OneApi=>"One API",Self::Sub2Api=>"Sub2API",Self::Kiro=>"Kiro",Self::Doubao=>"豆包",Self::RelayGeneral=>"通用餘額",Self::RelayCustom=>"自定義查詢",Self::Antigravity=>"Antigravity"} }
     pub fn api_key(self)->bool{matches!(self,Self::OpenCodeGo|Self::MiniMax|Self::Glm)||self.relay()}
     pub fn relay(self)->bool{matches!(self,Self::NewApi|Self::OneApi|Self::Sub2Api|Self::RelayGeneral|Self::RelayCustom)}
     pub fn balance(self)->bool{matches!(self,Self::WorkBuddy|Self::DeepSeek)||self.relay()}
@@ -87,12 +87,12 @@ impl RelayIcon {
 
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::Key => "默认钥匙",
-            Self::Layers => "叠层",
-            Self::Plane => "纸飞机",
-            Self::Bolt => "闪电",
-            Self::Link => "连接",
-            Self::Arrows => "双向箭头",
+            Self::Key => "默認鑰匙",
+            Self::Layers => "疊層",
+            Self::Plane => "紙飛機",
+            Self::Bolt => "閃電",
+            Self::Link => "連接",
+            Self::Arrows => "雙向箭頭",
             Self::Box => "方盒",
         }
     }
@@ -140,9 +140,9 @@ impl Config {
         crate::model::atomic_write(&dir.join("ai-quota.json"),&raw).map_err(|_|"無法儲存額度配置，原帳號未變更".into())
     }
     pub fn add(&mut self,provider:Provider,alias:String,source:PathBuf)->Result<(),String>{
-        if provider.api_key(){return Err("请使用 API Key 连接，无需登录 JSON".into());}
+        if provider.api_key(){return Err("請使用 API Key 連接，無需登錄 JSON".into());}
         if provider==Provider::ZCode{return Err(ZCODE_RECONNECT.into());}
-        if provider==Provider::Antigravity{return Err("请从当前 Antigravity CLI 登录连接".into());}
+        if provider==Provider::Antigravity{return Err("請從當前 Antigravity CLI 登錄連接".into());}
         if provider==Provider::Kiro{return kiro::add(self,&source,&alias);}
         if provider==Provider::WorkBuddy{return Err("請使用瀏覽器連線 WorkBuddy".into());}
         if provider==Provider::DeepSeek{return Err("請使用 API Key 連線 DeepSeek".into());}
@@ -295,26 +295,26 @@ impl Config {
 #[derive(Clone, Debug, PartialEq)]
 #[derive(serde::Serialize,serde::Deserialize)]
 pub struct Window {pub label:String,pub seconds:Option<i64>,pub remaining:f32,pub reset:Option<i64>,
-    /// 积分型额度的具体数值（例如 Kiro 的点数）；有值时界面显示数值而不是百分比。
+    /// 積分型額度的具體數值（例如 Kiro 的點數）；有值時界面顯示數值而不是百分比。
     #[serde(default)]pub amount:Option<Amount>}
-/// 周期额度的绝对数值：剩余量与总额。百分比仍然用于绘制进度，数值用于文字。
+/// 週期額度的絕對數值：剩餘量與總額。百分比仍然用於繪製進度，數值用於文字。
 #[derive(Clone, Debug, PartialEq)]
 #[derive(serde::Serialize,serde::Deserialize)]
 pub struct Amount {pub remaining:f64,pub limit:f64}
 impl Amount {
     pub fn new(remaining:f64,limit:f64)->Self{let limit=limit.max(0.0);Self{remaining:remaining.clamp(0.0,limit),limit}}
-    /// 常驻栏剩余点数：三位数以上取整。
+    /// 常駐欄剩餘點數：三位數以上取整。
     pub fn short(&self)->String{if self.remaining>=100.0{format!("{:.0}",self.remaining)}else{number_text(self.remaining)}}
-    /// 列表与提示里的完整写法：剩余 / 总额。
+    /// 列表與提示裡的完整寫法：剩餘 / 總額。
     pub fn full(&self)->String{format!("{} / {}",number_text(self.remaining),number_text(self.limit))}
 }
 fn number_text(v:f64)->String{let digits=if v<1.0{2}else{1};let factor=10f64.powi(digits);let rounded=(v*factor).round()/factor;if rounded>=1000.0||rounded.fract()==0.0{format!("{rounded:.0}")}else{format!("{rounded:.digits$}",digits=digits as usize)}}
 impl Window {
-    /// 剩余量的书面写法：数值型额度给出“剩余 / 总额”，其余给出百分比。
+    /// 剩餘量的書面寫法：數值型額度給出“剩餘 / 總額”，其餘給出百分比。
     pub fn value_text(&self)->String{self.amount.as_ref().map(Amount::full).unwrap_or_else(||{
         if self.remaining>0.0 && self.remaining<1.0{"<1%".into()}else{format!("{:.0}%",self.remaining)}
     })}
-    /// 一句话额度摘要，用于小岛提示与设置页。
+    /// 一句話額度摘要，用於小島提示與設置頁。
     pub fn summary(&self)->String{format!("{}剩餘 {}",self.label,self.value_text())}
 }
 #[derive(Clone, Debug, Default)]
@@ -396,7 +396,7 @@ pub fn parse(provider:Provider,v:&Value)->Result<Snapshot,String>{
     s.windows.sort_by_key(|w|w.seconds.unwrap_or(i64::MAX));Ok(s)
 }
 
-pub const KIMI_RELOGIN:&str="登录已失效，请在 Kimi Code 重新登录";
+pub const KIMI_RELOGIN:&str="登錄已失效，請在 Kimi Code 重新登錄";
 struct Credential {token:String,account_id:Option<String>,identity:Option<String>,expires_at:Option<f64>,stamp:Option<std::time::SystemTime>}
 fn same_login(a:&Credential,b:&Credential)->bool{a.token==b.token||a.identity.as_ref().zip(b.identity.as_ref()).is_some_and(|(a,b)|a==b)}
 fn login_json(path:&Path)->Result<Value,String>{
@@ -452,7 +452,7 @@ impl Service {
                 }
             }
             if accounts.is_empty(){continue;}
-            // 停用后保留退避记录，重新启用时仍尊重服务器的限流时间。
+            // 停用後保留退避記錄，重新啟用時仍尊重服務器的限流時間。
             let pending=self.workers.get(&group).map(|worker|worker.pending.clone()).unwrap_or_default();
             {let Ok(mut next)=pending.lock()else{return false;};next.accounts=Some(accounts);next.running=true;}
             let next=pending.clone();let results=self.results.clone();let run=run.clone();
@@ -485,7 +485,7 @@ impl Service {
             });
             if spawned.is_err(){if let Ok(mut state)=pending.lock(){state.running=false;}return false;}
             self.workers.insert(group,Worker{pending,wake});
-            // 信号与最新请求合并；关闭时只等在途请求，不积累新的线程。
+            // 信號與最新請求合併；關閉時只等在途請求，不積累新的線程。
             let _=self.workers[&group].wake.try_send(());
         }
         true
@@ -543,15 +543,15 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
     if account.provider==Provider::Codex{if let Some(id)=&auth.account_id{req=req.set("ChatGPT-Account-Id",id);}}
     let response=req.call().map_err(|e|match e{
         ureq::Error::Status(401,_) if account.provider==Provider::Kimi=>(KIMI_RELOGIN.into(),0),
-        ureq::Error::Status(403,_) if account.provider==Provider::Kimi=>("当前账号没有查询 Kimi Code 订阅额度的权限".into(),0),
-        ureq::Error::Status(401|403,_)=>("登录已失效或权限不足，请在对应工具中重新登录".into(),0),
-        ureq::Error::Status(429,r)=>("请求过于频繁，稍后自动重试".into(),r.header("Retry-After").and_then(|s|s.parse().ok()).unwrap_or(180).clamp(30,3600)),
-        ureq::Error::Status(n,_)=>(format!("额度服务暂不可用（{n}）"),60),
-        _=>("无法连接额度服务，请检查网络或代理".into(),30),
+        ureq::Error::Status(403,_) if account.provider==Provider::Kimi=>("當前帳號沒有查詢 Kimi Code 訂閱額度的權限".into(),0),
+        ureq::Error::Status(401|403,_)=>("登錄已失效或權限不足，請在對應工具中重新登錄".into(),0),
+        ureq::Error::Status(429,r)=>("請求過於頻繁，稍後自動重試".into(),r.header("Retry-After").and_then(|s|s.parse().ok()).unwrap_or(180).clamp(30,3600)),
+        ureq::Error::Status(n,_)=>(format!("額度服務暫不可用（{n}）"),60),
+        _=>("無法連接額度服務，請檢查網絡或代理".into(),30),
     })?;
-    let mut body=String::new();response.into_reader().take(1024*1024).read_to_string(&mut body).map_err(|_|("读取额度响应失败".into(),30))?;
-    if auth.stamp!=fs::metadata(&account.source).and_then(|m|m.modified()).ok(){return Err(("登录信息已变化，请刷新额度".into(),0));}
-    let value=serde_json::from_str(&body).map_err(|_|("服务没有返回有效的额度数据".into(),60))?;
+    let mut body=String::new();response.into_reader().take(1024*1024).read_to_string(&mut body).map_err(|_|("讀取額度響應失敗".into(),30))?;
+    if auth.stamp!=fs::metadata(&account.source).and_then(|m|m.modified()).ok(){return Err(("登錄信息已變化，請刷新額度".into(),0));}
+    let value=serde_json::from_str(&body).map_err(|_|("服務沒有返回有效的額度數據".into(),60))?;
     parse(account.provider,&value).map_err(|e|(e,60))
 }
 
@@ -561,7 +561,7 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
     #[test]
     fn antigravity_reconnect_preserves_preferences_and_refuses_old_cache() {
         let mut config = Config::default();
-        let id = config.bind_antigravity("当前 CLI", "agy.exe".into());
+        let id = config.bind_antigravity("當前 CLI", "agy.exe".into());
         config.accounts[0].pinned = true;
         config.accounts[0].enabled = false;
         config.colors.insert(id.clone(), Accent::Blue);
@@ -569,7 +569,7 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
         assert_eq!(config.bind_antigravity("", "new-path/agy.exe".into()), id);
         let account = &config.accounts[0];
         assert_eq!(config.accounts.len(), 1);
-        assert_eq!(account.alias, "当前 CLI");
+        assert_eq!(account.alias, "當前 CLI");
         assert!(account.pinned && !account.enabled);
         assert_ne!(account.slot.as_deref(), Some("old-connection"));
         assert_eq!(config.colors[&id], Accent::Blue);
@@ -587,16 +587,16 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
         let expired=json!({"access_token":"old-fixture","expires_at":1234.75}).to_string();
         fs::write(&path,&expired).unwrap();
         let mut config=Config::default();
-        config.add(Provider::Kimi,"测试".into(),path.clone()).unwrap();
+        config.add(Provider::Kimi,"測試".into(),path.clone()).unwrap();
         let account=&config.accounts[0];
         let agent=ureq::AgentBuilder::new().timeout(Duration::from_secs(1)).build();
         let server=TcpListener::bind("127.0.0.1:0").unwrap();
         let url=format!("http://{}/usage",server.local_addr().unwrap());
         let (message,wait)=fetch_subscription_at(&agent,account,&url).unwrap_err();
-        assert!(message.contains("Kimi Code") && message.contains("重新登录"));
+        assert!(message.contains("Kimi Code") && message.contains("重新登錄"));
         assert_eq!(wait,0);
         server.set_nonblocking(true).unwrap();
-        assert_eq!(server.accept().unwrap_err().kind(),std::io::ErrorKind::WouldBlock,"过期凭据不应发出请求");
+        assert_eq!(server.accept().unwrap_err().kind(),std::io::ErrorKind::WouldBlock,"過期憑據不應發出請求");
         server.set_nonblocking(false).unwrap();
         assert_eq!(fs::read_to_string(&path).unwrap(),expired);
 
@@ -616,7 +616,7 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
         fs::write(&path,r#"{"access_token":"legacy-fixture"}"#).unwrap();
         assert_eq!(fetch_subscription_at(&agent,account,&url).unwrap_err(),(KIMI_RELOGIN.into(),0));
         fs::write(&path,r#"{"access_token":"legacy-fixture","expires_at":0}"#).unwrap();
-        assert!(fetch_subscription_at(&agent,account,&url).unwrap_err().0.contains("权限"));
+        assert!(fetch_subscription_at(&agent,account,&url).unwrap_err().0.contains("權限"));
         assert_eq!(fetch_subscription_at(&agent,account,&url).unwrap_err().1,77);
 
         let renewed=json!({"access_token":"renewed-fixture","expires_at":chrono::Utc::now().timestamp()+900}).to_string();
@@ -701,7 +701,7 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
     }
     #[test]
     fn legacy_zcode_config_stays_editable_without_reading_login_or_refreshing(){
-        let legacy=json!({"accounts":[{"id":"old","provider":"ZCode","alias":"个人","source":"synthetic/credentials.json","slot":"old-reference","enabled":true,"pinned":true}],"selected":"old","colors":{"old":"gold"}});
+        let legacy=json!({"accounts":[{"id":"old","provider":"ZCode","alias":"個人","source":"synthetic/credentials.json","slot":"old-reference","enabled":true,"pinned":true}],"selected":"old","colors":{"old":"gold"}});
         let mut config=Config::from_json(&legacy);
         let original=config.clone();
         let account=&original.accounts[0];
@@ -709,9 +709,9 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
         let cache=json!({"old":{"provider":"ZCode","slot":"old-reference","snapshot":Snapshot{at:1900000000,..Default::default()}}});
         assert!(account.cached_snapshot(&cache).is_none());
         let mut service=Service::start();
-        assert!(service.refresh_with(original.accounts,|_,_|panic!("旧 ZCode 账号不应创建查询任务")));
+        assert!(service.refresh_with(original.accounts,|_,_|panic!("舊 ZCode 帳號不應創建查詢任務")));
         assert!(service.workers.is_empty());
-        let agent=ureq::AgentBuilder::new().middleware(|_:ureq::Request,_:ureq::MiddlewareNext|panic!("旧 ZCode 账号不应发请求")).build();
+        let agent=ureq::AgentBuilder::new().middleware(|_:ureq::Request,_:ureq::MiddlewareNext|panic!("舊 ZCode 帳號不應發請求")).build();
         assert_eq!(fetch(&agent,&config.accounts[0]).unwrap_err().0,ZCODE_RECONNECT);
         assert_eq!(config.add(Provider::ZCode,String::new(),"synthetic/credentials.json".into()).unwrap_err(),ZCODE_RECONNECT);
         assert_eq!(config,Config::from_json(&legacy));
@@ -829,8 +829,8 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
     fn relay_icon_preferences_are_per_account_and_compatible_with_old_config() {
         let legacy=json!({"accounts":[
             {"id":"a","provider":"New API","alias":"日常","source":"https://daily.example"},
-            {"id":"b","provider":"New API","alias":"备用","source":"https://backup.example"},
-            {"id":"c","provider":"Codex","alias":"本机","source":"auth.json"}
+            {"id":"b","provider":"New API","alias":"備用","source":"https://backup.example"},
+            {"id":"c","provider":"Codex","alias":"本機","source":"auth.json"}
         ]});
         let mut config=Config::from_json(&legacy);
         let accounts=config.accounts.clone();
@@ -849,5 +849,5 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
         assert!(restored.relay_icons.is_empty());
     }
 
-    #[test] fn multi_account_config_keeps_sources_and_selection_separate(){let mut c=Config::default();for n in 1..=2{c.accounts.push(Account{id:n.to_string(),provider:Provider::Codex,alias:format!("账号 {n}"),source:PathBuf::from(format!("profile-{n}/auth.json")),slot:None,enabled:true,pinned:true});}c.selected="2".into();let raw=c.json();assert_eq!(Config::from_json(&raw),c);assert_eq!(c.selected_index(),Some(1));assert_eq!(c.pinned_indices(),vec![0,1]);assert!(!raw.to_string().contains("access_token"));}
+    #[test] fn multi_account_config_keeps_sources_and_selection_separate(){let mut c=Config::default();for n in 1..=2{c.accounts.push(Account{id:n.to_string(),provider:Provider::Codex,alias:format!("帳號 {n}"),source:PathBuf::from(format!("profile-{n}/auth.json")),slot:None,enabled:true,pinned:true});}c.selected="2".into();let raw=c.json();assert_eq!(Config::from_json(&raw),c);assert_eq!(c.selected_index(),Some(1));assert_eq!(c.pinned_indices(),vec![0,1]);assert!(!raw.to_string().contains("access_token"));}
 }

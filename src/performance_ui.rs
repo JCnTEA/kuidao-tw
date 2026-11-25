@@ -1,9 +1,9 @@
-//! 系统性能：展开页、常驻徽标、侧边停靠与设置。
+//! 系統性能：展開頁、常駐徽標、側邊停靠與設置。
 //!
-//! 展开页先是总览：处理器、显卡、内存三张「玻璃液位」卡，磁盘和网络两张霓虹曲线卡；点哪张进哪类硬件的详情。
-//! 底部程序区左右两栏并排「CPU 最高」和「内存最多」，只看不点。
-//! 详情页是五个孪生版式：顶部带迷你曲线的页签条，左侧大环与三行读数，右上主视图，右下三行列表。
-//! 质感取自玻璃格：染色的暗底、霓虹描边、底边发亮，格子里的细颗粒随负载闪烁。
+//! 展開頁先是總覽：處理器、顯卡、內存三張「玻璃液位」卡，磁盤和網絡兩張霓虹曲線卡；點哪張進哪類硬件的詳情。
+//! 底部程序區左右兩欄並排「CPU 最高」和「內存最多」，只看不點。
+//! 詳情頁是五個孿生版式：頂部帶迷你曲線的頁籤條，左側大環與三行讀數，右上主視圖，右下三行列表。
+//! 質感取自玻璃格：染色的暗底、霓虹描邊、底邊發亮，格子裡的細顆粒隨負載閃爍。
 use crate::{
     app::{App, PERFORMANCE_PAGE},
     paint::{alpha, mix, Card, H},
@@ -14,7 +14,7 @@ use eframe::egui::{self, Color32, Pos2};
 use std::f32::consts::{FRAC_PI_2, TAU};
 use std::time::{Duration, Instant};
 
-// ---------- 配色：每类硬件一种主色，次级读数（上传、写入）取主色的浅色 ----------
+// ---------- 配色：每類硬件一種主色，次級讀數（上傳、寫入）取主色的淺色 ----------
 pub(crate) const CPU_COLOR: Color32 = Color32::from_rgb(99, 218, 207);
 const GPU: Color32 = Color32::from_rgb(171, 156, 245);
 const RAM: Color32 = Color32::from_rgb(233, 189, 117);
@@ -31,12 +31,12 @@ const KERNEL: Color32 = Color32::from_rgb(246, 138, 108);
 const COLORS: [Color32; 3] = [CPU_COLOR, GPU, RAM];
 const LETTERS: [&str; 3] = ["C", "G", "M"];
 
-/// 展开页高度：总览要像一块小屏，比其它页高。
+/// 展開頁高度：總覽要像一塊小屏，比其它頁高。
 pub(crate) const PAGE_H: f32 = 360.0;
-/// 正文左右边界（导航箭头之间）。
+/// 正文左右邊界（導航箭頭之間）。
 const LEFT: f32 = 37.0;
 const RIGHT: f32 = 381.0;
-// 总览：三张硬件卡、两张吞吐卡、一张程序排行
+// 總覽：三張硬件卡、兩張吞吐卡、一張程序排行
 const CARD_GAP: f32 = 7.0;
 const TOP_Y: f32 = 36.0;
 const TOP_H: f32 = 134.0;
@@ -44,13 +44,13 @@ const IO_Y: f32 = TOP_Y + TOP_H + CARD_GAP;
 const IO_H: f32 = 46.0;
 const APP_Y: f32 = IO_Y + IO_H + CARD_GAP;
 const APP_H: f32 = 114.0;
-/// 总览底部的程序表。
+/// 總覽底部的程序表。
 const APP_CARD: [f32; 4] = [LEFT, APP_Y, RIGHT - LEFT, APP_H];
-// 详情页：页签条
+// 詳情頁：頁籤條
 const TAB_Y: f32 = 36.0;
 const TAB_H: f32 = 44.0;
 const TAB_GAP: f32 = 5.0;
-// 详情页：左列大环与读数，右列主视图与列表
+// 詳情頁：左列大環與讀數，右列主視圖與列表
 const HERO_X: f32 = 89.0;
 const HERO_Y: f32 = 156.0;
 const HERO_R: f32 = 40.0;
@@ -64,7 +64,7 @@ const LIST_Y: f32 = 234.0;
 const ROW: f32 = 18.0;
 const BODY_BOTTOM: f32 = APP_Y + APP_H;
 const GB: f64 = 1073741824.0;
-/// 颗粒闪烁的刷新间隔：只在展开页可见时按这个节奏重绘，不跑满帧。
+/// 顆粒閃爍的刷新間隔：只在展開頁可見時按這個節奏重繪，不跑滿幀。
 const SHIMMER: Duration = Duration::from_millis(90);
 
 fn tab_w() -> f32 {
@@ -78,7 +78,7 @@ fn io_card(i: usize) -> [f32; 4] {
     let w = (RIGHT - LEFT - CARD_GAP) / 2.;
     [LEFT + i as f32 * (w + CARD_GAP), IO_Y, w, IO_H]
 }
-/// 总览里通向详情页的卡片位置（处理器、显卡、内存、磁盘、网络）。
+/// 總覽裡通向詳情頁的卡片位置（處理器、顯卡、內存、磁盤、網絡）。
 fn overview_card(view: View) -> [f32; 4] {
     match view {
         View::Cpu | View::Overview => top_card(0),
@@ -88,7 +88,7 @@ fn overview_card(view: View) -> [f32; 4] {
         View::Network => io_card(1),
     }
 }
-/// 测试用：总览卡片中心、详情页签中心、返回按钮中心。
+/// 測試用：總覽卡片中心、詳情頁籤中心、返回按鈕中心。
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn overview_card_center(view: View) -> (f32, f32) {
     let [x, y, w, h] = overview_card(view);
@@ -127,7 +127,7 @@ fn speed(value: Option<f32>) -> String {
     }
     format!("{n:.0} B/s")
 }
-/// 速率拆成数字和单位，大环中心分两行排。
+/// 速率拆成數字和單位，大環中心分兩行排。
 fn speed_parts(value: Option<f32>) -> (String, String) {
     let text = speed(value);
     match text.split_once(' ') {
@@ -135,7 +135,7 @@ fn speed_parts(value: Option<f32>) -> (String, String) {
         None => (text, String::new()),
     }
 }
-/// 字节数，按 Windows 的习惯用 1024 进制、写作 GB / MB。
+/// 字節數，按 Windows 的習慣用 1024 進制、寫作 GB / MB。
 fn bytes(n: u64) -> String {
     let v = n as f64;
     if v >= 1024. * GB {
@@ -157,12 +157,12 @@ fn capacity(value: Option<(u64, u64)>) -> String {
 fn link(bits: u64) -> String {
     if bits >= 1_000_000_000 { format!("{:.1} Gbps", bits as f64 / 1e9) } else { format!("{:.0} Mbps", bits as f64 / 1e6) }
 }
-/// 内存构成：程序（已用减去内核常驻）、内核、缓存（可随时回收，在可用里），以及剩下的空闲。
+/// 內存構成：程序（已用減去內核常駐）、內核、緩存（可隨時回收，在可用裡），以及剩下的空閒。
 fn memory_parts(r: &Reading) -> ([(&'static str, u64, Color32); 3], u64) {
     let (used, total) = r.memory.unwrap_or((0, 0));
     let kernel = r.memory_kernel.unwrap_or(0).min(used);
-    // 可用 = 备用缓存 + 空闲。空闲直接读系统计数器，缓存取差值，三处数字始终对得上；
-    // 读不到计数器时才退回系统缓存的大小（它统计口径不同，可能比可用还大，所以要截住）。
+    // 可用 = 備用緩存 + 空閒。空閒直接讀系統計數器，緩存取差值，三處數字始終對得上；
+    // 讀不到計數器時才退回系統緩存的大小（它統計口徑不同，可能比可用還大，所以要截住）。
     let available = total.saturating_sub(used);
     let (cache, free) = match r.memory_free {
         Some(free) => (available - free.min(available), free.min(available)),
@@ -171,8 +171,8 @@ fn memory_parts(r: &Reading) -> ([(&'static str, u64, Color32); 3], u64) {
             (cache, available - cache)
         }
     };
-    // 缓存属于「可用」：颜色压暗一半，在条上和真正被占用的程序、内核明显区分开。
-    ([("程序", used - kernel, RAM), ("内核", kernel, KERNEL), ("缓存", cache, mix(mix(RAM, NET, 0.75), SURFACE, 0.5))], free)
+    // 緩存屬於「可用」：顏色壓暗一半，在條上和真正被佔用的程序、內核明顯區分開。
+    ([("程序", used - kernel, RAM), ("內核", kernel, KERNEL), ("緩存", cache, mix(mix(RAM, NET, 0.75), SURFACE, 0.5))], free)
 }
 fn share(value: Option<(u64, u64)>) -> Option<f32> {
     value.filter(|&(_, total)| total > 0).map(|(used, total)| used as f32 / total as f32)
@@ -230,7 +230,7 @@ fn paint_rate_column(c: &Card, left: f32, rates: [Option<Metric>; 2], r: &Readin
     }
 }
 
-/// 整数哈希到 0..1，颗粒的位置、相位都由它决定，同一格每帧一致。
+/// 整數哈希到 0..1，顆粒的位置、相位都由它決定，同一格每幀一致。
 fn hash(a: u32, b: u32) -> f32 {
     let mut x = a.wrapping_mul(0x9E37_79B1) ^ b.wrapping_mul(0x85EB_CA77).rotate_left(13);
     x ^= x >> 15;
@@ -239,8 +239,8 @@ fn hash(a: u32, b: u32) -> f32 {
     (x & 0xFFFF) as f32 / 65535.
 }
 
-/// 环形占用：从正上方顺时针走，两端圆头，进度弧始终落在轨道里；
-/// `glow` 时弧中间再走一道细亮芯，末端一颗亮点，光都收在轨道宽度以内，不往外溢。
+/// 環形佔用：從正上方順時針走，兩端圓頭，進度弧始終落在軌道里；
+/// `glow` 時弧中間再走一道細亮芯，末端一顆亮點，光都收在軌道寬度以內，不往外溢。
 fn gauge(c: &Card, x: f32, y: f32, r: f32, width: f32, value: Option<f32>, color: Color32, glow: bool) {
     c.track(x, y, r, width, alpha(color, 0.12));
     let Some(v) = value.map(|v| v.clamp(0., 100.) / 100.).filter(|v| *v > 0.004) else {
@@ -259,7 +259,7 @@ fn gauge(c: &Card, x: f32, y: f32, r: f32, width: f32, value: Option<f32>, color
     }
 }
 
-/// 点是否落在圆角矩形内（留 `pad` 的边距），颗粒不会漏出圆角。
+/// 點是否落在圓角矩形內（留 `pad` 的邊距），顆粒不會漏出圓角。
 fn inside_round(rect: [f32; 4], r: f32, px: f32, py: f32, pad: f32) -> bool {
     let [x, y, w, h] = rect;
     let (l, t, rr, b) = (x + pad, y + pad, x + w - pad, y + h - pad);
@@ -272,17 +272,17 @@ fn inside_round(rect: [f32; 4], r: f32, px: f32, py: f32, pad: f32) -> bool {
     (px - cx).powi(2) + (py - cy).powi(2) <= r * r
 }
 
-/// 颗粒网格：3 点间距、1.6 点见方的小方块。
+/// 顆粒網格：3 點間距、1.6 點見方的小方塊。
 const PITCH: f32 = 3.0;
 const DOT: f32 = 1.6;
 
-/// 玻璃体：染色的暗底，上淡下浓。
+/// 玻璃體：染色的暗底，上淡下濃。
 fn glass_body(c: &Card, rect: [f32; 4], r: f32, color: Color32, k: f32) {
     let [x, y, w, h] = rect;
     c.vgrad(x, y, w, h, r, alpha(color, 0.04 * k), alpha(color, 0.20 * k));
 }
 
-/// 玻璃的边：霓虹细边、底边一道亮线、顶边一丝高光。
+/// 玻璃的邊：霓虹細邊、底邊一道亮線、頂邊一絲高光。
 fn glass_rim(c: &Card, rect: [f32; 4], r: f32, color: Color32, k: f32) {
     let [x, y, w, h] = rect;
     c.stroke(x + 0.5, y + 0.5, w - 1., h - 1., r, 1., alpha(mix(color, Color32::WHITE, 0.1), 0.85 * k));
@@ -293,8 +293,8 @@ fn glass_rim(c: &Card, rect: [f32; 4], r: f32, color: Color32, k: f32) {
     }
 }
 
-/// 颗粒：网格按整块玻璃 `shape` 对齐（分段条跨段连续），只画 `area` 里、横向落在 `span` 内的格。
-/// `lit` 时越靠底越密、各自闪烁，`energy`（0..1）越高越密、闪得越快；没亮的格留一点底纹。
+/// 顆粒：網格按整塊玻璃 `shape` 對齊（分段條跨段連續），只畫 `area` 裡、橫向落在 `span` 內的格。
+/// `lit` 時越靠底越密、各自閃爍，`energy`（0..1）越高越密、閃得越快；沒亮的格留一點底紋。
 #[allow(clippy::too_many_arguments)]
 fn cells(c: &Card, shape: [f32; 4], r: f32, area: [f32; 4], span: (f32, f32), color: Color32, energy: f32, t: f64, seed: u32, k: f32, lit: bool) {
     let [sx, sy, sw, sh] = shape;
@@ -334,7 +334,7 @@ fn cells(c: &Card, shape: [f32; 4], r: f32, area: [f32; 4], span: (f32, f32), co
     }
 }
 
-/// 竖直读数柱：一根带颗粒底纹的小圆角玻璃柱，占用从底部点亮（同一外形裁出来，不另贴内胆），顶端一道平直的亮线。
+/// 豎直讀數柱：一根帶顆粒底紋的小圓角玻璃柱，佔用從底部點亮（同一外形裁出來，不另貼內膽），頂端一道平直的亮線。
 fn tank(c: &Card, rect: [f32; 4], value: Option<f32>, color: Color32, t: f64, seed: u32) {
     let [x, y, w, h] = rect;
     let r = (w * 0.2).min(3.);
@@ -356,9 +356,9 @@ fn tank(c: &Card, rect: [f32; 4], value: Option<f32>, color: Color32, t: f64, se
     }
 }
 
-/// 横向构成条（像推文里的存储条）：整根条是一块小圆角玻璃，各段按横向范围从同一外形裁出来，
-/// 描边、底边亮线和颗粒网格都跨段连续；段与段之间一道淡淡的隔断，两侧颜色互相晕开一点。
-/// 已用部分的末端有一道亮边；`focus` 之外的段压暗。
+/// 橫向構成條（像推文裡的存儲條）：整根條是一塊小圓角玻璃，各段按橫向範圍從同一外形裁出來，
+/// 描邊、底邊亮線和顆粒網格都跨段連續；段與段之間一道淡淡的隔斷，兩側顏色互相暈開一點。
+/// 已用部分的末端有一道亮邊；`focus` 之外的段壓暗。
 #[allow(clippy::too_many_arguments)]
 fn glass_bar(c: &Card, rect: [f32; 4], parts: &[(f32, Color32)], focus: Option<usize>, energy: f32, t: f64, seed: u32, key: &str) {
     let [x, y, w, h] = rect;
@@ -371,7 +371,7 @@ fn glass_bar(c: &Card, rect: [f32; 4], parts: &[(f32, Color32)], focus: Option<u
     let mut cuts: Vec<(f32, Color32, Color32, f32)> = Vec::new();
     let mut last: Option<(Color32, f32)> = None;
     for (i, (part, color)) in parts.iter().enumerate() {
-        // 每段宽度平滑过渡，数据变化时条会「长」过去。
+        // 每段寬度平滑過渡，數據變化時條會「長」過去。
         let target = part.clamp(0., 1.) * w;
         let width = if c.live { ctx.animate_value_with_time(egui::Id::new(("performance-glass", key, i)), target, 0.5) } else { target };
         let width = width.min(x + w - left).max(0.);
@@ -393,7 +393,7 @@ fn glass_bar(c: &Card, rect: [f32; 4], parts: &[(f32, Color32)], focus: Option<u
         last = Some((*color, k));
         left += width;
     }
-    // 段间隔断：两侧颜色互相晕开，中间一道细细的亮线。
+    // 段間隔斷：兩側顏色互相暈開，中間一道細細的亮線。
     for (cx, a, b, k) in cuts {
         let blend = (h * 0.3).clamp(2., 5.);
         let mut mesh = egui::Mesh::default();
@@ -408,12 +408,12 @@ fn glass_bar(c: &Card, rect: [f32; 4], parts: &[(f32, Color32)], focus: Option<u
             mesh.add_triangle(i + 1, i + 3, i + 2);
         }
         c.painter.add(egui::Shape::mesh(mesh));
-        // 一道暗缝把两段分开，缝两侧各一条本段颜色的亮边，一眼看得出是两段。
+        // 一道暗縫把兩段分開，縫兩側各一條本段顏色的亮邊，一眼看得出是兩段。
         c.seg((cx, y + 1.), (cx, y + h - 1.), 2.4, alpha(Color32::from_rgb(12, 13, 16), 0.9 * k.max(0.6)));
         c.seg((cx - 1.7, y + 2.), (cx - 1.7, y + h - 2.), 1., alpha(mix(a, Color32::WHITE, 0.5), 0.8 * k));
         c.seg((cx + 1.7, y + 2.), (cx + 1.7, y + h - 2.), 1., alpha(mix(b, Color32::WHITE, 0.5), 0.8 * k));
     }
-    // 已用部分的末端：一道带光的亮边。
+    // 已用部分的末端：一道帶光的亮邊。
     if let Some((color, k)) = last.filter(|_| left < x + w - r.max(1.5)) {
         if left > x + r {
             c.glow(left, y + h / 2., h * 0.7, alpha(color, 0.22 * k));
@@ -422,7 +422,7 @@ fn glass_bar(c: &Card, rect: [f32; 4], parts: &[(f32, Color32)], focus: Option<u
     }
 }
 
-/// 在压暗的构成条上点亮一小段（从 `from` 到 `to`，按整条的比例），段的两端各一道亮边。
+/// 在壓暗的構成條上點亮一小段（從 `from` 到 `to`，按整條的比例），段的兩端各一道亮邊。
 #[allow(clippy::too_many_arguments)]
 fn glass_span(c: &Card, rect: [f32; 4], from: f32, to: f32, color: Color32, energy: f32, t: f64, seed: u32) {
     let [x, y, w, h] = rect;
@@ -441,8 +441,8 @@ fn glass_span(c: &Card, rect: [f32; 4], from: f32, to: f32, color: Color32, ener
     }
 }
 
-/// 鼠标落在右列哪一行程序上（行从 `y + 20` 起、行距 `ROW`；可见 `rows` 行，已滚过 `offset` 行，共 `total` 行）。
-/// 整个列表区连成一片按最近的行算，行与行之间没有空隙，快速扫过时不会短暂落空。返回在整个列表里的名次。
+/// 鼠標落在右列哪一行程序上（行從 `y + 20` 起、行距 `ROW`；可見 `rows` 行，已滾過 `offset` 行，共 `total` 行）。
+/// 整個列表區連成一片按最近的行算，行與行之間沒有空隙，快速掃過時不會短暫落空。返回在整個列表裡的名次。
 fn row_hover(c: &Card, y: f32, rows: usize, offset: f32, total: usize) -> Option<usize> {
     let rows = rows.min(total);
     if !c.live || rows == 0 {
@@ -456,15 +456,15 @@ fn row_hover(c: &Card, y: f32, rows: usize, offset: f32, total: usize) -> Option
     Some((((p.y - top) / ROW + offset).max(0.) as usize).min(total - 1))
 }
 
-/// CPU、内存详情的程序列表一屏几行；更多的名次滚动查看。
+/// CPU、內存詳情的程序列表一屏幾行；更多的名次滾動查看。
 const LIST_ROWS: usize = 5;
 
-/// 可滚动程序列表占的区域（页面坐标）：滚轮落在这里只滚列表，不翻页。
+/// 可滾動程序列表佔的區域（頁面座標）：滾輪落在這裡只滾列表，不翻頁。
 pub(crate) fn list_area() -> egui::Rect {
     egui::Rect::from_min_size(Pos2::new(COL_X - 6., LIST_Y + 7.), egui::vec2(RIGHT - COL_X + 18., LIST_ROWS as f32 * ROW))
 }
 
-/// 程序图标：有系统图标就画图标，没有就画一个带首字母的小方块。
+/// 程序圖標：有系統圖標就畫圖標，沒有就畫一個帶首字母的小方塊。
 fn program_icon(c: &Card, x: f32, y: f32, size: f32, program: &Process, color: Color32) {
     let ctx = c.ui.ctx();
     if let Some(image) = &program.icon {
@@ -484,7 +484,7 @@ fn program_icon(c: &Card, x: f32, y: f32, size: f32, program: &Process, color: C
     c.centered_text(x + size / 2., y + size / 2., &letter, size * 0.62, W::Bold, color, H::Center);
 }
 
-/// 霓虹折线：宽而淡的光、中等的光、亮芯三层叠出来。
+/// 霓虹折線：寬而淡的光、中等的光、亮芯三層疊出來。
 fn neon(c: &Card, pts: &[(f32, f32)], width: f32, color: Color32) {
     c.path(pts, width * 4.5, alpha(color, 0.06));
     c.path(pts, width * 2.2, alpha(color, 0.16));
@@ -496,12 +496,12 @@ impl App {
         self.module_on(PERFORMANCE_PAGE) && self.settings.show_performance && !self.effective_minimal()
             && (self.settings.performance_bar != BarStyle::Custom || self.settings.performance_metrics != 0)
     }
-    /// 岛内当前显示的页面：先看岛内的临时选择，没有就用设置里的。
+    /// 島內當前顯示的頁面：先看島內的臨時選擇，沒有就用設置裡的。
     fn performance_view(&self) -> View {
         self.performance.view.unwrap_or(self.settings.performance_view)
     }
 
-    /// 当前详情页的程序列表还能往下滚几行；不是 CPU、内存详情或列表不满一屏时为 0。
+    /// 當前詳情頁的程序列表還能往下滾幾行；不是 CPU、內存詳情或列表不滿一屏時為 0。
     pub(crate) fn performance_list_max(&self) -> usize {
         let r = &self.performance.latest;
         let len = match self.performance_view() {
@@ -512,15 +512,15 @@ impl App {
         len.saturating_sub(LIST_ROWS)
     }
 
-    /// 列表滚过的行数，按名次一行一行地滑过去。各详情页各记各的动画，换页时不会从别的页的位置滑过来。
+    /// 列表滾過的行數，按名次一行一行地滑過去。各詳情頁各記各的動畫，換頁時不會從別的頁的位置滑過來。
     fn list_offset(&self, c: &Card, view: View, len: usize) -> f32 {
         let first = self.performance.list_first.min(len.saturating_sub(LIST_ROWS)) as f32;
         c.ui.ctx().animate_value_with_time(egui::Id::new(("performance-list-offset", view.key())), first, 0.16)
     }
 
-    // ---------- 采样历史 ----------
+    // ---------- 採樣歷史 ----------
 
-    /// 最近 `seconds` 秒内某项读数的峰值。
+    /// 最近 `seconds` 秒內某項讀數的峰值。
     fn peak(&self, value: impl Fn(&Reading) -> Option<f32>, seconds: f32) -> Option<f32> {
         let now = Instant::now();
         self.performance
@@ -531,8 +531,8 @@ impl App {
             .reduce(f32::max)
     }
 
-    /// 把最近 `seconds` 秒的读数投到矩形里；采样断档超过 2.5 秒就断开成几段。
-    /// `down` 时自上沿向下长（镜像图的下半）。
+    /// 把最近 `seconds` 秒的讀數投到矩形裡；採樣斷檔超過 2.5 秒就斷開成幾段。
+    /// `down` 時自上沿向下長（鏡像圖的下半）。
     fn runs(&self, value: impl Fn(&Reading) -> Option<f32>, rect: [f32; 4], seconds: f32, max: f32, down: bool) -> Vec<Vec<(f32, f32)>> {
         let [x, y, w, h] = rect;
         let now = Instant::now();
@@ -558,7 +558,7 @@ impl App {
         runs
     }
 
-    /// 折线 + 向基线渐隐的面积填充。`fill` 为 0 时只画线；`glow` 时线是霓虹三层。返回「现在」那一点。
+    /// 折線 + 向基線漸隱的面積填充。`fill` 為 0 時只畫線；`glow` 時線是霓虹三層。返回「現在」那一點。
     #[allow(clippy::too_many_arguments)]
     fn plot(
         &self,
@@ -605,15 +605,15 @@ impl App {
             .filter(|p| p.0 >= rect[0] + rect[2] * (1. - 2.5 / seconds))
     }
 
-    /// 没有上限的读数（网速、磁盘）按最近一分钟的峰值定刻度，并留下限，空闲时曲线贴底。
+    /// 沒有上限的讀數（網速、磁盤）按最近一分鐘的峰值定刻度，並留下限，空閒時曲線貼底。
     fn throughput_scale(&self, value: impl Fn(&Reading) -> [Option<f32>; 2], floor: f32) -> f32 {
         let a = self.peak(|r| value(r)[0], 60.).unwrap_or(0.);
         let b = self.peak(|r| value(r)[1], 60.).unwrap_or(0.);
         (a.max(b) * 1.15).max(floor)
     }
 
-    /// 逐核：每个逻辑处理器一根柱。`rich` 时每根是一只小玻璃液位，否则是简洁的渐变柱（常驻用）。
-    /// 核数太多时相邻的核合并成一根（取平均）。
+    /// 逐核：每個邏輯處理器一根柱。`rich` 時每根是一隻小玻璃液位，否則是簡潔的漸變柱（常駐用）。
+    /// 核數太多時相鄰的核合併成一根（取平均）。
     fn core_bars(&self, c: &Card, rect: [f32; 4], max_cols: usize, rich: Option<f64>) {
         let [x, y, w, h] = rect;
         let loads = &self.performance.latest.cores;
@@ -626,7 +626,7 @@ impl App {
         let slot = w / cols.len() as f32;
         let bar = (slot * 0.62).max(1.5);
         let ctx = c.ui.ctx().clone();
-        // 每根柱最近 10 秒的峰值，画成柱里的一道短横线，看得出刚才冲到过多高。
+        // 每根柱最近 10 秒的峰值，畫成柱裡的一道短橫線，看得出剛才衝到過多高。
         let peaks: Vec<f32> = if rich.is_some() {
             let now = Instant::now();
             let mut peaks = vec![0f32; cols.len()];
@@ -667,7 +667,7 @@ impl App {
         }
     }
 
-    // ---------- 常驻：顶部岛 ----------
+    // ---------- 常駐：頂部島 ----------
 
     pub(crate) fn paint_performance_bar(&self, c: &Card, x: f32) {
         self.paint_performance_style(c, x, self.settings.performance_bar);
@@ -682,7 +682,7 @@ impl App {
                 let mut left = start;
                 for (first, second, width) in BarStyle::value_columns(mask) {
                     if stacked {
-                        // 两行一列；单数时最后一列只占上一行，字号与其它列一致。
+                        // 兩行一列；單數時最後一列只佔上一行，字號與其它列一致。
                         for (m, y) in std::iter::once((first, 9.5)).chain(second.map(|m| (m, 21.))) {
                             c.centered_text(left + 2., y, m.label(), 8., W::Semibold, metric_color(m), H::Left);
                             c.centered_text(left + width - 4., y, &resident_value(m, r), 9., W::Bold, INK, H::Right);
@@ -743,29 +743,29 @@ impl App {
     pub(crate) fn performance_bar(&mut self, c: &Card, x: f32) {
         self.paint_performance_bar(c, x);
         let width = self.settings.performance_bar.width(self.settings.performance_metrics);
-        if crate::quota_ui::bar_tooltip(c.hit(x - width / 2., 0., width, 30., "performance-open"), "打开系统性能".into())
+        if crate::quota_ui::bar_tooltip(c.hit(x - width / 2., 0., width, 30., "performance-open"), "打開系統性能".into())
             .clicked()
         {
-            // 点常驻指标是重新打开：从设置里的起始页开始。
+            // 點常駐指標是重新打開：從設置裡的起始頁開始。
             self.performance.view = None;
             self.show_page(PERFORMANCE_PAGE);
         }
     }
 
-    // ---------- 常驻：侧边停靠 ----------
+    // ---------- 常駐：側邊停靠 ----------
 
     pub(crate) fn side_performance(&mut self, c: &Card, x: f32, y: f32, height: f32) {
-        // 和横条用同一套元素：带字母的小圆环、CPU 标签加读数、负载曲线、彩色箭头加白色读数，只是竖着排。
+        // 和橫條用同一套元素：帶字母的小圓環、CPU 標籤加讀數、負載曲線、彩色箭頭加白色讀數，只是豎著排。
         let r = self.performance.latest.clone();
         let top = y - height / 2.;
-        // 一只小圆环：环里是 C / G / M，下面是百分比。
+        // 一隻小圓環：環裡是 C / G / M，下面是百分比。
         let ring = |c: &Card, cy: f32, i: usize| {
             let value = metric(&r, i);
             gauge(c, x, cy, 7., 2.2, value, COLORS[i], false);
             c.centered_text(x, cy, LETTERS[i], 7.5, W::Bold, COLORS[i], H::Center);
             c.centered_text(x, cy + 14., &percent(value), 9., W::Bold, INK, H::Center);
         };
-        // 两行读数：左边彩色标签，右边白色数值，数值放不下时缩小字号。
+        // 兩行讀數：左邊彩色標籤，右邊白色數值，數值放不下時縮小字號。
         let pair = |c: &Card, cy: f32, rates: [Option<Metric>; 2]| {
             for (i, m) in rates.into_iter().enumerate() {
                 let Some(m) = m else { continue };
@@ -824,33 +824,33 @@ impl App {
             }
             BarStyle::Network => pair(c, top + 11., Metric::RATE_PAIRS[0].map(Some)),
         }
-        if crate::quota_ui::bar_tooltip(c.hit(x - 16., y - height / 2., 32., height, "side-performance"), "打开系统性能".into())
+        if crate::quota_ui::bar_tooltip(c.hit(x - 16., y - height / 2., 32., height, "side-performance"), "打開系統性能".into())
             .clicked()
         {
-            // 点常驻指标是重新打开：从设置里的起始页开始。
+            // 點常駐指標是重新打開：從設置裡的起始頁開始。
             self.performance.view = None;
             self.show_page(PERFORMANCE_PAGE);
         }
     }
 
-    // ---------- 展开页 ----------
+    // ---------- 展開頁 ----------
 
     pub(crate) fn page_performance(&mut self, c: &Card) {
         let ctx = c.ui.ctx().clone();
         let t = ctx.input(|i| i.time);
-        // 颗粒闪烁按固定节奏重绘，只在页面真正显示时。
+        // 顆粒閃爍按固定節奏重繪，只在頁面真正顯示時。
         if c.live {
             ctx.request_repaint_after(SHIMMER);
         }
         let view = self.performance_view();
-        // 换到别的详情页时程序列表回到顶部；同一页收起再展开还停在原处。
+        // 換到別的詳情頁時程序列表回到頂部；同一頁收起再展開還停在原處。
         if view != self.performance.list_view {
             self.performance.list_view = view;
             self.performance.list_first = 0;
         }
         self.performance.list_first = self.performance.list_first.min(self.performance_list_max());
-        // 总览 ↔ 详情切换时整页交叉淡入，并有一点缩放，像推进去 / 退出来。
-        // 动画状态不区分可交互与否：展开到一半（只画不交互）和展开完成共用一份，重新展开时不会从旧值再跳一次。
+        // 總覽 ↔ 詳情切換時整頁交叉淡入，並有一點縮放，像推進去 / 退出來。
+        // 動畫狀態不區分可交互與否：展開到一半（只畫不交互）和展開完成共用一份，重新展開時不會從舊值再跳一次。
         let depth = ctx.animate_bool_with_time(egui::Id::new("performance-depth"), view != View::Overview, 0.26);
         let r = self.performance.latest.clone();
         if depth < 1. {
@@ -862,7 +862,7 @@ impl App {
         if depth > 0. {
             let layer = c.faded(depth * depth).scaled(209.5, PAGE_H / 2., 0.96 + 0.04 * depth);
             let layer = if view == View::Overview { layer.ghost() } else { layer };
-            // 退回总览的途中仍然画上一个详情页。
+            // 退回總覽的途中仍然畫上一個詳情頁。
             let shown = if view == View::Overview { self.performance.last_detail } else { view };
             self.performance_detail(&layer, shown, &r, t);
         }
@@ -871,11 +871,11 @@ impl App {
         }
     }
 
-    // ---------- 总览 ----------
+    // ---------- 總覽 ----------
 
     fn performance_overview(&mut self, c: &Card, r: &Reading, t: f64) {
         let ctx = c.ui.ctx().clone();
-        // ---- CPU、显卡、内存：大数字 + 读数柱 + 一分钟曲线，底部一条各自的「构成」 ----
+        // ---- CPU、顯卡、內存：大數字 + 讀數柱 + 一分鐘曲線，底部一條各自的「構成」 ----
         let subs = [
             r.cpu_mhz.map(|m| format!("{:.2} GHz", m / 1000.)).unwrap_or_default(),
             r.gpu_temp.map(|v| format!("{v:.0} °C")).unwrap_or_else(|| r.gpu_name.replace("(R)", "").replace("Intel ", "").replace("NVIDIA ", "").replace("AMD ", "")),
@@ -883,12 +883,12 @@ impl App {
         ];
         let (parts, _) = memory_parts(r);
         let (used, total) = r.memory.unwrap_or((0, 0));
-        // 核显几乎没有专用显存（几十到一两百 MB），这时总览改看共享显存。
+        // 核顯幾乎沒有專用顯存（幾十到一兩百 MB），這時總覽改看共享顯存。
         let integrated = r.shared_memory.is_some() && r.video_memory.is_none_or(|(_, total)| total < 512 * 1048576);
         let vram = if integrated { r.shared_memory } else { r.video_memory };
         let rows = [
-            ("逻辑处理器", if r.cores.is_empty() { "—".to_string() } else { r.cores.len().to_string() }),
-            (if integrated { "共享显存" } else { "专用显存" }, capacity(vram)),
+            ("邏輯處理器", if r.cores.is_empty() { "—".to_string() } else { r.cores.len().to_string() }),
+            (if integrated { "共享顯存" } else { "專用顯存" }, capacity(vram)),
             ("可用", r.memory.map_or_else(|| "—".into(), |_| bytes(total.saturating_sub(used)))),
         ];
         for (i, view) in [View::Cpu, View::Gpu, View::Memory].into_iter().enumerate() {
@@ -929,14 +929,14 @@ impl App {
                 }
             }
         }
-        // ---- 磁盘、网络：窄条，两项读数一行，背后垫一层淡淡的一分钟曲线 ----
+        // ---- 磁盤、網絡：窄條，兩項讀數一行，背後墊一層淡淡的一分鐘曲線 ----
         for (j, view) in [View::Disk, View::Network].into_iter().enumerate() {
             let [x, y, w, h] = io_card(j);
             let color = view_color(view);
             let hover = self.overview_card_frame(c, overview_card(view), view, view.key(), color);
             let read = move |s: &Reading| if j == 0 { s.disk } else { s.network };
             let (labels, note, floor) = if j == 0 {
-                (["读", "写"], r.disk_active.map(|a| format!("活动 {a:.0}%")), 1e6)
+                (["讀", "寫"], r.disk_active.map(|a| format!("活動 {a:.0}%")), 1e6)
             } else {
                 (["↓", "↑"], r.link_speed.map(link), 64e3)
             };
@@ -956,12 +956,12 @@ impl App {
                 c.text(left + lw + 5., y + 36., &speed(values[k]), 11., W::Bold, if values[k].is_some() { INK } else { FAINT }, H::Left);
             }
         }
-        // ---- 程序：左右两栏，一栏看谁最占 CPU、一栏看谁最占内存，各自只有一个读数 ----
+        // ---- 程序：左右兩欄，一欄看誰最佔 CPU、一欄看誰最佔內存，各自只有一個讀數 ----
         self.programs_table(c, r);
     }
 
-    /// 总览底部的程序区：「CPU 最高」和「内存最多」并排，每栏前四名。
-    /// 每行背后一条淡淡的液位条，长度是它占本栏第一名的比例；不需要排序，也不跳转。
+    /// 總覽底部的程序區：「CPU 最高」和「內存最多」並排，每欄前四名。
+    /// 每行背後一條淡淡的液位條，長度是它佔本欄第一名的比例；不需要排序，也不跳轉。
     fn programs_table(&self, c: &Card, r: &Reading) {
         let [x, y, w, h] = APP_CARD;
         c.fill(x, y, w, h, 11., SURFACE);
@@ -970,7 +970,7 @@ impl App {
         c.seg((x + half + 0.5, y + 12.), (x + half + 0.5, y + h - 12.), 0.8, GRID);
         let columns: [(&str, View, &[Process], Box<dyn Fn(&Process) -> (f32, String)>); 2] = [
             ("CPU 最高", View::Cpu, &r.by_cpu, Box::new(|p: &Process| (p.cpu, format!("{:.1}%", p.cpu)))),
-            ("内存最多", View::Memory, &r.by_memory, Box::new(|p: &Process| (p.memory as f32, bytes(p.memory)))),
+            ("內存最多", View::Memory, &r.by_memory, Box::new(|p: &Process| (p.memory as f32, bytes(p.memory)))),
         ];
         for (k, (title, view, list, value)) in columns.into_iter().enumerate() {
             let color = view_color(view);
@@ -979,7 +979,7 @@ impl App {
             c.circle(left + 2.5, y + 13., 2.4, color);
             c.centered_text(left + 9., y + 13., title, 9., W::Regular, MUTED, H::Left);
             if list.is_empty() {
-                c.text(left, y + 44., "正在统计…", 9.5, W::Regular, FAINT, H::Left);
+                c.text(left, y + 44., "正在統計…", 9.5, W::Regular, FAINT, H::Left);
                 continue;
             }
             let top = value(&list[0]).0.max(0.001);
@@ -987,7 +987,7 @@ impl App {
                 let row_y = y + 24. + i as f32 * 21.;
                 let (amount, text) = value(program);
                 let share = (amount / top).clamp(0.04, 1.);
-                // 液位条：从左边长出来，越靠后的名次越淡。
+                // 液位條：從左邊長出來，越靠後的名次越淡。
                 let k = 1. - i as f32 * 0.16;
                 let lw = (right - left + 6.) * share;
                 c.hgrad(left - 3., row_y, lw, 18., 5., alpha(color, 0.05 * k), alpha(color, 0.20 * k));
@@ -1001,7 +1001,7 @@ impl App {
         }
     }
 
-    /// 总览卡片的底板与交互：悬停时浮起、描上主色并在底边亮起一道光；点击进入对应详情。返回悬停程度。
+    /// 總覽卡片的底板與交互：懸停時浮起、描上主色並在底邊亮起一道光；點擊進入對應詳情。返回懸停程度。
     fn overview_card_frame(&mut self, c: &Card, rect: [f32; 4], view: View, key: &str, color: Color32) -> f32 {
         let [x, y, w, h] = rect;
         let response = c.hit(x, y, w, h, ("performance-card", key)).on_hover_cursor(egui::CursorIcon::PointingHand);
@@ -1022,7 +1022,7 @@ impl App {
         hover
     }
 
-    // ---------- 详情 ----------
+    // ---------- 詳情 ----------
 
     fn performance_detail(&mut self, c: &Card, view: View, r: &Reading, t: f64) {
         let fade = self.performance_tabs(c, view);
@@ -1039,10 +1039,10 @@ impl App {
         }
     }
 
-    /// 标题后的返回胶囊：回到总览。
+    /// 標題後的返回膠囊：回到總覽。
     fn performance_back(&mut self, c: &Card) {
         let [x, y, w, h] = BACK;
-        let response = c.hit(x, y - 3., w, h + 6., "performance-back").on_hover_text("返回总览");
+        let response = c.hit(x, y - 3., w, h + 6., "performance-back").on_hover_text("返回總覽");
         let (hover, _) = c.hover_t(&response);
         c.fill(x, y, w, h, h / 2., mix(Color32::from_rgb(30, 30, 33), RAISED, hover));
         let ink = mix(Color32::from_gray(150), INK, hover);
@@ -1053,7 +1053,7 @@ impl App {
         }
     }
 
-    /// 页签条：五个页签，每个带名称、读数和一分钟迷你曲线；选中底板随页签滑动。
+    /// 頁籤條：五個頁籤，每個帶名稱、讀數和一分鐘迷你曲線；選中底板隨頁籤滑動。
     fn performance_tabs(&mut self, c: &Card, view: View) -> f32 {
         let ctx = c.ui.ctx().clone();
         let current = View::DETAILS.iter().position(|v| *v == view).unwrap_or(0);
@@ -1064,7 +1064,7 @@ impl App {
         let accent = view_color(view);
         c.fill(sx, TAB_Y, w, TAB_H, 9., RAISED);
         c.stroke(sx + 0.5, TAB_Y + 0.5, w - 1., TAB_H - 1., 8.5, 1., alpha(accent, 0.5));
-        // 选中页签只在自己底边亮一道线，不往下面的大环上漏光。
+        // 選中頁籤只在自己底邊亮一道線，不往下面的大環上漏光。
         c.seg((sx + 12., TAB_Y + TAB_H - 1.), (sx + w - 12., TAB_Y + TAB_H - 1.), 1.2, alpha(accent, 0.7));
         for (i, tab) in View::DETAILS.into_iter().enumerate() {
             let x = LEFT + i as f32 * (w + TAB_GAP);
@@ -1098,7 +1098,7 @@ impl App {
         0.15 + 0.85 * fade
     }
 
-    /// 左列大环：环表示占用，中心是数字和一行小字；数值变化时环平滑过渡。
+    /// 左列大環：環表示佔用，中心是數字和一行小字；數值變化時環平滑過渡。
     fn hero(&self, c: &Card, key: &str, value: Option<f32>, big: &str, unit: &str, color: Color32) {
         let ctx = c.ui.ctx().clone();
         let shown = value.map(|v| if c.live { ctx.animate_value_with_time(egui::Id::new(("performance-hero", key)), v, 0.45) } else { v });
@@ -1107,7 +1107,7 @@ impl App {
         c.centered_text(HERO_X, HERO_Y - 4., big, size, W::Bold, if value.is_some() { INK } else { FAINT }, H::Center);
         c.centered_text(HERO_X, HERO_Y + 15., unit, 9., W::Regular, MUTED, H::Center);
     }
-    /// 左列大环下面的四行读数。
+    /// 左列大環下面的四行讀數。
     fn hero_rows(&self, c: &Card, rows: [(&str, String, Color32); 4]) {
         for (i, (label, value, ink)) in rows.into_iter().enumerate() {
             let base = 238. + i as f32 * 24.;
@@ -1115,19 +1115,19 @@ impl App {
             c.text(SIDE_R, base, &c.fit(&value, 10.5, W::Bold, 70.), 10.5, W::Bold, ink, H::Right);
         }
     }
-    /// 右列小节标题：左侧名称，右侧补充说明。
+    /// 右列小節標題：左側名稱，右側補充說明。
     fn section(&self, c: &Card, y: f32, title: &str, note: &str, note_color: Color32) {
         c.text(COL_X, y, title, 9., W::Semibold, MUTED, H::Left);
         if !note.is_empty() {
             c.text(RIGHT, y, &c.fit(note, 9., W::Regular, COL_W - c.text_w(title, 9., W::Semibold) - 12.), 9., W::Regular, note_color, H::Right);
         }
     }
-    /// 程序排行：图标、名称、发光细条和数值；悬停的行有一层底色。还没有数据时显示一行灰字。
+    /// 程序排行：圖標、名稱、發光細條和數值；懸停的行有一層底色。還沒有數據時顯示一行灰字。
     #[allow(clippy::too_many_arguments)]
-    /// `scroll` 为 `Some(滚过的行数)` 时整张列表都画出来、裁在 `limit` 行的窗口里，右边一条细滚动条；否则只画前 `limit` 名。
+    /// `scroll` 為 `Some(滾過的行數)` 時整張列表都畫出來、裁在 `limit` 行的窗口裡，右邊一條細滾動條；否則只畫前 `limit` 名。
     fn program_rows(&self, c: &Card, y: f32, limit: usize, programs: &[Process], scroll: Option<f32>, color: Color32, value: impl Fn(&Process) -> (f32, String)) {
         if programs.is_empty() {
-            c.text(COL_X, y + 20., "正在统计…", 10., W::Regular, FAINT, H::Left);
+            c.text(COL_X, y + 20., "正在統計…", 10., W::Regular, FAINT, H::Left);
             return;
         }
         let offset = scroll.unwrap_or(0.);
@@ -1157,7 +1157,7 @@ impl App {
             c.circle(bar_x + len - 1.5, base - 3.5, 1.4, mix(tint, Color32::WHITE, 0.5));
             c.text(RIGHT, base, &text, 10., W::Bold, INK, H::Right);
         }
-        // 细滚动条：轨道是窗口的高度，滑块长度是可见行占全部的比例。
+        // 細滾動條：軌道是窗口的高度，滑塊長度是可見行佔全部的比例。
         if scroll.is_some() && total > limit {
             let (track_y, track_h) = (y + 9., limit as f32 * ROW - 4.);
             let thumb = (track_h * limit as f32 / total as f32).max(12.);
@@ -1167,7 +1167,7 @@ impl App {
             outer.fill(RIGHT + 7., at, 2., thumb, 1., alpha(color, k));
         }
     }
-    /// 60 秒霓虹面积图，带 50% 参考线和「现在」光点。
+    /// 60 秒霓虹面積圖，帶 50% 參考線和「現在」光點。
     fn trend(&self, c: &Card, value: impl Fn(&Reading) -> Option<f32>, max: f32, color: Color32, rect: [f32; 4]) {
         let [x, y, w, h] = rect;
         c.seg((x, y + h / 2.), (x + w, y + h / 2.), 0.6, GRID);
@@ -1177,7 +1177,7 @@ impl App {
             c.circle(x, y, 2.6, mix(color, Color32::WHITE, 0.3));
         }
     }
-    /// 上下镜像图：上半是主读数（下载 / 读取），下半是次读数（上传 / 写入），共用一个刻度。
+    /// 上下鏡像圖：上半是主讀數（下載 / 讀取），下半是次讀數（上傳 / 寫入），共用一個刻度。
     fn mirror(&self, c: &Card, value: impl Fn(&Reading) -> [Option<f32>; 2] + Copy, max: f32, color: Color32, height: f32) {
         let half = height / 2.;
         let mid = VIZ_Y + half;
@@ -1187,44 +1187,44 @@ impl App {
     }
 
     fn performance_cpu(&self, c: &Card, r: &Reading, color: Color32, t: f64) {
-        self.hero(c, "cpu", r.cpu, &percent(r.cpu), "占用", color);
+        self.hero(c, "cpu", r.cpu, &percent(r.cpu), "佔用", color);
         let user = r.cpu.zip(r.cpu_kernel).map(|(all, kernel)| (all - kernel).max(0.));
         self.hero_rows(c, [
-            ("频率", r.cpu_mhz.map_or_else(|| "—".into(), |m| format!("{:.2} GHz", m / 1000.)), INK),
-            ("用户态", percent(user), INK),
-            ("内核态", percent(r.cpu_kernel), INK),
-            ("一分钟峰值", percent(self.peak(|s| s.cpu, 60.)), INK),
+            ("頻率", r.cpu_mhz.map_or_else(|| "—".into(), |m| format!("{:.2} GHz", m / 1000.)), INK),
+            ("用戶態", percent(user), INK),
+            ("內核態", percent(r.cpu_kernel), INK),
+            ("一分鐘峰值", percent(self.peak(|s| s.cpu, 60.)), INK),
         ]);
         let user_peak = self.peak(|s| s.cpu, 60.).map(|p| format!("峰值 {p:.0}%")).unwrap_or_default();
-        self.section(c, VIZ_Y - 7., "最近一分钟", &user_peak, FAINT);
+        self.section(c, VIZ_Y - 7., "最近一分鐘", &user_peak, FAINT);
         self.trend(c, |s| s.cpu, 100., color, [COL_X, VIZ_Y, COL_W, 56.]);
-        // 逐核只是一条窄窄的参考，不抢主图。
+        // 逐核只是一條窄窄的參考，不搶主圖。
         let busiest = r.cores.iter().copied().reduce(f32::max).map(|v| format!("最忙的核 {v:.0}%")).unwrap_or_default();
-        let title = if r.cores.is_empty() { "逻辑处理器".to_string() } else { format!("逻辑处理器 · {}", r.cores.len()) };
+        let title = if r.cores.is_empty() { "邏輯處理器".to_string() } else { format!("邏輯處理器 · {}", r.cores.len()) };
         self.section(c, 180., &title, &busiest, FAINT);
         self.core_bars(c, [COL_X, 186., COL_W, 26.], 32, Some(t));
-        self.section(c, LIST_Y, "占用最高的程序", "", FAINT);
+        self.section(c, LIST_Y, "佔用最高的程序", "", FAINT);
         let offset = self.list_offset(c, View::Cpu, r.by_cpu.len());
         self.program_rows(c, LIST_Y, LIST_ROWS, &r.by_cpu, Some(offset), color, |p| (p.cpu, format!("{:.1}%", p.cpu)));
     }
 
     fn performance_gpu(&self, c: &Card, r: &Reading, color: Color32, t: f64) {
-        self.hero(c, "gpu", r.gpu, &percent(r.gpu), "占用", color);
+        self.hero(c, "gpu", r.gpu, &percent(r.gpu), "佔用", color);
         self.hero_rows(c, [
-            ("温度", r.gpu_temp.map_or_else(|| "—".into(), |v| format!("{v:.0} °C")), temperature_color(r.gpu_temp)),
-            ("专用显存", r.video_memory.map_or_else(|| "—".into(), |(used, _)| bytes(used)), INK),
-            ("共享显存", r.shared_memory.map_or_else(|| "—".into(), |(used, _)| bytes(used)), INK),
-            ("一分钟峰值", percent(self.peak(|s| s.gpu, 60.)), INK),
+            ("溫度", r.gpu_temp.map_or_else(|| "—".into(), |v| format!("{v:.0} °C")), temperature_color(r.gpu_temp)),
+            ("專用顯存", r.video_memory.map_or_else(|| "—".into(), |(used, _)| bytes(used)), INK),
+            ("共享顯存", r.shared_memory.map_or_else(|| "—".into(), |(used, _)| bytes(used)), INK),
+            ("一分鐘峰值", percent(self.peak(|s| s.gpu, 60.)), INK),
         ]);
         let peak = self.peak(|s| s.gpu, 60.).map(|p| format!("峰值 {p:.0}%")).unwrap_or_default();
-        self.section(c, VIZ_Y - 7., "最近一分钟", &peak, FAINT);
+        self.section(c, VIZ_Y - 7., "最近一分鐘", &peak, FAINT);
         self.trend(c, |s| s.gpu, 100., color, [COL_X, VIZ_Y, COL_W, 56.]);
-        // 引擎：3D、视频解码、视频编码、复制……各一行，同类取最忙的那个。
+        // 引擎：3D、視頻解碼、視頻編碼、複製……各一行，同類取最忙的那個。
         let bar_x = COL_X + 50.;
         self.section(c, 180., "引擎", "", FAINT);
         let engines: Vec<_> = r.gpu_engines.iter().take(4).collect();
         if engines.is_empty() {
-            c.text(COL_X, 198., "显卡驱动没有提供引擎信息", 9.5, W::Regular, FAINT, H::Left);
+            c.text(COL_X, 198., "顯卡驅動沒有提供引擎信息", 9.5, W::Regular, FAINT, H::Left);
         }
         for (i, (label, load)) in engines.iter().enumerate() {
             let base = 198. + i as f32 * ROW;
@@ -1232,12 +1232,12 @@ impl App {
             glass_bar(c, [bar_x, base - 10., RIGHT - 40. - bar_x, 12.], &[(load / 100., color)], None, load / 100., t, 41 + i as u32, &format!("gpu-engine-{label}"));
             c.text(RIGHT, base, &percent(Some(*load)), 9.5, W::Bold, INK, H::Right);
         }
-        // 显存：专用（显卡自带）和共享（借用系统内存，核显主要用它）。
+        // 顯存：專用（顯卡自帶）和共享（借用系統內存，核顯主要用它）。
         let top = 198. + engines.len().max(1) as f32 * ROW + 8.;
-        let name = if r.gpu_name.is_empty() { "显卡型号未知" } else { &r.gpu_name };
+        let name = if r.gpu_name.is_empty() { "顯卡型號未知" } else { &r.gpu_name };
         c.text(COL_X, top, &c.fit(name, 9., W::Semibold, COL_W - 40.), 9., W::Semibold, color, H::Left);
-        c.text(RIGHT, top, "显存", 9., W::Regular, FAINT, H::Right);
-        for (i, (label, memory)) in [("专用", r.video_memory), ("共享", r.shared_memory)].into_iter().enumerate() {
+        c.text(RIGHT, top, "顯存", 9., W::Regular, FAINT, H::Right);
+        for (i, (label, memory)) in [("專用", r.video_memory), ("共享", r.shared_memory)].into_iter().enumerate() {
             let base = top + 20. + i as f32 * ROW;
             c.text(COL_X, base, label, 9.5, W::Regular, MUTED, H::Left);
             glass_bar(c, [bar_x, base - 10., RIGHT - 78. - bar_x, 12.], &[(share(memory).unwrap_or(0.), color)], None, r.gpu.unwrap_or(0.) / 100., t, 5 + i as u32, ["vram", "shared-vram"][i]);
@@ -1251,8 +1251,8 @@ impl App {
         self.hero_rows(c, [
             ("已用", r.memory.map_or_else(|| "—".into(), |_| bytes(used)), INK),
             ("可用", r.memory.map_or_else(|| "—".into(), |_| bytes(total.saturating_sub(used))), INK),
-            ("缓存", r.memory.map_or_else(|| "—".into(), |_| bytes(memory_parts(r).0[2].1)), INK),
-            ("总量", r.memory.map_or_else(|| "—".into(), |_| bytes(total)), INK),
+            ("緩存", r.memory.map_or_else(|| "—".into(), |_| bytes(memory_parts(r).0[2].1)), INK),
+            ("總量", r.memory.map_or_else(|| "—".into(), |_| bytes(total)), INK),
         ]);
         let (parts, free) = memory_parts(r);
         let whole = total.max(1) as f32;
@@ -1260,10 +1260,10 @@ impl App {
         let legend_y = VIZ_Y + 44.;
         let legend_w = COL_W / 2.;
         let legend = |i: usize| (COL_X + (i % 2) as f32 * legend_w, legend_y + (i / 2) as f32 * 16.);
-        // 只有悬停构成条本身时突出对应的一段，其余压暗，标题右侧换成这一段的大小；图例只跟着变暗，自己不响应。
+        // 只有懸停構成條本身時突出對應的一段，其餘壓暗，標題右側換成這一段的大小；圖例只跟著變暗，自己不響應。
         let pointer = c.ui.ctx().pointer_hover_pos().map(|p| c.to_local(p));
         let mut focus = None;
-        // 「可用」= 缓存 + 空闲（缓存随时能让给程序用），在条上是已用之后的整段；悬停这一段时整段一起亮。
+        // 「可用」= 緩存 + 空閒（緩存隨時能讓給程序用），在條上是已用之後的整段；懸停這一段時整段一起亮。
         let available = total.saturating_sub(used);
         let used_share = if c.live { c.ui.ctx().animate_value_with_time(egui::Id::new("performance-memory-available"), used as f32 / whole, 0.5) } else { used as f32 / whole };
         let mut available_hover = false;
@@ -1282,13 +1282,13 @@ impl App {
                 }
             }
         }
-        // 悬停下面的某个程序：整条压暗，只点亮「程序」段里属于它的那一小截（按排行顺序从左往右排）。
-        // 在列表里上下移动时亮块滑到下一个程序，不会先全亮再亮起。
+        // 懸停下面的某個程序：整條壓暗，只點亮「程序」段裡屬於它的那一小截（按排行順序從左往右排）。
+        // 在列表裡上下移動時亮塊滑到下一個程序，不會先全亮再亮起。
         let programs = &r.by_memory;
         let offset = self.list_offset(c, View::Memory, programs.len());
         let hovered = row_hover(c, LIST_Y, LIST_ROWS, offset, programs.len());
         let ctx = c.ui.ctx().clone();
-        // 刚移进列表时亮块直接出现在当前行，之后在行间移动才滑过去。
+        // 剛移進列表時亮塊直接出現在當前行，之後在行間移動才滑過去。
         let was = ctx.data_mut(|d| std::mem::replace(d.get_temp_mut_or_default::<bool>(egui::Id::new("performance-memory-span-on")), hovered.is_some()));
         let glide = if was { 0.14 } else { 0. };
         let span = hovered.map(|i| {
@@ -1306,16 +1306,16 @@ impl App {
             (None, None) => format!("可用 {}", bytes(available)),
         };
         let focus = if hovered.is_some() { Some(0) } else { focus };
-        self.section(c, VIZ_Y - 7., "内存构成", &note, if focus.is_some() { INK } else { FAINT });
+        self.section(c, VIZ_Y - 7., "內存構成", &note, if focus.is_some() { INK } else { FAINT });
         let energy = r.ram().unwrap_or(0.) / 100.;
-        // 悬停「可用」时条本身不点亮任何一段：可用是余量，只用括号和一圈淡描边圈出来，和点亮某一段区分开。
+        // 懸停「可用」時條本身不點亮任何一段：可用是餘量，只用括號和一圈淡描邊圈出來，和點亮某一段區分開。
         let bar_focus = if span.is_some() { Some(usize::MAX) } else if available_hover { None } else { focus };
         glass_bar(c, bar, &parts.map(|(_, n, col)| (n as f32 / whole, col)), bar_focus, energy, t, 17, "memory");
         if let Some((from, to)) = span {
             glass_span(c, bar, from, to, color, energy, t, 17);
         }
-        // 条下方一道细括号标出「可用」那一整段（缓存 + 空闲）。悬停时已用部分轻轻压暗，
-        // 可用段只描一圈淡淡的边、括号稍微提亮，不发光，比悬停程序、内核那种点亮要安静。
+        // 條下方一道細括號標出「可用」那一整段（緩存 + 空閒）。懸停時已用部分輕輕壓暗，
+        // 可用段只描一圈淡淡的邊、括號稍微提亮，不發光，比懸停程序、內核那種點亮要安靜。
         let [bx, by, bw, bh] = bar;
         let a = bx + bw * used_share.clamp(0., 1.);
         if bx + bw - a > 6. {
@@ -1331,7 +1331,7 @@ impl App {
                 c.stroke(a + 0.5, by + 0.5, (bx + bw - a - 1.).max(0.), bh - 1., 2., 1., alpha(cache, 0.4));
             }
         }
-        let rows = parts.iter().copied().chain([("空闲", free, Color32::from_rgb(58, 62, 70))]);
+        let rows = parts.iter().copied().chain([("空閒", free, Color32::from_rgb(58, 62, 70))]);
         for (i, (label, amount, col)) in rows.enumerate() {
             let (x, y) = legend(i);
             let dim = focus.is_some_and(|f| f != i) && !(available_hover && i == 3);
@@ -1340,27 +1340,27 @@ impl App {
             c.text(x + legend_w - 10., y, &bytes(amount), 9., W::Bold, if dim { FAINT } else { INK }, H::Right);
         }
         let peak = self.peak(|s| s.ram(), 60.).map(|p| format!("峰值 {p:.0}%")).unwrap_or_default();
-        self.section(c, 182., "最近一分钟", &peak, FAINT);
+        self.section(c, 182., "最近一分鐘", &peak, FAINT);
         self.trend(c, |s| s.ram(), 100., color, [COL_X, 188., COL_W, 28.]);
-        self.section(c, LIST_Y, "占用内存最多的程序", "", FAINT);
+        self.section(c, LIST_Y, "佔用內存最多的程序", "", FAINT);
         self.program_rows(c, LIST_Y, LIST_ROWS, &r.by_memory, Some(offset), color, |p| (p.memory as f32, bytes(p.memory)));
     }
 
     fn performance_disk(&self, c: &Card, r: &Reading, color: Color32, t: f64) {
-        self.hero(c, "disk", r.disk_active, &percent(r.disk_active), "活动时间", color);
+        self.hero(c, "disk", r.disk_active, &percent(r.disk_active), "活動時間", color);
         self.hero_rows(c, [
-            ("读取", speed(r.disk[0]), INK),
-            ("写入", speed(r.disk[1]), INK),
-            ("合计", speed(sum2(r.disk)), INK),
-            ("一分钟峰值", speed(self.peak(|s| sum2(s.disk), 60.)), INK),
+            ("讀取", speed(r.disk[0]), INK),
+            ("寫入", speed(r.disk[1]), INK),
+            ("合計", speed(sum2(r.disk)), INK),
+            ("一分鐘峰值", speed(self.peak(|s| sum2(s.disk), 60.)), INK),
         ]);
         let max = self.throughput_scale(|s| s.disk, 1e6);
-        self.section(c, VIZ_Y - 7., "读取 ↑   写入 ↓", &format!("刻度 {}", speed(Some(max))), FAINT);
+        self.section(c, VIZ_Y - 7., "讀取 ↑   寫入 ↓", &format!("刻度 {}", speed(Some(max))), FAINT);
         self.mirror(c, |s| s.disk, max, color, 56.);
         let more = r.volumes.len().saturating_sub(3);
-        self.section(c, 180., "本地分区", &if more > 0 { format!("另有 {more} 个分区") } else { String::new() }, FAINT);
+        self.section(c, 180., "本地分區", &if more > 0 { format!("另有 {more} 個分區") } else { String::new() }, FAINT);
         if r.volumes.is_empty() {
-            c.text(COL_X, 198., "正在统计…", 10., W::Regular, FAINT, H::Left);
+            c.text(COL_X, 198., "正在統計…", 10., W::Regular, FAINT, H::Left);
         }
         let energy = r.disk_active.unwrap_or(0.) / 100.;
         for (i, volume) in r.volumes.iter().take(3).enumerate() {
@@ -1371,34 +1371,34 @@ impl App {
             glass_bar(c, [COL_X + 20., base - 11., 112., 14.], &[(used, tint)], None, energy, t, 23 + i as u32, &format!("volume-{}", volume.letter));
             c.text(RIGHT, base, &capacity(Some((volume.used, volume.total))), 10., W::Bold, INK, H::Right);
         }
-        // 读写最多的程序：按进程的读写字节数（含文件、管道等全部读写），和任务管理器的「磁盘」列口径不完全一样。
+        // 讀寫最多的程序：按進程的讀寫字節數（含文件、管道等全部讀寫），和任務管理器的「磁盤」列口徑不完全一樣。
         let list_y = 198. + r.volumes.len().clamp(1, 3) as f32 * ROW + 6.;
         let limit = (((BODY_BOTTOM - 10. - (list_y + 20.)) / ROW).floor() as usize + 1).min(5);
-        self.section(c, list_y, "读写最多的程序", "", FAINT);
+        self.section(c, list_y, "讀寫最多的程序", "", FAINT);
         self.program_rows(c, list_y, limit, &r.by_io, None, color, |p| (p.io, speed(Some(p.io))));
     }
 
     fn performance_network(&self, c: &Card, r: &Reading, color: Color32) {
-        // 环是对数刻度的速度表（1 KB/s 到 1 GB/s），平常的几十 KB/s 也看得出起伏；中心直接写下载速度。
+        // 環是對數刻度的速度表（1 KB/s 到 1 GB/s），平常的幾十 KB/s 也看得出起伏；中心直接寫下載速度。
         let dial = r.network[0].map(|rate| (rate.max(1e3) / 1e3).log10() / 6. * 100.);
         let busy = r
             .link_speed
             .zip(r.network[0].into_iter().chain(r.network[1]).reduce(f32::max))
             .map(|(link, rate)| (rate * 800. / link as f32).min(100.));
         let (big, unit) = speed_parts(r.network[0]);
-        self.hero(c, "network", dial, &big, &format!("{unit} 下载"), color);
+        self.hero(c, "network", dial, &big, &format!("{unit} 下載"), color);
         self.hero_rows(c, [
-            ("上传", speed(r.network[1]), INK),
-            ("链路", r.link_speed.map_or_else(|| "—".into(), link), INK),
-            ("链路占用", percent(busy), INK),
-            ("一分钟峰值", speed(self.peak(|s| s.network[0], 60.)), INK),
+            ("上傳", speed(r.network[1]), INK),
+            ("鏈路", r.link_speed.map_or_else(|| "—".into(), link), INK),
+            ("鏈路佔用", percent(busy), INK),
+            ("一分鐘峰值", speed(self.peak(|s| s.network[0], 60.)), INK),
         ]);
         let max = self.throughput_scale(|s| s.network, 64e3);
-        self.section(c, VIZ_Y - 7., "下载 ↑   上传 ↓", &format!("刻度 {}", speed(Some(max))), FAINT);
+        self.section(c, VIZ_Y - 7., "下載 ↑   上傳 ↓", &format!("刻度 {}", speed(Some(max))), FAINT);
         self.mirror(c, |s| s.network, max, color, VIZ_H);
-        self.section(c, LIST_Y, "网卡启用以来", "", FAINT);
+        self.section(c, LIST_Y, "網卡啟用以來", "", FAINT);
         let both = r.net_total.map(|t| t[0] + t[1]);
-        for (i, (label, amount, tint)) in [("已接收", r.net_total.map(|t| t[0]), color), ("已发送", r.net_total.map(|t| t[1]), secondary(color)), ("合计", both, FAINT)]
+        for (i, (label, amount, tint)) in [("已接收", r.net_total.map(|t| t[0]), color), ("已發送", r.net_total.map(|t| t[1]), secondary(color)), ("合計", both, FAINT)]
             .into_iter()
             .enumerate()
         {
@@ -1409,9 +1409,9 @@ impl App {
         }
     }
 
-    // ---------- 设置页 ----------
+    // ---------- 設置頁 ----------
 
-    /// 设置里的样式缩略：一段岛身，里面直接画常驻样式本身，宽的样式整体缩小。
+    /// 設置裡的樣式縮略：一段島身，裡面直接畫常駐樣式本身，寬的樣式整體縮小。
     fn performance_style_preview(&self, ui: &egui::Ui, style: BarStyle, rect: egui::Rect) {
         let width = style.width(self.settings.performance_metrics).max(40.);
         let body_w = width + 18.;
@@ -1431,9 +1431,9 @@ impl App {
         use crate::extras::{setting_row, settings_card, settings_label, settings_segmented};
         use crate::settings_theme::color as theme_color;
         let ctx = ui.ctx().clone();
-        settings_label(ui, "常驻显示");
+        settings_label(ui, "常駐顯示");
         settings_card(ui, |ui| {
-            setting_row(ui, "显示在岛上", "点击指标可展开系统性能", &mut self.settings.show_performance);
+            setting_row(ui, "顯示在島上", "點擊指標可展開系統性能", &mut self.settings.show_performance);
             ui.separator();
             ui.add_enabled_ui(self.settings.show_performance, |ui| {
                 ui.spacing_mut().item_spacing.y = 6.;
@@ -1468,7 +1468,7 @@ impl App {
                     if response.clicked() && !selected {
                         self.settings.performance_bar = style;
                     }
-                    // 自由搭配的指标开关紧跟在它自己的卡片下面。
+                    // 自由搭配的指標開關緊跟在它自己的卡片下面。
                     if style == BarStyle::Custom && self.settings.performance_bar == BarStyle::Custom {
                         ui.horizontal_wrapped(|ui| {
                             ui.spacing_mut().item_spacing = egui::vec2(6., 6.);
@@ -1485,27 +1485,27 @@ impl App {
                 }
                 let hint = match self.settings.performance_bar {
                     BarStyle::Custom => {
-                        if self.settings.performance_metrics == 0 { "未选择指标，常驻区已收起。" } else { "仅在岛上显示勾选的指标。" }
+                        if self.settings.performance_metrics == 0 { "未選擇指標，常駐區已收起。" } else { "僅在島上顯示勾選的指標。" }
                     }
-                    BarStyle::Gauges => "依次显示 CPU、显卡和内存占用率。",
-                    BarStyle::Cores => "显示处理器占用率，每个逻辑处理器一根柱，按负载升高；核心较多时相邻的合成一根。",
-                    BarStyle::Pulse => "显示 CPU 占用率和最近 16 秒的负载曲线。",
-                    BarStyle::Dashboard => "横向并排显示负载曲线、三项占用率、网速和磁盘读写；侧边停靠时同样的内容竖着排。",
-                    BarStyle::Network => "分别显示物理网卡的下载与上传速度。",
+                    BarStyle::Gauges => "依次顯示 CPU、顯卡和內存佔用率。",
+                    BarStyle::Cores => "顯示處理器佔用率，每個邏輯處理器一根柱，按負載升高；核心較多時相鄰的合成一根。",
+                    BarStyle::Pulse => "顯示 CPU 佔用率和最近 16 秒的負載曲線。",
+                    BarStyle::Dashboard => "橫向並排顯示負載曲線、三項佔用率、網速和磁盤讀寫；側邊停靠時同樣的內容豎著排。",
+                    BarStyle::Network => "分別顯示物理網卡的下載與上傳速度。",
                 };
                 crate::extras::settings_hint(ui, hint);
             });
         });
-        settings_label(ui, "展开页");
+        settings_label(ui, "展開頁");
         settings_card(ui, |ui| {
             settings_segmented(ui, &mut self.settings.performance_view, &View::ALL.map(|v| (v, v.label())), 44.);
-            crate::extras::settings_hint(ui, "展开时先显示的页面。总览里点卡片进入详情，标题旁的返回键回到总览；移开鼠标收起后再展开，仍停在刚才的页面，点常驻指标或切到其它页面后从这里开始。硬件未提供的读数显示为 —。");
-            crate::extras::settings_hint(ui, "程序排行和分区容量只在展开页打开时统计，收起后停止。");
+            crate::extras::settings_hint(ui, "展開時先顯示的頁面。總覽裡點卡片進入詳情，標題旁的返回鍵回到總覽；移開鼠標收起後再展開，仍停在剛才的頁面，點常駐指標或切到其它頁面後從這裡開始。硬件未提供的讀數顯示為 —。");
+            crate::extras::settings_hint(ui, "程序排行和分區容量只在展開頁打開時統計，收起後停止。");
         });
     }
 }
 
-/// 自由搭配的指标开关：胶囊按钮，选中时染上指标色。
+/// 自由搭配的指標開關：膠囊按鈕，選中時染上指標色。
 fn metric_chip(ui: &mut egui::Ui, label: &str, color: Color32, on: bool) -> egui::Response {
     use crate::settings_theme::color as theme_color;
     let ctx = ui.ctx().clone();
@@ -1544,14 +1544,14 @@ fn metric_chip(ui: &mut egui::Ui, label: &str, color: Color32, on: bool) -> egui
 mod tests {
     use super::*;
 
-    /// 可用 = 缓存 + 空闲，悬停、图例和左栏三处用的是同一组数，任何读数下都对得上。
+    /// 可用 = 緩存 + 空閒，懸停、圖例和左欄三處用的是同一組數，任何讀數下都對得上。
     #[test]
     fn memory_cache_and_free_always_add_up_to_available() {
         let gb = 1u64 << 30;
         for (free, cache) in [(Some(gb), Some(9 * gb)), (Some(20 * gb), None), (None, Some(9 * gb)), (None, Some(gb)), (Some(0), None)] {
             let r = Reading { memory: Some((12 * gb, 16 * gb)), memory_free: free, memory_cache: cache, memory_kernel: Some(gb), ..Default::default() };
             let (parts, free) = memory_parts(&r);
-            assert_eq!(parts[2].1 + free, 4 * gb, "缓存 {} + 空闲 {free} 应等于可用", parts[2].1);
+            assert_eq!(parts[2].1 + free, 4 * gb, "緩存 {} + 空閒 {free} 應等於可用", parts[2].1);
             assert_eq!(parts[0].1 + parts[1].1, 12 * gb);
         }
     }

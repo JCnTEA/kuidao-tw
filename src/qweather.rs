@@ -1,4 +1,4 @@
-//! 和风天气：凭据保存在系统凭据库，所有出站请求先持久化计数。
+//! 和風天氣：憑據保存在系統憑據庫，所有出站請求先持久化計數。
 use crate::weather::{Day,Position,Snapshot,SunTimes};
 use serde::{Deserialize,Serialize};
 use serde_json::Value;
@@ -67,7 +67,7 @@ fn reserve(path:&Path,month:&str)->Result<(),Error> {
 }
 pub fn usage()->u32 {let _g=USAGE_LOCK.lock().unwrap_or_else(|e|e.into_inner());std::fs::read(crate::model::config_dir().join("qweather-usage.json")).ok().and_then(|b|serde_json::from_slice::<Usage>(&b).ok()).filter(|u|u.month==month()).map_or(0,|u|u.attempts)}
 
-/// 不派生 Debug；密钥不进入错误、URL、普通配置或天气缓存。
+/// 不派生 Debug；密鑰不進入錯誤、URL、普通配置或天氣緩存。
 #[derive(Clone)]
 pub(crate) struct Client {
     pub host:String,key:String,pub gate:Arc<AtomicBool>,
@@ -92,7 +92,7 @@ impl Client {
         #[cfg(test)]{return self.mock.as_ref().ok_or(Error::Network)?(&url,&self.key);}
         #[cfg(not(test))]
         {
-        // 禁止重定向及隐式网络重试；每次调用仅对应一次已计数的出站尝试。
+        // 禁止重定向及隱式網絡重試；每次調用僅對應一次已計數的出站嘗試。
         let response=ureq::AgentBuilder::new().redirects(0).timeout(Duration::from_secs(18)).build().get(url.as_str())
             .set("X-QW-Api-Key",&self.key).set("Accept","application/json").call().map_err(|e|match e {
                 ureq::Error::Status(401|403,_)=>Error::Auth,ureq::Error::Status(429,_)=>Error::Rate,
@@ -166,7 +166,7 @@ impl Runtime {
         changed
     }
     pub fn loading(&self)->bool {self.current.is_some()||self.daily.is_some()}
-    /// 连续实况失败，或凭据、额度等错误已暂停刷新。
+    /// 連續實況失敗，或憑據、額度等錯誤已暫停刷新。
     pub fn current_refresh_failed(&self)->bool {self.current_failures>=2||(self.paused&&self.error.is_some())}
     pub fn can_refresh(&self,now:i64)->bool {!self.loading()&&now-self.last_current.max(self.last_daily)>=30}
     pub fn refresh(&mut self,client:&Client,now:i64,manual:bool){
@@ -313,7 +313,7 @@ mod tests {
 fn attributions(v:&Value)->Vec<String> {v["metadata"]["attributions"].as_array().into_iter().flatten().filter_map(Value::as_str).map(str::to_string).collect()}
 fn timestamp(v:&Value)->Option<i64>{let text=v.as_str()?;chrono::DateTime::parse_from_rfc3339(text).or_else(|_|chrono::DateTime::parse_from_str(text,"%Y-%m-%dT%H:%M%#z")).ok().map(|t|t.timestamp())}
 fn temperature(v:&Value)->Option<f32>{let n=v["value"].as_f64()?;match v["unit"].as_str()?{"°C"=>Some(n as f32),"K"=>Some((n-273.15)as f32),"°F"=>Some(((n-32.0)/1.8)as f32),_=>None}}
-/// 和风天气代码单独转换为现有绘图代码；原始天气文字随实况保留。
+/// 和風天氣代碼單獨轉換為現有繪圖代碼；原始天氣文字隨實況保留。
 fn icon_code(code:&str)->u8 {match code.parse::<u16>().unwrap_or(999){100|150=>0,101|102|103|151|152|153=>2,104=>3,300=>80,301=>81,302=>95,303=>97,304=>99,305|314|399=>61,306|315=>63,307|308|310..=312|316..=318=>65,309=>51,313=>66,400|408|499=>71,401|409=>73,402|403|410=>75,404..=406=>77,407=>85,500..=515=>45,_=>3}}
 fn parse_current(v:&Value,l:&Location,at:i64)->Result<Snapshot,Error>{
     let zone=l.timezone.parse::<chrono_tz::Tz>().map_err(|_|Error::Response)?;
@@ -327,7 +327,7 @@ fn parse_daily(v:&Value,l:&Location)->Result<(Vec<Day>,Option<SunTimes>),Error>{
     let mut sun=None;let mut days=Vec::new();
     for day in v["days"].as_array().ok_or(Error::Response)? {
         let start=timestamp(&day["forecastStartTime"]).ok_or(Error::Response)?;
-        // 逐日预报可能从当地早晨开始，以日出所在的当地日期为准；无日出时使用区间起始日期。
+        // 逐日預報可能從當地早晨開始，以日出所在的當地日期為準；無日出時使用區間起始日期。
         let rise=timestamp(&day["astro"]["sunrise"]);let set=timestamp(&day["astro"]["sunset"]);
         let date=chrono::DateTime::from_timestamp(rise.unwrap_or(start),0).ok_or(Error::Response)?.with_timezone(&zone).date_naive();
         if date<now {continue;}
@@ -343,11 +343,11 @@ fn place_region(v:&Value)->String {
     let adm1=v["adm1"].as_str().unwrap_or("").trim();
     let adm2=v["adm2"].as_str().unwrap_or("").trim();
     let adm3=v["adm3"].as_str().unwrap_or("").trim();
-    let is_tw=adm1.contains("臺灣")||adm1.contains("台灣");
+    let is_tw=adm1.contains("台灣")||adm1.contains("台灣");
     if is_tw {
         let mut parts:Vec<&str>=vec!["台灣"];
-        if !adm2.is_empty()&&!adm2.contains("台灣")&&!adm2.contains("臺灣") {parts.push(adm2);}
-        if adm3.is_empty()||adm3==adm2||adm3.contains("台灣")||adm3.contains("臺灣") {} else {parts.push(adm3);}
+        if !adm2.is_empty()&&!adm2.contains("台灣")&&!adm2.contains("台灣") {parts.push(adm2);}
+        if adm3.is_empty()||adm3==adm2||adm3.contains("台灣")||adm3.contains("台灣") {} else {parts.push(adm3);}
         parts.join(" · ")
     } else {
         ["adm1","adm2"].iter().filter_map(|k|v[*k].as_str()).collect::<Vec<_>>().join(" · ")

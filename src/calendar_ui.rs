@@ -1,4 +1,4 @@
-//! 岛内日程的月历和按日期排列的列表。
+//! 島內日程的月曆和按日期排列的列表。
 use crate::{app::{App, Cmd, Env, CALENDAR_PAGE}, calendar, mail, paint::{self,Card,H}, theme::{self,W}};
 #[cfg(all(windows, feature = "sdk-material"))]
 use crate::material::ControlRole;
@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, HashMap};
 const AGENDA_ROWS: usize = 7;
 const AGENDA_TOP: f32 = 53.0;
 const AGENDA_ROW_H: f32 = 22.0;
-const WEEKDAYS: [&str;7] = ["周一","周二","周三","周四","周五","周六","周日"];
+const WEEKDAYS: [&str;7] = ["週一","週二","週三","週四","週五","週六","週日"];
 
 pub(crate) struct State {
     pub month: NaiveDate,
@@ -120,7 +120,7 @@ pub(crate) fn has_ended(event:&mail::Meeting,now:i64)->bool {
 }
 
 fn draw_calendar_annotation(c:&Card,lunar:&crate::lunar_calendar::LunarDate) {
-    let label=format!("农历{}",lunar.label);
+    let label=format!("農曆{}",lunar.label);
     c.centered_text(34.0,75.0,&label,8.5,W::Regular,Color32::from_rgb(168,168,178),H::Left);
     if let Some(term)=lunar.solar_term {
         let x=39.0+c.text_w(&label,8.5,W::Regular);
@@ -362,9 +362,9 @@ impl App {
     }
 
     fn draw_calendar_sync(&mut self, c: &Card, muted: Color32) {
-        let status=if self.calendar.view.loading{"同步中".to_string()}else if !self.calendar.view.error.is_empty(){"重试同步".to_string()}else if !self.calendar.view.warning.is_empty(){"部分同步".to_string()}else {let at=self.calendar.feeds.iter().map(|feed|feed.last_sync.as_str()).max().unwrap_or(&self.calendar.last_sync);if at.is_empty(){"".into()}else{format!("{} 更新",at.split_whitespace().last().unwrap_or(""))}};
+        let status=if self.calendar.view.loading{"同步中".to_string()}else if !self.calendar.view.error.is_empty(){"重試同步".to_string()}else if !self.calendar.view.warning.is_empty(){"部分同步".to_string()}else {let at=self.calendar.feeds.iter().map(|feed|feed.last_sync.as_str()).max().unwrap_or(&self.calendar.last_sync);if at.is_empty(){"".into()}else{format!("{} 更新",at.split_whitespace().last().unwrap_or(""))}};
         c.text(376.0,44.0,&status,7.4,W::Regular,muted,H::Right);
-        let sync_hint=if !self.calendar.view.error.is_empty(){self.calendar.view.error.as_str()}else if !self.calendar.view.warning.is_empty(){self.calendar.view.warning.as_str()}else{"同步这个月份"};
+        let sync_hint=if !self.calendar.view.error.is_empty(){self.calendar.view.error.as_str()}else if !self.calendar.view.warning.is_empty(){self.calendar.view.warning.as_str()}else{"同步這個月份"};
         if !self.calendar_configs().is_empty() && !self.calendar.view.loading && c.hit(326.0,33.0,52.0,15.0,"calendar-sync").on_hover_text(sync_hint).clicked(){self.request_calendar_month(true);}
     }
 
@@ -388,7 +388,7 @@ impl App {
         if add.clicked(){self.open_calendar_editor(None);return;}
 
         c.fill(34.0,33.0,92.0,18.0,9.0,theme::CARD);
-        for (agenda,label,x) in [(false,"日历",36.0),(true,"列表",80.0)] {
+        for (agenda,label,x) in [(false,"日曆",36.0),(true,"列表",80.0)] {
             let active=self.calendar.agenda==agenda;
             let tab=c.hit(x,33.0,44.0,18.0,("calendar-view",agenda));
             if active || tab.hovered() {
@@ -553,7 +553,7 @@ impl App {
         if let Some(uid)=edit_local{self.open_calendar_editor(Some(&uid));}
         if add_local{self.open_calendar_editor(None);}
         if let Some(event)=ignored{self.toggle_mail_event(&event);}
-        // 从日程窗口「连接日历」进来：直接打开设置页的添加日历弹窗。
+        // 從日程窗口「連接日曆」進來：直接打開設置頁的添加日曆彈窗。
         if connect {self.settings_tab=8;self.calendar.form.open=true;self.calendar.form.guide_open=true;self.open_settings();}
     }
 
@@ -563,8 +563,8 @@ impl App {
         let previous=month.checked_sub_months(one_month).filter(|date|*date>=calendar::month_start(today));
         c.centered_text(220.0,42.0,&format!("{}年{}月",month.year(),month.month()),9.5,W::Regular,theme::GRAY,H::Center);
         for (date,x,label,hint) in [
-            (previous,171.0,"‹","上个月"),
-            (month.checked_add_months(one_month),269.0,"›","下个月"),
+            (previous,171.0,"‹","上個月"),
+            (month.checked_add_months(one_month),269.0,"›","下個月"),
         ] {
             let color=if let Some(date)=date {
                 let button=c.hit(x-11.0,33.0,22.0,18.0,("agenda-month",label)).on_hover_text(hint);
@@ -579,10 +579,10 @@ impl App {
         let max=entries.len().saturating_sub(AGENDA_ROWS);
         let first=self.calendar.agenda_first.min(max);
         if entries.is_empty() {
-            let message=if self.calendar.view.loading {"正在获取日程…"}
-                else if !self.calendar.view.error.is_empty() {"暂时无法获取日程"}
+            let message=if self.calendar.view.loading {"正在獲取日程…"}
+                else if !self.calendar.view.error.is_empty() {"暫時無法獲取日程"}
                 else if !self.calendar.view.warning.is_empty() {"部分日程未同步"}
-                else {"这个月暂无日程"};
+                else {"這個月暫無日程"};
             c.centered_text(210.0,118.0,message,11.0,W::Regular,theme::GRAY,H::Center);
         }
         let mut previous_day=None;

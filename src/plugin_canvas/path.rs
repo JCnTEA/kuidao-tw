@@ -16,7 +16,7 @@ pub(crate) fn parse(path: &str, budget: usize) -> Result<Vec<PathCommand>, Strin
     let mut commands = Vec::new();
     for segment in PathParser::from(path) {
         if commands.len() == budget {
-            return Err("画布路径合计最多 4000 条命令".into());
+            return Err("畫布路徑合計最多 4000 條命令".into());
         }
         let point = |x, y, absolute| -> Result<[f32; 2], String> {
             Ok([
@@ -24,7 +24,7 @@ pub(crate) fn parse(path: &str, budget: usize) -> Result<Vec<PathCommand>, Strin
                 coordinate(y, current[1], absolute)?,
             ])
         };
-        let command = match segment.map_err(|error| format!("画布路径无效（{error}）"))? {
+        let command = match segment.map_err(|error| format!("畫布路徑無效（{error}）"))? {
             PathSegment::MoveTo { abs, x, y } => {
                 current = point(x, y, abs)?;
                 origin = current;
@@ -65,12 +65,12 @@ pub(crate) fn parse(path: &str, budget: usize) -> Result<Vec<PathCommand>, Strin
                 current = origin;
                 PathCommand::Close
             }
-            _ => return Err("画布路径只支持 M、L、H、V、Q、C、Z 命令".into()),
+            _ => return Err("畫布路徑只支持 M、L、H、V、Q、C、Z 命令".into()),
         };
         commands.push(command);
     }
     if commands.is_empty() {
-        return Err("画布路径缺少命令".into());
+        return Err("畫布路徑缺少命令".into());
     }
     Ok(commands)
 }
@@ -85,6 +85,6 @@ fn coordinate(value: f64, current: f32, absolute: bool) -> Result<f32, String> {
     if (-limit..=limit).contains(&value) && (-limit..=limit).contains(&resolved) {
         Ok(resolved as f32)
     } else {
-        Err("画布路径坐标必须在 -2000 到 2000 之间".into())
+        Err("畫布路徑座標必須在 -2000 到 2000 之間".into())
     }
 }

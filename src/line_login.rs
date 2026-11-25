@@ -457,9 +457,9 @@ impl Login {
                 if url.is_empty() {
                     return Err("無法組出 LINE 授權網址".into());
                 }
-                // 先佔住回呼埠再開瀏覽器，埠被占用時才不會白走一趟登入。
+                // 先佔住回呼埠再開瀏覽器，埠被佔用時才不會白走一趟登入。
                 let listener = TcpListener::bind(("127.0.0.1", port))
-                    .map_err(|_| format!("連接埠 {port} 被占用，請改 Callback URL 或關閉占用程式"))?;
+                    .map_err(|_| format!("連接埠 {port} 被佔用，請改 Callback URL 或關閉佔用程式"))?;
                 open_browser(&url)?;
                 let code = wait_for_code(listener, &path, &state, &worker)?;
                 let token = exchange_code(&cfg, &code, &verifier)?;

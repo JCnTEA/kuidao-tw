@@ -1,4 +1,4 @@
-//! 和风设置的原生交互与截图；只使用占位凭据和合成天气。
+//! 和風設置的原生交互與截圖；只使用佔位憑據和合成天氣。
 use super::*;
 use crate::{weather_source_ui::Provider,settings_theme::SettingsTheme};
 
@@ -30,7 +30,7 @@ fn weather_badge_only_dims_after_repeated_failures_and_old_data(){
     }
 }
 
-// 通过真实的和风解析与缓存入口准备示例，避免逐帧轮询覆盖手工注入的天气。
+// 通過真實的和風解析與緩存入口準備示例，避免逐幀輪詢覆蓋手工注入的天氣。
 fn qweather_data_fixture(h:&mut H){
     let location=crate::qweather::Location{position:crate::weather::Position{lat:30.27,lon:120.15,label:"杭州".into(),region:"浙江省 · 杭州市".into()},timezone:"Asia/Shanghai".into()};
     let today=chrono::Utc::now().with_timezone(&chrono_tz::Asia::Shanghai).date_naive();let now=chrono::Utc::now().timestamp();
@@ -119,7 +119,7 @@ fn qweather_city_dropdown_supports_fuzzy_input_keyboard_selection_and_add(){
     let key=|key|egui::Event::Key{key,physical_key:None,pressed:true,repeat:false,modifiers:Default::default()};
     draw(&mut h,vec![egui::Event::Ime(egui::ImeEvent::Enabled),key(egui::Key::ArrowDown)],egui::vec2(740.0,1100.0),1.0);
     draw(&mut h,vec![egui::Event::Ime(egui::ImeEvent::Disabled),key(egui::Key::Enter)],egui::vec2(740.0,1100.0),1.0);
-    assert_eq!(h.app.weather_source.query,"杭","输入法选词不能选中城市");
+    assert_eq!(h.app.weather_source.query,"杭","輸入法選詞不能選中城市");
     draw(&mut h,vec![key(egui::Key::ArrowDown)],egui::vec2(740.0,1100.0),1.0);
     draw(&mut h,vec![key(egui::Key::Enter)],egui::vec2(740.0,1100.0),1.0);
     assert_eq!(h.app.weather_source.query,"餘杭");

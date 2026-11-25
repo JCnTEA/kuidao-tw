@@ -1,4 +1,4 @@
-//! 只读解析汽水 3.7 媒体缓存中的原生歌词；不读取登录配置或音频。
+//! 只讀解析汽水 3.7 媒體緩存中的原生歌詞；不讀取登錄配置或音頻。
 use serde_json::{Value,Map};
 use std::collections::{HashMap,HashSet};
 
@@ -6,7 +6,7 @@ fn le(data:&[u8],offset:usize,n:usize)->Option<usize>{
     Some(data.get(offset..offset.checked_add(n)?)?.iter().enumerate().fold(0,|v,(i,b)|v|((*b as usize)<<(8*i))))
 }
 
-/// 仅遍历当前已提交快照的主数据库，忽略空闲页及旧事务内容。
+/// 僅遍歷當前已提交快照的主數據庫，忽略空閒頁及舊事務內容。
 fn entries(data:&[u8])->Option<Vec<&[u8]>> {
     if le(data,24,4)?!=0xbeefc0de || le(data,28,4)?!=2{return None;}
     let size=le(data,48,4)?;
@@ -14,7 +14,7 @@ fn entries(data:&[u8])->Option<Vec<&[u8]>> {
     if le(data,size+24,4)?!=0xbeefc0de || le(data,size+28,4)?!=2{return None;}
     let meta=if le(data,152,8)?>le(data,size+152,8)?{0}else{size};
     let mut pending=vec![le(data,meta+136,8)?];let mut visited=HashSet::new();let mut result=Vec::new();
-    // 每页最多访问一次：上限按文件实际页数，不再按固定页数（原先 4096 页约 16MB 即放弃）。
+    // 每頁最多訪問一次：上限按文件實際頁數，不再按固定頁數（原先 4096 頁約 16MB 即放棄）。
     let pages=data.len()/size;
     while let Some(page)=pending.pop(){
         if !visited.insert(page) || visited.len()>pages{return None;}
@@ -27,7 +27,7 @@ fn entries(data:&[u8])->Option<Vec<&[u8]>> {
             let len=le(bytes,node,4)?;let flags_node=le(bytes,node+4,2)?;let key=le(bytes,node+6,2)?;
             if flags==1 {pending.push(len | (flags_node<<32));continue;}
             if flags_node & 6!=0 {continue;}
-            // 歌词记录远小于 2MB；过大的其他记录直接跳过，不因一条大记录放弃整份缓存。
+            // 歌詞記錄遠小於 2MB；過大的其他記錄直接跳過，不因一條大記錄放棄整份緩存。
             if len>2*1024*1024{continue;}
             let start=node.checked_add(8+key)?;
             let value=if flags_node==1 {
@@ -43,7 +43,7 @@ fn entries(data:&[u8])->Option<Vec<&[u8]>> {
     Some(result)
 }
 
-// 汽水使用 MessagePack 的内联 record 扩展；记录表仅在单个值内有效。
+// 汽水使用 MessagePack 的內聯 record 擴展；記錄表僅在單個值內有效。
 struct Decoder<'a>{data:&'a[u8],pos:usize,records:HashMap<i32,Vec<String>>,two:HashSet<i32>,budget:usize}
 impl<'a> Decoder<'a>{
     fn take(&mut self,n:usize)->Option<&'a[u8]>{let end=self.pos.checked_add(n)?;let b=self.data.get(self.pos..end)?;self.pos=end;Some(b)}
@@ -108,13 +108,13 @@ fn select(value:&Value,title:&str,artist:&str,duration:f64)->Option<String>{
 }
 fn path()->Option<std::path::PathBuf>{Some(std::path::PathBuf::from(std::env::var_os("APPDATA")?).join("SodaMusic/LunaCacheV2/entries.db"))}
 
-/// 缓存文件的修改时间与大小；没变化时轮询不再整份读取（文件最大 32MB）。
+/// 緩存文件的修改時間與大小；沒變化時輪詢不再整份讀取（文件最大 32MB）。
 pub fn fingerprint()->Option<(std::time::SystemTime,u64)>{
     let meta=std::fs::metadata(path()?).ok()?;
     Some((meta.modified().ok()?,meta.len()))
 }
 
-/// 本地读取未命中的原因，写入歌词诊断日志，便于定位「为什么没词」。
+/// 本地讀取未命中的原因，寫入歌詞診斷日誌，便於定位「為什麼沒詞」。
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum Miss {Missing,TooLarge,Busy,Format,NoMatch}
 impl Miss {
@@ -129,17 +129,17 @@ impl Miss {
     }
 }
 
-/// 只防异常文件：Windows 下按需映射，不再整份复制进内存，正常缓存再大也不受影响。
+/// 只防異常文件：Windows 下按需映射，不再整份複製進內存，正常緩存再大也不受影響。
 const LIMIT:u64=1024*1024*1024;
 
-/// 只读打开的缓存内容：Windows 下为内存映射，其余平台整份读入（仅开发用途）。
+/// 只讀打開的緩存內容：Windows 下為內存映射，其餘平台整份讀入（僅開發用途）。
 struct Snapshot {
     #[cfg(windows)] map:memmap2::Mmap,
     #[cfg(not(windows))] data:Vec<u8>,
 }
 impl Snapshot {
     fn open(file:&std::fs::File)->Option<Self>{
-        // SAFETY：只读映射；LMDB 打开期间不会截短数据文件，且有映射时 Windows 拒绝截短；所有偏移都经越界检查。
+        // SAFETY：只讀映射；LMDB 打開期間不會截短數據文件，且有映射時 Windows 拒絕截短；所有偏移都經越界檢查。
         #[cfg(windows)] {Some(Self{map:unsafe{memmap2::Mmap::map(file)}.ok()?})}
         #[cfg(not(windows))] {use std::io::Read;let mut data=Vec::new();(&*file).read_to_end(&mut data).ok()?;Some(Self{data})}
     }
@@ -163,11 +163,11 @@ fn read_detail_at(path:&std::path::Path,title:&str,artist:&str,duration:f64)->Re
     let snapshot=Snapshot::open(&file).ok_or(Miss::Busy)?;
     let data=snapshot.bytes();
     let size=le(data,48,4).ok_or(Miss::Format)?;if !(512..=65536).contains(&size){return Err(Miss::Format);}
-    // 记下两份元页，遍历后再核对：客户端写入期间放弃本次读取，由后续轮询重试。
+    // 記下兩份元頁，遍歷後再核對：客戶端寫入期間放棄本次讀取，由後續輪詢重試。
     let headers=data.get(..size*2).ok_or(Miss::Format)?.to_vec();
     let changed=||data.get(..headers.len())!=Some(&headers[..]);
     let Some(entries)=entries(data) else {return Err(if changed(){Miss::Busy}else{Miss::Format});};
-    // 解码是主要开销（约 0.25ms/条）：原始字节里连歌名片段都没有的记录直接跳过。
+    // 解碼是主要開銷（約 0.25ms/條）：原始字節裡連歌名片段都沒有的記錄直接跳過。
     let needle=title_needle(title);
     let found=entries.into_iter().filter(|entry|needle.as_ref().is_none_or(|needle|needle.is_match(entry)))
         .find_map(|entry|select(&decode(entry)?,title,artist,duration));
@@ -175,11 +175,11 @@ fn read_detail_at(path:&std::path::Path,title:&str,artist:&str,duration:f64)->Re
     found.ok_or(Miss::NoMatch)
 }
 
-/// 歌曲身份的前几个字符在缓存原名中必须依次出现，其间可能有标点、空格或被清理的版本后缀。
+/// 歌曲身份的前幾個字符在緩存原名中必須依次出現，其間可能有標點、空格或被清理的版本後綴。
 fn title_needle(title:&str)->Option<regex::bytes::Regex>{
     let name=super::song_identity(title,"").0;
     let parts:Vec<_>=name.chars().take(5).map(|c|match c {
-        // Unicode 小写化会把 İ 展开为 i 和组合点，后者在歌曲身份中被移除。
+        // Unicode 小寫化會把 İ 展開為 i 和組合點，後者在歌曲身份中被移除。
         'i'=>"[iİ]".to_owned(),
         _=>regex::escape(&c.to_string()),
     }).collect();
@@ -244,7 +244,7 @@ mod tests {
         put(&mut db,node,8192,4);assert!(entries(&db).is_none());
         put(&mut db,node,payload.len(),4);put(&mut db,2*4096+124,2,4);assert!(entries(&db).is_none());
     }
-    /// 测试用 MessagePack 编码（只覆盖对象、数组、字符串、非负整数）。
+    /// 測試用 MessagePack 編碼（只覆蓋對象、數組、字符串、非負整數）。
     fn pack(value:&serde_json::Value,out:&mut Vec<u8>){
         match value {
             Value::Object(map)=>{out.push(0xde);out.extend_from_slice(&(map.len() as u16).to_be_bytes());for (k,v) in map{pack(&Value::String(k.clone()),out);pack(v,out);}}
@@ -254,7 +254,7 @@ mod tests {
             _=>unreachable!(),
         }
     }
-    /// 两页元页 + 根叶页（一条溢出记录、一条超过 2MB 的其他记录）+ 溢出页。
+    /// 兩頁元頁 + 根葉頁（一條溢出記錄、一條超過 2MB 的其他記錄）+ 溢出頁。
     fn fixture(payload:&[u8])->Vec<u8>{
         let mut db=vec![0u8;4096*5];
         fn put(db:&mut[u8],p:usize,v:usize,n:usize){for i in 0..n{db[p+i]=(v>>(8*i)) as u8;}}
@@ -276,7 +276,7 @@ mod tests {
         assert_eq!(entries(&db).unwrap(),vec![payload.as_slice()],"超過 2MB 的其他記錄應跳過，而不是放棄整份快取");
         let path=std::env::temp_dir().join(format!("daozai-soda-{}-{:?}.db",std::process::id(),std::thread::current().id()));
         std::fs::write(&path,&db).unwrap();
-        // 撑到 40MB：超过原先整份读取的 32MB 上限。
+        // 撐到 40MB：超過原先整份讀取的 32MB 上限。
         std::fs::OpenOptions::new().write(true).open(&path).unwrap().set_len(40*1024*1024).unwrap();
         assert_eq!(read_detail_at(&path,"歌","歌手",120.0).as_deref(),Ok("[1000,500]<0,500,0>詞"));
         assert_eq!(read_detail_at(&path,"歌 (Official Audio)","歌手",120.0).as_deref(),Ok("[1000,500]<0,500,0>詞"));
@@ -329,7 +329,7 @@ mod tests {
             let artist=artists.iter().filter_map(|a|a["name"].as_str()).collect::<Vec<_>>().join("/");
             let duration=track["duration"].as_f64().unwrap_or_default()/1000.0;
             if select(&value,title,&artist,duration).is_none(){continue;}
-            // 旧读法：整份数据中第一条匹配；新读法：映射撑大的副本。两者应完全相同。
+            // 舊讀法：整份數據中第一條匹配；新讀法：映射撐大的副本。兩者應完全相同。
             let old=all.iter().find_map(|e|select(&decode(e)?,title,&artist,duration));
             assert!(old.is_some());
             assert_eq!(read_detail_at(&copy,title,&artist,duration).ok(),old,"第 {count} 首不一致");

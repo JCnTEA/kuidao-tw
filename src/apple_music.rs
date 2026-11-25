@@ -1,4 +1,4 @@
-//! Apple Music 系统会话中的歌手与专辑字段。
+//! Apple Music 系統會話中的歌手與專輯字段。
 pub(super) fn is_source(source:&str)->bool{
     source.eq_ignore_ascii_case("AppleMusic.exe") || source.eq_ignore_ascii_case("AppleInc.AppleMusicWin_nzyj5cx40ttqa!App")
 }
@@ -21,7 +21,7 @@ mod tests{
     fn combined_display_field_does_not_become_a_lyric_search_artist(){
         for (artist,album,singer,record) in [
             ("王菲 — 只愛陌生人","","王菲","只愛陌生人"),
-            ("任賢齊 — 臺灣男兒任賢齊認真精選輯","","任賢齊","臺灣男兒任賢齊認真精選輯"),
+            ("任賢齊 — 台灣男兒任賢齊認真精選輯","","任賢齊","台灣男兒任賢齊認真精選輯"),
             ("孫燕姿 — 未完成","未完成","孫燕姿","未完成"),
             ("Artist — Album — Deluxe","","Artist","Album — Deluxe"),
             ("王菲","只愛陌生人","王菲","只愛陌生人"),

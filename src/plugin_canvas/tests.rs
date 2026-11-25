@@ -19,7 +19,7 @@ fn sdk_spike_canvas_pet_validates_mood_bindings_and_budget() {
         at, mood, motion, ..
     } = &evaluated.nodes[0].kind
     else {
-        panic!("缺少岛仔节点")
+        panic!("缺少島仔節點")
     };
     assert_eq!(at[0].initial(), 120.0);
     assert_eq!(
@@ -29,11 +29,11 @@ fn sdk_spike_canvas_pet_validates_mood_bindings_and_budget() {
     assert_eq!(*motion, PetMotion::Run);
     assert!(parse(vec![runner.clone(), runner.clone()])
         .unwrap_err()
-        .contains("一只"));
+        .contains("一隻"));
     let mut too_many = vec![runner];
     too_many
         .extend((0..8).map(|_| json!({"circle":[5,5,2],"loop":{"kind":"pulse","period_ms":800}})));
-    assert!(parse(too_many).unwrap_err().contains("循环"));
+    assert!(parse(too_many).unwrap_err().contains("循環"));
     assert!(parse(vec![json!({"pet":{"at":[0,0],"size":20,"mood":"unknown"}})]).is_err());
 }
 use serde_json::{json, Value};
@@ -51,7 +51,7 @@ fn sdk_spike_canvas_parses_all_primitives() {
         {"line":[2,24,80,24],"stroke":"$dim","cap":"round","dash":[2,3]},
         {"points":[[0,32],[12,30],[28,35]],"area":42,"fill":{"linear":[[0,0],[0,42]],"stops":[[0,"$accent"],[1,"#00000000"]]}},
         {"path":"M1 1 l3 0 h2 V5 q1 2 0 3 c1 1 2 2 3 3 Z","stroke":"$accent"},
-        {"text":"距元旦","at":[4,56],"size":16,"weight":700,"align":"center","max_width":32,"lines":2,"font":"快乐体","color":"$text"},
+        {"text":"距元旦","at":[4,56],"size":16,"weight":700,"align":"center","max_width":32,"lines":2,"font":"快樂體","color":"$text"},
         {"image":"assets/cover.SVG","rect":[0,60,150,120],"fit":"cover"},
         {"group":[{"rect":[0,0,12,10],"r":4}],"clip":[0,0,20,20],"translate":[30,40],"rotate":15,"scale":1.2}
     ])).unwrap();
@@ -99,7 +99,7 @@ fn sdk_spike_canvas_limits_nodes_depth_path_commands_and_text() {
     assert!(with_nodes(json!([group.clone()])).is_ok());
     assert!(with_nodes(json!([{"group":[group]}]))
         .unwrap_err()
-        .contains("8 层"));
+        .contains("8 層"));
 
     let path = format!("M0 0{}", " L1 1".repeat(1999));
     assert!(with_nodes(json!([{"path":path},{"path":path}])).is_ok());
@@ -109,7 +109,7 @@ fn sdk_spike_canvas_limits_nodes_depth_path_commands_and_text() {
             .contains("4000")
     );
 
-    let text = "岛".repeat(1000);
+    let text = "島".repeat(1000);
     assert!(with_nodes(
         json!([{"text":text,"at":[0,0],"size":6},{"text":text,"at":[0,0],"size":96}])
     )
@@ -139,10 +139,10 @@ fn sdk_spike_canvas_rejects_invalid_values_and_paths() {
         json!({"rect":[0,0,40,40],"fill":{"linear":[[0,0],[9,9]],"stops":[[1,"$dim"],[0,"$text"]]}}),
         json!({"circle":[0,0,0]}),
         json!({"line":[0,0,0,0],"dash":[0,0]}),
-        json!({"text":"岛","at":[0,0],"size":5}),
-        json!({"text":"岛","at":[0,0],"size":97}),
-        json!({"text":"岛","at":[0,0],"size":1e100}),
-        json!({"text":"岛","at":[0,0],"size":12,"lines":0}),
+        json!({"text":"島","at":[0,0],"size":5}),
+        json!({"text":"島","at":[0,0],"size":97}),
+        json!({"text":"島","at":[0,0],"size":1e100}),
+        json!({"text":"島","at":[0,0],"size":12,"lines":0}),
         json!({"path":"M0 0 T10 10"}),
         json!({"path":"M1999 0 l2 0"}),
         json!({"path":"M0 0 Q3000 0 2 3"}),
@@ -210,5 +210,5 @@ fn sdk_spike_canvas_bounds_live_declarations() {
     let hit = json!({"rect":[0,0,1,1],"hit":{"copy":"文字"}});
     assert!(with_nodes(json!(vec![hit.clone(); 64])).is_ok());
     assert!(with_nodes(json!(vec![hit; 65])).is_err());
-    assert!(with_nodes(json!([{"rect":[0,0,1,1],"hit":{"copy":"岛".repeat(2001)}}])).is_err());
+    assert!(with_nodes(json!([{"rect":[0,0,1,1],"hit":{"copy":"島".repeat(2001)}}])).is_err());
 }

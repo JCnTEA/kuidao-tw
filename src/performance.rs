@@ -1,4 +1,4 @@
-//! 模块开启时独立保留最近一分钟的采样，界面可见时才请求重绘。
+//! 模塊開啟時獨立保留最近一分鐘的採樣，界面可見時才請求重繪。
 use eframe::egui;
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
@@ -22,9 +22,9 @@ impl Metric {
     ];
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::Cpu => "CPU", Self::Gpu => "GPU", Self::Ram => "内存", Self::Vram => "显存",
-            Self::GpuTemp => "显卡温度", Self::Download => "下载", Self::Upload => "上传",
-            Self::Read => "磁盘读", Self::Write => "磁盘写",
+            Self::Cpu => "CPU", Self::Gpu => "GPU", Self::Ram => "內存", Self::Vram => "顯存",
+            Self::GpuTemp => "顯卡溫度", Self::Download => "下載", Self::Upload => "上傳",
+            Self::Read => "磁盤讀", Self::Write => "磁盤寫",
         }
     }
     pub(crate) fn bit(self) -> u16 { 1 << self as u16 }
@@ -32,8 +32,8 @@ impl Metric {
         match self {
             Self::Download => Some("↓"),
             Self::Upload => Some("↑"),
-            Self::Read => Some("读"),
-            Self::Write => Some("写"),
+            Self::Read => Some("讀"),
+            Self::Write => Some("寫"),
             _ => None,
         }
     }
@@ -73,7 +73,7 @@ impl BarStyle {
             .map(move |pair| pair.map(|m| (mask & m.bit() != 0).then_some(m)))
             .filter(|pair| pair.iter().any(Option::is_some))
     }
-    /// 侧边停靠时占的高度：和横条同样的内容竖着排。
+    /// 側邊停靠時佔的高度：和橫條同樣的內容豎著排。
     pub(crate) fn side_height(self, mask: u16) -> f32 {
         match self {
             Self::Custom => {
@@ -110,30 +110,30 @@ impl BarStyle {
     }
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::Gauges => "三联环",
-            Self::Pulse => "CPU 脉冲",
+            Self::Gauges => "三聯環",
+            Self::Pulse => "CPU 脈衝",
             Self::Network => "上下行",
-            Self::Dashboard => "综合监测",
+            Self::Dashboard => "綜合監測",
             Self::Custom => "自由搭配",
-            Self::Cores => "核心点阵",
+            Self::Cores => "核心點陣",
         }
     }
-    /// 设置里样式卡片上的一句话概括。
+    /// 設置裡樣式卡片上的一句話概括。
     pub(crate) fn summary(self) -> &'static str {
         match self {
-            Self::Gauges => "CPU、显卡、内存",
-            Self::Pulse => "占用率与负载曲线",
-            Self::Network => "下载与上传速度",
-            Self::Dashboard => "负载、网速与磁盘",
-            Self::Custom => "勾选想看的指标",
-            Self::Cores => "每个逻辑处理器一列灯",
+            Self::Gauges => "CPU、顯卡、內存",
+            Self::Pulse => "佔用率與負載曲線",
+            Self::Network => "下載與上傳速度",
+            Self::Dashboard => "負載、網速與磁盤",
+            Self::Custom => "勾選想看的指標",
+            Self::Cores => "每個邏輯處理器一列燈",
         }
     }
     pub(crate) fn parse(key: &str) -> Self {
         Self::ALL.into_iter().find(|v| v.key() == key).unwrap_or_default()
     }
 }
-/// 展开页：总览，以及五类硬件各自的详情页。
+/// 展開頁：總覽，以及五類硬件各自的詳情頁。
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum View {
     #[default]
@@ -146,7 +146,7 @@ pub enum View {
 }
 impl View {
     pub(crate) const ALL: [Self; 6] = [Self::Overview, Self::Cpu, Self::Gpu, Self::Memory, Self::Disk, Self::Network];
-    /// 详情页（页签条里的五项）。
+    /// 詳情頁（頁籤條裡的五項）。
     pub(crate) const DETAILS: [Self; 5] = [Self::Cpu, Self::Gpu, Self::Memory, Self::Disk, Self::Network];
     pub(crate) fn key(self) -> &'static str {
         match self {
@@ -160,34 +160,34 @@ impl View {
     }
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::Overview => "总览",
+            Self::Overview => "總覽",
             Self::Cpu => "CPU",
-            Self::Gpu => "显卡",
-            Self::Memory => "内存",
-            Self::Disk => "磁盘",
-            Self::Network => "网络",
+            Self::Gpu => "顯卡",
+            Self::Memory => "內存",
+            Self::Disk => "磁盤",
+            Self::Network => "網絡",
         }
     }
-    /// 旧版的「趋势 / 明细」等未知取值都回到总览。
+    /// 舊版的「趨勢 / 明細」等未知取值都回到總覽。
     pub(crate) fn parse(key: &str) -> Self {
         Self::ALL.into_iter().find(|v| v.key() == key).unwrap_or_default()
     }
 }
 
-/// 一个程序（同名进程合并）在最近一秒的处理器占用和私有内存。
+/// 一個程序（同名進程合併）在最近一秒的處理器佔用和私有內存。
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Process {
     pub name: String,
     pub cpu: f32,
     pub memory: u64,
-    /// 最近一秒的读写字节数（文件、管道等全部读写，不只磁盘）。
+    /// 最近一秒的讀寫字節數（文件、管道等全部讀寫，不只磁盤）。
     pub io: f32,
-    /// 同名进程里内存最多的那个进程号，用来找程序文件取图标。
+    /// 同名進程裡內存最多的那個進程號，用來找程序文件取圖標。
     pub pid: usize,
-    /// 程序图标（32 px），取不到时为空，界面画首字母。
+    /// 程序圖標（32 px），取不到時為空，界面畫首字母。
     pub icon: Option<std::sync::Arc<eframe::egui::ColorImage>>,
 }
-/// 一个本地固定磁盘分区的容量。
+/// 一個本地固定磁盤分區的容量。
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Volume {
     pub letter: char,
@@ -203,39 +203,39 @@ pub(crate) struct Reading {
     pub gpu_name: String,
     pub gpu_temp: Option<f32>,
     pub video_memory: Option<(u64, u64)>,
-    /// 共享显存（显卡借用的系统内存）的已用和上限；核显主要用它。
+    /// 共享顯存（顯卡借用的系統內存）的已用和上限；核顯主要用它。
     pub shared_memory: Option<(u64, u64)>,
-    /// 各类显卡引擎（3D、视频解码……）的占用率，同类取最忙的那个。
+    /// 各類顯卡引擎（3D、視頻解碼……）的佔用率，同類取最忙的那個。
     pub gpu_engines: Vec<(&'static str, f32)>,
     pub network: [Option<f32>; 2],
     pub disk: [Option<f32>; 2],
-    /// 处理器时间里内核态所占的百分比（相对全部逻辑处理器）。
+    /// 處理器時間裡內核態所佔的百分比（相對全部邏輯處理器）。
     pub cpu_kernel: Option<f32>,
-    /// 每个逻辑处理器的占用率。
+    /// 每個邏輯處理器的佔用率。
     pub cores: Vec<f32>,
     pub cpu_mhz: Option<f32>,
-    /// 内存构成：系统缓存与内核常驻（非分页池）字节数。
+    /// 內存構成：系統緩存與內核常駐（非分頁池）字節數。
     pub memory_cache: Option<u64>,
     pub memory_kernel: Option<u64>,
-    /// 真正空着的内存（空闲 + 已清零页）。可用 = 备用缓存 + 它。
+    /// 真正空著的內存（空閒 + 已清零頁）。可用 = 備用緩存 + 它。
     pub memory_free: Option<u64>,
-    /// 磁盘活动时间百分比。
+    /// 磁盤活動時間百分比。
     pub disk_active: Option<f32>,
-    /// 当前网卡的链路速率（比特每秒）与网卡启用以来的累计收发字节。
+    /// 當前網卡的鏈路速率（比特每秒）與網卡啟用以來的累計收發字節。
     pub link_speed: Option<u64>,
     pub net_total: Option<[u64; 2]>,
-    /// 展开页打开时才统计的程序排行。
+    /// 展開頁打開時才統計的程序排行。
     pub by_cpu: Vec<Process>,
     pub by_memory: Vec<Process>,
     pub by_io: Vec<Process>,
     pub volumes: Vec<Volume>,
 }
-/// 详情列表最多列几名程序：总览只看前四，CPU、内存详情可以滚动看完这些。
+/// 詳情列表最多列幾名程序：總覽只看前四，CPU、內存詳情可以滾動看完這些。
 pub(crate) const LIST_LEN: usize = 10;
 
 impl Reading {
-    /// 程序排行、内存构成和分区只在展开页显示时才统计。岛收起后、或刚展开还没算出新一轮时，
-    /// 沿用上一次的结果，展开时列表直接就在，下一秒再换成新的，不会每次从空白加载。
+    /// 程序排行、內存構成和分區只在展開頁顯示時才統計。島收起後、或剛展開還沒算出新一輪時，
+    /// 沿用上一次的結果，展開時列表直接就在，下一秒再換成新的，不會每次從空白加載。
     pub fn keep_lists(&mut self, previous: Reading) {
         if self.by_memory.is_empty() {
             self.by_memory = previous.by_memory;
@@ -247,7 +247,7 @@ impl Reading {
                 self.volumes = previous.volumes;
             }
         } else if self.by_cpu.is_empty() && self.by_io.is_empty() {
-            // 刚开始统计的第一秒只有内存，CPU 和读写要两次采样才算得出。
+            // 剛開始統計的第一秒只有內存，CPU 和讀寫要兩次採樣才算得出。
             self.by_cpu = previous.by_cpu;
             self.by_io = previous.by_io;
         }
@@ -264,11 +264,11 @@ impl Reading {
 pub(crate) struct Monitor {
     pub latest: Reading,
     pub history: VecDeque<(Instant, Reading)>,
-    /// 岛内正在看的页面；切到别的页面或点常驻指标时清空，下次展开回到设置里选的页面。
+    /// 島內正在看的頁面；切到別的頁面或點常駐指標時清空，下次展開回到設置裡選的頁面。
     pub view: Option<View>,
-    /// 最近看过的详情页，退回总览的过渡里继续画它。
+    /// 最近看過的詳情頁，退回總覽的過渡裡繼續畫它。
     pub last_detail: View,
-    /// CPU、内存详情的程序列表滚过了几名；`list_view` 记着是哪一页的，换页时回到顶部。
+    /// CPU、內存詳情的程序列表滾過了幾名；`list_view` 記著是哪一頁的，換頁時回到頂部。
     pub list_first: usize,
     pub list_view: View,
     #[cfg(windows)]
@@ -328,7 +328,7 @@ impl Drop for Worker {
 }
 
 impl Monitor {
-    /// `detail`：展开页正在显示，需要逐核、程序排行等较重的统计。
+    /// `detail`：展開頁正在顯示，需要逐核、程序排行等較重的統計。
     pub fn tick(&mut self, enabled: bool, visible: bool, detail: bool, ctx: &egui::Context) {
         #[cfg(windows)]
         {
@@ -394,7 +394,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "单独运行以测量实际系统采样的 CPU 时间"]
+    #[ignore = "單獨運行以測量實際系統採樣的 CPU 時間"]
     fn continuous_sampling_cost() {
         let ctx = egui::Context::default();
         let mut monitor = Monitor::default();

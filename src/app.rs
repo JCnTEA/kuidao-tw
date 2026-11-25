@@ -1,7 +1,7 @@
-//! 灵动岛主体：状态、悬停形变、切页、顶栏与公共层。与平台无关——
-//! Windows 外壳（`main.rs`）和无窗口录制器（`daozai-record`）共用同一份代码。
+//! 靈動島主體：狀態、懸停形變、切頁、頂欄與公共層。與平台無關——
+//! Windows 外殼（`main.rs`）和無窗口錄製器（`daozai-record`）共用同一份代碼。
 //!
-//! 时间一律来自 `Env::t`（秒），不直接读系统时钟，所以录屏可逐帧复现。
+//! 時間一律來自 `Env::t`（秒），不直接讀系統時鐘，所以錄屏可逐幀復現。
 
 use crate::extras::{Alert, HealthReminder, PetState};
 use crate::anim::{self, lerp, smoothstep, Spring};
@@ -20,14 +20,14 @@ use eframe::egui::{self, Color32, Pos2, Rect, Vec2};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-// ---------- 几何（逻辑点；原版 125% 截图 ÷ 1.25） ----------
-pub const PW: f32 = 419.0; // 展开面板宽
-pub const PH: f32 = 140.0; // 展开面板高
+// ---------- 幾何（邏輯點；原版 125% 截圖 ÷ 1.25） ----------
+pub const PW: f32 = 419.0; // 展開面板寬
+pub const PH: f32 = 140.0; // 展開面板高
 const PAGE_SHORTCUT_ROW_H: f32 = 24.0;
 pub const MUSIC_PAGE: usize = 0;
 pub const FOCUS_PAGE: usize = 1;
 pub const WATER_PAGE: usize = 2;
-/// 久坐提醒的标题（通知按钮据此区分喝水提醒）。
+/// 久坐提醒的標題（通知按鈕據此區分喝水提醒）。
 pub const SIT_TITLE: &str = "該起來活動了";
 
 pub const SHELF_PAGE: usize = 3;
@@ -42,25 +42,25 @@ pub(crate) const WEATHER_H: f32 = 232.0;
 pub(crate) const CALENDAR_H: f32 = 216.0;
 pub(crate) const GAME_H: f32 = 204.0;
 pub(crate) const POWER_H: f32 = 168.0;
-pub const BAR_W: f32 = 163.0; // 收起药丸宽
-pub const BAR_H: f32 = 30.0; // 收起药丸高
+pub const BAR_W: f32 = 163.0; // 收起藥丸寬
+pub const BAR_H: f32 = 30.0; // 收起藥丸高
 pub(crate) const HUD_W: f32 = 260.0;
 pub(crate) const LYRIC_BAR_W: f32 = 300.0;
 pub(crate) const HUD_TRACK_X: f32 = 48.0;
 pub(crate) const HUD_TRACK_W: f32 = 150.0;
-pub const BAR_W_MIN: f32 = 44.0; // 极简小条
+pub const BAR_W_MIN: f32 = 44.0; // 極簡小條
 pub const BAR_H_MIN: f32 = 4.5;
-pub const FLARE: f32 = 17.6; // 顶部外翻肩宽
-pub const FLARE_H: f32 = 16.0; // 外翻收敛高度
-pub const RAD: f32 = 33.0; // 底部圆角
-pub const WIN_W: f32 = 640.0; // 窗口（透明画布）
-pub const CANVAS_W: f32 = WIN_W + 320.0; // 保留右侧通知及阴影的完整空间，原岛仍按 WIN_W 定位。
-pub const WIN_H: f32 = 378.0 + PAGE_SHORTCUT_ROW_H; // 性能页展开 360 高，再留出投影
-/// 胶囊皮肤与屏幕顶边的间隙。
+pub const FLARE: f32 = 17.6; // 頂部外翻肩寬
+pub const FLARE_H: f32 = 16.0; // 外翻收斂高度
+pub const RAD: f32 = 33.0; // 底部圓角
+pub const WIN_W: f32 = 640.0; // 窗口（透明畫布）
+pub const CANVAS_W: f32 = WIN_W + 320.0; // 保留右側通知及陰影的完整空間，原島仍按 WIN_W 定位。
+pub const WIN_H: f32 = 378.0 + PAGE_SHORTCUT_ROW_H; // 性能頁展開 360 高，再留出投影
+/// 膠囊皮膚與屏幕頂邊的間隙。
 pub const PILL_GAP: f32 = 6.0;
 
-/// 胶囊的柔和投影：四周都有，多层叠加近似高斯。
-/// 圆角矩形一圈轮廓点（顺时针、首尾闭合），用于沿胶囊外形逐段着色。
+/// 膠囊的柔和投影：四周都有，多層疊加近似高斯。
+/// 圓角矩形一圈輪廓點（順時針、首尾閉合），用於沿膠囊外形逐段著色。
 fn round_rect_points(r:Rect,radius:f32)->Vec<Pos2>{
     let radius=radius.min(r.width().min(r.height())*0.5).max(0.0);
     let corners=[
@@ -84,18 +84,18 @@ fn pill_shadow(painter:&egui::Painter,rect:Rect,radius:f32,strength:f32){
         painter.rect_filled(r,radius+grow*0.8,Color32::from_black_alpha((255.0*a*strength) as u8));
     }
 }
-pub(crate) const PAGE_NAMES: [&str; 11] = ["音乐", "专注", "健康", "置物架", "待办", "邮箱", "AI 额度", "日程", "天气", "系统性能", "无线设备"];
+pub(crate) const PAGE_NAMES: [&str; 11] = ["音樂", "專注", "健康", "置物架", "待辦", "郵箱", "AI 額度", "日程", "天氣", "系統性能", "無線設備"];
 pub(crate) const PAGE_SHORTCUT_KEYS: [&str; PAGE_NAMES.len()] = [
     "music", "focus", "health", "shelf", "tasks", "mail", "quota", "calendar", "weather",
     "performance", "wireless",
 ];
 pub(crate) const PAGE_SETTINGS_TABS: [usize; 11] = [1,2,3,5,4,7,11,8,12,15,crate::extras::SETTINGS_TAB_WIRELESS];
 
-// ---------- 动效参数 ----------
-/// 悬停意图缓冲：光标停留这么久才真正展开（期间药丸轻微胀大作为反馈），防误触。
+// ---------- 動效參數 ----------
+/// 懸停意圖緩衝：光標停留這麼久才真正展開（期間藥丸輕微脹大作為反饋），防誤觸。
 const HOVER_INTENT: f64 = 0.20;
 const MINIMAL_HOVER_INTENT: f64 = 0.40;
-/// 移开后等待多久开始收起；这段时间内回来不会收。
+/// 移開後等待多久開始收起；這段時間內回來不會收。
 const LEAVE_DELAY: f64 = 0.12;
 const PAGE_EDGE_OVERLAP: f32 = 8.0;
 /// 頂欄時鐘組在額度／天氣頁允許的最右緣；再往右就是「重新整理」按鈕的命中區（約 x=303）。
@@ -105,19 +105,19 @@ const HEADER_LEFT_LIMIT: f32 = 14.0;
 // 額度／天氣頁右側有重新整理按鈕，頂欄可用寬度較小，日期與時鐘字級略縮，避免貼到按鈕。
 const HEADER_CROWDED_FONT: f32 = 0.9;
 const SWELL: (f32, f32) = (1.075, 1.13);
-// 展开：欠阻尼，末段约 5% 过冲后回落；高度略软于宽度，像「垂落」下来。
+// 展開：欠阻尼，末段約 5% 過沖後回落；高度略軟於寬度，像「垂落」下來。
 const OPEN_W: (f32, f32) = (330.0, 0.70);
 const OPEN_H: (f32, f32) = (290.0, 0.74);
-// 收起：临界阻尼，约 0.18 s 干净收回，无回弹。
+// 收起：臨界阻尼，約 0.18 s 乾淨收回，無回彈。
 const CLOSE: (f32, f32) = (620.0, 1.0);
 const SWELL_K: (f32, f32) = (420.0, 0.8);
 const PAGE_SLIDE: f32 = 32.0;
 const PAGE_TURN_DURATION: f32 = 0.34;
 
 pub struct Options {
-    /// 是否联网查歌词（录制/测试时关掉）。
+    /// 是否聯網查歌詞（錄製/測試時關掉）。
     pub fetch_lyrics: bool,
-    /// 吉祥物在多久无操作后出现（秒）。
+    /// 吉祥物在多久無操作後出現（秒）。
     pub pet_idle: f64,
 }
 
@@ -127,7 +127,7 @@ impl Default for Options {
     }
 }
 
-/// 每帧由外壳提供的外部世界。
+/// 每幀由外殼提供的外部世界。
 #[derive(Clone, Default)]
 pub struct Env {
     pub t: f64,
@@ -135,44 +135,44 @@ pub struct Env {
     pub clock: String,
     /// `YYYY-MM-DD`
     pub today: String,
-    /// 顶栏日期，例如 `10月28日 周三`
+    /// 頂欄日期，例如 `10月28日 週三`
     pub date: String,
     pub battery: Option<u8>,
     pub charging: bool,
-    /// 互联网连接状态；未知时不触发表情提醒。
+    /// 互聯網連接狀態；未知時不觸發表情提醒。
     pub network: Option<bool>,
-    /// 光标位置（与 `frame` 传入的 `win` 同一坐标系）；不在窗口附近时为 None。
+    /// 光標位置（與 `frame` 傳入的 `win` 同一座標系）；不在窗口附近時為 None。
     pub cursor: Option<Pos2>,
-    /// Windows 虚拟桌面中的鼠标物理坐标，跨屏时独立于岛体窗口。
+    /// Windows 虛擬桌面中的鼠標物理座標，跨屏時獨立於島體窗口。
     pub desktop_cursor: Option<(i32,i32)>,
     pub cancel_position_drag: bool,
-    /// 窗口移开后也能在原生桌面上识别松手。
+    /// 窗口移開後也能在原生桌面上識別鬆手。
     pub primary_down: Option<bool>,
     pub idle_seconds: Option<f64>,
-    /// 当前会话是否处于锁屏（Win + L、自动锁屏、唤醒后的登录界面）。
+    /// 當前會話是否處於鎖屏（Win + L、自動鎖屏、喚醒後的登錄界面）。
     pub screen_locked: bool,
-    /// 正在生成岛仔演示录屏。
+    /// 正在生成島仔演示錄屏。
     pub recording: bool,
-    /// 因「全屏时隐藏」而隐藏岛体，沿用外壳对设置和所在屏幕的判断。
+    /// 因「全屏時隱藏」而隱藏島體，沿用外殼對設置和所在屏幕的判斷。
     pub fullscreen_hidden: bool,
-    /// 前台浏览器的顶部是否与岛重叠；鬼島自身窗口或暂不可读时为 None。
+    /// 前台瀏覽器的頂部是否與島重疊；鬼島自身窗口或暫不可讀時為 None。
     pub browser_at_top: Option<bool>,
     pub media: NowPlaying,
-    /// 系统主音量（0..100, 是否静音）；v0.5.4 音量条与系统双向同步。
+    /// 系統主音量（0..100, 是否靜音）；v0.5.4 音量條與系統雙向同步。
     pub volume: Option<(u32, bool)>,
-    /// 蓝牙设备快照：连接状态、电量来源及本次会话的断开记录。
+    /// 藍牙設備快照：連接狀態、電量來源及本次會話的斷開記錄。
     pub bt: Vec<crate::bt::Device>,
-    /// 蓝牙服务是否已经完成首次扫描。
+    /// 藍牙服務是否已經完成首次掃描。
     pub bt_ready: bool,
-    /// Windows 当前识别到的 2.4G USB 接收器。
+    /// Windows 當前識別到的 2.4G USB 接收器。
     pub receivers: Vec<crate::bt::Device>,
-    /// 岛所在屏幕（与 `win` 同一坐标系，逻辑点）；用于让通知详情留在屏幕内。
+    /// 島所在屏幕（與 `win` 同一座標系，邏輯點）；用於讓通知詳情留在屏幕內。
     pub screen: Option<Rect>,
-    /// 毛玻璃皮肤：岛体四周采样得到的背景色（sRGB 0..1）。
+    /// 毛玻璃皮膚：島體四周採樣得到的背景色（sRGB 0..1）。
     pub backdrop: Option<[f32; 3]>,
-    /// 毛玻璃皮肤：系统背景模糊当前是否生效。
+    /// 毛玻璃皮膚：系統背景模糊當前是否生效。
     pub glass_blur: bool,
-    /// 不支持逐像素透明的兼容后端需要按内容轮廓裁剪窗口。
+    /// 不支持逐像素透明的兼容後端需要按內容輪廓裁剪窗口。
     pub opaque_surface: bool,
     #[cfg(all(windows, feature = "sdk-material"))]
     pub material_active: bool,
@@ -255,19 +255,19 @@ mod env_power_tests {
 
 pub use crate::messenger::{Messenger,Unread};
 
-/// 展开后未读胶囊的宽度、离面板的间距和每个图标占的高度。
+/// 展開後未讀膠囊的寬度、離面板的間距和每個圖標占的高度。
 pub(crate) const UNREAD_W: f32 = 68.0;
 pub(crate) const UNREAD_GAP: f32 = 8.0;
 pub(crate) const UNREAD_SLOT: f32 = 36.0;
-/// 未读胶囊底部的「全部已讀」高度；图标列表只用到剩下的空间。
+/// 未讀膠囊底部的「全部已讀」高度；圖標列表只用到剩下的空間。
 const UNREAD_CLEAR_H: f32 = 34.0;
-/// 收起时两个来源图标的间距：并排各占一格，不叠放。
+/// 收起時兩個來源圖標的間距：並排各佔一格，不疊放。
 fn unread_step(_horizontal: bool) -> f32 { 22.0 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NotificationSound { Silent, System, Health }
 
-/// 交给外壳执行的副作用。
+/// 交給外殼執行的副作用。
 #[derive(Clone, Debug, PartialEq)]
 pub enum Cmd {
     Media(Transport),
@@ -278,7 +278,7 @@ pub enum Cmd {
     OpenUrl(String),
     /// 社群通知：優先開啟通知的深層連結，其次喚起發出通知的桌面程式，最後才退回官網。
     OpenSocial(crate::social::Social,Option<String>,Option<String>),
-    /// 需要键盘输入：外壳应让窗口可激活并取得焦点。
+    /// 需要鍵盤輸入：外殼應讓窗口可激活並取得焦點。
     Focus,
     Reveal(PathBuf),
     Copy(String),
@@ -292,46 +292,46 @@ pub enum Cmd {
     QuotaRefresh,
     QuotaConnected,
     QuotaChooseFile,
-    /// 把系统主音量设为 0..100（v0.5.4 音量条）。
+    /// 把系統主音量設為 0..100（v0.5.4 音量條）。
     SetVolume(u32),
-    /// 切换系统静音。
+    /// 切換系統靜音。
     ToggleMute,
-    /// 音量命令携带点击时的播放器身份，避免切换歌曲来源后误调其他应用。
+    /// 音量命令攜帶點擊時的播放器身份，避免切換歌曲來源後誤調其他應用。
     MusicVolume(Transport,String),
-    /// v0.5.5：账号清单变了，让外壳重新同步收信线程。
+    /// v0.5.5：帳號清單變了，讓外殼重新同步收信線程。
     MailSync,
-    /// 测试某个邮箱的连接（授权码只在内存里传给工作线程）。
+    /// 測試某個郵箱的連接（授權碼只在內存裡傳給工作線程）。
     MailTest(mail::Account, String),
     MailManage(crate::mail_manage::Request),
-    /// v0.5.6：用临时密码试连日历，成功后才允许落盘。
+    /// v0.5.6：用臨時密碼試連日曆，成功後才允許落盤。
     CalendarTest(calendar::Config, String),
-    /// 让外壳立即同步一次日历。
+    /// 讓外殼立即同步一次日曆。
     CalendarSync,
     CalendarMonth(chrono::NaiveDate),
-    /// 断开并删除日历配置（凭据由界面删除）。
+    /// 斷開並刪除日曆配置（憑據由界面刪除）。
     CalendarForget,
-    /// 选择 .ics 文件导入本机日程。
+    /// 選擇 .ics 文件導入本機日程。
     CalendarImport,
-    /// 重启鬼島（切换渲染方式后生效）。
+    /// 重啟鬼島（切換渲染方式後生效）。
     RestartApp,
 }
 
-/// 毛玻璃皮肤下原生窗口区域的组成部分（相对 `win` 左上角，逻辑点）。
-/// 系统模糊只出现在窗口区域内，所以区域要贴合岛体轮廓，而不是外接矩形。
+/// 毛玻璃皮膚下原生窗口區域的組成部分（相對 `win` 左上角，邏輯點）。
+/// 系統模糊只出現在窗口區域內，所以區域要貼合島體輪廓，而不是外接矩形。
 #[derive(Clone, Debug, PartialEq)]
 pub enum GlassShape {
-    /// 任意闭合轮廓。
+    /// 任意閉合輪廓。
     Outline(Vec<Pos2>),
-    /// 岛体 / 通知胶囊：顶部外翻肩部 + 竖直侧边 + 底部圆角（参数同 `shape::fill`）。
+    /// 島體 / 通知膠囊：頂部外翻肩部 + 豎直側邊 + 底部圓角（參數同 `shape::fill`）。
     Notch { rect: Rect, flare: f32, flare_h: f32, radius: f32 },
-    /// 停靠在左右边缘的岛体：肩部沿屏幕边缘展开（参数同 `shape::fill_docked`）。
+    /// 停靠在左右邊緣的島體：肩部沿屏幕邊緣展開（參數同 `shape::fill_docked`）。
     Docked { rect: Rect, dock: model::Dock, flare: f32, flare_h: f32, radius: f32 },
-    /// 圆角矩形（通知详情、提示、浮动确认）。
+    /// 圓角矩形（通知詳情、提示、浮動確認）。
     Round(Rect, f32),
 }
 
 impl GlassShape {
-    /// 闭合轮廓（逻辑点）；窗口区域按它裁剪。
+    /// 閉合輪廓（邏輯點）；窗口區域按它裁剪。
     pub fn outline(&self) -> Vec<Pos2> {
         match self {
             Self::Outline(points) => points.clone(),
@@ -342,7 +342,7 @@ impl GlassShape {
     }
 }
 
-/// 一块系统模糊：物理像素的窗口坐标与圆角半径（0 = 直角）。
+/// 一塊系統模糊：物理像素的窗口座標與圓角半徑（0 = 直角）。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BlurPiece {
     pub x: f32,
@@ -352,16 +352,16 @@ pub struct BlurPiece {
     pub radius: f32,
 }
 
-/// 把毛玻璃轮廓拆成合成引擎能直接表达的圆角矩形块：
-/// 主体向上多延伸一个圆角半径，让顶部两角落在窗口外，只留下底部圆角；
-/// 外翻的肩部按物理像素逐行拼出（相邻同宽的行合并），边缘误差不超过半个像素。
+/// 把毛玻璃輪廓拆成合成引擎能直接表達的圓角矩形塊：
+/// 主體向上多延伸一個圓角半徑，讓頂部兩角落在窗口外，只留下底部圓角；
+/// 外翻的肩部按物理像素逐行拼出（相鄰同寬的行合併），邊緣誤差不超過半個像素。
 pub fn blur_pieces(shapes: &[GlassShape], ppp: f32) -> Vec<BlurPiece> {
     let mut out = Vec::new();
     for shape in shapes {
         match shape {
             GlassShape::Docked { rect, dock, flare, flare_h, radius } => {
                 if rect.width() <= 0.0 || rect.height() <= 0.0 { continue; }
-                // 在贴顶坐标系里按刘海拆块，再把每块映射到当前停靠边。
+                // 在貼頂座標系裡按劉海拆塊，再把每塊映射到當前停靠邊。
                 let (map, frame) = shape::EdgeMap::of(*rect, *dock);
                 let mut pieces = blur_pieces(&[GlassShape::Notch { rect: frame, flare: *flare, flare_h: *flare_h, radius: *radius }], ppp);
                 let anchor=map.apply(Pos2::ZERO);
@@ -400,11 +400,11 @@ pub fn blur_pieces(shapes: &[GlassShape], ppp: f32) -> Vec<BlurPiece> {
                 let (x,y,right,bottom)=((r.left()*ppp).round(),(r.top()*ppp).round(),(r.right()*ppp).round(),(r.bottom()*ppp).round());
                 let (w,h)=(right-x,bottom-y);
                 if w<=0.0 || h<=0.0 {continue;}
-                // 收起动画先按物理边界取整，再限制圆角，避免上下圆弧在中线交叠。
+                // 收起動畫先按物理邊界取整，再限制圓角，避免上下圓弧在中線交疊。
                 out.push(BlurPiece { x,y,w,h,radius:(radius*ppp).max(0.0).min(w.min(h)*0.5) });
             }
             GlassShape::Outline(points) => {
-                // 任意轮廓只能退化为外接矩形；岛体本身走 Notch，不会用到这里。
+                // 任意輪廓只能退化為外接矩形；島體本身走 Notch，不會用到這裡。
                 let b = Rect::from_points(points);
                 if b.is_positive() {
                     out.push(BlurPiece { x: (b.left() * ppp).round(), y: (b.top() * ppp).round(), w: (b.width() * ppp).round(), h: (b.height() * ppp).round(), radius: 0.0 });
@@ -422,7 +422,7 @@ mod blur_piece_tests {
     fn covered(pieces: &[BlurPiece], x: f32, y: f32) -> bool {
         pieces.iter().any(|p| {
             if !(x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) { return false; }
-            // 圆角：只判断四角的圆弧外侧
+            // 圓角：只判斷四角的圓弧外側
             let r = p.radius;
             let cx = x.clamp(p.x + r, p.x + p.w - r);
             let cy = y.clamp(p.y + r, p.y + p.h - r);
@@ -437,7 +437,7 @@ mod blur_piece_tests {
             let shape = GlassShape::Notch { rect, flare: 17.6, flare_h: 16.0, radius: 33.0 };
             let pieces = blur_pieces(std::slice::from_ref(&shape), ppp);
             let outline = shape.outline();
-            // 轮廓内部的点都被模糊覆盖，外部（含底部圆角外、肩部外）都不覆盖；边缘留 1.5 像素容差。
+            // 輪廓內部的點都被模糊覆蓋，外部（含底部圓角外、肩部外）都不覆蓋；邊緣留 1.5 像素容差。
             let inside = |x: f32, y: f32| {
                 let mut c = false;
                 let mut prev = *outline.last().unwrap();
@@ -488,9 +488,9 @@ mod blur_piece_tests {
                         let near = [(-1.5, 0.0), (1.5, 0.0), (0.0, 1.5), (0.0, -1.5)];
                         let deep_in = inside(lx, ly) && near.iter().all(|(dx, dy)| inside((lx + dx / ppp).clamp(0.01, 499.99), ly + dy / ppp));
                         let far_out = !inside(lx, ly) && near.iter().all(|(dx, dy)| !inside(lx + dx / ppp, ly + dy / ppp));
-                        if deep_in { assert!(covered(&pieces, px, py), "{dock:?} {ppp}: 岛体内 ({px},{py}) 没有模糊"); checked += 1; }
+                        if deep_in { assert!(covered(&pieces, px, py), "{dock:?} {ppp}: 島體內 ({px},{py}) 沒有模糊"); checked += 1; }
                         let on_canvas = lx > 0.5 && lx < 499.5 && (dock!=model::Dock::Bottom || ly<340.0);
-                        if far_out && on_canvas { assert!(!covered(&pieces, px, py), "{dock:?} {ppp}: 岛体外 ({px},{py}) 不能有模糊"); }
+                        if far_out && on_canvas { assert!(!covered(&pieces, px, py), "{dock:?} {ppp}: 島體外 ({px},{py}) 不能有模糊"); }
                     }
                 }
                 assert!(checked > 1000);
@@ -519,45 +519,45 @@ mod blur_piece_tests {
         let pieces = blur_pieces(&[GlassShape::Round(Rect::from_min_size(Pos2::new(10.0, 20.0), Vec2::new(100.0, 40.0)), 10.0)], 1.5);
         assert_eq!(pieces, vec![BlurPiece { x: 15.0, y: 30.0, w: 150.0, h: 60.0, radius: 15.0 }]);
         assert!(blur_pieces(&[GlassShape::Notch { rect: Rect::NOTHING, flare: 5.0, flare_h: 8.0, radius: 12.0 }], 1.0).is_empty());
-        // 极简细条：没有肩部，只有一块
+        // 極簡細條：沒有肩部，只有一塊
         let tiny = blur_pieces(&[GlassShape::Notch { rect: Rect::from_min_size(Pos2::new(298.0, 0.0), Vec2::new(44.0, 4.5)), flare: 0.0, flare_h: 8.0, radius: 2.25 }], 1.25);
         assert_eq!(tiny.len(), 1);
     }
 }
 
 pub struct FrameOut {
-    /// 原生窗口应保留的可见区域（相对 `win` 左上角）。
+    /// 原生窗口應保留的可見區域（相對 `win` 左上角）。
     pub region: Rect,
-    /// 毛玻璃 + 系统模糊时，替代 `region` 的贴合轮廓；其余情况为 None。
+    /// 毛玻璃 + 系統模糊時，替代 `region` 的貼合輪廓；其餘情況為 None。
     pub glass: Option<Vec<GlassShape>>,
-    /// 是否在 glass 轮廓下方显示系统模糊；兼容渲染只借轮廓裁剪时为 false。
+    /// 是否在 glass 輪廓下方顯示系統模糊；兼容渲染只借輪廓裁剪時為 false。
     pub blur: bool,
     #[cfg(all(windows, feature = "sdk-material"))]
     pub(crate) material_layer: Option<crate::material::Layer>,
-    /// 常驻条实际占用的窗口轮廓，透明留白交给下层窗口。
+    /// 常駐條實際佔用的窗口輪廓，透明留白交給下層窗口。
     pub resident_clip: Option<Vec<GlassShape>>,
-    /// 鼠标命中区（相对 `win` 左上角），区域外点击穿透到下层窗口。
+    /// 鼠標命中區（相對 `win` 左上角），區域外點擊穿透到下層窗口。
     pub hit: Rect,
-    /// 切到较矮页面时，原页边缘临时保留的续滚范围，不参与绘制或点击命中。
+    /// 切到較矮頁面時，原頁邊緣臨時保留的續滾範圍，不參與繪製或點擊命中。
     pub page_scroll_area: Option<Rect>,
-    /// 极简细条只感应悬停，鼠标点击交给下面的应用。
+    /// 極簡細條只感應懸停，鼠標點擊交給下面的應用。
     pub click_through: bool,
     pub notice_hit: Option<Rect>,
-    /// 当前可点击的通知范围（相对 `win` 左上角），供顶部任务栏遮挡判断。
+    /// 當前可點擊的通知範圍（相對 `win` 左上角），供頂部任務欄遮擋判斷。
     pub top_bar_notice: Option<Rect>,
-    /// 文件拖入感应区；独立于普通鼠标命中区。
+    /// 文件拖入感應區；獨立於普通鼠標命中區。
     pub file_drop_zone: Option<Rect>,
-    /// 展开状态立即生效，不等待展开动画结束。
+    /// 展開狀態立即生效，不等待展開動畫結束。
     pub expanded: bool,
     pub editing: bool,
     pub animating: bool,
-    /// 岛或浮层的外接范围还在变化，保持本轮动画的原生外框。
+    /// 島或浮層的外接範圍還在變化，保持本輪動畫的原生外框。
     pub geometry_transitioning: bool,
-    /// 当前帧正在绘制翻页过渡。
+    /// 當前幀正在繪製翻頁過渡。
     pub page_transition: bool,
-    /// 喝水页的百分比环和柱状图正在切换。
+    /// 喝水頁的百分比環和柱狀圖正在切換。
     pub water_view_transition: bool,
-    /// 展开、收起、翻页或内容滚动仍有画面需要逐帧交付。
+    /// 展開、收起、翻頁或內容滾動仍有畫面需要逐幀交付。
     pub interactive_transition: bool,
     pub repaint_after: std::time::Duration,
     pub cmds: Vec<Cmd>,
@@ -594,11 +594,11 @@ impl Pomo {
     }
 }
 
-/// 本地歌词（酷狗、汽水）每 5 秒复查，最多约 1 分钟；网络失败每 30 秒重试，最多约 5 分钟。手动点重试会重新计数。
+/// 本地歌詞（酷狗、汽水）每 5 秒複查，最多約 1 分鐘；網絡失敗每 30 秒重試，最多約 5 分鐘。手動點重試會重新計數。
 const NATIVE_RETRIES:u32=12;
 const NETWORK_RETRIES:u32=10;
 
-/// 与 `format!("{title}|{artist}|{duration:.0}")` 等价，但不分配内存：界面每帧要比较好几次。
+/// 與 `format!("{title}|{artist}|{duration:.0}")` 等價，但不分配內存：界面每幀要比較好幾次。
 pub(crate) fn lyric_key_matches(key:&str,media:&NowPlaying)->bool {
     use std::io::Write;
     let Some(rest)=key.strip_prefix(media.title.as_str()).and_then(|rest|rest.strip_prefix('|')) else{return false;};
@@ -622,7 +622,7 @@ fn lyric_key_matches_the_formatted_key_without_allocating(){
     }
 }
 
-/// 发起歌词查询时的歌曲信息，用来判断之后的变化是换歌还是信息补全。
+/// 發起歌詞查詢時的歌曲信息，用來判斷之後的變化是換歌還是信息補全。
 #[derive(Clone,Debug,Default)]
 pub(crate) struct LyricSong {pub source:String,pub title:String,pub artist:String,pub duration:f64,pub song_id:Option<u64>}
 impl LyricSong {
@@ -633,11 +633,11 @@ impl LyricSong {
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 enum SongChange {
-    /// 换了一首歌：立即清空旧歌词并重新查询。
+    /// 換了一首歌：立即清空舊歌詞並重新查詢。
     Different,
-    /// 同一首，只是时长、写法等补全：已有同步歌词时不再查询。
+    /// 同一首，只是時長、寫法等補全：已有同步歌詞時不再查詢。
     Same,
-    /// 同一首，署名有补全：重新查询，但查询期间继续显示已有歌词。
+    /// 同一首，署名有補全：重新查詢，但查詢期間繼續顯示已有歌詞。
     Refined,
 }
 
@@ -654,7 +654,7 @@ fn song_change(previous:&LyricSong,media:&NowPlaying)->SongChange {
         (Some(old),Some(new))=>return if old==new {SongChange::Same}else{SongChange::Different},
         _=>{}
     }
-    // 同名的不同版本（现场版、伴奏等）时长通常不同：两边都已知且相差超过 3 秒视为不同歌曲。
+    // 同名的不同版本（現場版、伴奏等）時長通常不同：兩邊都已知且相差超過 3 秒視為不同歌曲。
     if previous.duration>0.0 && media.duration>0.0 && (previous.duration-media.duration).abs()>3.0 {return SongChange::Different;}
     match lyrics::song_relation(&previous.title,&previous.artist,&media.title,&media.artist) {
         Some(true)=>SongChange::Same,
@@ -663,7 +663,7 @@ fn song_change(previous:&LyricSong,media:&NowPlaying)->SongChange {
     }
 }
 
-/// 等待旧请求结束后再发起的在线查询（同一时间只保留一个网络线程）。
+/// 等待舊請求結束後再發起的在線查詢（同一時間只保留一個網絡線程）。
 pub(crate) struct LyricsJob {
     source:String,title:String,artist:String,duration:f64,song_id:Option<u64>,
     cached:Option<lyrics::Lyrics>,native_only:bool,manual:bool,translate:bool,
@@ -672,20 +672,20 @@ pub(crate) struct LyricsJob {
 #[derive(Default)]
 pub(crate) struct LyricsState {
     pub key: String,
-    /// 本次查询对应的歌曲；为空表示还没有按歌曲发起过查询。
+    /// 本次查詢對應的歌曲；為空表示還沒有按歌曲發起過查詢。
     pub song: Option<LyricSong>,
-    /// 旧请求未结束时排队的在线查询；本机歌词轮询不等它，换歌后立即开始。
+    /// 舊請求未結束時排隊的在線查詢；本機歌詞輪詢不等它，換歌後立即開始。
     pub pending: Option<LyricsJob>,
     pub island_animation_started: bool,
     pub scroll_animation_started: bool,
     pub loading: bool,
     pub error: Option<lyrics::FetchError>,
     pub retry_at: Option<f64>,
-    /// 发起本次查询时已知的歌曲 ID；之后才拿到 ID 且还没有同步歌词时，按 ID 再查一次。
+    /// 發起本次查詢時已知的歌曲 ID；之後才拿到 ID 且還沒有同步歌詞時，按 ID 再查一次。
     pub song_id: Option<u64>,
-    /// 同一首歌已自动重试的次数；达到上限后停止，避免整首歌期间反复读盘或联网。
+    /// 同一首歌已自動重試的次數；達到上限後停止，避免整首歌期間反覆讀盤或聯網。
     pub attempts: u32,
-    /// 用户点了「重试」：下一次查询跳过近期「没有歌词」的记录。
+    /// 用戶點了「重試」：下一次查詢跳過近期「沒有歌詞」的記錄。
     pub manual_retry: bool,
     pub lyrics: Option<lyrics::Lyrics>,
     /// 主歌詞顯示字：中文歌已轉繁體，其餘保留原文；長度與 lyrics.lines 對齊。
@@ -696,28 +696,28 @@ pub(crate) struct LyricsState {
     pub native_rx: Option<std::sync::mpsc::Receiver<Option<lyrics::Lyrics>>>,
 }
 
-/// v0.5.5：邮件面板与设置表单的界面状态。正文只在内存里过一次，不落盘。
+/// v0.5.5：郵件面板與設置表單的界面狀態。正文只在內存裡過一次，不落盤。
 #[derive(Default)]
 pub(crate) struct MailState {
     pub privacy:crate::mail_privacy::Privacy,
     pub manage:crate::mail_manage_ui::State,
     pub accounts: Vec<mail::Account>,
-    /// 每个账号的连接状态，键是邮箱小写。
+    /// 每個帳號的連接狀態，鍵是郵箱小寫。
     pub status: HashMap<String, mail::Status>,
-    /// 最近邮件，新的在前，最多 60 封。
+    /// 最近郵件，新的在前，最多 60 封。
     pub recent: Vec<mail::Item>,
-    /// 等当前帧确认避让状态后再决定通知样式。
+    /// 等當前幀確認避讓狀態後再決定通知樣式。
     code_alerts: Vec<(String, u32, String)>,
-    /// 设置页里「测试连接」的结果。
+    /// 設置頁裡「測試連接」的結果。
     pub note: String,
     pub testing: Option<String>,
     pub form: MailForm,
-    /// 面板里点开的邮件（账号 + uid，避免两个账号 uid 撞车）。
+    /// 面板裡點開的郵件（帳號 + uid，避免兩個帳號 uid 撞車）。
     pub open_uid: Option<(String, u32)>,
     pub reading: Option<mail::Item>,
     pub reader_focus: bool,
     pub bell_at: Option<f64>,
-    /// 已经提醒过的会议，键是 `UID + DTSTART`（邮件和日历两条来源共用）。
+    /// 已經提醒過的會議，鍵是 `UID + DTSTART`（郵件和日曆兩條來源共用）。
     pub fired: std::collections::HashSet<String>,
 }
 
@@ -729,12 +729,12 @@ pub(crate) struct MailForm {
     pub email: String,
     pub password: String,
     pub show: bool,
-    /// 设置页的「添加邮箱」弹窗是否打开。
+    /// 設置頁的「添加郵箱」彈窗是否打開。
     pub open: bool,
 }
 
 impl MailState {
-    /// 最近一封带验证码的邮件。
+    /// 最近一封帶驗證碼的郵件。
     pub fn code_item(&self) -> Option<&mail::Item> {self.recent.iter().find(|m|m.code.is_some())}
     pub(crate) fn alert_code_item(&self, account: &str, uid: u32, now: f64, hide_seconds: u32) -> Option<&mail::Item> {
         self.recent.iter().find(|item| {
@@ -750,7 +750,7 @@ impl MailState {
     }
 }
 
-/// v0.5.6：日程（CalDAV）的界面状态。密码只在表单里暂存，保存后立刻清掉。
+/// v0.5.6：日程（CalDAV）的界面狀態。密碼只在表單裡暫存，保存後立刻清掉。
 #[derive(Default)]
 pub(crate) struct CalendarState {
     pub local: Vec<crate::local_calendar::Entry>,
@@ -758,25 +758,25 @@ pub(crate) struct CalendarState {
     pub draft: Option<crate::local_calendar::Draft>,
     pub feeds: Vec<CalendarFeed>,
     pub config: Option<calendar::Config>,
-    /// 未来 24 小时的日程（提醒也读这里）。
+    /// 未來 24 小時的日程（提醒也讀這裡）。
     pub events: Vec<mail::Meeting>,
     pub view: crate::calendar_ui::State,
     pub agenda: bool,
     pub agenda_first: usize,
     pub connected: bool,
     pub last_sync: String,
-    /// 连续失败次数；>= 2 才在设置页显示红字。
+    /// 連續失敗次數；>= 2 才在設置頁顯示紅字。
     pub failures: u32,
     pub error: String,
     pub testing: bool,
-    /// 设置表单里的提示（成功/失败/粘贴拆分的说明）。
+    /// 設置表單裡的提示（成功/失敗/粘貼拆分的說明）。
     pub note: String,
-    /// `note` 是不是错误提示（界面显示成红字）。
+    /// `note` 是不是錯誤提示（界面顯示成紅字）。
     pub note_error: bool,
     pub form: CalendarForm,
-    /// 「测试并保存」用的临时密码，测试成功才落盘。
+    /// 「測試並保存」用的臨時密碼，測試成功才落盤。
     pub test_password: String,
-    /// 导入 .ics 文件的结果说明。
+    /// 導入 .ics 文件的結果說明。
     pub import_note: String,
     pub warning:String,
 }
@@ -802,13 +802,13 @@ impl CalendarFeed {
 #[derive(Default)]
 pub(crate) struct CalendarForm {
     pub provider: calendar::Provider,
-    /// 自定义 CalDAV 的服务器地址。
+    /// 自定義 CalDAV 的服務器地址。
     pub server: String,
     pub username: String,
     pub password: String,
     pub show: bool,
     pub guide_open: bool,
-    /// 设置页的「添加日历」弹窗是否打开。
+    /// 設置頁的「添加日曆」彈窗是否打開。
     pub open: bool,
 }
 
@@ -829,33 +829,33 @@ struct PositionDrag {
     original_display:String,
     original_monitor:Option<String>,
     start: Vec2,
-    /// 本段拖动的起始偏移（未取整，换边后重置），单位与 `island_offset` 相同。
+    /// 本段拖動的起始偏移（未取整，換邊後重置），單位與 `island_offset` 相同。
     offset: f32,
     original: (model::Dock, i32),
 }
 
-// ---------- 拖动位置动效 ----------
-/// 原地按住这么久即「拿起」岛体，不必先移动鼠标。
+// ---------- 拖動位置動效 ----------
+/// 原地按住這麼久即「拿起」島體，不必先移動鼠標。
 const LIFT_HOLD: f64 = 0.12;
-/// 拿起 / 放下：略欠阻尼，提起时轻轻弹一下，放下时回落。
+/// 拿起 / 放下：略欠阻尼，提起時輕輕彈一下，放下時回落。
 const LIFT_K: (f32, f32) = (420.0, 0.38);
-/// 拿起后放大：沿停靠边方向 / 离开停靠边方向。
+/// 拿起後放大：沿停靠邊方向 / 離開停靠邊方向。
 const LIFT_SCALE: (f32, f32) = (0.08, 0.14);
-/// 窗口跟手：明显拖尾并略微冲过光标；松手后落位回弹一两下。
+/// 窗口跟手：明顯拖尾並略微衝過光標；鬆手後落位回彈一兩下。
 const GLIDE_FOLLOW: (f32, f32) = (320.0, 0.72);
 const GLIDE_SETTLE: (f32, f32) = (380.0, 0.38);
-/// 移动越快沿运动方向拉得越长（最多 22%），厚度方向相应收窄。
+/// 移動越快沿運動方向拉得越長（最多 22%），厚度方向相應收窄。
 const STRETCH_MAX: f32 = 0.22;
 const STRETCH_SPEED: f32 = 1400.0;
-/// 吸附范围（`island_offset` 单位）：居中和拖动前的位置。
+/// 吸附範圍（`island_offset` 單位）：居中和拖動前的位置。
 const DRAG_MAGNET: f32 = 5.0;
-/// 吸住居中后要拖出更远才松开，停在中间时稳稳「咬住」，不会被手抖带走。
+/// 吸住居中後要拖出更遠才鬆開，停在中間時穩穩「咬住」，不會被手抖帶走。
 const CENTER_RELEASE: f32 = 9.0;
-/// 离居中多近开始浮现轮廓描边（`island_offset` 单位）。
+/// 離居中多近開始浮現輪廓描邊（`island_offset` 單位）。
 const CENTER_GUIDE_RANGE: f32 = 24.0;
-/// 吸附瞬间沿轮廓从中心向两端扫开的光，持续时长（秒）。
+/// 吸附瞬間沿輪廓從中心向兩端掃開的光，持續時長（秒）。
 const CENTER_SWEEP: f64 = 0.55;
-/// 已居中的提示色（绿）：岛体描边、外发光和扫光统一用它，颜色本身就是「对准了」。
+/// 已居中的提示色（綠）：島體描邊、外發光和掃光統一用它，顏色本身就是「對準了」。
 const CENTER_TINT: (f32, f32, f32) = (88.0, 222.0, 140.0);
 
 pub struct App {
@@ -869,9 +869,9 @@ pub struct App {
     pinned_horizontal_width: f32,
     pub opts: Options,
     pub settings: model::Settings,
-    /// 由主程序应用原生截图保护后再保存。
+    /// 由主程序應用原生截圖保護後再保存。
     pub capture_exclusion_request: Option<bool>,
-    /// 截图和录屏隐藏未能生效时，在设置中显示原因。
+    /// 截圖和錄屏隱藏未能生效時，在設置中顯示原因。
     pub capture_exclusion_error: Option<String>,
     #[cfg(all(windows, feature = "sdk-material"))]
     pub material_capture_forced: bool,
@@ -879,45 +879,45 @@ pub struct App {
     pub material_active_id: Option<String>,
     #[cfg(all(windows, feature = "sdk-material"))]
     material_appearance: crate::material::Appearance,
-    /// 本次运行实际使用兼容渲染（Direct3D 12）；设置里的开关与它不同时提示重启。
+    /// 本次運行實際使用兼容渲染（Direct3D 12）；設置裡的開關與它不同時提示重啟。
     pub render_compat_running: bool,
     pub(crate) todos: model::TodoList,
     pub(crate) water: model::Water,
     pub(crate) shelf: model::Shelf,
     pub(crate) games: crate::games::Library,
 
-    // 形变
+    // 形變
     pub(crate) w: Spring,
     pub(crate) h: Spring,
-    /// 完全展开时的版面高度。切页时与外壳同步变化，开合进度不会因目标页变高而倒退。
+    /// 完全展開時的版面高度。切頁時與外殼同步變化，開合進度不會因目標頁變高而倒退。
     pub(crate) page_height: Spring,
     pub(crate) open: bool,
     hold_open: bool,
-    /// 顶栏为图钉让位的动画进度。
+    /// 頂欄為圖釘讓位的動畫進度。
     pub(crate) hold_slot: f32,
     hover_since: Option<f64>,
     leave_since: Option<f64>,
-    /// 前台切换导致的强制收起：光标离开前不再自动展开。
+    /// 前台切換導致的強制收起：光標離開前不再自動展開。
     pub hover_lock: bool,
     pub(crate) reveal: f32,
     position_drag: Option<PositionDrag>,
-    /// 拖动中和松手落位期间的窗口位置（未取整），落定后回到 `settings.island_offset`。
+    /// 拖動中和鬆手落位期間的窗口位置（未取整），落定後回到 `settings.island_offset`。
     drag_glide: Option<anim::Spring>,
-    /// 拿起程度 0..1（可略过冲）与速度拉伸量，只影响岛体外形，不影响展开进度。
+    /// 拿起程度 0..1（可略過沖）與速度拉伸量，隻影響島體外形，不影響展開進度。
     drag_lift: anim::Spring,
     seam_guide:f32,
     crossed_at:f64,
     drag_stretch: anim::Spring,
-    /// 拖动时是否吸在居中；进入吸附的时刻用于触发扫光和「咔嗒」。
+    /// 拖動時是否吸在居中；進入吸附的時刻用於觸發掃光和「咔嗒」。
     pub(crate) center_locked: bool,
     center_lock_at: f64,
-    /// 居中描边可见度 0..1（越靠近居中越清晰）与「已居中」点亮程度 0..1。
+    /// 居中描邊可見度 0..1（越靠近居中越清晰）與「已居中」點亮程度 0..1。
     pub(crate) center_guide: f32,
     pub(crate) center_lock_a: f32,
-    /// 光标停在日期时间拖动区的起始时间：停留越久把手提示越明显，划过不打扰。
+    /// 光標停在日期時間拖動區的起始時間：停留越久把手提示越明顯，劃過不打擾。
     grip_hover_since: Option<f64>,
 
-    // 切页
+    // 切頁
     pub(crate) page: usize,
     page_from: usize,
     #[cfg(feature="sdk-js")]
@@ -950,44 +950,44 @@ pub struct App {
     pub(crate) icons: crate::icons::Cache,
     pub(crate) avoidance: crate::avoidance::Picker,
     pub(crate) confirm_clear: Option<f64>,
-    /// 置物架页的两个分栏：0 = 文件，1 = 剪贴板。
+    /// 置物架頁的兩個分欄：0 = 文件，1 = 剪貼板。
     pub(crate) shelf_tab: usize,
     pub clipboard: crate::clipboard::Shared,
     pub(crate) clip_first: usize,
     pub(crate) clip_confirm_clear: Option<f64>,
 
-    // 饮水
+    // 飲水
     pub(crate) water_ring: Spring,
     pub(crate) water_ml: f32,
     pub(crate) water_view: usize,
     pub(crate) water_view_t: Spring,
     pub(crate) sit_view_t: Spring,
-    /// 饮水页当前是否显示「站立提醒」。
+    /// 飲水頁當前是否顯示「站立提醒」。
     pub(crate) sit_mode: bool,
-    /// 健康提醒设置里是否打开了「提醒时段」二级页（时段 + 午休）。
+    /// 健康提醒設置裡是否打開了「提醒時段」二級頁（時段 + 午休）。
     pub(crate) health_time: bool,
     pub(crate) remind_t: Spring,
     pub(crate) last_reminder: f64,
     pub(crate) health_pending: [bool;2],
     pub(crate) fullscreen_hidden: bool,
-    /// 久坐计时起点，确认提醒或点「起身了」后重置。
+    /// 久坐計時起點，確認提醒或點「起身了」後重置。
     pub(crate) sit_start: f64,
     pub(crate) sit_t: Spring,
 
-    // 专注
+    // 專注
     pub(crate) pomo: Pomo,
     pub(crate) settings_editing: bool,
     pub(crate) ring_shown: Spring,
     pub(crate) reset_spin: Spring,
 
-    // 待办
+    // 待辦
     pub(crate) adding: bool,
     pub(crate) editing: Option<usize>,
     pub(crate) buf: String,
     pub(crate) todo_input_focused: bool,
     pub(crate) todo_pop: Spring,
 
-    // 音乐
+    // 音樂
     pub(crate) ly: LyricsState,
     pub(crate) ly_worker: Option<std::thread::JoinHandle<()>>,
     pub(crate) show_lyrics: bool,
@@ -1003,7 +1003,7 @@ pub struct App {
     pub displays:Vec<crate::display_layout::Display>,
     browser_at_top:bool,
     browser_minimal_active:bool,
-    /// 毛玻璃着色量（平滑过渡，避免背景变化时闪烁）；0 表示尚未初始化。
+    /// 毛玻璃著色量（平滑過渡，避免背景變化時閃爍）；0 表示尚未初始化。
     glass_tint:f32,
     /// 毛玻璃目前取樣到的桌面底色，用來挑吉祥物線條的對比色。
     backdrop:Option<[f32;3]>,
@@ -1071,40 +1071,40 @@ pub struct App {
     pub(crate) current_hour: usize,
     pub(crate) cursor_local: Option<Pos2>,
     started: bool,
-    /// v0.5.4：音量条展示值（拖动时先用本地值，随后跟上系统回报）。
+    /// v0.5.4：音量條展示值（拖動時先用本地值，隨後跟上系統回報）。
     pub(crate) volume_ui: Option<(u32, bool)>,
-    /// 拖动/滚轮刚改过音量，这段时间内系统回声不再单独弹一条。
+    /// 拖動/滾輪剛改過音量，這段時間內系統回聲不再單獨彈一條。
     pub(crate) volume_quiet_until: f64,
-    /// 音量条填充的缓动量（0..1），让数值变化有「量感」。
+    /// 音量條填充的緩動量（0..1），讓數值變化有「量感」。
     pub(crate) volume_a: f32,
     pub(crate) music_volume_ui: Option<(u32,bool)>,
     pub(crate) music_volume_quiet_until: f64,
     pub(crate) music_volume_open: bool,
-    /// 拖动进度条松手后先用本地目标值显示：播放器回报新位置有延迟，等追上、换歌或超时再交还（来自 PR #162）。
+    /// 拖動進度條鬆手後先用本地目標值顯示：播放器回報新位置有延遲，等追上、換歌或超時再交還（來自 PR #162）。
     pub(crate) music_seek_ui: Option<(f64,String)>,
     pub(crate) music_seek_quiet_until: f64,
-    /// 点了上一首 / 下一首的时刻：先本地把进度归零，等播放器报回新歌位置再交还。
+    /// 點了上一首 / 下一首的時刻：先本地把進度歸零，等播放器報回新歌位置再交還。
     pub(crate) music_restart_at: Option<f64>,
-    /// 上一次看到的蓝牙设备，用来只在连接/断开时提示一次。
+    /// 上一次看到的藍牙設備，用來只在連接/斷開時提示一次。
     pub(crate) bt_shown: Vec<crate::bt::Device>,
     pub(crate) wireless_devices: Vec<crate::bt::Device>,
     pub(crate) wireless_offset: usize,
     pub(crate) wireless_focus: Option<String>,
-    /// 展开电量页的时刻，用于入场动效；离开页面或收起后清空。
+    /// 展開電量頁的時刻，用於入場動效；離開頁面或收起後清空。
     pub(crate) wireless_enter_at: Option<f64>,
     pub(crate) wireless_fx: std::collections::HashMap<String,crate::bluetooth_ui::WirelessFx>,
     pub(crate) wireless_alerted: std::collections::HashMap<(String,&'static str),f64>,
-    /// 每台已连接设备第一次出现的时刻；用来区分“正在读取电量”和“设备不提供电量”。
+    /// 每台已連接設備第一次出現的時刻；用來區分“正在讀取電量”和“設備不提供電量”。
     pub(crate) wireless_seen_at: std::collections::HashMap<String,f64>,
     bt_initialized: bool,
-    /// v0.5.5：邮件账号、最近邮件与设置表单。
+    /// v0.5.5：郵件帳號、最近郵件與設置表單。
     pub(crate) mail: MailState,
-    /// 岛内详情与独立阅读窗口各保留一份排版缓存。
+    /// 島內詳情與獨立閱讀窗口各保留一份排版緩存。
     mail_lines_cache: Vec<(std::sync::Arc<str>, std::sync::Arc<str>, u32, std::sync::Arc<Vec<crate::mail_format::Line>>)>,
-    /// v0.5.6：日历（CalDAV）配置、未来 24 小时事件与设置表单。
+    /// v0.5.6：日曆（CalDAV）配置、未來 24 小時事件與設置表單。
     pub(crate) calendar: CalendarState,
     pub(crate) quota: crate::quota_ui::State,
-    /// 天气页的当前数据与后台拉取状态。
+    /// 天氣頁的當前數據與後台拉取狀態。
     pub(crate) weather: crate::weather::State,
     pub(crate) weather_source: crate::weather_source_ui::State,
     pub(crate) updates: crate::updates::State,
@@ -1249,7 +1249,7 @@ impl App {
             #[cfg(feature="sdk-js")]
             settings_plugin:None,
             forced_open_until:0.0, settings_open:false, settings_window:std::sync::Arc::new(std::sync::Mutex::new(crate::settings_window::State::load())), displays:Vec::new(), browser_at_top:false, browser_minimal_active:false, glass_tint:0.0, fluid:Default::default(), fluid_origin:Pos2::ZERO, fluid_art:None, fluid_title:String::new(), screen:None, horizontal_width:WIN_W, settings_focus_requested:false, settings_tab:0, settings_category:0, messenger_statuses:Default::default(), notification_apps:model::NotificationApps::load(), subpage:None, task_dialog:None,
-            listener_status: "尚未连接".into(),
+            listener_status: "尚未連接".into(),
             notification_bell_until: 0.0, notification_bell_at: -10.0, notice: None, hud_notice: None, hud_alpha: 0.0, notice_width:Spring::new(0.0,CLOSE.0,CLOSE.1), notice_details:false, pending_messengers:Vec::new(), messenger_scroll:0.0, alerts: Default::default(), history: Default::default(), pending: vec![],
             #[cfg(windows)]
             plugin_notice_ui: Default::default(),
@@ -1353,10 +1353,10 @@ impl App {
             }
         }
     }
-    /// 同一封邮件、同一段正文只解析一次排版，避免每帧重复切分几百个段落。
+    /// 同一封郵件、同一段正文只解析一次排版，避免每幀重複切分幾百個段落。
     pub(crate) fn mail_body_lines(&mut self, item: &mail::Item) -> std::sync::Arc<Vec<crate::mail_format::Line>> {
-        // display_mail 每帧只 clone Arc：正文与 HTML 原文的指针都不变就说明是同一封邮件，
-        // 长邮件不必每帧重新哈希几十 KB，更不必重新跑正则解析。
+        // display_mail 每幀只 clone Arc：正文與 HTML 原文的指針都不變就說明是同一封郵件，
+        // 長郵件不必每幀重新哈希幾十 KB，更不必重新跑正則解析。
         if let Some((_,_,_,lines))=self.mail_lines_cache.iter().find(|(summary, html, uid, _)|
             *uid == item.uid
             && std::sync::Arc::ptr_eq(summary, &item.summary)
@@ -1373,8 +1373,8 @@ impl App {
                 safe.subject=crate::mail_privacy::mask(&safe.subject,code);
                 safe.from=crate::mail_privacy::mask(&safe.from,code);
                 safe.summary=self.mail.privacy.masked_body(item);
-                // HTML 原文里可能还有未遮蔽的验证码，隐藏时必须一起丢弃。
-                // 用共享的空 Arc，让排版缓存对隐藏邮件也能按指针命中，不必每帧重解析。
+                // HTML 原文裡可能還有未遮蔽的驗證碼，隱藏時必須一起丟棄。
+                // 用共享的空 Arc，讓排版緩存對隱藏郵件也能按指針命中，不必每幀重解析。
                 static EMPTY: std::sync::OnceLock<std::sync::Arc<str>> = std::sync::OnceLock::new();
                 safe.html=EMPTY.get_or_init(||std::sync::Arc::from("")).clone();
                 safe.links.clear(); // Avoid tooltip/URL/copy leaks while hidden.
@@ -1385,7 +1385,7 @@ impl App {
         safe
     }
 
-    /// 收信服务推来的事件；历史邮件静默，新邮件进入通知队列。
+    /// 收信服務推來的事件；歷史郵件靜默，新郵件進入通知隊列。
     pub fn mail_event(&mut self, ev: mail::Event) {
         if !self.module_on(MAIL_PAGE){return;}
         let watching=|email:&str|self.mail_active() && self.mail.accounts.iter().any(|a|a.enabled && a.email.eq_ignore_ascii_case(email));
@@ -1451,15 +1451,15 @@ impl App {
         }
     }
 
-    /// 设置窗口第 8 个标签页：邮件。
+    /// 設置窗口第 8 個標籤頁：郵件。
     pub fn open_mail_settings(&mut self) {
         self.settings_tab = 7;
-        // 从岛上「去添加」进来时直接打开添加邮箱弹窗。
+        // 從島上「去添加」進來時直接打開添加郵箱彈窗。
         self.mail.form.open = true;
         self.open_settings();
     }
 
-    /// v0.5.6：日历服务推来的事件。失败不弹窗，只累计次数（连续两次才显示红字）。
+    /// v0.5.6：日曆服務推來的事件。失敗不彈窗，只累計次數（連續兩次才顯示紅字）。
     pub fn calendar_event(&mut self, ev: calendar::Event) {
         if !self.module_on(CALENDAR_PAGE) {return;}
         match ev {
@@ -1480,7 +1480,7 @@ impl App {
                     self.calendar.note_error = true;
                     return;
                 }
-                self.calendar.note = if message.is_empty(){format!("已连接 · 未来 24 小时 {count} 个日程")}else{format!("已连接 · {message}")};
+                self.calendar.note = if message.is_empty(){format!("已連接 · 未來 24 小時 {count} 個日程")}else{format!("已連接 · {message}")};
                 self.calendar.note_error = false;
                 self.calendar.warning = message.clone();
                 if self.calendar.config.as_ref()!=Some(&cfg) {
@@ -1581,13 +1581,13 @@ impl App {
         }
     }
 
-    /// 所有已连接的平台都参与同步，设置标签只决定正在编辑的账号。
+    /// 所有已連接的平台都參與同步，設置標籤只決定正在編輯的帳號。
     pub fn calendar_configs(&self) -> Vec<calendar::Config> {
         if self.calendar.feeds.is_empty() {self.calendar.config.clone().into_iter().collect()}
         else {self.calendar.feeds.iter().map(|feed|feed.config.clone()).collect()}
     }
 
-    /// 等价于 `calendar_configs()==known`，外壳每帧调用，不复制配置。
+    /// 等價於 `calendar_configs()==known`，外殼每幀調用，不復制配置。
     pub fn calendar_configs_match(&self, known: &[calendar::Config]) -> bool {
         if self.calendar.feeds.is_empty() {known==self.calendar.config.as_slice()}
         else {known.len()==self.calendar.feeds.len() && known.iter().zip(&self.calendar.feeds).all(|(known,feed)|*known==feed.config)}
@@ -1623,7 +1623,7 @@ impl App {
         self.calendar.note.clear();self.calendar.note_error=false;
     }
 
-    /// 只移除正在管理的平台，保留其他平台的日程与提醒。
+    /// 只移除正在管理的平台，保留其他平台的日程與提醒。
     pub fn forget_calendar(&mut self) -> Option<calendar::Config> {
         let old = self.calendar.config.take();
         if let Some(config)=&old {
@@ -1644,12 +1644,12 @@ impl App {
         old
     }
 
-    /// 外壳同步收信线程时读账号清单（不含任何凭据）。
+    /// 外殼同步收信線程時讀帳號清單（不含任何憑據）。
     pub fn mail_accounts(&self) -> &[mail::Account] {
         &self.mail.accounts
     }
 
-    /// 账号增删或开关变化后：落盘并让外壳重新对齐收信线程。
+    /// 帳號增刪或開關變化後：落盤並讓外殼重新對齊收信線程。
     pub(crate) fn mail_accounts_changed(&mut self) {
         self.mail_lines_cache.clear();
         let accounts=&self.mail.accounts;
@@ -1666,10 +1666,10 @@ impl App {
         self.pending.push(Cmd::MailSync);
     }
 
-    /// 录制/截图用的邮件样例（只在 `record` feature 下编译）。
+    /// 錄製/截圖用的郵件樣例（只在 `record` feature 下編譯）。
     ///
-    /// `KUIDAO_MAIL_DEMO=1|code` 面板带验证码，`=list` 只列邮件，`=fail` 用假授权码走一次
-    /// 「测试连接失败」，方便在没有真实邮箱时验收失败路径。
+    /// `KUIDAO_MAIL_DEMO=1|code` 面板帶驗證碼，`=list` 只列郵件，`=fail` 用假授權碼走一次
+    /// 「測試連接失敗」，方便在沒有真實郵箱時驗收失敗路徑。
     #[cfg(feature = "record")]
     pub fn mail_demo(&mut self) {
         use mail::{Account, Item, Provider, Status};
@@ -1693,8 +1693,8 @@ impl App {
         for a in &self.mail.accounts {
             self.mail.status.insert(a.email.clone(), Status::Ready);
         }
-        // 会议演示：开始时间设成 10 分钟后，正好落在默认 15 分钟提前量里，
-        // 启动即触发一次「会议提醒」。
+        // 會議演示：開始時間設成 10 分鐘後，正好落在默認 15 分鐘提前量裡，
+        // 啟動即觸發一次「會議提醒」。
         let mstart = chrono::Local::now().timestamp() + 600;
         let mat = chrono::DateTime::from_timestamp(mstart, 0)
             .map(|d| d.with_timezone(&chrono::Local).format("%m-%d %H:%M").to_string())
@@ -1755,7 +1755,7 @@ impl App {
         self.dots_target();
     }
 
-    /// 录制/截图用的日程样例（只在 `record` feature 下编译）。
+    /// 錄製/截圖用的日程樣例（只在 `record` feature 下編譯）。
     ///
     /// `KUIDAO_CAL_DEMO=paste|fail|connected|alert`。
     #[cfg(feature = "record")]
@@ -1786,7 +1786,7 @@ impl App {
                 if let Some((u, p)) = calendar::parse_paste(&self.calendar.form.username) {
                     self.calendar.form.username = u;
                     self.calendar.form.password = p;
-                    self.calendar.note = "已從貼上內容拆出使用者名稱和密碼，伺服器地址已按平臺填好".into();
+                    self.calendar.note = "已從貼上內容拆出使用者名稱和密碼，伺服器地址已按平台填好".into();
                 }
             }
             "fail" => {
@@ -1821,7 +1821,7 @@ impl App {
         }
     }
 
-    /// v0.5.4：把系统音量与蓝牙设备状态同步进界面；只在连接/断开时提示一次。
+    /// v0.5.4：把系統音量與藍牙設備狀態同步進界面；只在連接/斷開時提示一次。
     fn sync_device(&mut self, env: &Env) {
         if !(self.open&&self.page==BLUETOOTH_PAGE) {self.wireless_enter_at=None;}
         self.track_wireless_changes(&env.bt);
@@ -1841,7 +1841,7 @@ impl App {
         let connection_enabled=self.settings.bluetooth_notifications;
         if !battery_enabled||!connection_enabled {
             let enabled=|a:&crate::extras::Alert| {
-                a.source!=crate::extras::AlertSource::Internal||a.title!="蓝牙设备"||
+                a.source!=crate::extras::AlertSource::Internal||a.title!="藍牙設備"||
                     if a.page==BLUETOOTH_PAGE {battery_enabled} else {connection_enabled}
             };
             self.alerts.retain(&enabled);
@@ -1853,7 +1853,7 @@ impl App {
             return;
         }
         if !env.bt_ready { return; }
-        // 只把首次完整扫描作为基线，之后的连接变化都应提示。
+        // 只把首次完整掃描作為基線，之後的連接變化都應提示。
         if !self.bt_initialized {
             self.bt_initialized = true;
             self.bt_shown = env.bt.iter().filter(|d|d.connected).cloned().collect();
@@ -1866,7 +1866,7 @@ impl App {
         self.bt_shown = env.bt.iter().filter(|d|d.connected).cloned().collect();
     }
 
-    /// 距离上次交互的秒数（小精灵出现的依据）。
+    /// 距離上次交互的秒數（小精靈出現的依據）。
     pub fn idle_for(&self) -> f64 {
         self.system_idle.unwrap_or(self.t - self.last_input)
     }
@@ -1892,7 +1892,7 @@ impl App {
     #[cfg(windows)]
     pub fn start_tray(&self,state:crate::tray::State)->Option<crate::tray::Tray>{
         let layout=self.settings_window.clone();
-        // 原生文件选择框会占用界面线程，托盘退出时直接保存最近一次观察到的布局。
+        // 原生文件選擇框會佔用界面線程，托盤退出時直接保存最近一次觀察到的佈局。
         crate::tray::Tray::start_with_exit(state,move||{layout.lock().unwrap_or_else(|e|e.into_inner()).close();})
     }
 
@@ -1916,22 +1916,22 @@ impl App {
     pub fn is_plugin_status_page(&self) -> bool {
         self.page >= PAGE_NAMES.len()
     }
-    /// 打开健康提醒设置里的「提醒时段」二级页（演示录制用）。
+    /// 打開健康提醒設置裡的「提醒時段」二級頁（演示錄製用）。
     pub fn show_health_time(&mut self) { self.health_time = true; }
-    /// 切到饮水页的久坐屏，并假定已连续久坐 minutes 分钟（演示录制用）。
+    /// 切到飲水頁的久坐屏，並假定已連續久坐 minutes 分鐘（演示錄製用）。
     pub fn show_sit_view(&mut self, minutes: f64) {
         self.show_page(WATER_PAGE);
         self.sit_mode = true;
         self.sit_start = self.t - minutes * 60.0;
     }
 
-    // ---------- 功能模块：页面开关即模块开关，关闭后页面隐藏、后台同步和提醒一并停止 ----------
+    // ---------- 功能模塊：頁面開關即模塊開關，關閉後頁面隱藏、後台同步和提醒一併停止 ----------
 
-    /// 模块是否开启（与「页面管理」里的页面开关一致）。
+    /// 模塊是否開啟（與「頁面管理」裡的頁面開關一致）。
     pub fn module_on(&self,page:usize)->bool {
         self.settings.visible_pages.get(page).copied().unwrap_or_else(||page-PAGE_NAMES.len()<self.status_page_count())
     }
-    /// 收信线程是否应运行：邮箱模块开启且打开了「新邮件提醒」。
+    /// 收信線程是否應運行：郵箱模塊開啟且打開了「新郵件提醒」。
     pub fn mail_active(&self)->bool {self.module_on(MAIL_PAGE) && self.settings.mail_enabled}
     /// 島上信箱通知使用的服務圖示：優先看最近觸發鈴鐺的帳號，其次看最近一封信。
     fn mail_provider(&self)->mail::Provider {
@@ -1946,13 +1946,13 @@ impl App {
         paint::bell(&c.scaled(bx,by,0.44),bx,by,theme::WHITE,swing);
         if count>0 {crate::social::badge(c,x+9.5,y-7.0,count,5.5,7.0);}
     }
-    /// 剪贴板监听是否应运行：置物架模块开启且打开了「记录剪贴板」。
+    /// 剪貼板監聽是否應運行：置物架模塊開啟且打開了「記錄剪貼板」。
     pub fn clipboard_active(&self)->bool {self.module_on(SHELF_PAGE) && self.settings.clipboard_history}
-    /// 额度查询是否应运行：AI 额度模块开启且打开了「开启 AI 额度」。
+    /// 額度查詢是否應運行：AI 額度模塊開啟且打開了「開啟 AI 額度」。
     pub fn quota_active(&self)->bool {self.module_on(QUOTA_PAGE) && self.quota.config.enabled}
-    /// 旧版设置页里「新邮件提醒」「开启 AI 额度」与页面管理的模块开关是两层开关。
-    /// 合并后只保留模块开关：旧的内部开关关着时，迁移为模块关闭，内部开关恢复为开。
-    /// 只剩这一个页面、模块关不掉时保持原样，不改变已有行为。
+    /// 舊版設置頁裡「新郵件提醒」「開啟 AI 額度」與頁面管理的模塊開關是兩層開關。
+    /// 合併後只保留模塊開關：舊的內部開關關著時，遷移為模塊關閉，內部開關恢復為開。
+    /// 只剩這一個頁面、模塊關不掉時保持原樣，不改變已有行為。
     pub fn migrate_merged_switches(&mut self){
         let mut settings_changed=false;
         if !self.settings.mail_enabled {
@@ -2022,7 +2022,7 @@ impl App {
         if let Some(name)=PAGE_NAMES.get(page) {return name;}
         #[cfg(feature="sdk-js")]
         if let Some((_,name))=self.status_pages.get(page-PAGE_NAMES.len()) {return name;}
-        "页面管理"
+        "頁面管理"
     }
 
     fn page_settings_tab(&self, page: usize) -> usize {
@@ -2060,7 +2060,7 @@ impl App {
             return;
         }
         let pages:Vec<_>=self.plugins.status_pages().map(|(id,name)|(id.to_owned(),name.to_owned())).collect();
-        // 数字页码只用于绘制和翻页，安装或停用其他插件时按 ID 找回原来的页面。
+        // 數字頁碼只用於繪製和翻頁，安裝或停用其他插件時按 ID 找回原來的頁面。
         let remap=|page:usize| {
             if page<PAGE_NAMES.len() {return Some(page);}
             let (id,_)=self.status_pages.get(page-PAGE_NAMES.len())?;
@@ -2099,8 +2099,8 @@ impl App {
         self.go(pages[(position+offset)%pages.len()],if next {1.0}else{-1.0});
     }
 
-    /// OLED 像素偏移只在收起动画完成、没有鼠标交互、不在编辑时移动；
-    /// 展开、点击、拖拽时保持当前位置，避免面板内容和位移一起跳。
+    /// OLED 像素偏移只在收起動畫完成、沒有鼠標交互、不在編輯時移動；
+    /// 展開、點擊、拖拽時保持當前位置，避免面板內容和位移一起跳。
     pub fn oled_shift_idle(&self,ctx:&egui::Context) -> bool {
         crate::oled_shift::should_move(self.open, self.position_drag.is_some() || self.drag_glide.is_some(), self.is_editing())
             && self.hover_since.is_none() && !self.drag_hot
@@ -2109,7 +2109,7 @@ impl App {
             && ctx.input(|i|!i.pointer.any_down() && !i.pointer.any_pressed() && i.raw.hovered_files.is_empty())
     }
 
-    /// 慢帧日志用：当前页与展开状态。
+    /// 慢幀日誌用：當前頁與展開狀態。
     pub fn debug_state(&self) -> (usize, bool) {
         (self.page, self.open)
     }
@@ -2126,7 +2126,7 @@ impl App {
         if self.adding && self.buf.trim().is_empty(){self.cancel_edit();}
     }
 
-    /// 带过渡地切到某页。`dir` > 0 表示内容从右侧进入。
+    /// 帶過渡地切到某頁。`dir` > 0 表示內容從右側進入。
     pub(crate) fn go(&mut self, page: usize, dir: f32) {
         if page == self.page || !self.module_on(page) { return; }
         if self.drag_departing {
@@ -2135,7 +2135,7 @@ impl App {
         }
         self.music_volume_open=false;
         self.subpage=None;
-        // 连点时，尚在滑入的页面从当前的位置和透明度开始淡出。
+        // 連點時，尚在滑入的頁面從當前的位置和透明度開始淡出。
         let elapsed = self.page_e();
         self.page_from_offset = self.page_slide_offset(elapsed);
         self.page_from_elapsed = elapsed;
@@ -2183,7 +2183,7 @@ impl App {
         self.todo_input_focused=false;
     }
 
-    /// 外壳据此调整音乐采样频率：看着音乐页时最快，收起显示歌词次之，其余只需跟上歌名和播放状态。
+    /// 外殼據此調整音樂採樣頻率：看著音樂頁時最快，收起顯示歌詞次之，其餘只需跟上歌名和播放狀態。
     pub fn media_poll_interval(&self)->std::time::Duration {
         if self.open && self.page==MUSIC_PAGE {crate::smtc::POLL_FAST}
         else if self.island_lyrics_active() && !self.open {crate::smtc::POLL_LYRICS}
@@ -2203,7 +2203,7 @@ impl App {
         self.island_lyrics_active()&&!self.open&&!self.notice.as_ref().is_some_and(|a|a.meeting.is_some()||self.settings.notification_preview&&matches!(a.source,crate::extras::AlertSource::External(_)))
     }
 
-    /// 换句、分段和展开高亮共用时间调整；正数延后，负数提前。
+    /// 換句、分段和展開高亮共用時間調整；正數延後，負數提前。
     pub(crate) fn lyric_position(&self)->f32 {
         // 播放器時間 + 這首歌學到的位移（聽歌辨識校準）→ 曲內時間；再套全域的時間調整。
         let offset=crate::lyric_sync::offset_seconds(&self.media.title,&self.media.artist,&self.media.source) as f64;
@@ -2217,7 +2217,7 @@ impl App {
         lyrics.line_progress(index,self.lyric_position(),self.media.duration as f32)
     }
 
-    /// 当前歌曲没有进度采样且备用读取不可用时，岛上显示歌名。
+    /// 當前歌曲沒有進度採樣且備用讀取不可用時，島上顯示歌名。
     pub(crate) fn music_lyrics_limited(&self)->bool {
         #[cfg(windows)] {self.media.sampled_at.is_none() && crate::smtc::music_compat::lyrics_limited(&self.media.source)}
         #[cfg(not(windows))] {false}
@@ -2249,7 +2249,7 @@ impl App {
         let translation=current.and_then(|(index,_)|self.ly.translation_lines.get(index)).map(|text|text.trim()).filter(|text|!text.is_empty());
         let ink=if current.is_some()||title{theme::WHITE}else{theme::GRAY};
         let layout=|text:String| {
-            // 维语等从右往左的歌词：先按阅读顺序分行再逐行转换，否则折行后第一行会是句子的结尾（#200）。
+            // 維語等從右往左的歌詞：先按閱讀順序分行再逐行轉換，否則折行後第一行會是句子的結尾（#200）。
             let font=theme::font(if translation.is_some(){10.5}else{11.0},W::Semibold);
             let text=crate::rtl_text::display_wrapped(&text,LYRIC_BAR_W-80.0,|s|ctx.fonts(|fonts|fonts.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x)).into_owned();
             let mut job=egui::text::LayoutJob::simple(text,font,ink,LYRIC_BAR_W-80.0);
@@ -2275,7 +2275,7 @@ impl App {
                 let start=lyrics.lines[index].t;
                 let end=lyrics.lines.iter().skip(index+1).find(|line|line.t>start).map_or(self.media.duration as f32,|line|line.t);
                 let progress=if end>start {((self.lyric_position()-start)/(end-start)).clamp(0.0,1.0)}else{0.0};
-                // 按当前句的时间范围与各段字数切换，暂停和跳转直接跟随播放位置。
+                // 按當前句的時間範圍與各段字數切換，暫停和跳轉直接跟隨播放位置。
                 let total:usize=galley.rows.iter().map(|row|row.glyphs.len()).sum();
                 let mut count=0;
                 let page=galley.rows.iter().position(|row|{count+=row.glyphs.len();progress*(total as f32)<count as f32}).unwrap_or(galley.rows.len()-1);
@@ -2294,7 +2294,7 @@ impl App {
     fn lyric_bar_width(&self)->f32 {LYRIC_BAR_W+if self.pet_enabled(){48.0}else{0.0}+self.lyric_focus_space()}
     fn notice_size(&self,a:&Alert)->(f32,f32) {
         if matches!(a.source, crate::extras::AlertSource::MailCode(..)) { return (270.0,60.0); }
-        let (width,height)=if a.meeting.is_some(){(360.0,136.0)}else if a.source==crate::extras::AlertSource::Internal && a.title=="蓝牙设备"{(HUD_W,48.0)}else if a.is_hud(){(HUD_W,38.0)}else{(334.0,44.0)};
+        let (width,height)=if a.meeting.is_some(){(360.0,136.0)}else if a.source==crate::extras::AlertSource::Internal && a.title=="藍牙設備"{(HUD_W,48.0)}else if a.is_hud(){(HUD_W,38.0)}else{(334.0,44.0)};
         (width,height)
     }
     pub fn set_pet(&mut self,enabled:bool) {
@@ -2314,7 +2314,7 @@ impl App {
             if let Some(a)=&self.notice {let (width,height)=self.notice_size(a);return (width+self.pet_space(),height);}
         }
         if self.side() {
-            // 左右停靠：竖向胶囊（通知仍是贴边滑出的横向卡片，见上）。
+            // 左右停靠：豎向膠囊（通知仍是貼邊滑出的橫向卡片，見上）。
             return self.side_base_size(self.effective_minimal()&&self.notification_bell().is_none());
         }
         if self.island_lyrics_active() {
@@ -2326,8 +2326,8 @@ impl App {
         }
     }
 
-    /// 常驻区比展开面板还宽时（比如开了综合监测），展开、收起途中岛宽会先窄于常驻内容。
-    /// 这时常驻内容跟着岛宽一起等比收拢，而不是被岛的边缘直接切掉。
+    /// 常駐區比展開面板還寬時（比如開了綜合監測），展開、收起途中島寬會先窄於常駐內容。
+    /// 這時常駐內容跟著島寬一起等比收攏，而不是被島的邊緣直接切掉。
     fn resident_squeeze(&self)->f32 {
         if self.side()||self.island_lyrics_active()||self.notice.is_some() {return 1.0;}
         let content=self.resident.target.width.min(self.resident_limit());
@@ -2348,13 +2348,13 @@ impl App {
         WIN_W
     }
 
-    /// 0 = 药丸，1 = 完整面板（展开时可略超过 1）。
+    /// 0 = 藥丸，1 = 完整面板（展開時可略超過 1）。
     #[cfg(test)]
     pub(crate) fn current_width(&self) -> f32 { self.w.pos+self.notice_width.pos }
 
     pub fn progress(&self) -> f32 {
         let (bw, bh) = self.base_size();
-        // 左右停靠时面板沿水平方向从边缘滑出，用宽度衡量展开程度。
+        // 左右停靠時面板沿水平方向從邊緣滑出，用寬度衡量展開程度。
         if self.side() {return (self.w.pos - bw) / (PW - bw).max(1.0);}
         (self.h.pos - bh) / (self.page_height.pos - bh).max(1.0)
     }
@@ -2402,7 +2402,7 @@ impl App {
     }
 
     // ---------------------------------------------------------------
-    // 每帧入口
+    // 每幀入口
     // ---------------------------------------------------------------
     pub fn frame(&mut self, ui: &mut egui::Ui, win: Rect, env: &Env) -> FrameOut {
         let ctx = ui.ctx().clone();
@@ -2485,7 +2485,7 @@ impl App {
             (if self.open {self.page==PERFORMANCE_PAGE} else {performance_bar && self.notice.is_none() && !self.island_lyrics_active()});
         let performance_detail=performance_visible && self.open && self.page==PERFORMANCE_PAGE;
         self.performance.tick(self.module_on(PERFORMANCE_PAGE),performance_visible,performance_detail,&ctx);
-        // 鼠标移开收起再移回来，接着看刚才的详情；切到别的页面才回到设置里的起始页。
+        // 鼠標移開收起再移回來，接著看剛才的詳情；切到別的頁面才回到設置裡的起始頁。
         if self.page!=PERFORMANCE_PAGE {self.performance.view=None;}
         if performance_bar {layout.add_performance(self.settings.performance_bar.width(self.settings.performance_metrics));}
         layout.reorder(&self.settings.resident_order);
@@ -2504,7 +2504,7 @@ impl App {
         if let Some(extra)=self.weather_pill_extra(&ctx){ layout.widen(bar::WEATHER,extra); }
         if resident_day.is_none() && !self.settings.show_clock {layout.hide_clock();}
         let wireless=self.wireless_resident();
-        // 放不下整组时不挤压其他常驻项，整组隐藏。
+        // 放不下整組時不擠壓其他常駐項，整組隱藏。
         let wireless_w=self.wireless_bar_width();
         if !wireless.is_empty()&&wireless_w<=self.resident_limit()-layout.width-12.0 {layout.append_bluetooth(wireless_w);}
         #[cfg(feature="sdk-js")]
@@ -2521,7 +2521,7 @@ impl App {
                 let pinned_width = if self.open && !suppress && self.render_compat_running
                     && self.placement_offset() == 0.0 && self.position_drag.is_none()
                     && self.drag_glide.is_none() && self.w.settled(PW) && self.h.settled(self.expanded_height()) {
-                    // 先扩背景交换链，收起时再按原节奏加入常驻项。
+                    // 先擴背景交換鏈，收起時再按原節奏加入常駐項。
                     self.plugins.pinned_reserved_width(ui)
                 } else {
                     widths.iter().map(|width| width + 12.0).sum()
@@ -2549,7 +2549,7 @@ impl App {
         }
         self.update_island_lyric_layout(&ctx);
 
-        // 胶囊皮肤悬浮在屏幕顶边下方。
+        // 膠囊皮膚懸浮在屏幕頂邊下方。
         let pill = self.settings.island_shape==model::IslandShape::Pill;
         let top = win.top() + if pill { PILL_GAP } else { 0.0 };
         let bottom=self.dock()==model::Dock::Bottom;
@@ -2560,7 +2560,7 @@ impl App {
         let side = self.side();
         let dock = self.dock();
 
-        // ---------- 输入：拖放 ----------
+        // ---------- 輸入：拖放 ----------
         let (hovering_files, dropped) = ctx.input(|i| {
             (
                 self.settings.visible_pages[3] && !i.raw.hovered_files.is_empty(),
@@ -2582,7 +2582,7 @@ impl App {
             self.drag_departing = true;
         }
 
-        // ---------- 输入：悬停 ----------
+        // ---------- 輸入：懸停 ----------
         let p_prev = self.progress();
         let (offset,badge,notice)=self.bar_parts(win,self.island_rect(win,self.w.pos,self.h.pos));
         let cx=win.center().x+offset.x;
@@ -2594,7 +2594,7 @@ impl App {
             && !env.fullscreen_hidden && !env.screen_locked && env.cursor.is_some_and(|c|area.contains(c))
             && !ctx.input(|i|i.pointer.any_pressed() || i.key_pressed(egui::Key::Escape)));
         let page_hover=inside || self.page_scroll_area.is_some();
-        // 展开时，穿过面板到通知图标之间的空隙也算悬停；按钮仍只在图标本身响应点击。
+        // 展開時，穿過面板到通知圖標之間的空隙也算懸停；按鈕仍只在圖標本身響應點擊。
         let on_notice=env.cursor.is_some_and(|c|badge.into_iter().chain(notice).any(|mut r|{
             if self.open {
                 r.extend_with_x(hit.x_range().clamp(r.center().x));
@@ -2654,14 +2654,14 @@ impl App {
                 let status_scroll=false;
                 if mail_reading || mail_list || music_volume || status_scroll {self.wheel_delta=0.0;}
                 else {
-                    // 累积高精度滚轮的小幅输入；停顿或反向时丢弃上一段余量。
+                    // 累積高精度滾輪的小幅輸入；停頓或反向時丟棄上一段餘量。
                     if self.t-self.wheel_at>0.18 || self.wheel_delta*scroll<0.0 {self.wheel_delta=0.0;}
                     self.wheel_at=self.t;
                     self.wheel_delta+=scroll;
                     if self.wheel_delta.abs()>=8.0 {
                         let next=self.wheel_delta<0.0;
                         self.wheel_delta=0.0;
-                        // 性能 CPU、内存详情的程序列表：滚轮在列表上只滚列表，滚到头也不翻页。
+                        // 性能 CPU、內存詳情的程序列表：滾輪在列表上只滾列表，滾到頭也不翻頁。
                         let performance_list=self.page==PERFORMANCE_PAGE && crate::performance_ui::list_area().contains(cursor);
                         let performance_max=if performance_list {self.performance_list_max()}else{0};
                         let clipboard_tab=self.page==3 && self.shelf_tab==1;
@@ -2683,7 +2683,7 @@ impl App {
                             let target=if next {(*first+1).min(max)}else{first.saturating_sub(1)};
                             let changed=target!=*first;*first=target;changed
                         });
-                        // 内容溢出时滚动列表并停在边界；未溢出时滚轮翻页。
+                        // 內容溢出時滾動列表並停在邊界；未溢出時滾輪翻頁。
                         if !scrolled && !content_scrolls && !self.todo_choosing && self.t-self.wheel_page_at>=0.08 {
                             self.navigate_page(next);
                             self.wheel_page_at=self.t;
@@ -2702,7 +2702,7 @@ impl App {
         }
         if self.drag_departing && (staying_open && self.drag_a <= 0.004
             || !self.open && self.w.settled(PW) && self.h.settled(self.expanded_height())) {
-            // 先收完外形再静默恢复页面；保持展开时则等放置框淡出。
+            // 先收完外形再靜默恢復頁面；保持展開時則等放置框淡出。
             self.drag_departing = false;
             self.drag_a = 0.0;
             if let Some(page) = self.drag_saved.take() {
@@ -2713,10 +2713,10 @@ impl App {
         }
         self.hold_slot=ctx.animate_bool_with_time(egui::Id::new("hold-open-slot"),self.shows_hold_open(),0.18);
 
-        // ---------- 绘制 ----------
+        // ---------- 繪製 ----------
         let p = self.progress();
         let (sx, sy) = self.drag_scale();
-        // 拿起放大不能超出透明画布，否则两端会被切掉。
+        // 拿起放大不能超出透明畫布，否則兩端會被切掉。
         let (max_w, max_h) = if side {(crate::side_dock::SIDE_W, crate::side_dock::SIDE_H)} else {(win.width(), WIN_H)};
         let (w, h) = ((self.w.pos * sx).min((max_w - 24.0).max(self.w.pos)), (self.h.pos * sy).min((max_h - 24.0).max(self.h.pos)));
         let panel = self.island_rect(win, w, h);
@@ -2743,15 +2743,15 @@ impl App {
         let glass_skin = self.effective_skin().is_glass() && !self.glassy();
         let layer = painter.layer_id();
         let palette = self.island_palette();
-        // 换色时跳过的图形范围（岛体底色、阴影、吉祥物）。
+        // 換色時跳過的圖形範圍（島體底色、陰影、吉祥物）。
         let mut keep_colors:Vec<(usize,usize)>=Vec::new();
-        // 毛玻璃：真实模糊下保留柔和投影增加层次；无模糊时阴影再减淡一些，保持轻盈。
+        // 毛玻璃：真實模糊下保留柔和投影增加層次；無模糊時陰影再減淡一些，保持輕盈。
         let skin_shadow = if !self.effective_skin().is_glass() {1.0} else if env.glass_blur {0.75} else {0.7};
         #[cfg(all(windows, feature = "sdk-material"))]
         let skin_shadow = self.material_appearance.shadow.unwrap_or(skin_shadow);
         let shadow_k = glass::shadow_alpha(0.0, thick) / 0.12 * skin_shadow;
         let island_shadow=|r:Rect,flare:f32,flare_h:f32,radius:f32,strength:f32| if pill {pill_shadow(&painter,r,radius,strength)} else if dock!=model::Dock::Top {shape::shadow_docked(&painter,r,dock,flare,flare_h,radius,strength)} else {shape::shadow(&painter,r,flare,flare_h,radius,strength)};
-        // 拿起时投影加深，像被从屏幕边缘提起来。
+        // 拿起時投影加深，像被從屏幕邊緣提起來。
         let lifted = self.drag_lift.pos.clamp(0.0, 1.2);
         island_shadow(body, flare, flare_h, radius, (smoothstep(0.1, 0.9, pc) + lifted * 0.9) * shadow_k);
         if let Some(r)=outside_badge{
@@ -2803,7 +2803,7 @@ impl App {
         let center_guide=self.paint_center_rim(&painter, body, panel, flare, flare_h, radius, env.screen);
         let content_from=crate::skin_paint::shape_count(&ctx,layer);
 
-        // 内容只随形体「揭开」：不缩放，按面板裁剪，到 55% 才开始淡入
+        // 內容只隨形體「揭開」：不縮放，按面板裁剪，到 55% 才開始淡入
         let reveal = if self.open { smoothstep(0.50, 0.97, p) } else { smoothstep(0.55, 0.92, p) };
         self.reveal = reveal;
         let mut origin = self.content_origin(win)+offset;
@@ -2828,7 +2828,7 @@ impl App {
                 let interactive=opacity>=0.85 && banner;
                 let overlay=Card::new(ui,panel.min+Vec2::new(self.pet_space(),0.0),clip).faded(opacity);
                 let overlay=if interactive {overlay}else{overlay.ghost()};
-                if interactive && a.title=="系统音量" {top_bar_notice=Some(clip);}
+                if interactive && a.title=="系統音量" {top_bar_notice=Some(clip);}
                 self.draw_notice(&overlay,panel,&a,&mut cmds);
             }
         }else if banner {
@@ -2892,7 +2892,7 @@ impl App {
         let pet_alpha=self.pet_a*(1.0-smoothstep(0.0,0.3,pc));
         if pet_alpha>0.004 && !minimal_pill {
             let y=(h.min(self.base_size().1)-BAR_H).max(0.0)/2.0;
-            // 吉祥物跟随皮肤换色：浅色底上变成深色版本，保持清晰。
+            // 吉祥物跟隨皮膚換色：淺色底上變成深色版本，保持清晰。
             let fit=if self.notice.is_some(){1.0}else{self.resident_fit()};
             self.pet.draw(&base.scaled(cx-origin.x,15.0,fit).shifted(0.0,y).faded(pet_alpha),cx-origin.x+self.resident.position(bar::PET),self.t,palette);
         }
@@ -2914,9 +2914,9 @@ impl App {
             self.draw_hold_open(&c);
             if !self.toast_below {self.toast_layer(&c,106.0);}
         }
-        // 岛下的确认提示使用独立裁剪区域，收起时跟随岛体下沿。
+        // 島下的確認提示使用獨立裁剪區域，收起時跟隨島體下沿。
         let floating_toast=if self.toast_below && self.toast.is_some() {
-            // 侧边停靠：提示出现在胶囊正下方，靠边时向内挪，保证完整显示。
+            // 側邊停靠：提示出現在膠囊正下方，靠邊時向內挪，保證完整顯示。
             let toast_origin=if side {
                 let center=if dock==model::Dock::Left {panel.center().x.max(win.left()+90.0)} else {panel.center().x.min(win.right()-90.0)};
                 Pos2::new(center-PW/2.0,panel.top())
@@ -2930,10 +2930,10 @@ impl App {
         if !plugin_notice_detail && self.task_dialog.is_some() && reveal>0.9 {self.task_editor_inputs(ui,origin,&mut cmds);}
         if !plugin_notice_detail && self.calendar.draft.is_some() && reveal>0.9 {self.calendar_editor_inputs(ui,origin,&mut cmds);}
 
-        // ---------- 输出 ----------
+        // ---------- 輸出 ----------
         let rel = |r: Rect| r.translate(-win.min.to_vec2());
         let mut region = if side {
-            // 侧边：面板从边缘滑出，区域包含肩部（沿边缘上下）与外侧阴影，并一直延伸到屏幕边缘。
+            // 側邊：面板從邊緣滑出，區域包含肩部（沿邊緣上下）與外側陰影，並一直延伸到屏幕邊緣。
             let r=if p > 0.02 || self.open {
                 let height=self.expanded_height().max(self.h.pos)*1.08+FLARE*2.0+24.0;
                 self.island_rect(win,PW+20.0,height).union(panel.expand(20.0))
@@ -2944,23 +2944,23 @@ impl App {
             if dock==model::Dock::Left {Rect::from_min_max(Pos2::new(win.left(),r.top()),r.max)} else {Rect::from_min_max(r.min,Pos2::new(win.right(),r.bottom()))}
         } else if p > 0.02 || self.open {
             let height=self.expanded_height().max(self.h.pos)*1.08+16.0;
-            // 常驻条比展开面板宽时（比如开了综合监测），展开开头和收起末尾岛还比面板宽；
-            // 窗口区域按当前岛宽取大，否则两侧会被系统按面板宽度直接切掉。
+            // 常駐條比展開面板寬時（比如開了綜合監測），展開開頭和收起末尾島還比面板寬；
+            // 窗口區域按當前島寬取大，否則兩側會被系統按面板寬度直接切掉。
             Rect::from_center_size(Pos2::new(cx, top + height/2.0), Vec2::new(PW.max(self.w.pos) + FLARE * 2.0 + 56.0, height))
         } else {
             let (bw, bh) = self.base_size();
             Rect::from_center_size(Pos2::new(cx, top + (bh * SWELL.1 + 12.0) / 2.0), Vec2::new(bw * SWELL.0 + 24.0, bh * SWELL.1 + 12.0))
         };
         region=orient(region);
-        // 拿起放大、甩动拉伸以及加深的投影都要留在窗口区域内，否则两端会被系统裁掉。
+        // 拿起放大、甩動拉伸以及加深的投影都要留在窗口區域內，否則兩端會被系統裁掉。
         if self.drag_lift.pos.abs()>0.005 || self.drag_stretch.pos.abs()>0.001 {region=region.union(panel.expand2(Vec2::new(18.0,22.0)));}
         if let Some(r)=center_guide {region=region.union(r);}
         if let Some(r)=messenger_rect{region=region.union(r.expand(5.0));}
         if let Some(rect)=notice_shape {region=region.union(rect.expand2(Vec2::new(12.0,8.0)));}
         if let Some(rect)=notice_details {region=region.union(rect.expand(12.0));}
-        // 胶囊上方留空的那一小条也要在窗口区域内，阴影才不会被截断。
+        // 膠囊上方留空的那一小條也要在窗口區域內，陰影才不會被截斷。
         if pill && bottom {region.max.y=win.bottom();} else if pill && !side {region.min.y=region.min.y.min(win.top());}
-        // 浅色皮肤：把这一帧岛体内容统一换成皮肤配色。
+        // 淺色皮膚：把這一幀島體內容統一換成皮膚配色。
         if let Some(palette)=palette {
             let end=crate::skin_paint::shape_count(&ctx,layer);
             let mut ranges=Vec::new();let mut at=content_from;
@@ -2969,7 +2969,7 @@ impl App {
             if end>at {ranges.push((at,end));}
             crate::skin_paint::recolor_layer(&ctx,layer,&ranges,&palette);
         }
-        // 原生裁剪还需包含悬停提示；只扩大绘制区域，保持桌面点击穿透。
+        // 原生裁剪還需包含懸停提示；只擴大繪製區域，保持桌面點擊穿透。
         let mut tooltips=Vec::new();
         ctx.memory(|memory|{
             for layer in memory.areas().visible_layer_ids() {
@@ -2978,7 +2978,7 @@ impl App {
                 }
             }
         });
-        // 原生模糊与窗口裁剪共用岛体和浮层的绘制轮廓。
+        // 原生模糊與窗口裁剪共用島體和浮層的繪製輪廓。
         let outlines=||{
             let outline=|r:Rect,flare:f32,flare_h:f32,radius:f32| if pill {GlassShape::Round(rel(r),radius.min(r.height().min(r.width())*0.5))}
                 else if dock!=model::Dock::Top {GlassShape::Docked{rect:rel(r),dock,flare,flare_h,radius}} else {GlassShape::Notch{rect:rel(r),flare,flare_h,radius}};
@@ -2992,14 +2992,14 @@ impl App {
             shapes.extend(tooltips.iter().map(|r|GlassShape::Round(rel(*r),6.0)));
             shapes
         };
-        // 常驻条两端的动画留白不能盖住相邻窗口按钮。
+        // 常駐條兩端的動畫留白不能蓋住相鄰窗口按鈕。
         let resident_clip=(!side && !self.open && !minimal_strip && pc<=0.1 && lifted<0.001 && self.drag_stretch.pos.abs()<=0.001 && !self.drag_hot
             && self.w.settled(PW) && self.h.settled(self.expanded_height()) && center_guide.is_none() && self.shelf_menu_rect.is_none()).then(&outlines);
         let glass_region=(glass_skin && self.settings.glass_blur || env.opaque_surface)
             .then(||resident_clip.clone().unwrap_or_else(outlines));
         self.update_position_drag(&ctx,env,dt);
         let water_view_transition = self.open && self.page == WATER_PAGE && self.subpage.is_none() && !self.sit_mode
-            // 点击在本帧推进弹簧之后处理，先识别尚未同步的目标。
+            // 點擊在本幀推進彈簧之後處理，先識別尚未同步的目標。
             && (self.water_view_t.target != self.water_view as f32 || !self.water_view_t.settled(1.0));
         let scrolling=previous_scroll.zip(self.content_scroll).is_some_and(|((old_id,old_y),(id,y))| old_id==id && old_y!=y);
         let resizing=!self.w.settled(PW) || !self.h.settled(self.expanded_height());
@@ -3038,7 +3038,7 @@ impl App {
         #[cfg(not(feature="sdk-js"))]
         let (canvas_animating, canvas_scroll, canvas_repaint) = (false,None,None);
         let animating=transitioning || ambient || canvas_animating || pet_visible && self.pet.state!=PetState::Sleeping;
-        // 交互形变保持 60 帧，媒体 30 帧；小表情 20 帧，睡眠 10 帧，静态界面每秒核对提醒。
+        // 交互形變保持 60 幀，媒體 30 幀；小表情 20 幀，睡眠 10 幀，靜態界面每秒核對提醒。
         let repaint_after=std::time::Duration::from_secs_f64(if transitioning{1.0/60.0}else if ambient{1.0/30.0}else if pet_visible{if self.pet.state==PetState::Sleeping{0.1}else{0.05}}else{1.0})
             .min(canvas_repaint.unwrap_or(std::time::Duration::MAX));
         cmds.append(&mut self.pending);
@@ -3050,9 +3050,9 @@ impl App {
         }
         if page_before!=self.page && self.open {
             let previous=self.page_scroll_area.map_or(hit,|area|hit.union(area));
-            // 滚轮续翻的空白带按最终页边界计算，点击区域则跟随当前画面。
+            // 滾輪續翻的空白帶按最終頁邊界計算，點擊區域則跟隨當前畫面。
             let next_hit=if side {self.side_hit_rect(win,self.progress(),self.expanded_height()).translate(offset)}else{next_hit};
-            // 保留缩短一侧原有的整段宽度。和新页重叠一点，避免在边缘来回挪动时误收起。
+            // 保留縮短一側原有的整段寬度。和新頁重疊一點，避免在邊緣來回挪動時誤收起。
             self.page_scroll_area=env.cursor.filter(|&c|previous.contains(c)).and_then(|c|{
                 let mut band=previous;
                 if previous.bottom()>next_hit.bottom() && c.y>=next_hit.bottom()-PAGE_EDGE_OVERLAP {
@@ -3097,7 +3097,7 @@ impl App {
 
     fn hit_rect(&self, cx: f32, top: f32, p: f32) -> Rect {
         let r=self.hit_rect_base(cx,top,p);
-        // 胶囊离屏幕顶边有一段空隙：把光标推到屏幕最顶端也要能唤出岛。
+        // 膠囊離屏幕頂邊有一段空隙：把光標推到屏幕最頂端也要能喚出島。
         if self.settings.island_shape==model::IslandShape::Pill {Rect::from_min_max(Pos2::new(r.left(),r.top()-PILL_GAP),r.max)} else {r}
     }
 
@@ -3118,13 +3118,13 @@ impl App {
         }
     }
 
-    /// 展开后未读胶囊的出现程度：面板基本展开后从面板旁淡入。
+    /// 展開後未讀膠囊的出現程度：面板基本展開後從面板旁淡入。
     pub(crate) fn messenger_appear(&self)->f32 {
         if self.calendar.draft.is_some() || self.task_dialog.is_some(){return 0.0;}
         smoothstep(0.0,1.0,anim::clamp01((self.progress()-0.7)/0.3))
     }
     fn messenger_stack_appear(&self)->f32 {1.0-smoothstep(0.04,0.30,self.progress())}
-    /// 同一来源有多个账号时给图标编号（1、2…）；只有一个账号不编号。
+    /// 同一來源有多個帳號時給圖標編號（1、2…）；只有一個帳號不編號。
     pub(crate) fn unread_tag(&self,i:usize)->Option<usize>{
         let unread=self.pending_messengers.get(i)?;let source=unread.source;
         if unread.unidentified(){return None;}
@@ -3137,7 +3137,7 @@ impl App {
         let n=self.pending_messengers[..=i].iter().filter(|u|u.source==self.pending_messengers[i].source).count();
         if n>1{format!("{name}{n}")}else{name.to_string()}
     }
-    /// 展开胶囊高度：一个是圆，两个是短胶囊，三个及以上与面板等高（多出的滚动）。
+    /// 展開膠囊高度：一個是圓，兩個是短膠囊，三個及以上與面板等高（多出的滾動）。
     fn unread_capsule_height(&self,panel_h:f32)->f32 {
         let n=self.unread_count();
         let list=if n>=3 {panel_h}else{4.0+UNREAD_SLOT*n as f32};
@@ -3153,13 +3153,13 @@ impl App {
         let count=count+self.plugin_notice_ui.item_count();
         count
     }
-    /// 收起时叠放的来源图标，每个客户端各占一个。
+    /// 收起時疊放的來源圖標，每個客戶端各佔一個。
     fn unread_sources(&self)->Vec<Messenger>{
         let mut sources=Vec::new();
         for u in &self.pending_messengers {if !sources.contains(&u.source){sources.push(u.source);}}
         sources
     }
-    /// 收起时叠放区沿胶囊方向的长度。
+    /// 收起時疊放區沿膠囊方向的長度。
     fn unread_stack_len(&self,horizontal:bool)->f32 {
         let icons=self.unread_sources().len()+self.health_badges().len();
         #[cfg(windows)]
@@ -3177,7 +3177,7 @@ impl App {
         (limit - self.unread_stack_len(!self.side())).max(1.0)
     }
 
-    /// 并入岛体的图标与主内容共用停靠中线；展开后独立显示的胶囊自行定位。
+    /// 併入島體的圖標與主內容共用停靠中線；展開後獨立顯示的膠囊自行定位。
     fn bar_parts(&self,win:Rect,panel:Rect)->(Vec2,Option<Rect>,Option<Rect>) {
         let badge=self.messenger_badge_rect(win,panel);
         let notice=self.notice_rect(panel);
@@ -3198,24 +3198,24 @@ impl App {
 
     fn messenger_badge_rect(&self,win:Rect,panel:Rect)->Option<Rect>{
         if self.unread_count()==0 || self.browser_minimal_active && !self.open {return None;}
-        // 完整横幅已包含该来源图标。歌词模式和横幅收起后使用常驻入口。
+        // 完整橫幅已包含該來源圖標。歌詞模式和橫幅收起後使用常駐入口。
         if !self.open && !self.compact_notices() && self.unread_count()==1 && self.pending_messengers.len()==1
             && self.notice.as_ref().and_then(|a|a.messenger())==self.pending_messengers.first().map(|u|u.source){return None;}
         let bounds=self.screen.map_or(win,|screen|screen.intersect(win));
         let appear=self.messenger_appear();
         if appear>0.02 {
-            // 展开：贴在面板外侧、顶端对齐的竖向胶囊；顶部停靠和左停靠在右边，右停靠在左边。
+            // 展開：貼在面板外側、頂端對齊的豎向膠囊；頂部停靠和左停靠在右邊，右停靠在左邊。
             let full=self.island_rect(win,PW,self.page_height.pos);
-            // 顶部停靠时面板贴着屏幕上沿，胶囊往下让一点，圆顶不会被屏幕边切掉。
+            // 頂部停靠時面板貼著屏幕上沿，膠囊往下讓一點，圓頂不會被屏幕邊切掉。
             let inset=self.unread_top_inset();
             let height=self.unread_capsule_height(full.height()-inset);
             let left=self.dock()==model::Dock::Right || !self.side() && full.right()+UNREAD_GAP+UNREAD_W>bounds.right();
-            // 胶囊在展开后的中心原地显现，避免跟着岛体边缘越过终点再弹回来。
+            // 膠囊在展開後的中心原地顯現，避免跟著島體邊緣越過終點再彈回來。
             let cx=if left {full.left()-UNREAD_GAP-UNREAD_W/2.0}else{full.right()+UNREAD_GAP+UNREAD_W/2.0};
             let center=Pos2::new(cx,full.top()+inset+height/2.0);
             return Some(Rect::from_center_size(center,Vec2::new(UNREAD_W,height)*appear));
         }
-        // 极简刘海：横幅照常弹出，收起后只留细线，未读不常挂在线条上；展开岛体时在面板旁出现。
+        // 極簡劉海：橫幅照常彈出，收起後只留細線，未讀不常掛在線條上；展開島體時在面板旁出現。
         if self.effective_minimal(){return None;}
         let scale=self.messenger_stack_appear();
         if scale<0.02 || self.open && (self.calendar.draft.is_some() || self.task_dialog.is_some()){return None;}
@@ -3233,7 +3233,7 @@ impl App {
         Some(Rect::from_min_size(Pos2::new(x,y),Vec2::new(width,height)))
     }
 
-    /// 展开后的未读胶囊：每个账号一个图标，点击跳到对应窗口；超过三个时滚轮翻看。
+    /// 展開後的未讀膠囊：每個帳號一個圖標，點擊跳到對應窗口；超過三個時滾輪翻看。
     fn draw_unread_capsule(&mut self,ctx:&egui::Context,c:&Card,rect:Rect,cursor:Option<Pos2>,cmds:&mut Vec<Cmd>){
         let n=self.unread_count();
         let height=rect.height()/c.s;
@@ -3285,7 +3285,7 @@ impl App {
             if button.clicked(){self.confirm_health_reminder(kind);}
         }
         if max_scroll>0.0 {
-            // 还有没露出的图标：上下边缘各一条淡淡的指示。
+            // 還有沒露出的圖標：上下邊緣各一條淡淡的指示。
             let ink=paint::alpha(theme::WHITE,0.35);
             if self.messenger_scroll>0.5 {c.fill(x-6.0,4.0,12.0,2.0,1.0,ink);}
             if self.messenger_scroll<max_scroll-0.5 {c.fill(x-6.0,list_h-6.0,12.0,2.0,1.0,ink);}
@@ -3302,7 +3302,7 @@ impl App {
         }
     }
 
-    /// 收起时的未读入口：每个来源一个图标加小红点（同一来源多个账号合成一个）。只有一条时点它直接跳转，多条时展开面板挑选。
+    /// 收起時的未讀入口：每個來源一個圖標加小紅點（同一來源多個帳號合成一個）。只有一條時點它直接跳轉，多條時展開面板挑選。
     fn draw_unread_stack(&mut self,c:&Card,horizontal:bool,cmds:&mut Vec<Cmd>){
         let sources=self.unread_sources();
         let socials=self.social.active_ordered(&self.settings.social_order);
@@ -3319,7 +3319,7 @@ impl App {
             crate::extras::messenger_icon(&c.scaled(x,y,scale),x,y,sources[k]);
         }
         for (i,kind) in health.iter().enumerate(){let (x,y)=at(sources.len()+i);kind.icon(c,x,y,0.7);}
-        // 每个来源图标右上角一个小红点，不显示数字。
+        // 每個來源圖標右上角一個小紅點，不顯示數字。
         for k in 0..sources.len()+health.len() {let (x,y)=at(k);c.circle(x+8.0,y-7.0,2.6,Color32::from_rgb(255,59,48));}
         let length=self.unread_stack_len(horizontal);
         let messenger_length=if icons==sources.len(){length}else{sources.len() as f32*step+if horizontal{5.0}else{3.0}};
@@ -3359,7 +3359,7 @@ impl App {
             if crate::quota_ui::bar_tooltip(button,format!("{} · 點選確認，重新計時",kind.label())).clicked(){self.confirm_health_reminder(kind);}
         }
     }
-    /// 展开面板，让旁边的未读胶囊露出来。
+    /// 展開面板，讓旁邊的未讀膠囊露出來。
     pub(crate) fn reveal_unread(&mut self){
         self.notice=None;
         self.open=true; self.forced_open_until=self.t+4.0;
@@ -3375,7 +3375,7 @@ impl App {
         let a=self.hud_notice.as_ref().filter(|_|self.notice_details&&self.notice.is_some())?;
         let badge=badge?;let (width,height)=self.notice_size(a);
         let mut x=badge.left();
-        // 岛体靠近屏幕右缘时，详情卡片向左展开，始终完整留在屏幕内。
+        // 島體靠近屏幕右緣時，詳情卡片向左展開，始終完整留在屏幕內。
         if let Some(screen)=self.screen {x=x.min(screen.right()-width-8.0).max(screen.left()+8.0);}
         Some(Rect::from_min_size(Pos2::new(x,if self.dock()==model::Dock::Bottom {badge.top()-height-6.0}else{badge.bottom()+6.0}),Vec2::new(width,height)))
     }
@@ -3422,21 +3422,21 @@ impl App {
         self.skin_palette()
     }
 
-    /// 岛体绘制使用的内置皮肤，插件选中时由它提供基础外观。
+    /// 島體繪製使用的內置皮膚，插件選中時由它提供基礎外觀。
     pub fn effective_skin(&self)->model::Skin {
         #[cfg(feature="sdk-js")]
         if let Some(skin)=self.plugins.active_skin() {return skin.base;}
         self.settings.skin
     }
 
-    /// 基础皮肤的换色调色板，也用于独立设置窗口的预览。
+    /// 基礎皮膚的換色調色板，也用於獨立設置窗口的預覽。
     pub(crate) fn skin_palette(&self)->Option<crate::skin_paint::Palette> {
         #[cfg(feature="sdk-js")]
         if let Some(skin)=self.plugins.active_skin() {return Some(skin.palette);}
         match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Classic|model::Skin::Fluid=>None}
     }
 
-    /// 设置页预览用的岛体底色：没有真实模糊，毛玻璃按较实的玻璃表现。
+    /// 設置頁預覽用的島體底色：沒有真實模糊，毛玻璃按較實的玻璃表現。
     pub(crate) fn preview_fill(&self)->Color32 {
         match self.effective_skin() {
             model::Skin::GlassDark=>{let (r,g,b)=glass::GROUND_DARK;Color32::from_rgba_unmultiplied(r,g,b,215)}
@@ -3446,7 +3446,7 @@ impl App {
         }
     }
 
-    /// 岛体底色：经典为纯黑；奶油为暖白；毛玻璃按当前着色量叠加深色或浅色玻璃。
+    /// 島體底色：經典為純黑；奶油為暖白；毛玻璃按當前著色量疊加深色或淺色玻璃。
     fn glass_fill(&self)->Color32 {
         #[cfg(feature="sdk-js")]
         if let Some(skin)=self.plugins.active_skin().filter(|skin|matches!(skin.base,model::Skin::Classic|model::Skin::Cream)) {
@@ -3464,13 +3464,13 @@ impl App {
         }
     }
 
-    /// 毛玻璃边缘高光：浅色玻璃更亮，像苹果的玻璃边缘。
+    /// 毛玻璃邊緣高光：淺色玻璃更亮，像蘋果的玻璃邊緣。
     fn glass_rim(&self)->Color32 {
         let strength=if self.effective_skin()==model::Skin::GlassLight {0.55} else {glass::rim_alpha()*0.7};
         Color32::from_white_alpha((255.0*strength).round() as u8)
     }
 
-    /// 绘制岛体（或通知胶囊）的本体：经典皮肤为纯黑；毛玻璃为着色底 + 顶部柔光 + 边缘高光。
+    /// 繪製島體（或通知膠囊）的本體：經典皮膚為純黑；毛玻璃為著色底 + 頂部柔光 + 邊緣高光。
     fn paint_body(&self,painter:&egui::Painter,rect:Rect,flare:f32,flare_h:f32,radius:f32,feather:f32){
         let skin=self.effective_skin();
         if skin==model::Skin::Fluid {
@@ -3540,7 +3540,7 @@ impl App {
         }
         shape::fill(painter,rect,flare,flare_h,radius,self.glass_fill(),feather);
         if !skin.is_glass() {return;}
-        // 玻璃厚度带来的上亮下暗：顶部白光在前 60% 高度（最多 64 点）内淡出；浅色玻璃更亮。
+        // 玻璃厚度帶來的上亮下暗：頂部白光在前 60% 高度（最多 64 點）內淡出；淺色玻璃更亮。
         if skin==model::Skin::GlassLight {
             let sheen=Color32::from_white_alpha(15);
             shape::fill_gradient(painter,rect,flare,flare_h,radius,sheen,Color32::TRANSPARENT,(rect.height()*0.6).min(64.0),feather);
@@ -3551,7 +3551,7 @@ impl App {
         }
     }
 
-    /// 拿起时沿岛体轮廓的一圈柔光：外圈宽而淡，内圈细而亮。
+    /// 拿起時沿島體輪廓的一圈柔光：外圈寬而淡，內圈細而亮。
     fn paint_lift_halo(&self,painter:&egui::Painter,rect:Rect,flare:f32,flare_h:f32,radius:f32,amount:f32) {
         if rect.width()<10.0 || rect.height()<10.0 {return;}
         let pill=self.settings.island_shape==model::IslandShape::Pill;
@@ -3617,9 +3617,9 @@ impl App {
                 let edges=[(model::Dock::Top,cursor.y.max(0.0)),(model::Dock::Left,cursor.x.max(0.0)),(model::Dock::Right,(size.x-cursor.x).max(0.0)),(model::Dock::Bottom,(size.y-bottom_inset-cursor.y).max(0.0))];
                 let &(nearest,distance)=edges.iter().min_by(|a,b|a.1.total_cmp(&b.1)).unwrap();
                 let current=edges.iter().find(|(dock,_)|*dock==self.dock()).unwrap().1;
-                // 靠近新边缘才换边；角落保留缓冲，防止横竖形态来回跳变。
+                // 靠近新邊緣才換邊；角落保留緩衝，防止橫豎形態來回跳變。
                 let mut target=Some(nearest).filter(|dock|*dock!=self.dock() && distance<=64.0 && distance+24.0<current);
-                // 左右对侧：过了中线、明显更靠近另一侧就换过去，不必甩到屏幕尽头；中线附近留缓冲不来回跳。
+                // 左右對側：過了中線、明顯更靠近另一側就換過去，不必甩到屏幕盡頭；中線附近留緩衝不來回跳。
                 if target.is_none() && self.side() {
                     let (opposite,far)=if self.dock()==model::Dock::Left {(model::Dock::Right,edges[2].1)}else{(model::Dock::Left,edges[1].1)};
                     if far+size.x*0.07<current {target=Some(opposite);}
@@ -3636,8 +3636,8 @@ impl App {
                 let raw=if travel<=0.0 {0.0}else if switch {(position-length/2.0)/travel*limit}
                     else {drag.offset+(position-start)/travel*limit};
                 let raw=raw.clamp(-limit,limit);
-                // 居中和拖动前的位置有轻微吸附，窗口弹簧会把这一下「吸过去」。
-                // 居中带滞回：进入范围小、松开范围大；刚吸住时岛体轻轻一沉，像卡进了槽位。
+                // 居中和拖動前的位置有輕微吸附，窗口彈簧會把這一下「吸過去」。
+                // 居中帶滯回：進入範圍小、鬆開範圍大；剛吸住時島體輕輕一沉，像卡進了槽位。
                 let centered=raw.abs()<=if self.center_locked {CENTER_RELEASE}else{DRAG_MAGNET};
                 if centered && !self.center_locked {
                     self.center_lock_at=self.t;
@@ -3650,7 +3650,7 @@ impl App {
                 let glide=self.drag_glide.get_or_insert_with(||anim::Spring::new(drag.offset,GLIDE_FOLLOW.0,GLIDE_FOLLOW.1));
                 glide.target=target;
                 if switch {
-                    // 换边时画布横竖互换，位置和外形直接到位，避免从旧边缘滑过去。
+                    // 換邊時畫布橫豎互換，位置和外形直接到位，避免從舊邊緣滑過去。
                     glide.snap(target);
                     drag.start=cursor;drag.offset=raw;
                     let (bw,bh)=self.base_size();
@@ -3681,7 +3681,7 @@ impl App {
             glide.step(dt);
             if self.position_drag.is_none() && glide.settled(limit) {self.drag_glide=None;}
         }
-        // 描边：拖动中按离居中的距离渐显；松手后稍作停留再淡出，让人确认落在了中间。
+        // 描邊：拖動中按離居中的距離漸顯；鬆手後稍作停留再淡出，讓人確認落在了中間。
         let dragging=self.position_drag.is_some();
         let distance=self.drag_glide.map_or(f32::INFINITY,|g|g.pos.abs());
         let want=if dragging {1.0-smoothstep(1.5,CENTER_GUIDE_RANGE,distance)}else{0.0};
@@ -3691,10 +3691,10 @@ impl App {
         if !dragging && self.center_guide<0.002 {self.center_locked=false;}
     }
 
-    /// 拖动接近居中时由岛体轮廓和一根中轴细线提示，不用文字：
-    /// 越靠近居中，轮廓浮出越清晰的淡白描边，屏幕中轴细线与岛体中心刻度逐渐重合；
-    /// 吸住瞬间描边和细线一起转为绿色、一道亮光从中心沿轮廓向两端扫开，停在中间期间绿边缓慢呼吸。
-    /// 返回需要留在窗口区域内的范围。
+    /// 拖動接近居中時由島體輪廓和一根中軸細線提示，不用文字：
+    /// 越靠近居中，輪廓浮出越清晰的淡白描邊，屏幕中軸細線與島體中心刻度逐漸重合；
+    /// 吸住瞬間描邊和細線一起轉為綠色、一道亮光從中心沿輪廓向兩端掃開，停在中間期間綠邊緩慢呼吸。
+    /// 返回需要留在窗口區域內的範圍。
     fn paint_center_rim(&self,painter:&egui::Painter,body:Rect,panel:Rect,flare:f32,flare_h:f32,radius:f32,screen:Option<Rect>)->Option<Rect> {
         let sweep=((self.t-self.center_lock_at)/CENTER_SWEEP) as f32;
         let sweeping=(0.0..1.0).contains(&sweep);
@@ -3707,7 +3707,7 @@ impl App {
         let outline=|grow:f32| if pill {round_rect_points(body.expand(grow),radius+grow)}
             else if dock!=model::Dock::Top {shape::outline_docked(body.expand(grow),dock,flare,flare_h,radius+grow)}
             else {shape::outline(body.expand(grow),flare,flare_h,radius+grow)};
-        // 颜色即状态：接近时中性白，吸住后过渡为绿色。
+        // 顏色即狀態：接近時中性白，吸住後過渡為綠色。
         let tint=|mix:f32,alpha:f32| {
             let c=|w:f32,a:f32|(lerp(w,a,mix)) as u8;
             Color32::from_rgba_unmultiplied(c(255.0,CENTER_TINT.0),c(255.0,CENTER_TINT.1),c(255.0,CENTER_TINT.2),(alpha.clamp(0.0,1.0)*255.0) as u8)
@@ -3715,18 +3715,18 @@ impl App {
         let lock=self.center_lock_a;
         let points=outline(0.5);
         if vis>0.004 {
-            // 停在中间时绿边以 1.6 秒为周期缓慢呼吸，持续表明「就在中间」。
+            // 停在中間時綠邊以 1.6 秒為週期緩慢呼吸，持續表明「就在中間」。
             let breathe=0.5+0.5*((self.t*std::f64::consts::TAU/1.6).sin() as f32);
             let strength=vis*lerp(0.32,lerp(0.78,1.0,breathe),lock);
             if lock>0.01 {painter.add(egui::Shape::line(outline(2.0),egui::Stroke::new(5.0,tint(1.0,0.22*strength*lock))));}
             painter.add(egui::Shape::line(points.clone(),egui::Stroke::new(lerp(1.0,1.6,lock),tint(lock,0.95*strength))));
         }
         let mut bounds=body.expand(8.0);
-        // 中轴细线：屏幕中轴一条向外渐隐的细线，岛体中心一截短刻度，两者重合即居中；吸住后细线同样转绿。
-        // 细线画在桌面上，底色未知：彩芯加淡黑描边，深浅壁纸都看得清。
+        // 中軸細線：屏幕中軸一條向外漸隱的細線，島體中心一截短刻度，兩者重合即居中；吸住後細線同樣轉綠。
+        // 細線畫在桌面上，底色未知：彩芯加淡黑描邊，深淺壁紙都看得清。
         if let Some(screen)=screen.filter(|_|vis>0.004) {
             let travel=if side {screen.height()/2.0-crate::side_dock::SIDE_HALF_EXTENT}else{screen.width()/2.0-crate::display_layout::horizontal_half_extent(self.horizontal_width)}.max(0.0);
-            // 屏幕中轴相对岛体中心的位置（与窗口跟随同源，不会差一帧）。
+            // 屏幕中軸相對島體中心的位置（與窗口跟隨同源，不會差一幀）。
             let off=self.placement_offset()*travel;
             let (out,edge)=match dock {
                 model::Dock::Bottom=>(-Vec2::Y,panel.center_top()),
@@ -3749,12 +3749,12 @@ impl App {
                     painter.line_segment([p,q],egui::Stroke::new(width,tint(mix,0.80*fade)));
                 }
             };
-            // 细线只做辅助：比描边更短更淡，吸住后也只转成偏浅的绿。
+            // 細線只做輔助：比描邊更短更淡，吸住後也只轉成偏淺的綠。
             line(axis,length,vis*lerp(0.40,0.70,lock),lerp(1.0,1.3,lock),lock*0.7);
             if off.abs()>0.5 {line(start,8.0,vis*0.65*(1.0-lock),1.0,0.0);}
             bounds=bounds.union(Rect::from_two_pos(start,axis+out*length).expand(6.0));
         }
-        // 扫光：吸住瞬间从岛体中心沿轮廓向两端对称扫开，扫到两端时淡尽。
+        // 掃光：吸住瞬間從島體中心沿輪廓向兩端對稱掃開，掃到兩端時淡盡。
         if sweeping {
             let half=if side {body.height()}else{body.width()}*0.5;
             let front=anim::ease_out_cubic(sweep)*(half+12.0);
@@ -3774,13 +3774,13 @@ impl App {
 
     pub fn dragging_position(&self)->bool {self.position_drag.is_some()}
 
-    /// 拖动中和落位期间窗口使用的位置（-1 … 1，不取整）；其余时候就是保存的位置。
+    /// 拖動中和落位期間窗口使用的位置（-1 … 1，不取整）；其餘時候就是保存的位置。
     pub fn placement_offset(&self)->f32 {
         let limit=model::ISLAND_OFFSET_MAX as f32;
         self.drag_glide.map_or(self.settings.island_offset_ratio(),|g|(g.pos/limit).clamp(-1.0,1.0))
     }
 
-    /// 拿起与速度拉伸带来的外形缩放：(宽, 高)。
+    /// 拿起與速度拉伸帶來的外形縮放：(寬, 高)。
     fn drag_scale(&self)->(f32,f32) {
         let lift=self.drag_lift.pos.max(0.0);let stretch=self.drag_stretch.pos.max(0.0);
         let along=1.0+LIFT_SCALE.0*lift+stretch;
@@ -3796,17 +3796,17 @@ impl App {
         let mut glide=anim::Spring::new(offset as f32,GLIDE_FOLLOW.0,GLIDE_FOLLOW.1);
         if let Some(g)=self.drag_glide {glide.pos=g.pos;glide.vel=g.vel;}
         self.drag_glide=Some(glide);
-        // 本来就在中间：直接显示已居中，不重复扫光。
+        // 本來就在中間：直接顯示已居中，不重複掃光。
         self.center_locked=offset==0;
-        // 拿起时给一点初速度，按下后立刻有反馈。
+        // 拿起時給一點初速度，按下後立刻有反饋。
         self.drag_lift.vel=self.drag_lift.vel.max(4.0);
     }
 
-    /// 悬停状态机：意图缓冲 → 弹簧展开 → 离开延迟 → 临界阻尼收起；全程可打断。
+    /// 懸停狀態機：意圖緩衝 → 彈簧展開 → 離開延遲 → 臨界阻尼收起；全程可打斷。
     fn morph(&mut self, want: bool, inside: bool, t: f64, dt: f32) {
         let (bw, bh) = self.base_size();
         if self.position_drag.is_some() {
-            // 拿起后面板快速收成常驻形态；放大效果由 `drag_scale` 叠加在外形上。
+            // 拿起後面板快速收成常駐形態；放大效果由 `drag_scale` 疊加在外形上。
             self.open=false;
             self.hover_lock=true;
             self.hover_since=None;
@@ -3828,14 +3828,14 @@ impl App {
                 self.w.target = PW;
                 self.h.target = self.expanded_height();
                 if self.drag_hot {
-                    // 拖入不等缓冲，直接给一点初速度，30 ms 内就能看到形变
+                    // 拖入不等緩衝，直接給一點初速度，30 ms 內就能看到形變
                     self.w.vel = self.w.vel.max(600.0);
                     self.h.vel = self.h.vel.max(260.0);
                 }
             } else if !self.open {
                 self.w.tune(SWELL_K.0, SWELL_K.1);
                 self.h.tune(SWELL_K.0, SWELL_K.1);
-                // 悬停时轻微胀大：厚度方向胀得多一点（侧边停靠时厚度是宽度）。
+                // 懸停時輕微脹大：厚度方向脹得多一點（側邊停靠時厚度是寬度）。
                 let (sw,sh)=if self.side(){(SWELL.1,SWELL.0)}else{SWELL};
                 self.w.target = bw * sw;
                 self.h.target = bh * sh;
@@ -3869,11 +3869,11 @@ impl App {
         let (prev_w,prev_h)=(self.w.pos,self.h.pos);
         self.w.step(dt);
         self.h.step(dt);
-        // 常驻条比展开面板还宽时（比如开了综合监测），展开是「由宽变窄」。宽高各走各的弹簧会出现又宽又高的空黑框。
-        // 这时宽度不再单独弹，直接跟着高度的进度走：同一个动作里一边往下长一边收窄，收起时反过来，和短岛一样一气呵成。
+        // 常駐條比展開面板還寬時（比如開了綜合監測），展開是「由寬變窄」。寬高各走各的彈簧會出現又寬又高的空黑框。
+        // 這時寬度不再單獨彈，直接跟著高度的進度走：同一個動作裡一邊往下長一邊收窄，收起時反過來，和短島一樣一氣呵成。
         if !self.side() && self.position_drag.is_none() && bw > PW + 1.0 {
             let full = self.expanded_height();
-            // 从悬停微胀的形态起步；收起时回到微胀高度就交还给弹簧，悬停微胀照旧。
+            // 從懸停微脹的形態起步；收起時回到微脹高度就交還給彈簧，懸停微脹照舊。
             let start = bh * SWELL.1;
             let from = if self.open {bw * SWELL.0} else {bw};
             if self.open || self.h.pos > start + 0.5 {
@@ -3884,7 +3884,7 @@ impl App {
                 self.w.target = if self.open {PW} else {bw};
             }
         }
-        // 仅在从外侧越过目标时收住，扩展提示条时不强制跳到目标宽度。
+        // 僅在從外側越過目標時收住，擴展提示條時不強制跳到目標寬度。
         if !self.open {
             if prev_w>=bw && self.w.pos<bw {self.w.snap(bw);}
             if prev_h>=bh && self.h.pos<bh {self.h.snap(bh);}
@@ -3895,7 +3895,7 @@ impl App {
     }
 
     // ---------------------------------------------------------------
-    // 顶栏：电池 + 日期 + 时钟。药丸里的电池与时钟会「飞」到顶栏位置（共享元素过渡）。
+    // 頂欄：電池 + 日期 + 時鐘。藥丸裡的電池與時鐘會「飛」到頂欄位置（共享元素過渡）。
     // ---------------------------------------------------------------
     fn shared_header(&mut self, base: &Card, cx: f32, p: f32, reveal: f32, env: &Env, resident_day: Option<&ResidentDay>) {
         let local_cx = cx - base.origin.x;
@@ -3965,7 +3965,7 @@ impl App {
         let bt_power=env.display_bluetooth().map(|device|device.kind).or_else(||env.present_kind());
         let show_battery=self.settings.show_battery && power.is_some();
 
-        // 顶栏终点布局：[电池][日期][时钟] 作为一组整体居中；顯示手機或耳機電量時多留裝置圖示的位置。
+        // 頂欄終點佈局：[電池][日期][時鐘] 作為一組整體居中；顯示手機或耳機電量時多留裝置圖示的位置。
         // 額度、天氣頁右側有重新整理按鈕，頂欄空間較小，日期與時鐘字級略縮，並把整組向左收齊。
         let crowded = matches!(self.page, QUOTA_PAGE | WEATHER_PAGE);
         let date_size = size::DATE * if crowded {HEADER_CROWDED_FONT}else{1.0};
@@ -3974,9 +3974,9 @@ impl App {
         let clock_w = paint::clock_width(base,&clock,clock_size);
         let battery_space=if show_battery {if bt_power.is_some(){34.0}else{24.0}}else{0.0};
         let group = battery_space + date_w + 8.0 + clock_w;
-        // 顶栏共用日程「新增」和天气「刷新」之间的空间，切页时日期和时钟保持原位。
+        // 頂欄共用日程「新增」和天氣「刷新」之間的空間，切頁時日期和時鐘保持原位。
         let (left,right)=(155.0,300.0-self.header_music_shift());
-        // 直接过渡时钟实际需要移动的距离，避免先等边界追上，再在最后几帧挤动文字。
+        // 直接過渡時鐘實際需要移動的距離，避免先等邊界追上，再在最後幾幀擠動文字。
         let ctx=base.ui.ctx();
         let target_fit=((right-left)/group).min(1.0);
         let target_x=(local_cx-group*target_fit/2.0+if show_battery {6.0}else{0.0}).min(right-group*target_fit).max(left);
@@ -3985,7 +3985,7 @@ impl App {
         let hb = (gx + 8.5*fit, 18.6);
         let hd = gx + battery_space*fit;
         let hc = hd + (date_w + 8.0)*fit;
-        // 药丸起点布局
+        // 藥丸起點佈局
         let has_music=self.media.is_music();
         let layout=self.resident.current();
         let pb=(local_cx+layout.x[bar::BATTERY].unwrap_or(0.0),15.0);
@@ -3998,7 +3998,7 @@ impl App {
         let clock_clearance=if resident_day.is_some(){layout.date_group_clearance()}else{layout.clearance(bar::CLOCK)};
 
         if self.effective_minimal() && self.notification_bell().is_none() && p < 0.02 { return; }
-        // 电池：位置/大小连续插值
+        // 電池：位置/大小連續插值
         let bk = lerp(1.0, 0.8*fit, m);
         let bpos = (lerp(pb.0, hb.0, m), lerp(pb.1, hb.1, m));
         if show_battery {
@@ -4024,7 +4024,7 @@ impl App {
             }
         }
 
-        // 时钟：两个字号沿同一路径交叉淡化，避免逐帧换字号
+        // 時鐘：兩個字號沿同一路徑交叉淡化，避免逐幀換字號
         let cpos = (lerp(pcx, hc, m), lerp(21.0, 23.0, m));
         let a_pill = (1.0 - smoothstep(0.25, 0.6, m)) * clock_clearance;
         let a_head = smoothstep(0.35, 0.75, m);
@@ -4034,19 +4034,19 @@ impl App {
         if a_head > 0.0 {
             paint::clock(&base.faded(a_head),cpos.0,cpos.1-0.5,&clock,size::CLOCK*fit);
         }
-        // 日期随内容淡入，从药丸方向轻轻滑出。漸層皮膚底色較亮，日期改用近白字避免灰字被吃掉。
+        // 日期隨內容淡入，從藥丸方向輕輕滑出。漸層皮膚底色較亮，日期改用近白字避免灰字被吃掉。
         if reveal > 0.0 {
             base.faded(reveal).text(hd + (1.0 - reveal) * 10.0, 22.5, &env.date, size::DATE*fit, W::Regular, Color32::from_rgb(210, 210, 214), H::Left);
         }
         if self.open && reveal>0.95 && p>0.98 && !self.is_editing() && !self.drag_hot {
             if let Some(screen)=env.screen {
-                // 中间的日期时间区不占用两侧的新增、刷新和设置按钮。
+                // 中間的日期時間區不佔用兩側的新增、刷新和設置按鈕。
                 let left=(hd-12.0).max(140.0).max(left);let right=(hc+clock_w*fit+12.0).min(303.0).min(right);
                 if right>left {
-                    // Windows 没有「抓手」光标，Grab 会变成四向箭头；保持普通箭头，改用岛体内的把手提示。
+                    // Windows 沒有「抓手」光標，Grab 會變成四向箭頭；保持普通箭頭，改用島體內的把手提示。
                     let response=base.hit_drag(left,4.0,right-left,26.0,"island-position").on_hover_text("按住拖動位置");
                     let (_,press)=base.hover_t(&response);
-                    // 展开时保留淡把手；悬停后加亮，按下立即反馈。
+                    // 展開時保留淡把手；懸停後加亮，按下立即反饋。
                     let dwell=(if response.hovered() {self.t-*self.grip_hover_since.get_or_insert(self.t)}else{self.grip_hover_since=None;0.0}) as f32;
                     if response.hovered() && dwell<1.2 {base.ui.ctx().request_repaint();}
                     let ctx=base.ui.ctx();
@@ -4058,11 +4058,11 @@ impl App {
                         let (x,w)=(left-pad,right-left+pad*2.0);
                         if fill_in>0.003 {base.fill(x,5.0,w,26.0,13.0,Color32::from_white_alpha((fill_in*7.0+press*12.0) as u8));}
                         let grip=lerp(14.0,22.0,press)*lerp(0.5,1.0,grip_in);
-                        // 圆角由绘制器按实际像素高度截到半高，避免小数缩放时两端的抗锯齿边缘重叠。
+                        // 圓角由繪製器按實際像素高度截到半高，避免小數縮放時兩端的抗鋸齒邊緣重疊。
                         let height=2.6;
                         base.fill(local_cx-grip/2.0,7.5,grip,height,height,Color32::from_white_alpha((grip_in*60.0+press*60.0) as u8));
                     }
-                    // 开始移动立即拿起；原地按住片刻也会拿起，先给反馈再移动。
+                    // 開始移動立即拿起；原地按住片刻也會拿起，先給反饋再移動。
                     let held=response.is_pointer_button_down_on() && base.ui.input(|i|i.pointer.primary_down() && i.pointer.press_start_time().is_some_and(|at|i.time-at>=LIFT_HOLD));
                     if response.is_pointer_button_down_on() {base.ui.ctx().request_repaint();}
                     if response.drag_started_by(egui::PointerButton::Primary) || held {
@@ -4076,7 +4076,7 @@ impl App {
             let y=lerp(15.0,18.0,m);
             paint::playback_bars(base,x,y,self.t,self.media.playing,theme::WHITE);
             if self.open && reveal>0.6 && base.hit(x-13.0,y-14.0,26.0,28.0,"header-music")
-                .on_hover_text("返回音乐播放页")
+                .on_hover_text("返回音樂播放頁")
                 .on_hover_cursor(egui::CursorIcon::PointingHand).clicked(){self.show_page(0);}
         }
         let compact_alpha=1.0-smoothstep(0.0,0.22,p);
@@ -4129,8 +4129,8 @@ impl App {
         }
     }
 
-    /// 常驻内容：顶部停靠走共享元素过渡（药丸里的电池、时钟飞到顶栏）；
-    /// 左右停靠时竖排内容随展开淡出，顶栏随面板内容淡入。
+    /// 常駐內容：頂部停靠走共享元素過渡（藥丸裡的電池、時鐘飛到頂欄）；
+    /// 左右停靠時豎排內容隨展開淡出，頂欄隨面板內容淡入。
     fn resident_header(&mut self, base: &Card, panel: Rect, cx: f32, p: f32, reveal: f32, env: &Env, resident_day: Option<&ResidentDay>) {
         if !self.side() {self.shared_header(base,cx,p,reveal,env,resident_day);return;}
         let bar_alpha=1.0-smoothstep(0.0,0.3,p);
@@ -4167,7 +4167,7 @@ impl App {
     }
 
     // ---------------------------------------------------------------
-    // 面板主体：页标题 + 页面（带切页过渡）+ 翻页箭头 + 页码豆
+    // 面板主體：頁標題 + 頁面（帶切頁過渡）+ 翻頁箭頭 + 頁碼豆
     // ---------------------------------------------------------------
     fn shows_hold_open(&self)->bool {
         self.hold_open || self.page==SHELF_PAGE && self.calendar.draft.is_none() && self.task_dialog.is_none()
@@ -4178,7 +4178,7 @@ impl App {
     }
 
     fn draw_hold_open(&mut self,c:&Card) {
-        // 声波先让出位置，再显示图钉；收回时按相反顺序。
+        // 聲波先讓出位置，再顯示圖釘；收回時按相反順序。
         let alpha=smoothstep(if self.media.is_music(){0.65}else{0.0},1.0,self.hold_slot);
         if alpha<=0.001 {return;}
         let Some(button)=c.edge_control(354.0,5.0,25.0,26.0) else{return;};
@@ -4186,7 +4186,7 @@ impl App {
         let button=button.faded(alpha);
         let button=if visible && alpha>0.8 {button}else{button.ghost()};
         let response=button.hit(354.0,5.0,25.0,26.0,"hold-open")
-            .on_hover_text(if self.hold_open {"取消保持展开"}else{"保持展开"})
+            .on_hover_text(if self.hold_open {"取消保持展開"}else{"保持展開"})
             .on_hover_cursor(egui::CursorIcon::PointingHand);
         if response.clicked() {
             self.hold_open=!self.hold_open;
@@ -4205,7 +4205,7 @@ impl App {
     fn panel_body(&mut self, c: &Card, env: &Env, cmds: &mut Vec<Cmd>) -> bool {
         let settings_card=if self.side() {c.edge_control(380.0,4.0,28.0,28.0)} else {Some(c.clone())};
         if let Some(c)=settings_card {
-            let settings=c.hit(380.0,4.0,28.0,28.0,"page-settings").on_hover_text(format!("打开{}设置窗口",self.navigation_page_name(self.page)));
+            let settings=c.hit(380.0,4.0,28.0,28.0,"page-settings").on_hover_text(format!("打開{}設置窗口",self.navigation_page_name(self.page)));
             let (hover,press)=c.hover_t(&settings);
             #[cfg(all(windows, feature = "sdk-material"))]
             if !self.glassy() || self.glass_controls_ready() {
@@ -4225,11 +4225,11 @@ impl App {
         }
         if self.subpage==Some(self.page) {
             c.text(15.0,25.0,"‹",19.0,W::Bold,theme::WHITE,H::Left);
-            // 健康提醒设置沿用主页的标题 + 喝水/久坐切换，切到哪边就设置哪边。
+            // 健康提醒設置沿用主頁的標題 + 喝水/久坐切換，切到哪邊就設置哪邊。
             if self.page==2 && self.health_time {c.text(31.0,25.0,"提醒時段",size::TITLE,W::Bold,theme::WHITE,H::Left);}
             else if self.page==2 {let sv=self.sit_view_t.pos.clamp(0.0,1.0);self.health_tabs(c,31.0,sv);}
             else {c.text(37.0,25.0,"專注設定",size::TITLE,W::Bold,theme::WHITE,H::Left);}
-            // 「提醒时段」二级页的返回先回到健康提醒设置，再退出设置。
+            // 「提醒時段」二級頁的返回先回到健康提醒設置，再退出設置。
             if c.hit(9.0,7.0,28.0,23.0,"subpage-back").clicked(){
                 if self.page==2 && self.health_time {self.health_time=false;} else {self.subpage=None;self.settings_editing=false;}
             }
@@ -4238,7 +4238,7 @@ impl App {
         let e = self.page_e();
         let in_tx = e < PAGE_TURN_DURATION && self.page_from != self.page;
         if in_tx {
-            // 旧页停在当前位置淡出，新页朝目标单向滑入。
+            // 舊頁停在當前位置淡出，新頁朝目標單向滑入。
             let old_a = Self::page_slide_alpha(self.page_from_elapsed) * (1.0 - smoothstep(0.0, 0.16, e));
             let new_a = Self::page_slide_alpha(e);
             if old_a > 0.0 && self.module_on(self.page_from) {
@@ -4249,7 +4249,7 @@ impl App {
             }
             let nc = c.faded(new_a);
             let nc = if e < 0.12 { nc.ghost() } else { nc };
-            // 同一位置的标题先退后进，避免两个页面的汉字在中间帧叠成重影。
+            // 同一位置的標題先退後進，避免兩個頁面的漢字在中間幀疊成重影。
             let header=c.faded(Self::page_header_alpha(e));
             let header=if e<0.12 {header.ghost()}else{header};
             self.page_title(self.page, &header);
@@ -4277,20 +4277,20 @@ impl App {
         let (a, b, col) = match page {
             0 | CALENDAR_PAGE => return,
             1 => ("番茄", "專注", theme::RED_TOP),
-            // 健康页的标题由页面自己画（「健康提醒」+ 喝水/久坐分段切换）。
+            // 健康頁的標題由頁面自己畫（「健康提醒」+ 喝水/久坐分段切換）。
             2 => return,
-            // 置物架的标题就是「置物架 | 剪贴板」分栏，由页面自己画。
+            // 置物架的標題就是「置物架 | 剪貼板」分欄，由頁面自己畫。
             3 => return,
             4 => ("待辦", "清單", theme::GREEN),
             5 => ("信箱", "", theme::CYAN),
             6 => ("AI", "額度", theme::SOFT_GREEN),
             8 if self.weather.solar_open => ("日出", "日落", theme::YELLOW),
-            PERFORMANCE_PAGE => ("系统", "性能", crate::performance_ui::CPU_COLOR),
-            8 => ("当地", "天气", theme::CYAN),
-            // 详情页的标题带返回箭头，由页面自己画。
+            PERFORMANCE_PAGE => ("系統", "性能", crate::performance_ui::CPU_COLOR),
+            8 => ("當地", "天氣", theme::CYAN),
+            // 詳情頁的標題帶返回箭頭，由頁面自己畫。
             BLUETOOTH_PAGE if self.wireless_focus.is_some() && self.wireless_devices.len()>1 => return,
-            BLUETOOTH_PAGE => ("无线", "设备", theme::CYAN),
-            _ => ("岛仔", "设置", theme::WHITE),
+            BLUETOOTH_PAGE => ("無線", "設備", theme::CYAN),
+            _ => ("島仔", "設置", theme::WHITE),
         };
         let wa = c.text(15.0, base, a, size::TITLE, W::Bold, theme::WHITE, H::Left);
         if !b.is_empty() {
@@ -4301,7 +4301,7 @@ impl App {
     fn nav(&mut self, c: &Card) {
         let all_pages:Vec<_>=self.navigation_pages().collect();
         if all_pages.len()<2 { return; }
-        // 停靠方式决定箭头的锚点，切页改变面板高度时仍可原地点击。
+        // 停靠方式決定箭頭的錨點，切頁改變面板高度時仍可原地點擊。
         let anchor_y=68.0;
         let arrow_y=match self.dock() {
             model::Dock::Top=>anchor_y,
@@ -4327,7 +4327,7 @@ impl App {
             if button.clicked() {self.navigate_page(direction>0.0);}
         }
         let shortcuts = self.page_shortcuts_enabled();
-        // 页数较多时，底栏随当前页移动，左右箭头和滚轮仍可切到每一页。
+        // 頁數較多時，底欄隨當前頁移動，左右箭頭和滾輪仍可切到每一頁。
         let max_slots=if shortcuts {PAGE_NAMES.len()}else{40};
         let current=all_pages.iter().position(|&page|page==self.page).unwrap_or_default();
         let start=current.saturating_sub(max_slots/2).min(all_pages.len().saturating_sub(max_slots));
@@ -4341,7 +4341,7 @@ impl App {
         } else {
             self.page_height.pos - 7.2
         };
-        // 图标和页码点共用底部一行，按可见页面的数量整体居中。
+        // 圖標和頁碼點共用底部一行，按可見頁面的數量整體居中。
         let dots_width = pages.iter().copied().map(dot_width).sum::<f32>() * dot_scale
             + gap * (pages.len() - 1) as f32;
         let shortcut_slot = 26.0;
@@ -4351,7 +4351,7 @@ impl App {
         let mut clicked = None;
         if shortcuts {
             let row_width = dots_width + shortcut_width;
-            // 只在整行已经露出时显示，避免展开过程点击穿到正文控件。
+            // 只在整行已經露出時顯示，避免展開過程點擊穿到正文控件。
             let Some(row) = c.edge_control(x - 2.0, dot_y - 11.0, row_width + 4.0, 22.0) else { return; };
             for &page in pages {
                 let center = x + shortcut_slot / 2.0;
@@ -4453,7 +4453,7 @@ impl App {
             }
             return;
         }
-        // 页面内容横向滑动，右侧操作只随切页淡入淡出，避免滑过图钉。
+        // 頁面內容橫向滑動，右側操作只隨切頁淡入淡出，避免滑過圖釘。
         let actions=header.shifted(-self.header_music_shift(),0.0);
         #[cfg(any(feature="sdk-js",feature="sdk-wasm"))]
         if page==4 && crate::sdk_spike::live_card(c){return;}
@@ -4499,11 +4499,11 @@ impl App {
     }
 
     // ---------------------------------------------------------------
-    // 每帧推进：番茄钟、饮水提醒、跨天
+    // 每幀推進：番茄鍾、飲水提醒、跨天
     // ---------------------------------------------------------------
     fn tick(&mut self, env: &Env, dt: f32, elapsed: f32) {
         if self.toast.as_ref().is_some_and(|(_,at)|self.t-at>2.4){self.toast=None;}
-        // 跳转后先用本地目标位置显示；播放器回报追上了、换歌了或超时就交还真实位置。
+        // 跳轉後先用本地目標位置顯示；播放器回報追上了、換歌了或超時就交還真實位置。
         let seek_done=self.music_seek_ui.as_ref().is_some_and(|(target,title)|{
             (self.media.duration>0.0 && (self.media.position-*target).abs()<1.5)
                 || self.t>=self.music_seek_quiet_until || &self.media.title!=title
@@ -4546,7 +4546,7 @@ impl App {
         if self.module_on(WATER_PAGE) && self.water.remind && !self.health_pending[HealthReminder::Water as usize] && self.water.percent() < 100.0 && self.remind_window(env) && self.t - self.last_reminder >= self.settings.water_minutes as f64 * 60.0 {
             self.alert("喝水時間到了", format!("休息一下，喝 {} ml 水吧", self.settings.serving_ml), 2, true);
         }
-        // 专注阶段不打断，等专注结束（通常正好进入休息）再提醒。
+        // 專注階段不打斷，等專注結束（通常正好進入休息）再提醒。
         let focusing = self.pomo.running && self.pomo.phase == Phase::Focus;
         if self.module_on(WATER_PAGE) && self.settings.sit_remind && !self.health_pending[HealthReminder::Sit as usize] && !focusing && self.remind_window(env) && self.t >= self.sit_due() {
             self.alert(SIT_TITLE, "起來走走，休息一下", 2, true);
@@ -4571,14 +4571,14 @@ impl App {
         }
         let due: Vec<_> = self.todos.items.iter().enumerate().filter(|(_, item)| todo_on && item.reminder_due(&now)).map(|(i,item)| (i,item.text.clone())).collect();
         for (i,text) in due { self.todos.items[i].mark_reminded(&now); self.todos.save(); self.alert("待辦到時間了", text, 4, true); }
-        // v0.5.5 会议提醒：.ics 里的开始时间，默认提前 15 分钟（可设 5/15/30）。
-        // v0.5.6 起日历（CalDAV）事件走同一套：同一场会（UID + DTSTART）只提醒一次，
-        // 邮件和日历两条来源撞上了也只弹一次。
+        // v0.5.5 會議提醒：.ics 裡的開始時間，默認提前 15 分鐘（可設 5/15/30）。
+        // v0.5.6 起日曆（CalDAV）事件走同一套：同一場會（UID + DTSTART）只提醒一次，
+        // 郵件和日曆兩條來源撞上了也只彈一次。
         let lead = self.settings.mail_ics as i64 * 60;
         let now_ts = chrono::Local::now().timestamp();
         let mut picks = Vec::new();
         let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-        // 会议提醒点开后进入日程页；日程模块关闭时不再提醒（含邮件邀请）。
+        // 會議提醒點開後進入日程頁；日程模塊關閉時不再提醒（含郵件邀請）。
         let calendar_on=self.module_on(CALENDAR_PAGE);
         for entry in self.calendar.local.iter().filter(|_|calendar_on) {
             let Some(at)=entry.reminder_at() else{continue;};
@@ -4620,7 +4620,7 @@ impl App {
         self.remind_t.step(dt);
         self.sit_t.target = if self.settings.sit_remind { 1.0 } else { 0.0 };
         self.sit_t.step(dt);
-        // 剪贴板记录同时受置物架模块和记录开关控制。
+        // 剪貼板記錄同時受置物架模塊和記錄開關控制。
         if self.clipboard.is_enabled() != self.clipboard_active() {
             self.clipboard.set_enabled(self.clipboard_active());
         }
@@ -4633,7 +4633,7 @@ impl App {
         }
     }
 
-    /// 媒体进度在两次 SMTC 刷新之间按时间外推，进度条才会连续走动。
+    /// 媒體進度在兩次 SMTC 刷新之間按時間外推，進度條才會連續走動。
     fn update_media(&mut self, env: &Env, ctx: &egui::Context) {
         let m = &env.media;
         if !self.module_on(MUSIC_PAGE) || !m.is_music() {
@@ -4663,12 +4663,12 @@ impl App {
                 else {*pos};
             if m.duration>0.0 {np.position=np.position.min(m.duration);}
         }
-        // 网易云的 song_id 只来自本机日志，SMTC 那一路没有；None 与 Some 之间来回不是换歌，不能每次都清空歌词重查。
+        // 網易雲的 song_id 只來自本機日誌，SMTC 那一路沒有；None 與 Some 之間來回不是換歌，不能每次都清空歌詞重查。
         let other_song=matches!((self.media.song_id,np.song_id),(Some(old),Some(new)) if old!=new);
         if self.media.source != np.source || other_song { self.ly=LyricsState::default(); }
         crate::lyric_sync::tick(&np.title,&np.artist,np.position,np.playing);
         self.media = np;
-        // 播放器版本比已适配的旧、歌词无法同步：岛下浮出一句提示（与网易云不支持跳转的提示同一样式），同一播放器版本只提醒一次。
+        // 播放器版本比已適配的舊、歌詞無法同步：島下浮出一句提示（與網易雲不支持跳轉的提示同一樣式），同一播放器版本只提醒一次。
         #[cfg(windows)]
         if let Some(message)=crate::smtc::music_compat::take_update_notice() {self.say(message);self.toast_below=true;}
         if let Some(image)=&self.media.artwork {
@@ -4690,11 +4690,11 @@ impl App {
             let change=self.ly.song.as_ref().map_or(SongChange::Different,|song|song_change(song,np));
             let synced=self.ly.lyrics.as_ref().is_some_and(|lyrics|lyrics.synced);
             match change {
-                // 时长、写法补全：已有同步歌词就沿用，不清空、不重查。
+                // 時長、寫法補全：已有同步歌詞就沿用，不清空、不重查。
                 SongChange::Same if synced=>{self.ly.key=key;self.ly.song=Some(LyricSong::of(np));}
-                // 换歌：立即切换显示状态，旧歌词和迟到的旧结果都不再显示。
+                // 換歌：立即切換顯示狀態，舊歌詞和遲到的舊結果都不再顯示。
                 SongChange::Different=>self.start_lyrics(key,None,false),
-                // 同一首的补全：重新查询，期间继续显示已有歌词。
+                // 同一首的補全：重新查詢，期間繼續顯示已有歌詞。
                 _=>{let keep=self.ly.lyrics.take();self.start_lyrics(key,keep,false);}
             }
         } else if id_arrived || self.ly.retry_at.is_some_and(|at|self.t>=at) {
@@ -4707,7 +4707,7 @@ impl App {
             if let Some(lyrics)=found {
                 self.ly.lyrics=Some(lyrics);self.ly.loading=false;self.ly.error=None;
                 self.refresh_lyric_display();
-                // 本机歌词已到：排队中的在线查询不再需要，进行中的结果也丢弃。
+                // 本機歌詞已到：排隊中的在線查詢不再需要，進行中的結果也丟棄。
                 self.ly.retry_at=None;self.ly.rx=None;self.ly.native_rx=None;self.ly.pending=None;
             }
         }
@@ -4734,8 +4734,8 @@ impl App {
         }
     }
 
-    /// 为当前歌曲建立新的歌词状态：本机歌词轮询立即开始，在线查询交给 `spawn_lyrics_job`。
-    /// `keep`：同一首歌信息补全时继续显示的歌词；`retry`：同一首歌的定时重试或补到歌曲 ID。
+    /// 為當前歌曲建立新的歌詞狀態：本機歌詞輪詢立即開始，在線查詢交給 `spawn_lyrics_job`。
+    /// `keep`：同一首歌信息補全時繼續顯示的歌詞；`retry`：同一首歌的定時重試或補到歌曲 ID。
     fn start_lyrics(&mut self,key:String,keep:Option<lyrics::Lyrics>,retry:bool) {
         let np=&self.media;
         let kugou=np.source.to_ascii_lowercase().contains("kugou");
@@ -4754,8 +4754,8 @@ impl App {
             let (tx,rx)=std::sync::mpsc::sync_channel(1);self.ly.native_rx=Some(rx);
             let (source,title,artist)=(source.clone(),title.clone(),artist.clone());
             let native=crate::resources::NATIVE_LYRICS.spawn(move ||{
-                // 客户端通常在开播几秒内写好歌词：先密后疏（0.5s 起，最长 5s 一次），最多等 90 秒。
-                // 汽水的缓存文件可达 32MB，修改时间和大小都没变时不重复整份读取，但每 15 秒仍完整核对一次。
+                // 客戶端通常在開播幾秒內寫好歌詞：先密後疏（0.5s 起，最長 5s 一次），最多等 90 秒。
+                // 汽水的緩存文件可達 32MB，修改時間和大小都沒變時不重複整份讀取，但每 15 秒仍完整核對一次。
                 let started=std::time::Instant::now();
                 let mut wait=std::time::Duration::from_millis(500);
                 let mut last:Option<((std::time::SystemTime,u64),std::time::Instant)>=None;
@@ -4767,7 +4767,7 @@ impl App {
                         if let Some(print)=print {last=Some((print,std::time::Instant::now()));}
                         lyrics::read_native_detail(&source,&title,&artist,dur).map_err(|reason|miss=reason).ok()
                     };
-                    // 找到歌词时等界面取走再结束（换歌或关闭歌词后通道断开会立即返回），不因通道暂满丢掉结果。
+                    // 找到歌詞時等界面取走再結束（換歌或關閉歌詞後通道斷開會立即返回），不因通道暫滿丟掉結果。
                     if found.is_some() {
                         // 本機歌詞同樣在背景執行緒翻譯，介面取走時就有譯文可用。
                         if translate {if let Some(lyrics)=found.as_ref(){crate::lyrics_zh::ensure(&title,&artist,dur,lyrics);}}
@@ -4780,7 +4780,7 @@ impl App {
                     wait=(wait*2).min(std::time::Duration::from_secs(5));
                 }
             });
-            // 快速切歌时本机轮询线程已满：不留空通道，之后的定时重试会再次启动。
+            // 快速切歌時本機輪詢線程已滿：不留空通道，之後的定時重試會再次啟動。
             if native.is_none(){self.ly.native_rx=None;}
         }
         self.ly.pending=Some(LyricsJob{source,title,artist,duration:dur,song_id,cached,native_only,manual,translate});
@@ -4815,8 +4815,8 @@ impl App {
             .unwrap_or_default();
     }
 
-    /// 旧请求结束后再发起排队的在线查询：歌曲信息抖动或快速切歌时不会叠加网络线程，
-    /// 也只会查询最新的那首；旧请求的结果因通道已更换而直接丢弃。
+    /// 舊請求結束後再發起排隊的在線查詢：歌曲信息抖動或快速切歌時不會疊加網絡線程，
+    /// 也只會查詢最新的那首；舊請求的結果因通道已更換而直接丟棄。
     fn spawn_lyrics_job(&mut self) {
         if self.ly.pending.is_none() || self.ly_worker.as_ref().is_some_and(|worker|!worker.is_finished()) {return;}
         let Some(lease)=crate::resources::LYRICS.acquire() else {return;};
@@ -4835,7 +4835,7 @@ impl App {
         if self.ly_worker.is_none(){self.ly.rx=None;self.ly.loading=false;self.ly.key.clear();}
     }
 
-    /// 外部直接提供歌词（录制演示用）。
+    /// 外部直接提供歌詞（錄製演示用）。
     pub fn set_lyrics(&mut self, title: &str, artist: &str, duration: f64, l: lyrics::Lyrics) {
         self.ly = LyricsState { key: format!("{title}|{artist}|{duration:.0}"), lyrics: Some(l), ..Default::default() };
         self.refresh_lyric_display();
@@ -4878,7 +4878,7 @@ impl App {
         }
     }
 
-    /// 待办输入框：真正的 egui 文本框，放在待办卡片顶部那一行。
+    /// 待辦輸入框：真正的 egui 文本框，放在待辦卡片頂部那一行。
     fn input_field(&mut self, ui: &mut egui::Ui, origin: Pos2, cmds: &mut Vec<Cmd>) {
         let rect = Rect::from_min_size(origin + Vec2::new(222.0, 37.0), Vec2::new(142.0, 18.0));
         let mut buf = std::mem::take(&mut self.buf);

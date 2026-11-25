@@ -1058,7 +1058,7 @@ mod tests {
         let payload = root.join("payload");
         std::fs::create_dir_all(&payload).unwrap();
         std::fs::write(payload.join(APP_EXE), b"app").unwrap();
-        std::fs::write(payload.join("收集岛仔诊断.cmd"), b"diag").unwrap();
+        std::fs::write(payload.join("收集島仔診斷.cmd"), b"diag").unwrap();
         let zip = root.join("update.zip");
         let system_root = std::env::var_os("SystemRoot")
             .map(PathBuf::from)
@@ -1082,7 +1082,7 @@ mod tests {
         let stage = root.join("stage");
         extract(&zip, &stage).expect("ZIP 應該可以直接解壓");
         assert_eq!(std::fs::read(stage.join(APP_EXE)).unwrap(), b"app".to_vec());
-        assert!(stage.join("收集岛仔诊断.cmd").is_file());
+        assert!(stage.join("收集島仔診斷.cmd").is_file());
         let _ = std::fs::remove_dir_all(&root);
     }
 }

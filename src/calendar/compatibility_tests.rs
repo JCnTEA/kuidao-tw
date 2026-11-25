@@ -70,13 +70,13 @@ fn caldav_connection_test_accepts_parse_errors_but_requires_read_access() {
             let data = if ics.is_empty() { String::new() } else { format!("<d:response><d:href>/calendar/1.ics</d:href><c:calendar-data>{ics}</c:calendar-data></d:response>") };
             let xml = format!(r#"<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">{data}</d:multistatus>"#);
             let result = mock_caldav_connection(provider, "mock", status, "application/xml", &xml);
-            let Event::Test { ok, message, count: actual, config } = result else { panic!("应返回连接测试结果"); };
+            let Event::Test { ok, message, count: actual, config } = result else { panic!("應返回連接測試結果"); };
             assert_eq!(ok, status == 207, "{provider:?} {status} {message}");
             assert_eq!(actual, count);
             assert_eq!(config.is_some(), ok);
             if let Some(cfg) = config { assert_eq!(cfg.href, Some(format!("{}calendar/", cfg.base()))); }
             if status != 207 { assert!(message.contains(&status.to_string())); }
-            else { assert_eq!(message.contains("1 条日程无法解析"), !ics.is_empty()); }
+            else { assert_eq!(message.contains("1 條日程無法解析"), !ics.is_empty()); }
         }
     }
 }

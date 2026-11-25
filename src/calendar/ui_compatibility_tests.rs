@@ -8,7 +8,7 @@ fn caldav_login_page_blocks_saving_but_empty_calendar_can_be_saved() {
 
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let cases = [
-        (200, "text/html", "<!DOCTYPE html><html><body><form>登录</form></body></html>", false),
+        (200, "text/html", "<!DOCTYPE html><html><body><form>登錄</form></body></html>", false),
         (200, "application/xml", r#"<html><body><multistatus xmlns="DAV:"/></body></html>"#, false),
         (200, "application/xml", "", false),
         (200, "application/xml", r#"<multistatus xmlns="urn:other"/>"#, false),
@@ -38,11 +38,11 @@ fn caldav_login_page_blocks_saving_but_empty_calendar_can_be_saved() {
             assert_eq!(saved[0].username, cfg.username);
             assert_eq!(saved[0].href, Some(format!("{}calendar/", saved[0].base())));
             assert_eq!(password.as_deref(), Ok("test-password"));
-            assert!(h.app.calendar.note.contains("0 个日程"));
+            assert!(h.app.calendar.note.contains("0 個日程"));
         } else {
             assert!(saved.is_empty());
             assert!(password.is_err());
-            assert!(h.app.calendar.note.contains("服务器未返回有效的 CalDAV"));
+            assert!(h.app.calendar.note.contains("服務器未返回有效的 CalDAV"));
         }
     }
 }
@@ -58,7 +58,7 @@ fn calendar_connection_with_parse_warning_is_saved_and_sync_keeps_cached_events(
         href: Some("https://calendar.example.invalid/dav/calendar/".into()),
         server: Some("https://calendar.example.invalid/dav/".into()),
     };
-    let warning = "1 条日程无法解析".to_string();
+    let warning = "1 條日程無法解析".to_string();
     h.app.calendar.test_password = "test-password".into();
     h.app.calendar.testing = true;
     h.app.calendar_event(Event::Test { ok: true, message: warning.clone(), count: 0, config: Some(config.clone()) });
@@ -77,7 +77,7 @@ fn calendar_connection_with_parse_warning_is_saved_and_sync_keeps_cached_events(
         uid: "cached".into(), title: "已同步的日程".into(), start: 1, end: None, all_day: false, at: String::new(),
     }];
     h.app.calendar_event(Event::Synced { config: config.clone(), events, at: "12:00".into() });
-    h.app.calendar_event(Event::Failed { config: config.clone(), message: "上次网络连接失败".into() });
+    h.app.calendar_event(Event::Failed { config: config.clone(), message: "上次網絡連接失敗".into() });
     h.app.calendar_event(Event::Warning { config, month: None, message: warning.clone() });
     assert!(h.app.calendar.connected && h.app.calendar.feeds[0].connected);
     assert!(h.app.calendar.error.is_empty());

@@ -57,7 +57,7 @@ fn glm_error(v:&Value,http:Option<u16>)->(String,u64){
     let numeric=|v:&Value|v.as_u64().or_else(||v.as_str()?.parse::<u64>().ok());
     let code=v.pointer("/error/code").and_then(numeric).or_else(||v.get("code").and_then(numeric));
     let reason=v["msg"].as_str().or_else(||v["message"].as_str()).or_else(||v.pointer("/error/message").and_then(Value::as_str)).unwrap_or_default().to_ascii_lowercase();
-    // HTTP 429 也可能表示套餐到期，先按业务码区分；服务端原文不进入界面或缓存。
+    // HTTP 429 也可能表示套餐到期，先按業務碼區分；服務端原文不進入界面或緩存。
     let (message,retry)=match code{
         Some(1003)=>("GLM 金鑰已過期，請在所選地區控制檯重新獲取套餐 Key",0),
         Some(401|1000|1001)=>("GLM 金鑰認證失敗，請核對 Key、有效期及所選地區",0),
@@ -170,8 +170,8 @@ fn parse_glm(v: &Value, s: &mut Snapshot) -> Result<(), String> {
         return Err(glm_error(v,None).0);
     }
     let data = if v["data"].is_object() { &v["data"] } else { v };
-    let rows = data["limits"].as_array().ok_or("GLM 额度响应缺少限制列表")?;
-    if rows.len()>16{return Err("GLM 返回过多额度窗口，请检查响应版本".into());}
+    let rows = data["limits"].as_array().ok_or("GLM 額度響應缺少限制列表")?;
+    if rows.len()>16{return Err("GLM 返回過多額度窗口，請檢查響應版本".into());}
     s.plan="Coding Plan".into();
     for row in rows{
         let Some(used)=number(&row["percentage"]).filter(|v|*v<=100.0) else{continue;};
@@ -180,12 +180,12 @@ fn parse_glm(v: &Value, s: &mut Snapshot) -> Result<(), String> {
         let reset=row["nextResetTime"].as_i64().filter(|x|*x>0).map(|x|if x>10_000_000_000{x/1000}else{x});
         match row["type"].as_str(){
             Some("TOKENS_LIMIT"|"CREDIT_LIMIT")=>s.windows.push(window(&super::cadence(seconds),seconds,(100.0-used) as f32,reset)),
-            Some("TIME_LIMIT")=>s.extra.push(window("工具调用",seconds,(100.0-used) as f32,reset)),
+            Some("TIME_LIMIT")=>s.extra.push(window("工具調用",seconds,(100.0-used) as f32,reset)),
             _=>{},
         }
     }
     if s.windows.is_empty(){
-        return Err("GLM 未返回可识别的编程额度（工具额度不能代替编程额度）".into());
+        return Err("GLM 未返回可識別的編程額度（工具額度不能代替編程額度）".into());
     }
     if let Some(level)=data["level"].as_str().map(str::trim).filter(|v|!v.is_empty()&&v.len()<=64){s.plan=level.into();}
     Ok(())

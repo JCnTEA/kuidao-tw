@@ -104,7 +104,7 @@ unsafe fn trusted_file(path: PCWSTR, file: HANDLE, expected: impl FnOnce(&str) -
 pub(crate) fn lock_signed_executable(path: &Path, expected: impl FnOnce(&str) -> bool) -> Option<File> {
     let wide_path = wide(path.as_os_str());
     let file = OpenOptions::new().read(true).share_mode(FILE_SHARE_READ.0).open(path).ok()?;
-    // 启动结束前持有这个句柄，签名通过的文件不能被替换。
+    // 啟動結束前持有這個句柄，簽名通過的文件不能被替換。
     unsafe { trusted_file(PCWSTR(wide_path.as_ptr()), HANDLE(file.as_raw_handle()), expected) }.then_some(file)
 }
 
@@ -123,41 +123,41 @@ unsafe fn elevated(token: HANDLE) -> windows::core::Result<bool> {
 }
 
 pub(super) fn launch_feishu(path: &Path, pid: u32) -> Result<(), &'static str> {
-    let path = std::fs::canonicalize(path).map_err(|_| "无法确认客户端程序的实际路径")?;
-    let dirname = path.parent().ok_or("无法确认客户端安装目录")?;
-    let filename = path.file_name().and_then(OsStr::to_str).ok_or("无法确认客户端程序名")?;
+    let path = std::fs::canonicalize(path).map_err(|_| "無法確認客戶端程序的實際路徑")?;
+    let dirname = path.parent().ok_or("無法確認客戶端安裝目錄")?;
+    let filename = path.file_name().and_then(OsStr::to_str).ok_or("無法確認客戶端程序名")?;
     let wide_path = wide(path.as_os_str());
-    // 在创建子进程前持有文件，避免文件在签名检查和启动之间被替换。
+    // 在創建子進程前持有文件，避免文件在簽名檢查和啟動之間被替換。
     let file = OpenOptions::new().read(true).share_mode(FILE_SHARE_READ.0)
-        .open(&path).map_err(|_| "无法读取客户端程序进行签名验证")?;
+        .open(&path).map_err(|_| "無法讀取客戶端程序進行簽名驗證")?;
     unsafe {
         if !trusted_file(PCWSTR(wide_path.as_ptr()), HANDLE(file.as_raw_handle()), |signer| expected_publisher(filename, signer)) {
-            return Err("客户端签名或签名发布者无法验证");
+            return Err("客戶端簽名或簽名發佈者無法驗證");
         }
-        let current = process_token(GetCurrentProcess(), TOKEN_QUERY).map_err(|_| "无法确认岛仔运行权限")?;
-        if !elevated(*current).map_err(|_| "无法确认岛仔运行权限")? {
+        let current = process_token(GetCurrentProcess(), TOKEN_QUERY).map_err(|_| "無法確認島仔運行權限")?;
+        if !elevated(*current).map_err(|_| "無法確認島仔運行權限")? {
             return Command::new(&path).current_dir(dirname)
                 .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
-                .spawn().map(|_| ()).map_err(|_| "启动客户端程序失败");
+                .spawn().map(|_| ()).map_err(|_| "啟動客戶端程序失敗");
         }
-        // 使用已匹配的客户端令牌，管理员运行的岛仔也不以自身权限启动飞书。
+        // 使用已匹配的客戶端令牌，管理員運行的島仔也不以自身權限啟動飛書。
         let process = Owned::new(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
-            .map_err(|_| "无法获取客户端运行权限")?);
+            .map_err(|_| "無法獲取客戶端運行權限")?);
         let token = process_token(*process, TOKEN_QUERY | TOKEN_DUPLICATE)
-            .map_err(|_| "无法获取客户端运行权限")?;
-        if elevated(*token).map_err(|_| "无法确认客户端运行权限")? {
-            return Err("客户端以管理员身份运行，请从托盘手动打开");
+            .map_err(|_| "無法獲取客戶端運行權限")?;
+        if elevated(*token).map_err(|_| "無法確認客戶端運行權限")? {
+            return Err("客戶端以管理員身份運行，請從托盤手動打開");
         }
         let mut primary = HANDLE::default();
         DuplicateTokenEx(*token, TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY, None,
-            SecurityImpersonation, TokenPrimary, &mut primary).map_err(|_| "无法获取客户端普通权限令牌")?;
+            SecurityImpersonation, TokenPrimary, &mut primary).map_err(|_| "無法獲取客戶端普通權限令牌")?;
         let primary = Owned::new(primary);
         let wide_dir = wide(dirname.as_os_str());
         let startup = STARTUPINFOW { cb: size_of::<STARTUPINFOW>() as u32, ..Default::default() };
         let mut child = PROCESS_INFORMATION::default();
         CreateProcessWithTokenW(*primary, CREATE_PROCESS_LOGON_FLAGS(0), PCWSTR(wide_path.as_ptr()),
             PWSTR::null(), PROCESS_CREATION_FLAGS(0), None, PCWSTR(wide_dir.as_ptr()), &startup, &mut child)
-            .map_err(|_| "无法以普通权限打开客户端，请从托盘手动打开")?;
+            .map_err(|_| "無法以普通權限打開客戶端，請從托盤手動打開")?;
         let _process = Owned::new(child.hProcess);
         let _thread = Owned::new(child.hThread);
         Ok(())

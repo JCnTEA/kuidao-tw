@@ -1,4 +1,4 @@
-//! QQ 的安装位置、主窗口和托盘规则。
+//! QQ 的安裝位置、主窗口和托盤規則。
 use super::{Messenger,OpenError,Target,Unread};
 use super::windows::*;
 use windows::{core::{w,PCWSTR},Win32::{Foundation::{HWND,LPARAM,WPARAM},System::{Registry::{HKEY_CLASSES_ROOT,HKEY_CURRENT_USER},Threading::{OpenProcess,PROCESS_QUERY_LIMITED_INFORMATION}},UI::WindowsAndMessaging::*}};
@@ -12,10 +12,10 @@ fn open(unread:Unread,paths:&[String],_:bool)->Result<(),OpenError>{unsafe{
     if unread.window==0 || !IsWindow(window).as_bool() || window_pid(window)!=unread.pid{wake_step("提醒視窗已不屬於該帳號");return Err(OpenError::Unavailable);}
     let target=if usable_main_frame(window,unread.source) && matches(window,paths){Some(window)}else{visible_main_window_of(unread.pid,unread.source,paths)};
     if let Some(target)=target{
-        wake_step(format!("切前臺 {}",describe_window(target)));
+        wake_step(format!("切前台 {}",describe_window(target)));
         if IsIconic(target).as_bool(){let _=ShowWindowAsync(target,SW_RESTORE);}
         if SetForegroundWindow(target).as_bool(){wake_step("系統已接受");return Ok(());}
-        wake_step("系統拒絕切前臺");
+        wake_step("系統拒絕切前台");
     }else{wake_step("沒有可見的 QQ 主視窗");}
     if class_name(window)=="Electron_NotifyIconHostWindow" && matches(window,paths){
         let icons=host_icons(&[(unread.pid,window)],unread.pid);
@@ -113,7 +113,7 @@ mod tests{
         let steps=take_wake_steps();
         let _=DestroyWindow(window);
         assert_eq!(result,Err(OpenError::Unavailable));
-        assert_eq!(steps,["沒有可見的 QQ 主視窗".to_string(),"提醒視窗不是 QQ 系統匣宿主（Static）".to_string()],"依次记录切前台和托盘两条路为什么都走不通");
+        assert_eq!(steps,["沒有可見的 QQ 主視窗".to_string(),"提醒視窗不是 QQ 系統匣宿主（Static）".to_string()],"依次記錄切前台和托盤兩條路為什麼都走不通");
         take_wake_steps();
         let gone=open(Unread{source:Messenger::Qq,pid:std::process::id(),window:0},&paths,true);
         assert_eq!((gone,take_wake_steps()),(Err(OpenError::Unavailable),vec!["提醒視窗已不屬於該帳號".to_string()]));
@@ -134,7 +134,7 @@ mod tests{
         }
         let pid=std::process::id();let paths=[normalized(&std::env::current_exe().unwrap().to_string_lossy())];
         assert_eq!(host_icons(&[(pid,host)],pid),vec![(host,3)]);
-        let found=accounts(&paths).expect("单一托盘账号不能因多个隐藏辅助窗口而识别失败");
+        let found=accounts(&paths).expect("單一托盤帳號不能因多個隱藏輔助窗口而識別失敗");
         assert_eq!(found.len(),1);assert_eq!(found[0].unread.window,host.0 as isize);
         assert!(ready_with_paths(found[0],&paths));
         let mut history=super::super::AccountHistory::new(Messenger::Qq);
@@ -143,7 +143,7 @@ mod tests{
         let mut second=fixture.icon;second.uID=4;
         assert!(Shell_NotifyIconW(NIM_ADD,&second).as_bool());
         let ambiguous=accounts(&paths);let _=Shell_NotifyIconW(NIM_DELETE,&second);
-        assert!(ambiguous.is_none(),"同宿主多个账号图标仍不能假装只有一个账号");
+        assert!(ambiguous.is_none(),"同宿主多個帳號圖標仍不能假裝只有一個帳號");
     }}
     #[test]
     fn qq_multiple_main_windows_in_one_process_are_not_a_unique_account(){unsafe{
@@ -155,11 +155,11 @@ mod tests{
         let paths=[normalized(&std::env::current_exe().unwrap().to_string_lossy())];
         let first=create();let one=accounts(&paths);let original=one.as_ref().unwrap()[0];let before=ready_with_paths(original,&paths);let second=create();let ambiguous=accounts(&paths);let after=ready_with_paths(original,&paths);
         DestroyWindow(first).unwrap();DestroyWindow(second).unwrap();
-        assert_eq!(one.unwrap().len(),1);assert!(before);assert!(!after,"已经绑定的 QQ 目标在出现同进程多主窗口后也不能继续猜测唤起");
-        assert!(ambiguous.is_none(),"同进程多个 QQ 主窗口不能随便拿第一个当成唯一账号");
+        assert_eq!(one.unwrap().len(),1);assert!(before);assert!(!after,"已經綁定的 QQ 目標在出現同進程多主窗口後也不能繼續猜測喚起");
+        assert!(ambiguous.is_none(),"同進程多個 QQ 主窗口不能隨便拿第一個當成唯一帳號");
     }}
     #[test]
-    #[ignore="需要本机正在运行 QQ，仅用于现场诊断"]
+    #[ignore="需要本機正在運行 QQ，僅用於現場診斷"]
     fn live_probe(){
         unsafe{
             use windows::Win32::Foundation::BOOL;
@@ -171,7 +171,7 @@ mod tests{
                 let tray=class=="Electron_NotifyIconHostWindow";
                 let main=client_main_frame(Messenger::Qq,&class,GetWindowLongW(hwnd,GWL_STYLE)as u32,GetWindowLongW(hwnd,GWL_EXSTYLE)as u32) && GetWindow(hwnd,GW_OWNER).is_err();
                 if (tray||main) && matches(hwnd,search.paths){
-                    println!("候选 {} {:#x} pid {} 样式 0x{:08X}/0x{:08X}",if tray{"托盘宿主"}else{"主窗口"},hwnd.0 as usize,window_pid(hwnd),GetWindowLongW(hwnd,GWL_STYLE)as u32,GetWindowLongW(hwnd,GWL_EXSTYLE)as u32);
+                    println!("候選 {} {:#x} pid {} 樣式 0x{:08X}/0x{:08X}",if tray{"托盤宿主"}else{"主窗口"},hwnd.0 as usize,window_pid(hwnd),GetWindowLongW(hwnd,GWL_STYLE)as u32,GetWindowLongW(hwnd,GWL_EXSTYLE)as u32);
                     if tray{search.hosts.push(hwnd);}else{search.mains.push(hwnd);}
                 }
                 true.into()
@@ -180,10 +180,10 @@ mod tests{
             let _=EnumWindows(Some(visit),LPARAM((&mut search as *mut S)as isize));
             for &host in &search.hosts{
                 let icons=host_icons(&[(window_pid(host),host)],window_pid(host));
-                println!("宿主 {:#x} pid {} 图标 {:?}",host.0 as usize,window_pid(host),icons);
+                println!("宿主 {:#x} pid {} 圖標 {:?}",host.0 as usize,window_pid(host),icons);
             }
             println!("accounts = {:?}",accounts(&paths));
-            println!("parent_processes 数量 {}",parent_processes().len());
+            println!("parent_processes 數量 {}",parent_processes().len());
         }
     }
 

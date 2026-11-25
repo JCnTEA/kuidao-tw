@@ -1,4 +1,4 @@
-//! 按实际绘制位置登记主岛控件，将交互和弹簧状态打包为材质输入。
+//! 按實際繪製位置登記主島控件，將交互和彈簧狀態打包為材質輸入。
 
 use crate::anim::Spring;
 use eframe::egui::{Context, Id, IdMap, Pos2, Rect, Vec2};
@@ -7,7 +7,7 @@ use std::cell::RefCell;
 const MAX_CONTROLS: usize = 16;
 const PRESS_SCALE: f32 = 0.14;
 
-/// `Frame.ctl_spring.w` 中的角色编号。新角色只在末尾追加。
+/// `Frame.ctl_spring.w` 中的角色編號。新角色只在末尾追加。
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ControlRole {
@@ -62,7 +62,7 @@ thread_local! {
     static REGISTRATIONS: RefCell<Option<Vec<Registration>>> = const { RefCell::new(None) };
 }
 
-/// 在主岛绘制时登记控件。无材质或在其他窗口绘制时没有活动收集器。
+/// 在主島繪製時登記控件。無材質或在其他窗口繪製時沒有活動收集器。
 pub(crate) fn control(id: Id, rect: Rect, radius: f32, role: ControlRole) {
     REGISTRATIONS.with_borrow_mut(|registrations| {
         let Some(registrations) = registrations.as_mut() else {
@@ -115,7 +115,7 @@ struct ControlScales {
     entries: [Option<(Id, f32)>; MAX_CONTROLS],
 }
 
-/// 读取最近一帧的缩放，让前景图标跟随同一个弹簧。
+/// 讀取最近一幀的縮放，讓前景圖標跟隨同一個彈簧。
 pub(crate) fn control_scale(ctx: &Context, id: Id) -> Option<f32> {
     let pass = ctx.cumulative_pass_nr();
     let scales =
@@ -192,7 +192,7 @@ impl Controls {
             });
             registrations.truncate(MAX_CONTROLS);
         }
-        // 小控件最后交给着色器，重叠时位于较大的底板上层。
+        // 小控件最後交給著色器，重疊時位於較大的底板上層。
         registrations.sort_by(by_area);
         self.motions
             .retain(|id, _| registrations.iter().any(|entry| entry.id == *id));

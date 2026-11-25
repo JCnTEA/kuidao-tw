@@ -1,4 +1,4 @@
-//! Windows 消息客户端的通用生命周期、窗口检查和后台唤起。
+//! Windows 消息客戶端的通用生命週期、窗口檢查和後台喚起。
 use super::{AccountHistory,Capture,Messenger,OpenError,Target,Unread};
 use crate::model::Settings;
 use std::{collections::HashMap,sync::mpsc,time::{Duration,Instant}};
@@ -35,18 +35,18 @@ pub(crate) fn frame_style(class:&str,style:u32,extended:u32)->bool{
 pub fn describe_foreground()->String{unsafe{let window=GetForegroundWindow();format!("{:#x} {} 程序 {}",window.0 as usize,class_name(window),window_pid(window))}}
 pub fn trace(line:impl AsRef<str>){crate::resources::append_log(&crate::model::config_dir().join("diagnostics"),"messenger-events",line.as_ref());}
 
-// 点岛上的提醒唤起客户端：各客户端把走过的步骤记在当前线程，结束时与结果合成一行写入
-// messenger-events.log。只记窗口句柄、类名、可见状态和进程号，不记窗口标题或消息内容。
+// 點島上的提醒喚起客戶端：各客戶端把走過的步驟記在當前線程，結束時與結果合成一行寫入
+// messenger-events.log。只記窗口句柄、類名、可見狀態和進程號，不記窗口標題或消息內容。
 thread_local!{static WAKE_STEPS:std::cell::RefCell<Vec<String>>=const{std::cell::RefCell::new(Vec::new())};}
 pub(crate) fn wake_step(line:impl Into<String>){WAKE_STEPS.with(|steps|steps.borrow_mut().push(line.into()));}
-/// 窗口当时的状态：是否还在、类名、隐藏 / 最小化、所属进程。
+/// 窗口當時的狀態：是否還在、類名、隱藏 / 最小化、所屬進程。
 pub(crate) fn describe_window(window:HWND)->String{unsafe{
     if window.0.is_null() || !IsWindow(window).as_bool(){return format!("{:#x} 已不存在",window.0 as usize);}
     format!("{:#x} {}{}{} 程序 {}",window.0 as usize,class_name(window),
         if IsWindowVisible(window).as_bool(){""}else{" 隱藏"},if IsIconic(window).as_bool(){" 最小化"}else{""},window_pid(window))
 }}
 fn wake_line(head:&str,steps:&[String],error:Option<&OpenError>,elapsed:Duration)->String{
-    let outcome=match error{None=>"已发出打开请求".to_string(),Some(error)=>format!("失败 {error:?}")};
+    let outcome=match error{None=>"已發出打開請求".to_string(),Some(error)=>format!("失敗 {error:?}")};
     let steps=if steps.is_empty(){"-".to_string()}else{steps.join(" → ")};
     format!("{head} → {steps} → 結果:{outcome} 用時{}ms",elapsed.as_millis())
 }
@@ -335,7 +335,7 @@ impl Runtime {
         }
         events
     }
-    /// 前台已确认查看该账号时同步重置监听端，避免遗漏激活事件后吞掉下一条消息。
+    /// 前台已確認查看該帳號時同步重置監聽端，避免遺漏激活事件後吞掉下一條消息。
     pub fn viewed_client(&self,client:Messenger,pid:u32){
         if pid==0{return;}
         for entry in &self.taskbar{if entry.client==client{if let Some(source)=&entry.source{source.forget(pid);}}}
@@ -343,7 +343,7 @@ impl Runtime {
     pub fn track(&mut self,target:Target)->Result<(),OpenError>{
         let process=check_process(target)?;
         let unread=target.unread;
-        // 办公客户端的闪动已提供原进程代际。原窗口随后关闭时仍可登记，点击时再核对是否有唯一的替换主窗。
+        // 辦公客戶端的閃動已提供原進程代際。原窗口隨後關閉時仍可登記，點擊時再核對是否有唯一的替換主窗。
         if unread.source.adapter().native.strict_window && (unread.window==0
             || !Messenger::OFFICE.contains(&unread.source) && !original_window_exists(unread)){return Err(OpenError::Unavailable);}
         self.processes.insert(target.unread.pid,Some(process));self.targets.insert(target.unread,target);Ok(())
@@ -353,12 +353,12 @@ impl Runtime {
         if !Messenger::OFFICE.contains(&unread.source){
             return (self.track_unread(unread)!=Err(OpenError::Exited)).then_some(unread);
         }
-        // 无法将登记失败的闪动显示成已确认账号，也不能事后按 PID 重新认领一个进程。
+        // 無法將登記失敗的閃動顯示成已確認帳號，也不能事後按 PID 重新認領一個進程。
         match target.filter(|target|target.unread==unread).map_or(Err(OpenError::Unavailable),|target|self.track(target)){
             Ok(())=>Some(unread),
             Err(OpenError::Exited)=>None,
             Err(error)=>{
-                if !cfg!(test){trace(format!("登记 {} 账号 {} · 窗口 {:#x}：{error:?}",unread.source.name(),unread.pid,unread.window));}
+                if !cfg!(test){trace(format!("登記 {} 帳號 {} · 窗口 {:#x}：{error:?}",unread.source.name(),unread.pid,unread.window));}
                 Some(Unread::of(unread.source))
             }
         }
@@ -429,7 +429,7 @@ fn resolve_open_target(target:Target,paths:&[String])->Result<Target,OpenError>{
             return Ok(replacement);
         }
     }
-    wake_step("原窗口已失效，无法确认唯一的替换主窗");
+    wake_step("原窗口已失效，無法確認唯一的替換主窗");
     Err(OpenError::Unavailable)
 }
 
@@ -454,7 +454,7 @@ impl OpenRequest {
         let steps=WAKE_STEPS.with(|steps|std::mem::take(&mut *steps.borrow_mut()));
         let line=wake_line(&head,&steps,result.as_ref().err(),started.elapsed());
         #[cfg(test)] LAST_WAKE.with(|last|*last.borrow_mut()=line.clone());
-        // 测试时不写，免得把模拟数据混进用户的真实诊断日志。
+        // 測試時不寫，免得把模擬數據混進用戶的真實診斷日誌。
         if !cfg!(test){trace(line);}
         result
     }
@@ -466,13 +466,13 @@ impl OpenRequest {
             return Err(if self.unread.pid==0{OpenError::Unidentified}else{OpenError::Unavailable});
         };
         if target.unread!=self.unread{wake_step("登記的帳號與提醒不一致");return Err(OpenError::Unavailable);}
-        // 句柄保留到整个唤起结束，不能因提醒被关闭而提前允许进程号复用。
-        let process=check_process(target).inspect_err(|error|wake_step(format!("账号进程检查未通过 {error:?}")))?;
+        // 句柄保留到整個喚起結束，不能因提醒被關閉而提前允許進程號複用。
+        let process=check_process(target).inspect_err(|error|wake_step(format!("帳號進程檢查未通過 {error:?}")))?;
         let target=resolve_open_target(target,paths)?;
         let adapter=self.unread.source.adapter().native;
-        if !(adapter.ready)(target){wake_step("客户端尚未就绪");return Err(OpenError::Unavailable);}
+        if !(adapter.ready)(target){wake_step("客戶端尚未就緒");return Err(OpenError::Unavailable);}
         let result=(adapter.open)(target,paths,self.allow_tray);
-        if unsafe{WaitForSingleObject(*process,0)==WAIT_OBJECT_0}{wake_step("唤起过程中账号进程已退出");Err(OpenError::Exited)}else{result}
+        if unsafe{WaitForSingleObject(*process,0)==WAIT_OBJECT_0}{wake_step("喚起過程中帳號進程已退出");Err(OpenError::Exited)}else{result}
     }
 }
 fn validate_unread_with(unread:Unread,discover:impl FnMut(Messenger)->Option<Vec<u32>>)->Result<(),OpenError>{
@@ -593,13 +593,13 @@ mod tests {
         let replacement=Target{unread:Unread{window:window.0 as isize,..target.unread},..target};
         let paths=[normalized(&std::env::current_exe().unwrap().to_string_lossy())];
         let mut runtime=Runtime::default();
-        assert_eq!(runtime.register_taskbar(target.unread,None),Some(Unread::of(Messenger::DingTalk)),"缺少原闪动的代际证据时，不能把提醒显示为已确认账号");
-        assert_eq!(runtime.register_taskbar(target.unread,Some(Target{started:target.started+1,..target})),None,"不能把旧进程的提醒交给复用 PID 的进程");
-        assert_eq!(runtime.register_taskbar(target.unread,Some(target)),Some(target.unread),"窗口重建后仍可登记原进程代际");
+        assert_eq!(runtime.register_taskbar(target.unread,None),Some(Unread::of(Messenger::DingTalk)),"缺少原閃動的代際證據時，不能把提醒顯示為已確認帳號");
+        assert_eq!(runtime.register_taskbar(target.unread,Some(Target{started:target.started+1,..target})),None,"不能把舊進程的提醒交給複用 PID 的進程");
+        assert_eq!(runtime.register_taskbar(target.unread,Some(target)),Some(target.unread),"窗口重建後仍可登記原進程代際");
         assert_eq!(runtime.request(target.unread,&Settings::default()).target,Some(target));
         assert_eq!(resolve_open_target(target,&paths),Ok(replacement));
         let ambiguous=create();
-        assert_eq!(resolve_open_target(target,&paths),Err(OpenError::Unavailable),"同进程多个候选不能猜替换窗口");
+        assert_eq!(resolve_open_target(target,&paths),Err(OpenError::Unavailable),"同進程多個候選不能猜替換窗口");
         DestroyWindow(ambiguous).unwrap();
         assert_eq!(runtime.replace_opened(target.unread,Target{started:target.started+1,..replacement}),Err(OpenError::Unavailable));
         runtime.replace_opened(target.unread,replacement).unwrap();
@@ -616,9 +616,9 @@ mod tests {
         let started=process_started(GetCurrentProcess()).unwrap();
         let paths=[normalized(&std::env::current_exe().unwrap().to_string_lossy())];
         for (client,class,title) in [
-            (Messenger::Feishu,w!("Chrome_WidgetWin_1"),w!("飞书")),
-            (Messenger::DingTalk,w!("StandardFrame_DingTalk"),w!("钉钉")),
-            (Messenger::WeCom,w!("WeWorkWindow"),w!("企业微信")),
+            (Messenger::Feishu,w!("Chrome_WidgetWin_1"),w!("飛書")),
+            (Messenger::DingTalk,w!("StandardFrame_DingTalk"),w!("釘釘")),
+            (Messenger::WeCom,w!("WeWorkWindow"),w!("企業微信")),
         ]{
             RegisterClassW(&WNDCLASSW{lpfnWndProc:Some(proc),hInstance:instance,lpszClassName:class,..Default::default()});
             let create=||{
@@ -629,29 +629,29 @@ mod tests {
             let old=create();
             let original=Target{unread:Unread{source:client,pid,window:old.0 as isize},started};
             let mut runtime=Runtime::default();
-            assert_eq!(runtime.foreground_at(old,client,&paths),None,"没有原账号登记时不得认领前台窗口");
+            assert_eq!(runtime.foreground_at(old,client,&paths),None,"沒有原帳號登記時不得認領前台窗口");
             assert_eq!(runtime.register_taskbar(original.unread,Some(original)),Some(original.unread));
             assert_eq!(runtime.foreground_at(old,client,&paths),Some(pid));
             let rebuilt=create();
-            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"原窗口仍在时不得把另一个主窗当成重建");
+            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"原窗口仍在時不得把另一個主窗當成重建");
             DestroyWindow(old).unwrap();
             let extra=create();
-            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"同进程多个合格候选时保留提醒");
+            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"同進程多個合格候選時保留提醒");
             DestroyWindow(extra).unwrap();
             let popup=CreateWindowExW(WS_EX_TOOLWINDOW,class,title,WS_VISIBLE|WS_POPUP,-10000,-10000,800,600,None,None,instance,None).unwrap();
-            assert_eq!(runtime.foreground_at(popup,client,&paths),None,"同进程的辅助窗不能触发清理");
+            assert_eq!(runtime.foreground_at(popup,client,&paths),None,"同進程的輔助窗不能觸發清理");
             DestroyWindow(popup).unwrap();
             let _=ShowWindow(rebuilt,SW_SHOWMINNOACTIVE);
-            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"新窗口仍最小化时保留提醒");
+            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"新窗口仍最小化時保留提醒");
             let _=ShowWindow(rebuilt,SW_SHOWNOACTIVATE);
-            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),Some(pid),"原账号唯一的新主窗可确认查看");
-            assert_eq!(runtime.request(original.unread,&Settings::default()).target,Some(original),"确认查看不应改写已登记的原提醒");
+            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),Some(pid),"原帳號唯一的新主窗可確認查看");
+            assert_eq!(runtime.request(original.unread,&Settings::default()).target,Some(original),"確認查看不應改寫已登記的原提醒");
             let other=Target{unread:Unread{pid:pid+1,..original.unread},..original};
             runtime.targets.remove(&original.unread);
             runtime.targets.insert(other.unread,other);
-            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"前台的新窗口不能清另一个账号");
+            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"前台的新窗口不能清另一個帳號");
             runtime.targets.insert(original.unread,Target{started:started+1,..original});
-            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"相同 PID 的新进程不能清旧提醒");
+            assert_eq!(runtime.foreground_at(rebuilt,client,&paths),None,"相同 PID 的新進程不能清舊提醒");
             DestroyWindow(rebuilt).unwrap();
         }
     }}
@@ -795,10 +795,10 @@ mod tests {
     }}
     #[test]
     fn wake_line_reports_success_and_steps_in_order(){
-        let ok=wake_line("唤起 钉钉 账号 7",&["切前台 0x1 StandardFrame_DingTalk 进程 7".into(),"系统已接受".into()],None,Duration::from_millis(12));
-        assert_eq!(ok,"唤起 钉钉 账号 7 → 切前台 0x1 StandardFrame_DingTalk 进程 7 → 系统已接受 → 结果:已发出打开请求 用时12ms");
-        let failed=wake_line("唤起 微信 账号 9",&[],Some(&OpenError::Failed("未能唤起微信（T3）".into())),Duration::ZERO);
-        assert!(failed.contains("→ - →") && failed.contains("失败 Failed(\"未能唤起微信（T3）\")"));
+        let ok=wake_line("喚起 釘釘 帳號 7",&["切前台 0x1 StandardFrame_DingTalk 進程 7".into(),"系統已接受".into()],None,Duration::from_millis(12));
+        assert_eq!(ok,"喚起 釘釘 帳號 7 → 切前台 0x1 StandardFrame_DingTalk 進程 7 → 系統已接受 → 結果:已發出打開請求 用時12ms");
+        let failed=wake_line("喚起 微信 帳號 9",&[],Some(&OpenError::Failed("未能喚起微信（T3）".into())),Duration::ZERO);
+        assert!(failed.contains("→ - →") && failed.contains("失敗 Failed(\"未能喚起微信（T3）\")"));
     }
     #[test]
     fn exited_messenger_accounts_are_removed_individually(){

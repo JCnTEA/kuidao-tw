@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn parses_track_and_offset() {
         let body = r#"{"matches":[{"id":"1","offset":42.5,"timeskew":0.1}],
-            "track":{"title":" 稻香 ","subtitle":"周杰倫 · 魔杰座","url":"https://x"}}"#;
+            "track":{"title":" 稻香 ","subtitle":"周杰倫 · 魔傑座","url":"https://x"}}"#;
         let found = parse(body).unwrap();
         assert_eq!(found.title, "稻香");
         assert_eq!(found.artist, "周杰倫");

@@ -1,4 +1,4 @@
-//! 兼容 CC Switch 的 request / extractor 查询脚本。
+//! 兼容 CC Switch 的 request / extractor 查詢腳本。
 use super::{amount,window,read_response,Scope,Quota,Snapshot};
 use serde_json::Value;
 use std::time::{Duration,Instant};
@@ -57,7 +57,7 @@ pub fn parse_result(value:&Value,source:&str)->Result<Snapshot,String>{
     Ok(Snapshot{plan:source.into(),relay:Some(Quota{source:source.into(),amounts,expires_at:None}),windows,at:chrono::Utc::now().timestamp(),..Default::default()})
 }
 
-/// 这份地址表同时用于站点校验和直连解析，localhost 无需查询 DNS。
+/// 這份地址表同時用於站點校驗和直連解析，localhost 無需查詢 DNS。
 pub(super) fn loopback_ips(url:&url::Url)->&'static [std::net::IpAddr] {
     use std::net::{IpAddr,Ipv4Addr,Ipv6Addr};
     const V4:IpAddr=IpAddr::V4(Ipv4Addr::LOCALHOST);
@@ -71,21 +71,21 @@ pub(super) fn loopback_ips(url:&url::Url)->&'static [std::net::IpAddr] {
 }
 
 pub fn request(agent:&ureq::Agent,base:&str,credential:&Credential,cancelled:impl Fn()->bool)->Result<Snapshot,(String,u64)>{
-    if cancelled(){return Err(("已取消连接".into(),0));}
+    if cancelled(){return Err(("已取消連接".into(),0));}
     let base=super::site_url(base,true).map_err(|e|(e,0))?;
-    if credential.script.trim().is_empty()||credential.script.len()>65536{return Err(("请输入 64 KB 以内的查询脚本".into(),0));}
+    if credential.script.trim().is_empty()||credential.script.len()>65536{return Err(("請輸入 64 KB 以內的查詢腳本".into(),0));}
     let mut code=credential.script.clone();
     for (key,value) in [("baseUrl",base.as_str()),("apiKey",credential.api_key.as_str()),("accessToken",credential.access_token.as_str()),("userId",credential.user_id.as_str())]{code=code.replace(&format!("{{{{{key}}}}}"),value);}
     let config=evaluate(&code,None,Duration::from_secs(5)).map_err(|e|(e,0))?;
     let url=url::Url::parse(config["url"].as_str().ok_or(("查詢指令碼缺少請求地址".into(),0))?).map_err(|_|("查詢指令碼的請求地址無效".into(),0))?;
     let origin=url::Url::parse(&base).unwrap();
-    if url.origin()!=origin.origin()||!url.username().is_empty()||url.password().is_some()||url.fragment().is_some(){return Err(("查询脚本必须请求所填站点的同源接口".into(),0));}
+    if url.origin()!=origin.origin()||!url.username().is_empty()||url.password().is_some()||url.fragment().is_some(){return Err(("查詢腳本必須請求所填站點的同源接口".into(),0));}
     let method=config["method"].as_str().unwrap_or("GET");
-    if !matches!(method,"GET"|"POST"){return Err(("额度查询脚本仅支持 GET 或 POST".into(),0));}
+    if !matches!(method,"GET"|"POST"){return Err(("額度查詢腳本僅支持 GET 或 POST".into(),0));}
     let direct;
     let agent=if url.scheme()=="http" {
         let ips=loopback_ips(&url);
-        let port=url.port_or_known_default().expect("HTTP 有默认端口");
+        let port=url.port_or_known_default().expect("HTTP 有默認端口");
         direct=ureq::AgentBuilder::new().try_proxy_from_env(false).redirects(0)
             .resolver(move |_:&str|Ok(ips.iter().map(|ip|std::net::SocketAddr::new(*ip,port)).collect()))
             .build();
@@ -157,7 +157,7 @@ mod tests{
                 let mut changed=c.clone();
                 changed.script=changed.script.replace("{{baseUrl}}",&target);
                 let error=request(&agent,&base,&changed,||false).unwrap_err();
-                assert!(error.0.contains("所填站点"));
+                assert!(error.0.contains("所填站點"));
             }
         }
         assert_eq!(observer.accept().unwrap_err().kind(),std::io::ErrorKind::WouldBlock);

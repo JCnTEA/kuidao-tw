@@ -32,10 +32,10 @@ pub(super) struct Sampler {
     disk: Option<Counters>,
     gpu: Option<Gpu>,
     gpu_retry: Option<Instant>,
-    /// 上一次的程序处理器时间（按进程号和创建时间区分），只在展开页打开时保留。
+    /// 上一次的程序處理器時間（按進程號和創建時間區分），只在展開頁打開時保留。
     processes: Option<(Instant, HashMap<(usize, i64), (i64, u64)>)>,
     process_buffer: Vec<u64>,
-    /// 程序图标，按小写名称缓存；取不到也记下，免得每秒重试。
+    /// 程序圖標，按小寫名稱緩存；取不到也記下，免得每秒重試。
     icons: HashMap<String, Option<std::sync::Arc<eframe::egui::ColorImage>>>,
     volumes: Option<(Instant, Vec<Volume>)>,
 }
@@ -46,7 +46,7 @@ impl Sampler {
         let times = cpu_times();
         r.cpu = self.cpu.zip(times).and_then(|(prev, cur)| cpu_load(prev, cur));
         self.cpu = times;
-        // 逐核读数很便宜，常驻的「核心点阵」也要用，所以一直采。
+        // 逐核讀數很便宜，常駐的「核心點陣」也要用，所以一直採。
         let cores = core_times();
         if let (Some(prev), Some(cur)) = (&self.cores, &cores) {
             if prev.len() == cur.len() {
@@ -98,7 +98,7 @@ impl Sampler {
         r
     }
 
-    /// 展开页才需要的统计：程序排行、内存构成、分区容量。
+    /// 展開頁才需要的統計：程序排行、內存構成、分區容量。
     fn read_detail(&mut self, now: Instant, r: &mut Reading) {
         let mut info = PERFORMANCE_INFORMATION {
             cb: size_of::<PERFORMANCE_INFORMATION>() as u32,
@@ -164,7 +164,7 @@ impl Sampler {
     }
 }
 
-/// `SystemProcessorPerformanceInformation` 的一项：每个逻辑处理器一份。
+/// `SystemProcessorPerformanceInformation` 的一項：每個邏輯處理器一份。
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 struct ProcessorTimes {
@@ -194,7 +194,7 @@ fn core_times() -> Option<Vec<[i64; 3]>> {
     (!buffer.is_empty()).then(|| buffer.iter().map(|t| [t.idle, t.kernel, t.user]).collect())
 }
 
-/// 逐核占用率，以及内核态（内核时间减去空闲）占全部处理器时间的比例。
+/// 逐核佔用率，以及內核態（內核時間減去空閒）佔全部處理器時間的比例。
 fn core_loads(prev: &[[i64; 3]], cur: &[[i64; 3]]) -> (Vec<f32>, Option<f32>) {
     let (mut kernel_busy, mut all) = (0i64, 0i64);
     let loads = prev
@@ -234,7 +234,7 @@ fn top_memory(biggest: &HashMap<String, u64>, name: &str) -> u64 {
     biggest.get(&name.to_lowercase()).copied().unwrap_or(0)
 }
 
-/// 由进程号找到程序文件，取它的图标。系统进程打不开或没有文件时返回空。
+/// 由進程號找到程序文件，取它的圖標。系統進程打不開或沒有文件時返回空。
 fn program_icon(pid: usize) -> Option<std::sync::Arc<eframe::egui::ColorImage>> {
     use ::windows::Win32::Foundation::CloseHandle;
     use ::windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION};
@@ -258,12 +258,12 @@ struct ProcessEntry {
     created: i64,
     cpu: i64,
     memory: u64,
-    /// 累计读写字节数（ReadTransferCount + WriteTransferCount）。
+    /// 累計讀寫字節數（ReadTransferCount + WriteTransferCount）。
     io: u64,
     name: String,
 }
 
-/// 一次系统调用取回全部进程的名称、处理器时间和私有工作集，不必逐个打开进程。
+/// 一次系統調用取回全部進程的名稱、處理器時間和私有工作集，不必逐個打開進程。
 #[cfg(target_pointer_width = "64")]
 fn process_table(buffer: &mut Vec<u64>) -> Option<Vec<ProcessEntry>> {
     const MISMATCH: i32 = 0xC000_0004_u32 as i32;
@@ -290,7 +290,7 @@ fn process_table(buffer: &mut Vec<u64>) -> Option<Vec<ProcessEntry>> {
         return None;
     }
     let bytes = unsafe { std::slice::from_raw_parts(buffer.as_ptr().cast::<u8>(), (len as usize).min(buffer.len() * 8)) };
-    // SYSTEM_PROCESS_INFORMATION（x64）里用到的字段偏移。
+    // SYSTEM_PROCESS_INFORMATION（x64）裡用到的字段偏移。
     let read = |at: usize, offset: usize, width: usize| -> Option<u64> {
         let slice = bytes.get(at + offset..at + offset + width)?;
         let mut raw = [0u8; 8];
@@ -310,7 +310,7 @@ fn process_table(buffer: &mut Vec<u64>) -> Option<Vec<ProcessEntry>> {
             let name = if !inside || chars == 0 {
                 String::new()
             } else {
-                // 名称指针指向同一块缓冲区内部，上面已核对范围。
+                // 名稱指針指向同一塊緩衝區內部，上面已核對範圍。
                 String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(pointer, chars) })
             };
             let name = match name.len().checked_sub(4) {
@@ -345,7 +345,7 @@ fn volumes() -> Vec<Volume> {
         .filter_map(|i| {
             let letter = (b'A' + i) as char;
             let root: Vec<u16> = format!("{letter}:\\").encode_utf16().chain([0]).collect();
-            // 只统计本地固定磁盘（DRIVE_FIXED = 3），不碰网络盘和光驱。
+            // 只統計本地固定磁盤（DRIVE_FIXED = 3），不碰網絡盤和光驅。
             if unsafe { GetDriveTypeW(PCWSTR(root.as_ptr())) } != 3 {
                 return None;
             }
@@ -371,7 +371,7 @@ fn cpu_load(prev: [u64; 2], cur: [u64; 2]) -> Option<f32> {
 fn interfaces() -> Option<(Interfaces, u64)> {
     let mut table = std::ptr::null_mut();
     unsafe { GetIfTable2(&mut table) }.ok().ok()?;
-    // 行数由同一次系统分配给出，只在释放表前借用行。
+    // 行數由同一次系統分配給出，只在釋放表前借用行。
     let rows = unsafe { std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize) };
     let mut counters = HashMap::new();
     let mut speed = 0u64;
@@ -403,7 +403,7 @@ fn net_rates(prev: &Interfaces, cur: &Interfaces, secs: f64) -> [Option<f32>; 2]
     })
 }
 
-/// 同一个 PDH 查询里的四个计数器：磁盘读、写、空闲时间，处理器性能百分比（换算当前频率）。
+/// 同一個 PDH 查詢裡的四個計數器：磁盤讀、寫、空閒時間，處理器性能百分比（換算當前頻率）。
 struct Counters {
     query: isize,
     counters: [isize; 5],
@@ -422,7 +422,7 @@ impl Counters {
             w!("\\PhysicalDisk(_Total)\\Disk Write Bytes/sec"),
             w!("\\PhysicalDisk(_Total)\\% Idle Time"),
             w!("\\Processor Information(_Total)\\% Processor Performance"),
-            // 真正空着的内存（空闲 + 已清零页）；可用内存减去它就是随时能让出来的备用缓存。
+            // 真正空著的內存（空閒 + 已清零頁）；可用內存減去它就是隨時能讓出來的備用緩存。
             w!("\\Memory\\Free & Zero Page List Bytes"),
         ];
         for (slot, name) in disk.counters.iter_mut().zip(names) {
@@ -459,7 +459,7 @@ struct Gpu {
     segments: u32,
     capacity: u64,
     shared: u64,
-    /// 每个节点的引擎类别（取不到元数据时为空）。
+    /// 每個節點的引擎類別（取不到元數據時為空）。
     engines: Vec<Option<&'static str>>,
     name: String,
     previous: Option<(Instant, Vec<i64>)>,
@@ -504,7 +504,7 @@ impl Gpu {
         }
         Some(gpu)
     }
-    /// 节点的引擎类别，按任务管理器的分法起中文名；不常见的类别不单独列出。
+    /// 節點的引擎類別，按任務管理器的分法起中文名；不常見的類別不單獨列出。
     fn engine(&self, node: u32) -> Option<&'static str> {
         let mut meta = D3DKMT_NODEMETADATA { NodeOrdinalAndAdapterIndex: node, ..Default::default() };
         let mut q = D3DKMT_QUERYADAPTERINFO {
@@ -514,16 +514,16 @@ impl Gpu {
             PrivateDriverDataSize: size_of_val(&meta) as u32,
         };
         unsafe { D3DKMTQueryAdapterInfo(&mut q) }.is_ok().then_some(())?;
-        // 结构体按 1 字节对齐，先把字段拷出来再用。
+        // 結構體按 1 字節對齊，先把字段拷出來再用。
         let (kind, name) = (meta.NodeData.EngineType, meta.NodeData.FriendlyName);
         let friendly = String::from_utf16_lossy(&name[..name.iter().position(|&n| n == 0).unwrap_or(name.len())]);
         match kind {
             DXGK_ENGINE_TYPE_3D => Some("3D"),
-            DXGK_ENGINE_TYPE_VIDEO_DECODE => Some("视频解码"),
-            DXGK_ENGINE_TYPE_VIDEO_ENCODE => Some("视频编码"),
-            DXGK_ENGINE_TYPE_VIDEO_PROCESSING => Some("视频处理"),
-            DXGK_ENGINE_TYPE_COPY => Some("复制"),
-            DXGK_ENGINE_TYPE_OTHER if friendly.to_lowercase().starts_with("compute") => Some("计算"),
+            DXGK_ENGINE_TYPE_VIDEO_DECODE => Some("視頻解碼"),
+            DXGK_ENGINE_TYPE_VIDEO_ENCODE => Some("視頻編碼"),
+            DXGK_ENGINE_TYPE_VIDEO_PROCESSING => Some("視頻處理"),
+            DXGK_ENGINE_TYPE_COPY => Some("複製"),
+            DXGK_ENGINE_TYPE_OTHER if friendly.to_lowercase().starts_with("compute") => Some("計算"),
             _ => None,
         }
     }
@@ -539,7 +539,7 @@ impl Gpu {
         if kind == D3DKMT_QUERYSTATISTICS_SEGMENT {
             q.Anonymous.QuerySegment.SegmentId = index;
         }
-        // 内核根据 Type 写入对应的联合体成员。
+        // 內核根據 Type 寫入對應的聯合體成員。
         unsafe { D3DKMTQueryStatistics(&raw mut q) }.is_ok().then_some(q.QueryResult)
     }
     fn read(&mut self, now: Instant, r: &mut Reading) -> bool {
@@ -565,7 +565,7 @@ impl Gpu {
                     .map(|(a, b)| a.checked_sub(*b).filter(|n| *n >= 0).map(|ticks| (ticks as f64 / (1e5 * interval)).clamp(0., 100.) as f32))
                     .collect();
                 r.gpu = loads.iter().flatten().copied().reduce(f32::max);
-                // 同类引擎取最忙的节点，按第一次出现的顺序排。
+                // 同類引擎取最忙的節點，按第一次出現的順序排。
                 for (load, kind) in loads.iter().zip(&self.engines) {
                     let (Some(load), Some(kind)) = (load, kind) else { continue };
                     match r.gpu_engines.iter_mut().find(|(k, _)| k == kind) {
@@ -587,7 +587,7 @@ impl Gpu {
             r.video_memory = used.map(|v| (v, self.capacity));
         }
         if self.shared > 0 {
-            // 共享段（Aperture）里常驻的字节，就是任务管理器里的「共享 GPU 内存」。
+            // 共享段（Aperture）裡常駐的字節，就是任務管理器裡的「共享 GPU 內存」。
             let used = (0..self.segments)
                 .map(|i| Some(unsafe { self.stat(D3DKMT_QUERYSTATISTICS_SEGMENT, i)?.SegmentInformation }))
                 .try_fold(0u64, |total, seg| {
@@ -646,7 +646,7 @@ mod tests {
         assert!(r.memory_cache.is_some() && r.memory_kernel.is_some() && r.memory_free.is_some());
         println!("{:?} {:?} {:?} {:?} {:?}", r.cpu_mhz, r.cpu_kernel, r.disk_active, r.link_speed, &r.by_cpu);
         let quiet = sampler.read(Instant::now(), false);
-        assert!(quiet.by_memory.is_empty() && quiet.volumes.is_empty(), "收起后不再统计程序和分区");
+        assert!(quiet.by_memory.is_empty() && quiet.volumes.is_empty(), "收起後不再統計程序和分區");
     }
     #[test]
     fn windows_samples_live_cpu_and_memory() {

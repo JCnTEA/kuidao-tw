@@ -1,4 +1,4 @@
-//! 插件详情页的数据与布局契约。
+//! 插件詳情頁的數據與佈局契約。
 
 use serde::{Deserialize, Serialize};
 
@@ -130,29 +130,29 @@ pub(crate) struct CanvasField {
 impl StatusLayout {
     pub(crate) fn validate(&self) -> Result<(), &'static str> {
         if !(1..=MAX_COMPONENTS).contains(&self.components.len()) {
-            return Err("状态页布局需要 1 至 10 个组件");
+            return Err("狀態頁佈局需要 1 至 10 個組件");
         }
         for (index, component) in self.components.iter().enumerate() {
             let limit = if component.is_realtime() { MAX_REALTIME } else { 1 };
             if self.occurrence(index) >= limit {
                 return Err(if limit == 1 {
-                    "状态页布局中同一普通组件只能出现一次"
+                    "狀態頁佈局中同一普通組件只能出現一次"
                 } else {
-                    "状态页布局中同一实时组件最多出现 4 次"
+                    "狀態頁佈局中同一實時組件最多出現 4 次"
                 });
             }
             if matches!(component, StatusComponent::Metrics { columns } if !(1..=2).contains(columns))
             {
-                return Err("状态页指标只能使用 1 列或 2 列");
+                return Err("狀態頁指標只能使用 1 列或 2 列");
             }
         }
         if self.style.accent.is_some() && self.style.accent_rgb().is_none() {
-            return Err("状态页强调色需为 #RRGGBB 格式");
+            return Err("狀態頁強調色需為 #RRGGBB 格式");
         }
         if self.canvas_fields.len() > 3
             || !self.canvas_fields.is_empty() && !self.components.contains(&StatusComponent::Canvas {})
         {
-            return Err("画布输入框需要 canvas 组件，最多 3 个");
+            return Err("畫布輸入框需要 canvas 組件，最多 3 個");
         }
         for (index, field) in self.canvas_fields.iter().enumerate() {
             let [x, y, w, h] = field.rect.map(u32::from);
@@ -162,7 +162,7 @@ impl StatusLayout {
                 || field.action.as_deref().is_some_and(|id| !valid_control_id(id))
                 || field.placeholder.as_deref().is_some_and(|text| !valid_text(text, 80))
             {
-                return Err("画布输入框的键、位置、提示或动作无效");
+                return Err("畫布輸入框的鍵、位置、提示或動作無效");
             }
         }
         Ok(())
@@ -440,8 +440,8 @@ mod tests {
     #[test]
     fn plugin_status_accepts_bounded_fields_and_honors_expiry() {
         let status: PluginStatus = serde_json::from_value(json!({
-            "state":"running", "label":"打印中", "summary":"首层校准完成", "progress_pct":48.5,
-            "metrics":[{"label":"喷嘴","value":"220 °C"}], "alert":"耗材余量偏低",
+            "state":"running", "label":"打印中", "summary":"首層校準完成", "progress_pct":48.5,
+            "metrics":[{"label":"噴嘴","value":"220 °C"}], "alert":"耗材餘量偏低",
             "observed_at":100, "expires_at":120
         }))
         .unwrap();
@@ -451,7 +451,7 @@ mod tests {
         assert!(status.fresh_at(119));
         assert!(!status.fresh_at(120));
         let idle: PluginStatus =
-            serde_json::from_value(json!({"state":"idle","label":"就绪"})).unwrap();
+            serde_json::from_value(json!({"state":"idle","label":"就緒"})).unwrap();
         assert!(idle.valid() && idle.fresh_at(MAX_TIMESTAMP));
     }
 
@@ -459,16 +459,16 @@ mod tests {
     fn plugin_status_rejects_invalid_or_oversized_values_and_unrecognized_fields() {
         for (key, value) in [
             ("label", json!("休眠\n正在打印")),
-            ("summary", json!("测".repeat(121))),
+            ("summary", json!("測".repeat(121))),
             ("alert", json!(" ")),
             ("progress_pct", json!(100.1)),
             ("observed_at", json!(i64::MAX)),
             ("expires_at", json!(99)),
             (
                 "metrics",
-                json!(vec![json!({"label":"温度","value":"30 °C"}); 7]),
+                json!(vec![json!({"label":"溫度","value":"30 °C"}); 7]),
             ),
-            ("metrics", json!([{"label":"温度","value":"测".repeat(33)}])),
+            ("metrics", json!([{"label":"溫度","value":"測".repeat(33)}])),
         ] {
             let mut input = json!({"state":"running","label":"打印中","observed_at":100});
             input[key] = value;
@@ -476,11 +476,11 @@ mod tests {
             assert!(!status.valid(), "{key}: {status:?}");
         }
         assert!(serde_json::from_value::<PluginStatus>(json!({
-            "state":"idle","label":"就绪","unknown_field":[]
+            "state":"idle","label":"就緒","unknown_field":[]
         }))
         .is_err());
         assert!(serde_json::from_value::<PluginStatus>(json!({
-            "state":"unknown","label":"异常"
+            "state":"unknown","label":"異常"
         }))
         .is_err());
     }
@@ -489,10 +489,10 @@ mod tests {
     fn plugin_status_checks_component_data_limits() {
         let mut status: PluginStatus = serde_json::from_value(json!({
             "state":"running", "label":"打印中",
-            "items":vec![json!({"label":"任务","detail":"热床升温","state":"paused"}); 8],
+            "items":vec![json!({"label":"任務","detail":"熱床升溫","state":"paused"}); 8],
             "series":vec![15.0; 48],
-            "note":format!("{}\r\n结束", "行".repeat(297)),
-            "tags":["标签标签标签标签","模拟","精细","颜色"]
+            "note":format!("{}\r\n結束", "行".repeat(297)),
+            "tags":["標籤標籤標籤標籤","模擬","精細","顏色"]
         }))
         .unwrap();
         assert!(status.valid());
@@ -513,23 +513,23 @@ mod tests {
         status.items.push(status.items[0].clone());
         assert!(!status.valid());
         status.items.pop();
-        status.items[0].detail = Some("测".repeat(81));
+        status.items[0].detail = Some("測".repeat(81));
         assert!(!status.valid());
         status.items[0].detail = None;
         status.items[0].label = " ".into();
         assert!(!status.valid());
         status.items[0].label = "打印".into();
-        status.note = Some("测".repeat(301));
+        status.note = Some("測".repeat(301));
         assert!(!status.valid());
         status.note = Some("第一行\t第二行".into());
         assert!(!status.valid());
         status.note = Some("第一行\n第二行".into());
         assert!(status.valid());
 
-        status.tags.push("第五条".into());
+        status.tags.push("第五條".into());
         assert!(!status.valid());
         status.tags.pop();
-        status.tags[0] = "标签标签标签标签超".into();
+        status.tags[0] = "標籤標籤標籤標籤超".into();
         assert!(!status.valid());
     }
 
@@ -574,13 +574,13 @@ mod tests {
     #[test]
     fn plugin_status_validates_realtime_parameters_and_list_actions() {
         let input = json!({
-            "state":"running","label":"实时",
+            "state":"running","label":"實時",
             "counter":{"start_value":10.0,"per_second":0.5,"start_at":100,"until":110,
                        "decimals":2,"prefix":"¥","sensitive":true},
-            "clock":[{"label":"东京","utc_offset_minutes":540,"format":"HH:mm:ss"}],
-            "countdown":{"label":"倒数","target_at":100,"format":"d天 HH:mm","done_label":"到了"},
-            "items":[{"label":"便签","action":"delete-1","sensitive":true}],
-            "series":[1, 2],"series_label":"走势"
+            "clock":[{"label":"東京","utc_offset_minutes":540,"format":"HH:mm:ss"}],
+            "countdown":{"label":"倒數","target_at":100,"format":"d天 HH:mm","done_label":"到了"},
+            "items":[{"label":"便籤","action":"delete-1","sensitive":true}],
+            "series":[1, 2],"series_label":"走勢"
         });
         let status: PluginStatus = serde_json::from_value(input.clone()).unwrap();
         assert!(status.valid());
@@ -602,9 +602,9 @@ mod tests {
             ("counter", json!({"start_value":0, "per_second":1, "start_at":2, "until":1, "decimals":0})),
             ("counter", json!({"start_value":0, "per_second":1, "start_at":2, "decimals":5})),
             ("clock", json!({"label":"城市","utc_offset_minutes":841,"format":"HH:mm"})),
-            ("countdown", json!({"label":"倒数","target_at":-1,"format":"HH:mm:ss"})),
-            ("series_label", json!("测".repeat(13))),
-            ("items", json!([{"label":"便签","action":"删除\n便签"}])),
+            ("countdown", json!({"label":"倒數","target_at":-1,"format":"HH:mm:ss"})),
+            ("series_label", json!("測".repeat(13))),
+            ("items", json!([{"label":"便籤","action":"刪除\n便籤"}])),
         ] {
             let mut invalid = input.clone();
             invalid[key] = value;

@@ -1,4 +1,4 @@
-//! 插件画布的矢量绘制和静态几何缓存。
+//! 插件畫布的矢量繪製和靜態幾何緩存。
 
 #[path = "plugin_canvas_geometry.rs"]
 mod geometry;
@@ -156,7 +156,7 @@ enum Item {
     Pet(pet::Placement),
 }
 
-/// 侧栏和快捷导航共用 24×24 的矢量路径，各自传入前景色。
+/// 側欄和快捷導航共用 24×24 的矢量路徑，各自傳入前景色。
 pub(crate) fn draw_navigation_icon(
     painter: &egui::Painter,
     area: Rect,
@@ -195,7 +195,7 @@ pub(crate) fn draw(
     draw_canvas(c, id, canvas, area, theme, None, image)
 }
 
-/// 常驻内容沿用画布原字号，点击由常驻位处理。
+/// 常駐內容沿用畫布原字號，點擊由常駐位處理。
 pub(crate) fn draw_pinned(
     c: &Card,
     id: &str,
@@ -250,7 +250,7 @@ pub(crate) fn pinned_content_width(ui: &egui::Ui, canvas: &Canvas, limit: f32) -
     (right + 4.0).max(24.0).min(limit)
 }
 
-/// 返回是否超出绘制预算。错误或超时由插件宿主登记到开发调试页面。
+/// 返回是否超出繪製預算。錯誤或超時由插件宿主登記到開發調試頁面。
 fn draw_static(
     c: &Card,
     id: &str,
@@ -302,7 +302,7 @@ fn draw_static(
             }
         }
     };
-    // 没有完整画面可回退时，必须完整绘制当前帧。
+    // 沒有完整畫面可回退時，必須完整繪製當前幀。
     let deadline = cache.previous.is_some().then(|| Instant::now() + FRAME_BUDGET);
     let offset = (area.min.to_vec2() * pixels).round() / pixels;
     let clip = area.intersect(c.painter.clip_rect());
@@ -332,14 +332,14 @@ fn draw_static(
     }
     if timed_out {
         if let Some(previous) = &cache.previous {
-            // 上一帧已细分的几何仍可复用；纹理跟随正在显示的包。
+            // 上一幀已細分的幾何仍可複用；紋理跟隨正在顯示的包。
             previous.draw(c, offset, clip, None, theme, pets, &mut image);
         } else {
             let local = c.to_local(clip.center());
             c.centered_text(
                 local.x,
                 local.y,
-                "插件画面有误",
+                "插件畫面有誤",
                 12.0,
                 W::Regular,
                 theme::DIM,
@@ -953,11 +953,11 @@ mod tests {
         let area = Rect::from_min_size(Pos2::ZERO, vec2(200.0, 40.0));
         let fallback = CanvasTheme { palette: None, accent: None, background: Color32::BLACK };
         let texture = ctx.load_texture(
-            "首帧测试",
+            "首幀測試",
             egui::ColorImage::new([1, 1], Color32::WHITE),
             egui::TextureOptions::NEAREST,
         );
-        for (text, expected) in [("首帧内容", false), ("后续内容", true)] {
+        for (text, expected) in [("首幀內容", false), ("後續內容", true)] {
             let canvas = frame(text);
             let output = ctx.run(
                 egui::RawInput { screen_rect: Some(area), ..Default::default() },
@@ -972,7 +972,7 @@ mod tests {
                 },
             );
             assert!(output.shapes.iter().any(|shape| matches!(&shape.shape,
-                Shape::Text(text) if text.galley.text() == "首帧内容")));
+                Shape::Text(text) if text.galley.text() == "首幀內容")));
             assert!(output.shapes.iter().any(|shape| shape.shape.texture_id() == texture.id()));
         }
     }
@@ -1007,7 +1007,7 @@ mod tests {
             "../spike/examples/canvas-demo/badge.svg"
         ))
         .unwrap();
-        let texture = ctx.load_texture("插件演示图", badge, egui::TextureOptions::LINEAR);
+        let texture = ctx.load_texture("插件演示圖", badge, egui::TextureOptions::LINEAR);
         let destination =
             std::env::var_os("DAOZAI_CANVAS_SCREENSHOTS").map(std::path::PathBuf::from);
         let mut screenshot = crate::preview_raster::Raster::new(419, 230);
@@ -1035,7 +1035,7 @@ mod tests {
                     card.text(
                         16.0,
                         26.0,
-                        "画布演示",
+                        "畫布演示",
                         15.0,
                         W::Bold,
                         theme.token(&Token::Text),
@@ -1099,7 +1099,7 @@ mod tests {
                         break;
                     }
                 }
-                assert!(found, "{name}、缩放 {scale}：未绘制演示画布");
+                assert!(found, "{name}、縮放 {scale}：未繪製演示畫布");
             }
         }
     }

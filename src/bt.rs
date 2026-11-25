@@ -1,4 +1,4 @@
-//! 蓝牙设备连接与多来源电量监控。
+//! 藍牙設備連接與多來源電量監控。
 mod state;
 pub use state::{Device,DeviceKind,BatterySource,BatteryReading,FRESH_FOR};
 
@@ -9,8 +9,8 @@ mod windows;
 #[cfg(windows)]
 mod receivers;
 
-/// 识别顺序：具体型号词 → 通用名称词 → 蓝牙类别码 → 兜底名称词。
-/// 短词（pen、mic、band…）按整词匹配，避免 OpenRun 里的 pen 被认成触控笔。
+/// 識別順序：具體型號詞 → 通用名稱詞 → 藍牙類別碼 → 兜底名稱詞。
+/// 短詞（pen、mic、band…）按整詞匹配，避免 OpenRun 裡的 pen 被認成觸控筆。
 fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {
     use DeviceKind::*;
     let name = name.to_lowercase();
@@ -20,24 +20,24 @@ fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {
     if name.contains("airpods") { return if word("max") { Headphones } else if word("pro") { EarbudsStemTips } else { EarbudsStem }; }
     if name.contains("freebuds") && word("pro") { return EarbudsStemTips; }
     if any(&["joy-con", "joycon"]) { return JoyCon; }
-    // Shokz 的开放式耳机不是骨传导，要先于骨传导规则。
-    if any(&["openfit", "opendots", "freeclip", "ultra open", "耳夹"]) { return OpenEar; }
-    if any(&["shokz", "aftershokz", "openmove", "openrun", "openswim", "骨传导"]) { return Bone; }
+    // Shokz 的開放式耳機不是骨傳導，要先於骨傳導規則。
+    if any(&["openfit", "opendots", "freeclip", "ultra open", "耳夾"]) { return OpenEar; }
+    if any(&["shokz", "aftershokz", "openmove", "openrun", "openswim", "骨傳導"]) { return Bone; }
     if word("wf") || any(&["earbuds", "buds", "earphones", "入耳"]) { return Earbuds; }
     if word("wh") { return Headphones; }
-    if any(&["hearing", "助听"]) { return HearingAid; }
-    if any(&["trackpad", "touchpad", "触控板"]) { return Trackpad; }
-    if any(&["keyboard", "键盘"]) { return Keyboard; }
-    if any(&["mouse", "鼠标"]) { return Mouse; }
-    if any(&["stylus", "手写笔", "触控笔"]) || word("pen") || word("pencil") { return Pen; }
-    if any(&["presenter", "spotlight", "翻页"]) { return Presenter; }
+    if any(&["hearing", "助聽"]) { return HearingAid; }
+    if any(&["trackpad", "touchpad", "觸控板"]) { return Trackpad; }
+    if any(&["keyboard", "鍵盤"]) { return Keyboard; }
+    if any(&["mouse", "鼠標"]) { return Mouse; }
+    if any(&["stylus", "手寫筆", "觸控筆"]) || word("pen") || word("pencil") { return Pen; }
+    if any(&["presenter", "spotlight", "翻頁"]) { return Presenter; }
     if any(&["gamepad", "controller", "dualsense", "dualshock", "手柄"]) { return Gamepad; }
-    if any(&["speaker", "soundlink", "音箱", "音响"]) { return Speaker; }
-    if any(&["microphone", "麦克风"]) || word("mic") { return Mic; }
-    if any(&["遥控"]) || word("remote") { return Remote; }
+    if any(&["speaker", "soundlink", "音箱", "音響"]) { return Speaker; }
+    if any(&["microphone", "麥克風"]) || word("mic") { return Mic; }
+    if any(&["遙控"]) || word("remote") { return Remote; }
     if any(&["ipad", "tablet", "matepad", "平板"]) { return Tablet; }
-    if any(&["手表"]) || words.iter().any(|w| w.starts_with("watch")) { return Watch; }
-    if any(&["手环"]) || word("band") { return Band; }
+    if any(&["手錶"]) || words.iter().any(|w| w.starts_with("watch")) { return Watch; }
+    if any(&["手環"]) || word("band") { return Band; }
     if any(&["心率"]) || word("hrm") || word("heart") { return Health; }
     if let Some(class) = class {
         if classic {
@@ -55,7 +55,7 @@ fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {
                 _ => {}
             }
         } else {
-            // 低功耗蓝牙外观值：高 10 位是类别，低 6 位是子类别。
+            // 低功耗藍牙外觀值：高 10 位是類別，低 6 位是子類別。
             match (class >> 6, class & 0x3f) {
                 (15, 1) => return Keyboard,
                 (15, 2) => return Mouse,
@@ -82,7 +82,7 @@ fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {
 }
 
 
-/// 释放服务会唤醒后台线程并取消未完成的蓝牙读取。
+/// 釋放服務會喚醒後台線程並取消未完成的藍牙讀取。
 pub struct Service {
     pub rx: std::sync::mpsc::Receiver<Vec<Device>>,
     stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
@@ -117,9 +117,9 @@ mod tests {
         assert_eq!(device_kind("OpenMove by Shokz", true, Some(0x240418)), DeviceKind::Bone);
         assert_eq!(device_kind("QingLong 87 Ultra 8K", false, Some(961)), DeviceKind::Keyboard);
         assert_eq!(device_kind("MX Anywhere", false, Some(962)), DeviceKind::Mouse);
-        assert_eq!(device_kind("耳机", true, Some(0x0404)), DeviceKind::Headphones);
+        assert_eq!(device_kind("耳機", true, Some(0x0404)), DeviceKind::Headphones);
         assert_eq!(device_kind("AirPods", true, None), DeviceKind::EarbudsStem);
-        assert_eq!(device_kind("未知设备", false, None), DeviceKind::Other);
+        assert_eq!(device_kind("未知設備", false, None), DeviceKind::Other);
     }
 
     #[test]
@@ -132,21 +132,21 @@ mod tests {
             ("Joy-Con (L)", JoyCon), ("Xbox Wireless Controller", Gamepad), ("Magic Trackpad", Trackpad),
             ("Surface Slim Pen 2", Pen), ("HUAWEI M-Pencil", Pen), ("Logi Spotlight", Presenter),
             ("DJI Mic 2", Mic), ("Galaxy Watch6", Watch), ("HUAWEI WATCH GT 4", Watch), ("Mi Smart Band 8", Band),
-            ("小米手环 8", Band), ("MatePad Pro", Tablet), ("JBL Flip 6 speaker", Speaker),
+            ("小米手環 8", Band), ("MatePad Pro", Tablet), ("JBL Flip 6 speaker", Speaker),
         ] { assert_eq!(device_kind(name, false, None), kind, "{name}"); }
     }
 
     #[test]
     fn recognizes_class_and_appearance_codes() {
         use DeviceKind::*;
-        // 经典蓝牙：音频 · 麦克风、电脑 · 平板、外设 · 手柄 / 遥控 / 数字笔、可穿戴 · 手表。
+        // 經典藍牙：音頻 · 麥克風、電腦 · 平板、外設 · 手柄 / 遙控 / 數字筆、可穿戴 · 手錶。
         assert_eq!(device_kind("X", true, Some(0x0410)), Mic);
         assert_eq!(device_kind("X", true, Some(0x011C)), Tablet);
         assert_eq!(device_kind("X", true, Some(0x0508)), Gamepad);
         assert_eq!(device_kind("X", true, Some(0x050C)), Remote);
         assert_eq!(device_kind("X", true, Some(0x051C)), Pen);
         assert_eq!(device_kind("X", true, Some(0x0704)), Watch);
-        // 低功耗外观值：触控板、演示遥控、数字笔、助听器、入耳耳机、心率。
+        // 低功耗外觀值：觸控板、演示遙控、數字筆、助聽器、入耳耳機、心率。
         assert_eq!(device_kind("X", false, Some(15 << 6 | 9)), Trackpad);
         assert_eq!(device_kind("X", false, Some(15 << 6 | 10)), Presenter);
         assert_eq!(device_kind("X", false, Some(15 << 6 | 7)), Pen);

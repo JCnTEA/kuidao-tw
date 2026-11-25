@@ -1,10 +1,10 @@
-//! OpenGL 初始化失败时使用独立的图形后端。
+//! OpenGL 初始化失敗時使用獨立的圖形後端。
 //!
-//! 典型场景：笔记本接扩展坞 / DisplayLink 外接屏、远程桌面、显卡驱动缺失时，窗口所在的显示设备
-//! 只有 Windows 自带的 OpenGL 1.1（GDI Generic），egui_glow 报「requires OpenGL 2.0+」。
-//! 这时改用 Direct3D 12 重新启动，不需要用户拔扩展坞。
+//! 典型場景：筆記本接擴展塢 / DisplayLink 外接屏、遠程桌面、顯卡驅動缺失時，窗口所在的顯示設備
+//! 只有 Windows 自帶的 OpenGL 1.1（GDI Generic），egui_glow 報「requires OpenGL 2.0+」。
+//! 這時改用 Direct3D 12 重新啟動，不需要用戶拔擴展塢。
 
-/// 兼容图形后端（低功耗显卡优先）：指定 Direct3D 12 或 Vulkan。
+/// 兼容圖形後端（低功耗顯卡優先）：指定 Direct3D 12 或 Vulkan。
 fn compatible(mut options:eframe::NativeOptions,backends:eframe::wgpu::Backends)->eframe::NativeOptions {
     options.renderer=eframe::Renderer::Wgpu;
     #[cfg(all(windows, feature = "sdk-material"))]
@@ -12,23 +12,23 @@ fn compatible(mut options:eframe::NativeOptions,backends:eframe::wgpu::Backends)
     if let eframe::egui_wgpu::WgpuSetup::CreateNew(setup)=&mut options.wgpu_options.wgpu_setup {
         setup.instance_descriptor.backends=backends;
         setup.power_preference=eframe::wgpu::PowerPreference::LowPower;
-        // 默认的 Performance 让 DX12 分配器按 256MB 显存块 + 64MB 上传块预留。核显没有独立显存，
-        // 这些都算进鬼島进程内存（实测 60MB → 530MB）。鬼島的纹理只有几 MB，按小块分配即可。
+        // 默認的 Performance 讓 DX12 分配器按 256MB 顯存塊 + 64MB 上傳塊預留。核顯沒有獨立顯存，
+        // 這些都算進鬼島進程內存（實測 60MB → 530MB）。鬼島的紋理只有幾 MB，按小塊分配即可。
         let base=setup.device_descriptor.clone();
         setup.device_descriptor=std::sync::Arc::new(move|adapter|small_memory_blocks(base(adapter)));
     }
     options
 }
-/// 鬼島同时存在的纹理只有几十张。DX12 会按绑定上限预建整张描述符表：
-/// 默认 100 万项约 61MB，65536 项约 4MB，仍有上千倍余量。
+/// 鬼島同時存在的紋理只有幾十張。DX12 會按綁定上限預建整張描述符表：
+/// 默認 100 萬項約 61MB，65536 項約 4MB，仍有上千倍餘量。
 const MAX_BINDINGS:u32=65_536;
 fn small_memory_blocks(descriptor:eframe::wgpu::DeviceDescriptor<'static>)->eframe::wgpu::DeviceDescriptor<'static>{
     let required_limits=eframe::wgpu::Limits{max_non_sampler_bindings:MAX_BINDINGS,..descriptor.required_limits.clone()};
     eframe::wgpu::DeviceDescriptor{memory_hints:eframe::wgpu::MemoryHints::MemoryUsage,required_limits,..descriptor}
 }
 
-/// 兼容渲染优先用 Direct3D 12（Windows 原生、睡眠唤醒与换屏处理最稳）；
-/// 设备不支持时再退到 Vulkan。两者都不经过显卡的 OpenGL 驱动。
+/// 兼容渲染優先用 Direct3D 12（Windows 原生、睡眠喚醒與換屏處理最穩）；
+/// 設備不支持時再退到 Vulkan。兩者都不經過顯卡的 OpenGL 驅動。
 fn launch_compatible(options:eframe::NativeOptions,launch:&mut impl FnMut(eframe::NativeOptions)->eframe::Result<()>)->eframe::Result<()> {
     let first=launch(compatible(options.clone(),eframe::wgpu::Backends::DX12));
     #[cfg(all(windows, feature = "sdk-material"))]
@@ -46,14 +46,14 @@ fn launch_compatible(options:eframe::NativeOptions,launch:&mut impl FnMut(eframe
     }
 }
 
-/// 验收与排障：设置环境变量 `KUIDAO_RENDERER=wgpu` 直接使用兼容图形后端，
-/// 在正常电脑上也能检查 OpenGL 失败后用户会看到的画面。
+/// 驗收與排障：設置環境變量 `KUIDAO_RENDERER=wgpu` 直接使用兼容圖形後端，
+/// 在正常電腦上也能檢查 OpenGL 失敗後用戶會看到的畫面。
 fn forced_compatible()->bool {
     std::env::var("KUIDAO_RENDERER").is_ok_and(|value|value.trim().eq_ignore_ascii_case("wgpu"))
 }
 
 pub fn run(options:eframe::NativeOptions,launch:impl FnMut(eframe::NativeOptions)->eframe::Result<()>)->eframe::Result<()> {
-    // 上次崩在显卡 OpenGL 驱动里时，崩溃处理留下的标记会在这里转成设置。
+    // 上次崩在顯卡 OpenGL 驅動裡時，崩潰處理留下的標記會在這裡轉成設置。
     let _=daozai::renderer::apply_pending_fallback();
     let forced=forced_compatible();
     #[cfg(all(windows, feature = "sdk-js", feature = "sdk-material"))]
@@ -85,8 +85,8 @@ fn opengl(mut options:eframe::NativeOptions)->eframe::NativeOptions {
 
 fn run_with(compat_first:bool,options:eframe::NativeOptions,mut launch:impl FnMut(eframe::NativeOptions)->eframe::Result<()>)->eframe::Result<()> {
     if compat_first {
-        // 兼容渲染是被要求的（设置、崩溃标记或环境变量），但这台电脑可能根本没有 DX12 / Vulkan 设备
-        // （远程桌面、虚拟机、只有基本显示适配器、老显卡）。这时退回 OpenGL，不让用户每次都打不开。
+        // 兼容渲染是被要求的（設置、崩潰標記或環境變量），但這台電腦可能根本沒有 DX12 / Vulkan 設備
+        // （遠程桌面、虛擬機、只有基本顯示適配器、老顯卡）。這時退回 OpenGL，不讓用戶每次都打不開。
         daozai::renderer::set_compat_active(true);
         let error=match launch_compatible(options.clone(),&mut launch) {
             Err(error @ eframe::Error::Wgpu(_))=>error,
@@ -167,11 +167,11 @@ mod tests {
         daozai::material::configure_startup(&mut options,true,true);
         let mut attempts=Vec::new();
         launch_compatible(options,&mut |options|{
-            let eframe::egui_wgpu::WgpuSetup::CreateNew(setup)=options.wgpu_options.wgpu_setup else{panic!("应创建兼容图形设备")};
+            let eframe::egui_wgpu::WgpuSetup::CreateNew(setup)=options.wgpu_options.wgpu_setup else{panic!("應創建兼容圖形設備")};
             let direct_composition=options.wgpu_options.direct_composition;
             attempts.push((setup.instance_descriptor.backends,direct_composition));
             if direct_composition {
-                Err(eframe::Error::Wgpu(eframe::egui_wgpu::WgpuError::DirectComposition("测试".into())))
+                Err(eframe::Error::Wgpu(eframe::egui_wgpu::WgpuError::DirectComposition("測試".into())))
             } else {Ok(())}
         }).unwrap();
         assert_eq!(attempts,[(eframe::wgpu::Backends::DX12,true),(eframe::wgpu::Backends::DX12,false)]);

@@ -11,7 +11,7 @@ use crate::model::Dock;
 const PRELUDE: &str = include_str!("prelude.wgsl");
 pub(super) const DEBUG_SHADER: &str = include_str!("debug.wgsl");
 
-/// 插件 API 1 的 uniform 布局。修改字段时同步核对 prelude 的偏移测试。
+/// 插件 API 1 的 uniform 佈局。修改字段時同步核對 prelude 的偏移測試。
 #[repr(C, align(16))]
 #[derive(Clone, Copy, Default, Pod, Zeroable)]
 pub(super) struct Frame {
@@ -173,8 +173,8 @@ impl Pipeline {
         dock: Dock,
     ) -> Result<egui::Shape, String> {
         let screen = plate.geometry.screen;
-        let width = u32::try_from(screen.width).map_err(|_| "底片宽度无效")?;
-        let height = u32::try_from(screen.height).map_err(|_| "底片高度无效")?;
+        let width = u32::try_from(screen.width).map_err(|_| "底片寬度無效")?;
+        let height = u32::try_from(screen.height).map_err(|_| "底片高度無效")?;
         let limit = self.device.limits().max_texture_dimension_2d;
         let bytes = (width as usize)
             .checked_mul(height as usize)
@@ -185,7 +185,7 @@ impl Pipeline {
             || height > limit
             || bytes != Some(plate.bgra.len())
         {
-            return Err("底片尺寸或数据长度无效".into());
+            return Err("底片尺寸或數據長度無效".into());
         }
         let size = wgpu::Extent3d {
             width,
@@ -288,15 +288,15 @@ fn validate_shader(source: &str) -> Result<wgpu::naga::Module, String> {
 
     let module = wgsl::parse_str(source).map_err(|error| error.emit_to_string(source))?;
     if module.entry_points.len() != 2 {
-        return Err("材质不得声明 @vertex、@fragment 或 @compute 入口".into());
+        return Err("材質不得聲明 @vertex、@fragment 或 @compute 入口".into());
     }
-    // 检查所有声明，未被入口使用的资源也必须符合材质接口。
+    // 檢查所有聲明，未被入口使用的資源也必須符合材質接口。
     for (handle, variable) in module.global_variables.iter() {
         if let Some(binding) = &variable.binding {
             let span = module.global_variables.get_span(handle).to_range();
             if span.is_none_or(|span| span.end > PRELUDE.len()) {
                 return Err(format!(
-                    "材质声明了接口以外的 @group({}) @binding({})",
+                    "材質聲明瞭接口以外的 @group({}) @binding({})",
                     binding.group, binding.binding
                 ));
             }
@@ -372,7 +372,7 @@ mod tests {
             .unwrap()
             .1;
         let wgpu::naga::TypeInner::Struct { members, span } = &frame_type.inner else {
-            panic!("Frame 必须是 WGSL 结构体");
+            panic!("Frame 必須是 WGSL 結構體");
         };
         let rust = [
             ("capture", offset_of!(Frame, capture)),
@@ -419,7 +419,7 @@ mod tests {
                     "{PRELUDE}\n@group({group}) @binding({binding}) var<uniform> extra : vec4<f32>;\n\
                     fn material(i : MaterialIn) -> vec4<f32> {{ return {result}; }}"
                 );
-                let error = validate_shader(&source).expect_err("接口外的资源声明应被拒绝");
+                let error = validate_shader(&source).expect_err("接口外的資源聲明應被拒絕");
                 assert!(
                     error.contains(&format!("@group({group}) @binding({binding})")),
                     "{error}"
@@ -436,8 +436,8 @@ mod tests {
             "@compute @workgroup_size(1) fn extra() {}",
         ] {
             let error = validate_shader(&format!("{PRELUDE}\n{DEBUG_SHADER}\n{entry}"))
-                .expect_err("插件入口应被拒绝");
-            assert!(error.contains("材质不得声明"), "{error}");
+                .expect_err("插件入口應被拒絕");
+            assert!(error.contains("材質不得聲明"), "{error}");
         }
         validate_shader(&format!(
             "{PRELUDE}\n{DEBUG_SHADER}\n/* @vertex @binding(3) */"
@@ -503,7 +503,7 @@ mod tests {
         });
 
         let mut encoder = state.device.create_command_encoder(&Default::default());
-        // 让 egui 的实际 paint 回调负责设置 viewport、绑定和绘制。
+        // 讓 egui 的實際 paint 回調負責設置 viewport、綁定和繪製。
         let paint = [egui::ClippedPrimitive {
             clip_rect: capture,
             primitive: match shape {
@@ -555,11 +555,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "需要本机 Direct3D 12，显式运行离屏像素检查"]
+    #[ignore = "需要本機 Direct3D 12，顯式運行離屏像素檢查"]
     fn dx12_material_pixels_and_shader_error_scope() {
         let state = dx12_state();
 
-        // WGSL 本身合法，实际建立管线时缺失常量值的错误由作用域收集。
+        // WGSL 本身合法，實際建立管線時缺失常量值的錯誤由作用域收集。
         let missing_constant = "
             override required_value : f32;
             fn material(i : MaterialIn) -> vec4<f32> { return vec4<f32>(required_value); }
@@ -617,13 +617,13 @@ mod tests {
             assert_eq!(pixel(x, y), &[x as u8, y as u8, 97, 255], "{dock:?}");
             assert_eq!(pixel(outside_x, outside_y), &[0; 4], "{dock:?}");
             if dock == Dock::Top {
-                assert!(pixel(29, 22)[1] > 180, "控件边框应清晰可见");
+                assert!(pixel(29, 22)[1] > 180, "控件邊框應清晰可見");
             }
         }
     }
 
     #[test]
-    #[ignore = "需要本机 Direct3D 12，显式运行离屏像素检查"]
+    #[ignore = "需要本機 Direct3D 12，顯式運行離屏像素檢查"]
     fn dx12_material_exact_outline_and_transparent_edge() {
         let state = dx12_state();
         let mask = "
@@ -635,7 +635,7 @@ mod tests {
         let mut glass = Pipeline::new(&state, LIQUID_GLASS_SHADER).unwrap();
         let capture = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::Vec2::splat(SIDE as f32));
 
-        // 使用同一宿主几何，对比收起、变化途中与展开三种尺寸。
+        // 使用同一宿主幾何，對比收起、變化途中與展開三種尺寸。
         for (expansion, width, height, radius, flare, flare_h) in [
             (0.0, 26.0, 12.0, 5.0, 5.0, 8.0),
             (0.5, 32.0, 23.0, 8.0, 8.0, 9.0),
@@ -695,18 +695,18 @@ mod tests {
                             previous = next;
                         }
                         let alpha = 4 * (y * SIDE + x) as usize + 3;
-                        // 宿主曲线按折线离散，边缘的半个像素留作采样容差。
+                        // 宿主曲線按折線離散，邊緣的半個像素留作採樣容差。
                         if distance_sq > 0.5 * 0.5 {
                             assert_eq!(
                                 exact_pixels[alpha],
                                 if inside { 255 } else { 0 },
-                                "{dock:?}，展开 {expansion}，像素 ({x}, {y})"
+                                "{dock:?}，展開 {expansion}，像素 ({x}, {y})"
                             );
                         }
                         if !inside && distance_sq > 4.0 {
                             assert_eq!(
                                 glass_pixels[alpha], 0,
-                                "{dock:?}，展开 {expansion}，轮廓外像素 ({x}, {y})"
+                                "{dock:?}，展開 {expansion}，輪廓外像素 ({x}, {y})"
                             );
                         }
                     }

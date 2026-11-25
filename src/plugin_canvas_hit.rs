@@ -1,4 +1,4 @@
-//! 画布点按、悬停与滚轮都在宿主内处理。
+//! 畫布點按、懸停與滾輪都在宿主內處理。
 
 use super::{
     geometry::{self, Clip, Transform},
@@ -468,7 +468,7 @@ pub(super) fn bounds(c: &Card<'_>, node: &Node, transform: Transform) -> Rect {
             commands,
             transform,
             c.ui.ctx().pixels_per_point(),
-            // 点击区域要算完整外框，不受绘制预算限制。
+            // 點擊區域要算完整外框，不受繪製預算限制。
             None,
         )
         .into_iter()

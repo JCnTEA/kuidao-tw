@@ -38,7 +38,7 @@ pub(super) fn collect() -> Map<String, Value> {
     let system = |name| registry_string(HKEY_LOCAL_MACHINE, key, name);
     let build = system(w!("CurrentBuildNumber"));
     let name = system(w!("ProductName")).map(|name| {
-        // Windows 11 的 ProductName 可能仍沿用 Windows 10 字样。
+        // Windows 11 的 ProductName 可能仍沿用 Windows 10 字樣。
         if build.as_ref().and_then(|build| build.parse::<u32>().ok()).is_some_and(|build| build >= 22000) {
             name.replacen("Windows 10", "Windows 11", 1)
         } else {
@@ -67,7 +67,7 @@ pub(super) fn collect() -> Map<String, Value> {
     if let Some(sessions) = media.ok().and_then(|_| receive.recv_timeout(std::time::Duration::from_secs(5)).ok()).flatten() {
         info.insert("MediaSessions".into(), json!(sessions));
     } else {
-        info.insert("MediaQuery".into(), json!("无法读取系统媒体会话"));
+        info.insert("MediaQuery".into(), json!("無法讀取系統媒體會話"));
     }
     recent_events(&mut info);
     info
@@ -100,7 +100,7 @@ fn graphics() -> Vec<Value> {
 
 fn process_details(info: &mut Map<String, Value>) {
     let Ok(snapshot) = (unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }) else {
-        info.insert("ProcessQuery".into(), json!("无法读取进程列表"));
+        info.insert("ProcessQuery".into(), json!("無法讀取進程列表"));
         return;
     };
     let mut entry = PROCESSENTRY32W { dwSize: size_of::<PROCESSENTRY32W>() as u32, ..Default::default() };
@@ -114,7 +114,7 @@ fn process_details(info: &mut Map<String, Value>) {
             let exe = utf16(&entry.szExeFile).to_ascii_lowercase();
             let name = exe.strip_suffix(".exe").unwrap_or(&exe);
             let pid = entry.th32ProcessID;
-            // 核对快照中的 PID 仍属于目标应用，仅查询文件版本与进程计数。
+            // 核對快照中的 PID 仍屬於目標應用，僅查詢文件版本與進程計數。
             let path = || player_process::image_path(pid)
                 .filter(|path| path.rsplit(['\\', '/']).next().is_some_and(|file| file.eq_ignore_ascii_case(&exe)));
             if name == "daozai" {
@@ -212,7 +212,7 @@ fn recent_events(info: &mut Map<String, Value>) {
     let faults = events(w!("Application"), w!("*[System[(EventID=1000 or EventID=1001 or EventID=1002) and TimeCreated[timediff(@SystemTime) <= 604800000]] and EventData[Data[@Name='AppName']='daozai.exe' or Data[@Name='P1']='daozai.exe']]"), 30);
     let resets = events(w!("System"), w!("*[System[EventID=4101 and TimeCreated[timediff(@SystemTime) <= 604800000]]]"), 20);
     if faults.is_none() || resets.is_none() {
-        info.insert("EventQuery".into(), json!("无法读取部分 Windows 事件记录"));
+        info.insert("EventQuery".into(), json!("無法讀取部分 Windows 事件記錄"));
     }
     info.insert("ApplicationFaults".into(), json!(faults.unwrap_or_default()));
     info.insert("DisplayResets".into(), json!(resets.unwrap_or_default()));

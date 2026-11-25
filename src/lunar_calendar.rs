@@ -1,6 +1,6 @@
-//! 离线农历和节气换算，支持公历 1901 年至 2100 年。
+//! 離線農曆和節氣換算，支持公曆 1901 年至 2100 年。
 //
-// 年度数据沿用「今日农历」已核对的数据，由 lunar-javascript 生成。
+// 年度數據沿用「今日農曆」已核對的數據，由 lunar-javascript 生成。
 // https://github.com/6tail/lunar-javascript/tree/5c92e62c904ba5cc0b62f032796aeef433702268
 //
 // MIT License
@@ -37,11 +37,11 @@ pub(crate) struct LunarDate {
     pub(crate) solar_term: Option<&'static str>,
 }
 
-// 依次为正月初一距公历元旦天数、闰月月号（0 表示无闰月）、
-// 各农历月大小（0 表示 29 天，1 表示 30 天）、公历年各节气的日号（每个两位）。
+// 依次為正月初一距公曆元旦天數、閏月月號（0 表示無閏月）、
+// 各農曆月大小（0 表示 29 天，1 表示 30 天）、公曆年各節氣的日號（每個兩位）。
 type YearData = (u32, usize, &'static [u8], &'static [u8; 48]);
 
-// 首行供 1901 年正月初一之前的日期使用。节气始终读取公历年份对应的行。
+// 首行供 1901 年正月初一之前的日期使用。節氣始終讀取公曆年份對應的行。
 #[rustfmt::skip]
 const YEARS: [YearData; (LAST_YEAR - FIRST_DATA_YEAR + 1) as usize] = [
     (30, 8, b"0100101101101", b"062004190621052006210622072308230823092408230722"), // 1900
@@ -248,7 +248,7 @@ const YEARS: [YearData; (LAST_YEAR - FIRST_DATA_YEAR + 1) as usize] = [
 ];
 
 const MONTH_NAMES: [&str; 12] = [
-    "正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "腊",
+    "正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "臘",
 ];
 const DAY_NAMES: [&str; 30] = [
     "初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八", "初九", "初十", "十一", "十二",
@@ -256,8 +256,8 @@ const DAY_NAMES: [&str; 30] = [
     "廿五", "廿六", "廿七", "廿八", "廿九", "三十",
 ];
 const SOLAR_TERMS: [&str; 24] = [
-    "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种", "夏至",
-    "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪", "冬至",
+    "小寒", "大寒", "立春", "雨水", "驚蟄", "春分", "清明", "穀雨", "立夏", "小滿", "芒種", "夏至",
+    "小暑", "大暑", "立秋", "處暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪", "冬至",
 ];
 
 pub(crate) fn for_date(date: NaiveDate) -> Option<LunarDate> {
@@ -294,7 +294,7 @@ pub(crate) fn for_date(date: NaiveDate) -> Option<LunarDate> {
             let month = index - usize::from(leap_month > 0 && index >= leap_month);
             let label = format!(
                 "{}{}月{}",
-                if in_leap_month { "闰" } else { "" },
+                if in_leap_month { "閏" } else { "" },
                 MONTH_NAMES[month],
                 DAY_NAMES[remaining as usize],
             );
@@ -313,16 +313,16 @@ mod tests {
     fn dates_and_solar_terms_follow_the_selected_day() {
         for (year, month, day, label, solar_term) in [
             (2026, 1, 5, "十一月十七", Some("小寒")),
-            (2026, 2, 16, "腊月廿九", None),
+            (2026, 2, 16, "臘月廿九", None),
             (2026, 2, 17, "正月初一", None),
             (2026, 11, 21, "十月十三", None),
             (2026, 11, 22, "十月十四", Some("小雪")),
             (2026, 11, 23, "十月十五", None),
             (2025, 7, 24, "六月三十", None),
-            (2025, 7, 25, "闰六月初一", None),
-            (2033, 12, 22, "闰十一月初一", None),
+            (2025, 7, 25, "閏六月初一", None),
+            (2033, 12, 22, "閏十一月初一", None),
             (1901, 1, 1, "十一月十一", None),
-            (2100, 12, 31, "腊月初一", None),
+            (2100, 12, 31, "臘月初一", None),
         ] {
             let date = NaiveDate::from_ymd_opt(year, month, day).unwrap();
             let lunar = for_date(date).unwrap();

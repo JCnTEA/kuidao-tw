@@ -76,7 +76,7 @@ fn default_preset() -> usize { 0 }
 fn default_edge() -> f32 { 0.7 }
 fn default_dim() -> u8 { 118 }
 
-/// 外掛樣式包資料夾；和平臺慣例一致，Windows 用 `%APPDATA%\Kuidao`。
+/// 外掛樣式包資料夾；和平台慣例一致，Windows 用 `%APPDATA%\Kuidao`。
 fn packs_dir() -> PathBuf {
     std::env::var_os("APPDATA")
         .map(PathBuf::from)

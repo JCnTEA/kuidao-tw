@@ -1,7 +1,7 @@
 use super::*;
 
 fn endpoint(id:&str,address:&str,container:Option<&str>)->Endpoint {
-    Endpoint {id:id.into(),address:normalize_address(address),container:container.map(str::to_owned),name:"同名耳机".into(),kind:DeviceKind::Earbuds,ble:false}
+    Endpoint {id:id.into(),address:normalize_address(address),container:container.map(str::to_owned),name:"同名耳機".into(),kind:DeviceKind::Earbuds,ble:false}
 }
 fn sample(key:&str,session:u64,source:BatterySource,percent:u8,at:Instant)->Sample {
     Sample {key:key.into(),session,reading:BatteryReading::new(percent,source,at,None)}
@@ -102,10 +102,10 @@ fn windows_poll_refreshes_same_value_and_rename_preserves_identity() {
     assert_eq!(d.reading.as_ref().unwrap().observed,later);
     assert!(!d.stale_at(later+FRESH_FOR));
     assert!(d.stale_at(later+FRESH_FOR+Duration::from_secs(1)));
-    ep.name="新的耳机名称".into();
+    ep.name="新的耳機名稱".into();
     state.discover(vec![ep],later);
     let d=state.devices(later).remove(0);
-    assert_eq!((d.id,d.name,d.battery),(t.key.clone(),"新的耳机名称".into(),Some(20)));
+    assert_eq!((d.id,d.name,d.battery),(t.key.clone(),"新的耳機名稱".into(),Some(20)));
     state.ingest(sample(&t.key,t.session,BatterySource::Windows,19,later+Duration::from_secs(2)));
     assert_eq!(state.devices(later+Duration::from_secs(2))[0].reading.as_ref().unwrap().value_since,later+Duration::from_secs(2));
 }

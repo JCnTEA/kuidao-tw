@@ -1,4 +1,4 @@
-//! 办公客户端只监听任务栏事件；唤起时仅处理已确认的原窗口。
+//! 辦公客戶端只監聽任務欄事件；喚起時僅處理已確認的原窗口。
 use super::{Messenger,OpenError,Target,Unread};
 use super::windows::*;
 use windows::{core::Owned,Win32::{Foundation::{BOOL,HWND,LPARAM},System::Threading::{OpenProcess,PROCESS_QUERY_LIMITED_INFORMATION},UI::WindowsAndMessaging::*}};
@@ -41,7 +41,7 @@ pub(crate) unsafe fn main_window(window:HWND,client:Messenger)->bool{
     if client==Messenger::Feishu && !feishu_title(&window_title(window)) && feishu_main_frame(window_pid(window)).is_some(){return false;}
     window_sized(window)
 }
-/// 最小化时按恢复尺寸检查，排除任何状态下不足 300×300 的小弹窗。
+/// 最小化時按恢復尺寸檢查，排除任何狀態下不足 300×300 的小彈窗。
 unsafe fn window_sized(window:HWND)->bool{
     use windows::Win32::Foundation::RECT;
     let mut rect=RECT::default();
@@ -53,12 +53,12 @@ unsafe fn window_sized(window:HWND)->bool{
     rect.right-rect.left>=300 && rect.bottom-rect.top>=300
 }
 const DINGTALK_FRAME:&str="StandardFrame_DingTalk";
-/// 钉钉 9.0.5 的 Qt 主窗口没有系统标题栏，但有完整的窗口控制样式。同进程的隐藏对话框带标题栏。
+/// 釘釘 9.0.5 的 Qt 主窗口沒有系統標題欄，但有完整的窗口控制樣式。同進程的隱藏對話框帶標題欄。
 fn dingtalk_frameless_main_style(style:u32)->bool{
     let frame=(WS_POPUP|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX).0;
     style&(frame|WS_CAPTION.0)==frame
 }
-/// 可见窗口优先。全隐藏时，仍要用闪动窗口和同进程唯一候选同时确认主窗口。
+/// 可見窗口優先。全隱藏時，仍要用閃動窗口和同進程唯一候選同時確認主窗口。
 unsafe fn has_preferred_dingtalk_qt(pid:u32,visible_only:bool)->bool{
     struct Search{pid:u32,visible_only:bool,found:bool}
     unsafe extern "system" fn visit(window:HWND,data:LPARAM)->BOOL{
@@ -77,8 +77,8 @@ unsafe fn has_preferred_dingtalk_qt(pid:u32,visible_only:bool)->bool{
     let _=EnumWindows(Some(visit),LPARAM((&mut search as *mut Search)as isize));
     search.found
 }
-/// 新版钉钉的主窗口是 StandardFrame_DingTalk；同进程里的 Qt 窗口只是对话框（常为隐藏状态），
-/// 不能算作第二个主窗口。主窗口本身隐藏到托盘时仍然认它。只有旧版没有该窗口时才按 Qt 主窗口识别。
+/// 新版釘釘的主窗口是 StandardFrame_DingTalk；同進程裡的 Qt 窗口只是對話框（常為隱藏狀態），
+/// 不能算作第二個主窗口。主窗口本身隱藏到托盤時仍然認它。只有舊版沒有該窗口時才按 Qt 主窗口識別。
 unsafe fn has_dingtalk_frame(pid:u32)->bool{
     struct Search{pid:u32,found:bool}
     unsafe extern "system" fn visit(window:HWND,data:LPARAM)->BOOL{
@@ -94,8 +94,8 @@ unsafe fn has_dingtalk_frame(pid:u32)->bool{
     let _=EnumWindows(Some(visit),LPARAM((&mut search as *mut Search)as isize));
     search.found
 }
-/// 闪动没能对应到账号时写进诊断日志：同进程所有无所属窗口的顶层窗口，
-/// 列出类名、样式、尺寸、可见状态和是否算主窗口，不读标题。最多列 12 个。
+/// 閃動沒能對應到帳號時寫進診斷日誌：同進程所有無所屬窗口的頂層窗口，
+/// 列出類名、樣式、尺寸、可見狀態和是否算主窗口，不讀標題。最多列 12 個。
 pub(crate) fn describe_process_windows(client:Messenger,pid:u32)->String{unsafe{
     use windows::Win32::Foundation::RECT;
     struct Search{pid:u32,windows:Vec<HWND>}
@@ -109,17 +109,17 @@ pub(crate) fn describe_process_windows(client:Messenger,pid:u32)->String{unsafe{
     let total=search.windows.len();
     let mut lines=search.windows.iter().take(12).map(|&window|{
         let mut rect=RECT::default();let _=GetWindowRect(window,&mut rect);
-        format!("{:#x} {} 样式 {:#010x}/{:#x} {}×{}{}{}{}",window.0 as usize,class_name(window),
+        format!("{:#x} {} 樣式 {:#010x}/{:#x} {}×{}{}{}{}",window.0 as usize,class_name(window),
             GetWindowLongW(window,GWL_STYLE)as u32,GetWindowLongW(window,GWL_EXSTYLE)as u32,rect.right-rect.left,rect.bottom-rect.top,
-            if IsWindowVisible(window).as_bool(){""}else{" 隐藏"},if IsIconic(window).as_bool(){" 最小化"}else{""},
+            if IsWindowVisible(window).as_bool(){""}else{" 隱藏"},if IsIconic(window).as_bool(){" 最小化"}else{""},
             if main_window(window,client){" 主窗口"}else{""})
     }).collect::<Vec<_>>();
-    if total>12{lines.push(format!("另有 {} 个",total-12));}
-    format!("进程 {pid} 顶层窗口 {total} 个：{}",lines.join("；"))
+    if total>12{lines.push(format!("另有 {} 個",total-12));}
+    format!("進程 {pid} 頂層窗口 {total} 個：{}",lines.join("；"))
 }}
-/// 飞书主窗口的标题固定为应用名（切换消息、云文档等页面不变，关到托盘后仍保留）；
-/// 「在独立窗口打开」的会话、文档窗口与主窗口同进程、同类名、同样式，只有标题是会话或文档名。
-const FEISHU_TITLES:[&str;3]=["飞书","Feishu","Lark"];
+/// 飛書主窗口的標題固定為應用名（切換消息、雲文檔等頁面不變，關到托盤後仍保留）；
+/// 「在獨立窗口打開」的會話、文檔窗口與主窗口同進程、同類名、同樣式，只有標題是會話或文檔名。
+const FEISHU_TITLES:[&str;3]=["飛書","Feishu","Lark"];
 const FEISHU_FRAME:&str="Chrome_WidgetWin_1";
 fn feishu_title(title:&str)->bool{FEISHU_TITLES.iter().any(|name|name.eq_ignore_ascii_case(title.trim()))}
 fn window_title(window:HWND)->String{
@@ -131,7 +131,7 @@ unsafe fn feishu_frame(window:HWND)->bool{
     class_name(window)==FEISHU_FRAME && GetWindow(window,GW_OWNER).is_err()
         && main_frame(Messenger::Feishu,FEISHU_FRAME,GetWindowLongW(window,GWL_STYLE)as u32,GetWindowLongW(window,GWL_EXSTYLE)as u32)
 }
-/// 同进程里唯一一个以应用名为标题的飞书主窗口；没有或不止一个（比如有会话恰好叫「飞书」）时不猜。
+/// 同進程裡唯一一個以應用名為標題的飛書主窗口；沒有或不止一個（比如有會話恰好叫「飛書」）時不猜。
 unsafe fn feishu_main_frame(pid:u32)->Option<HWND>{
     struct Search{pid:u32,found:Vec<HWND>}
     unsafe extern "system" fn visit(window:HWND,data:LPARAM)->BOOL{
@@ -144,7 +144,7 @@ unsafe fn feishu_main_frame(pid:u32)->Option<HWND>{
     let _=EnumWindows(Some(visit),LPARAM((&mut search as *mut Search)as isize));
     match search.found.as_slice(){[one]=>Some(*one),_=>None}
 }
-/// 飞书独立会话 / 文档窗口闪动时，归到同进程的主窗口：同一进程就是同一个飞书实例，不会串到其他账号。
+/// 飛書獨立會話 / 文檔窗口閃動時，歸到同進程的主窗口：同一進程就是同一個飛書實例，不會串到其他帳號。
 unsafe fn feishu_owner(window:HWND)->Option<HWND>{
     if !feishu_frame(window) || feishu_title(&window_title(window)){return None;}
     feishu_main_frame(window_pid(window))
@@ -167,7 +167,7 @@ fn snapshot_account(pid:u32,windows:impl IntoIterator<Item=Unread>,started_at:im
     let started=started_at(pid)?;
     Some(windows.into_iter().filter(|unread|unread.pid==pid).map(|unread|Target{unread,started}).collect())
 }
-/// 只接受原事件窗口或其明确的所属主窗口，同进程的其他窗口不能借用。
+/// 只接受原事件窗口或其明確的所屬主窗口，同進程的其他窗口不能借用。
 fn select_target(client:Messenger,window:isize,accounts:&[Target])->Option<Target>{
     let target=accounts.iter().find(|target|target.unread.source==client && target.unread.window==window)?;
     (accounts.iter().filter(|other|other.unread.source==client && other.unread.pid==target.unread.pid).count()==1).then_some(*target)
@@ -187,7 +187,7 @@ pub(crate) fn flash_account(client:Messenger,window:HWND,paths:&[String])->Optio
 pub(crate) fn flash_target(client:Messenger,window:HWND,paths:&[String])->Option<Unread>{
     flash_account(client,window,paths).map(|target|target.map_or_else(||Unread::of(client),|t|t.unread))
 }
-/// 钉钉 9.0.5 扫码前会闪动竖版登录窗口，登录成功后在同一进程中另建消息主窗口。
+/// 釘釘 9.0.5 掃碼前會閃動豎版登錄窗口，登錄成功後在同一進程中另建消息主窗口。
 unsafe fn dingtalk_login_window(window:HWND)->bool{
     let class=class_name(window);
     let style=GetWindowLongW(window,GWL_STYLE) as u32;
@@ -198,7 +198,7 @@ unsafe fn dingtalk_login_window(window:HWND)->bool{
     if GetWindowPlacement(window,&mut placement).is_err(){return false;}
     let rect=placement.rcNormalPosition;
     let (width,height)=(i64::from(rect.right-rect.left),i64::from(rect.bottom-rect.top));
-    // 实测宽高比 600:798，允许不同显示缩放带来的两个像素取整差。
+    // 實測寬高比 600:798，允許不同顯示縮放帶來的兩個像素取整差。
     width>0 && (height*600-width*798).abs()<=1200
 }
 fn ready(target:Target)->bool{
@@ -211,10 +211,10 @@ fn ready_with_paths(target:Target,paths:&[String])->bool{
 pub(super) fn matches_foreground(target:Target,window:HWND,paths:&[String])->bool{
     let window=window.0 as isize;
     if target.unread.window==window{return ready_with_paths(target,paths);}
-    // 手动打开客户端时也只确认原进程中唯一合格的前台新主窗。
+    // 手動打開客戶端時也只確認原進程中唯一合格的前台新主窗。
     rebuild_target(target,paths).is_some_and(|rebuilt|rebuilt.unread.window==window)
 }
-/// 重建时没有新闪动可校验，必须有该客户端明确的主窗口特征。
+/// 重建時沒有新閃動可校驗，必須有該客戶端明確的主窗口特徵。
 pub(crate) fn rebuild_target(target:Target,paths:&[String])->Option<Target>{unsafe{
     let pid=target.unread.pid;
     let window=HWND(target.unread.window as *mut _);
@@ -238,7 +238,7 @@ fn open(target:Target,paths:&[String],_:bool)->Result<Target,OpenError>{unsafe{
     if unread.pid==0 || window_pid(window)!=unread.pid {wake_step("提醒視窗已不屬於該帳號");return Err(OpenError::Unavailable);}
     if !main_window(window,unread.source){wake_step(format!("提醒視窗不是主視窗（{}）",describe_window(window)));return Err(OpenError::Unavailable);}
     if !matches(window,paths){wake_step("提醒視窗所屬程式不在已知安裝路徑中");return Err(OpenError::Unavailable);}
-    // 不执行协议、托盘回调或鼠标键盘模拟，只恢复该消息保存的主窗口。
+    // 不執行協議、托盤回調或鼠標鍵盤模擬，只恢復該消息保存的主窗口。
     wake_step(format!("切前台 {}",describe_window(window)));
     let show_queued=match wake_route(unread.source,IsWindowVisible(window).as_bool(),IsIconic(window).as_bool()) {
         WakeRoute::Restore=>Some(ShowWindowAsync(window,SW_RESTORE).as_bool()),
@@ -250,22 +250,22 @@ fn open(target:Target,paths:&[String],_:bool)->Result<Target,OpenError>{unsafe{
 }}
 
 fn finish_open(show_queued:Option<bool>,focus:impl FnOnce()->bool)->Result<(),OpenError>{
-    if show_queued==Some(false){wake_step("系统未接受窗口恢复请求");return Err(OpenError::Unavailable);}
-    if focus(){wake_step("系统已接受");return Ok(());}
+    if show_queued==Some(false){wake_step("系統未接受窗口恢復請求");return Err(OpenError::Unavailable);}
+    if focus(){wake_step("系統已接受");return Ok(());}
     if show_queued==Some(true){
-        wake_step("恢复请求已提交，等待原窗口到前台");
+        wake_step("恢復請求已提交，等待原窗口到前台");
         Ok(())
     }else{
-        wake_step("系统拒绝切前台");
+        wake_step("系統拒絕切前台");
         Err(OpenError::Unavailable)
     }
 }
 
 #[derive(Debug,PartialEq,Eq)]
 enum WakeRoute {Focus,Restore,Show,Relaunch}
-/// 怎样把主窗口带到前台。飞书关到托盘后窗口被隐藏，若由鬼島直接 `ShowWindow`，飞书不会恢复渲染，
-/// 页面停在加载骨架、点击无响应（#181，本机飞书 8.6 复现）；改为再启动一次飞书主程序，由飞书自己显示原窗口。
-/// 最小化的窗口照常还原（实测正常）；其他客户端未验证，保持原做法。
+/// 怎樣把主窗口帶到前台。飛書關到托盤後窗口被隱藏，若由鬼島直接 `ShowWindow`，飛書不會恢復渲染，
+/// 頁面停在加載骨架、點擊無響應（#181，本機飛書 8.6 復現）；改為再啟動一次飛書主程序，由飛書自己顯示原窗口。
+/// 最小化的窗口照常還原（實測正常）；其他客戶端未驗證，保持原做法。
 fn wake_route(source:Messenger,visible:bool,iconic:bool)->WakeRoute {
     if !visible && source==Messenger::Feishu {WakeRoute::Relaunch}
     else if iconic {WakeRoute::Restore}
@@ -273,20 +273,20 @@ fn wake_route(source:Messenger,visible:bool,iconic:bool)->WakeRoute {
     else {WakeRoute::Show}
 }
 
-/// 启动提醒窗口所属进程自己的程序（单实例：不会多开，飞书把已有主窗口显示出来），再等窗口出现。
+/// 啟動提醒窗口所屬進程自己的程序（單實例：不會多開，飛書把已有主窗口顯示出來），再等窗口出現。
 unsafe fn relaunch(target:Target,paths:&[String])->Result<Target,OpenError>{
     let pid=target.unread.pid;
-    let Some(path)=crate::smtc::player_process::image_path(pid) else{wake_step("无法读取客户端程序路径");return Err(OpenError::Unavailable);};
-    if !path_allowed(&normalized(&path),paths) {wake_step("客户端程序不在已知安装路径中");return Err(OpenError::Unavailable);}
+    let Some(path)=crate::smtc::player_process::image_path(pid) else{wake_step("無法讀取客戶端程序路徑");return Err(OpenError::Unavailable);};
+    if !path_allowed(&normalized(&path),paths) {wake_step("客戶端程序不在已知安裝路徑中");return Err(OpenError::Unavailable);}
     super::trust::launch_feishu(std::path::Path::new(&path),pid).map_err(|reason|{
         wake_step(reason);OpenError::Failed(reason.into())
     })?;
-    wake_step("窗口在托盘中，由客户端自己显示主窗口");
+    wake_step("窗口在托盤中，由客戶端自己顯示主窗口");
     let until=std::time::Instant::now()+std::time::Duration::from_secs(3);
     while std::time::Instant::now()<until {
         if let Some(shown)=visible_relaunched_target(target,paths){
-            if shown==target{wake_step("客户端已显示原主窗口");}
-            else{wake_step(format!("客户端已显示同一账号的新主窗口 · {:#x} → {:#x}",target.unread.window,shown.unread.window));}
+            if shown==target{wake_step("客戶端已顯示原主窗口");}
+            else{wake_step(format!("客戶端已顯示同一帳號的新主窗口 · {:#x} → {:#x}",target.unread.window,shown.unread.window));}
             let window=HWND(shown.unread.window as *mut _);
             return finish_open(Some(true),||SetForegroundWindow(window).as_bool()).map(|_|shown);
         }
@@ -316,7 +316,7 @@ mod tests{
             assert_eq!(select_target(client,22,&[a,b,c]),Some(b));
             assert_eq!(select_target(client,11,&[b,c]),None);
             assert_eq!(select_target(client,11,&[c]),None);
-            assert_eq!(select_target(client,11,&[a,Target{unread:Unread{window:44,..a.unread},..a}]),None,"同进程多窗口不能当作唯一账号");
+            assert_eq!(select_target(client,11,&[a,Target{unread:Unread{window:44,..a.unread},..a}]),None,"同進程多窗口不能當作唯一帳號");
         }
     }
     #[test]
@@ -330,22 +330,22 @@ mod tests{
                 (pid==100).then_some(original.started)
             });
             assert_eq!(snapshot,Some(vec![original]));
-            assert_eq!(queried,[100],"另一实例退出时不应查询它的进程元数据");
+            assert_eq!(queried,[100],"另一實例退出時不應查詢它的進程元數據");
         }
     }
     #[test]
     fn feishu_in_tray_is_shown_by_feishu_itself(){
-        assert_eq!(wake_route(Messenger::Feishu,false,false),WakeRoute::Relaunch,"关到托盘的飞书不能由岛仔直接显示（#181 卡死）");
-        assert_eq!(wake_route(Messenger::Feishu,false,true),WakeRoute::Relaunch,"隐藏优先于残留的最小化标志");
-        assert_eq!(wake_route(Messenger::Feishu,true,true),WakeRoute::Restore,"最小化的飞书照常还原");
+        assert_eq!(wake_route(Messenger::Feishu,false,false),WakeRoute::Relaunch,"關到托盤的飛書不能由島仔直接顯示（#181 卡死）");
+        assert_eq!(wake_route(Messenger::Feishu,false,true),WakeRoute::Relaunch,"隱藏優先於殘留的最小化標誌");
+        assert_eq!(wake_route(Messenger::Feishu,true,true),WakeRoute::Restore,"最小化的飛書照常還原");
         assert_eq!(wake_route(Messenger::Feishu,true,false),WakeRoute::Focus);
         for client in [Messenger::DingTalk,Messenger::WeCom] {assert_eq!(wake_route(client,false,false),WakeRoute::Show,"其他客戶端未驗證，保持原做法");}
     }
     #[test]
     fn a_queued_window_restore_waits_for_foreground_confirmation(){
-        assert_eq!(finish_open(Some(true),||false),Ok(()),"恢复请求已进入窗口队列，应继续等原窗口切到前台");
-        assert_eq!(finish_open(Some(false),||panic!("恢复请求被拒后无需再尝试置前")),Err(OpenError::Unavailable));
-        assert_eq!(finish_open(None,||false),Err(OpenError::Unavailable),"仅置前的请求被拒后没有待确认的恢复操作");
+        assert_eq!(finish_open(Some(true),||false),Ok(()),"恢復請求已進入窗口隊列，應繼續等原窗口切到前台");
+        assert_eq!(finish_open(Some(false),||panic!("恢復請求被拒後無需再嘗試置前")),Err(OpenError::Unavailable));
+        assert_eq!(finish_open(None,||false),Err(OpenError::Unavailable),"僅置前的請求被拒後沒有待確認的恢復操作");
     }
     #[test]
     fn feishu_rebuilt_during_relaunch_waits_for_the_same_accounts_visible_main_window(){unsafe{
@@ -354,33 +354,33 @@ mod tests{
         let class=w!("Chrome_WidgetWin_1");
         RegisterClassW(&WNDCLASSW{lpfnWndProc:Some(proc),hInstance:instance,lpszClassName:class,..Default::default()});
         let create=|title|CreateWindowExW(WINDOW_EX_STYLE(0),class,title,WS_OVERLAPPEDWINDOW,-10000,-10000,500,500,None,None,instance,None).unwrap();
-        let hidden=create(w!("飞书"));
+        let hidden=create(w!("飛書"));
         let original=Target{unread:Unread{source:Messenger::Feishu,pid:std::process::id(),window:hidden.0 as isize},
             started:process_started(GetCurrentProcess()).unwrap()};
         let paths=[normalized(&std::env::current_exe().unwrap().to_string_lossy())];
         assert_eq!(visible_relaunched_target(original,&paths),None);
         DestroyWindow(hidden).unwrap();
-        assert_eq!(visible_relaunched_target(original,&paths),None,"新主窗口尚未创建时应继续等待");
-        let helper=create(w!("独立会话"));
+        assert_eq!(visible_relaunched_target(original,&paths),None,"新主窗口尚未創建時應繼續等待");
+        let helper=create(w!("獨立會話"));
         let _=ShowWindow(helper,SW_SHOWNOACTIVATE);
         let unrelated=visible_relaunched_target(original,&paths);
         DestroyWindow(helper).unwrap();
-        assert_eq!(unrelated,None,"同进程的独立窗口不能接管这次唤起");
-        let replacement=create(w!("飞书"));
-        assert_eq!(visible_relaunched_target(original,&paths),None,"新窗口隐藏时应继续等待");
+        assert_eq!(unrelated,None,"同進程的獨立窗口不能接管這次喚起");
+        let replacement=create(w!("飛書"));
+        assert_eq!(visible_relaunched_target(original,&paths),None,"新窗口隱藏時應繼續等待");
         let _=ShowWindow(replacement,SW_SHOWNOACTIVATE);
         let shown=visible_relaunched_target(original,&paths);
         DestroyWindow(replacement).unwrap();
         assert_eq!(shown,Some(Target{unread:Unread{window:replacement.0 as isize,..original.unread},..original}));
     }}
-    /// 本机实测：先把飞书关到托盘，再运行 `cargo test live_feishu -- --ignored`，走岛仔点提醒时的同一条唤起路径。
+    /// 本機實測：先把飛書關到托盤，再運行 `cargo test live_feishu -- --ignored`，走島仔點提醒時的同一條喚起路徑。
     #[test]
     #[ignore="需要本機飛書已登入並關到系統匣"]
     fn live_feishu_tray_window_is_shown_by_feishu(){unsafe{
         let paths=client_paths(Messenger::Feishu);
-        let accounts:Vec<_>=client_processes(Messenger::Feishu).expect("应找到飞书进程").into_iter()
+        let accounts:Vec<_>=client_processes(Messenger::Feishu).expect("應找到飛書進程").into_iter()
             .filter_map(|pid|candidates(Messenger::Feishu,pid)).flatten().collect();
-        let [target]=accounts.as_slice() else{panic!("应只有一个飞书主窗口：{}",accounts.len())};
+        let [target]=accounts.as_slice() else{panic!("應只有一個飛書主窗口：{}",accounts.len())};
         let window=HWND(target.unread.window as *mut _);
         assert!(!IsWindowVisible(window).as_bool(),"請先把飛書關到系統匣");
         crate::messenger::windows::take_wake_steps();
@@ -392,9 +392,9 @@ mod tests{
         while GetForegroundWindow()!=window && std::time::Instant::now()<until{
             std::thread::sleep(std::time::Duration::from_millis(50));
         }
-        assert_eq!(GetForegroundWindow(),window,"应将原飞书主窗口切到前台");
+        assert_eq!(GetForegroundWindow(),window,"應將原飛書主窗口切到前台");
         assert!(IsWindowVisible(window).as_bool() && !IsIconic(window).as_bool());
-        assert!(steps.iter().any(|s|s.contains("由客户端自己显示")));
+        assert!(steps.iter().any(|s|s.contains("由客戶端自己顯示")));
     }}
     #[test]
     fn main_window_rules_exclude_login_popups_and_cross_client_windows(){
@@ -438,15 +438,15 @@ mod tests{
             assert!(!ready_with_paths(original,&paths),"同程序新增主視窗後不得繼續按程序猜帳號");
             assert_eq!(flash_target(client,first,&paths),Some(Unread::of(client)));
             DestroyWindow(first).unwrap();
-            assert!(!ready_with_paths(original,&paths),"不能换成仍存活的其他窗口");
+            assert!(!ready_with_paths(original,&paths),"不能換成仍存活的其他窗口");
             if client==Messenger::Feishu || client==Messenger::DingTalk && class_name(second)!=DINGTALK_FRAME {
-                assert_eq!(rebuild_target(original,&paths),None,"没有主窗口特征的独立窗口不能作为重建窗口");
+                assert_eq!(rebuild_target(original,&paths),None,"沒有主窗口特徵的獨立窗口不能作為重建窗口");
             }
             assert_eq!(open(original,&paths,true),Err(OpenError::Unavailable));
-            assert!(!IsWindowVisible(second).as_bool(),"不能打开其他窗口");
+            assert!(!IsWindowVisible(second).as_bool(),"不能打開其他窗口");
             DestroyWindow(second).unwrap();
         }
-        // 不足主窗口尺寸的 StandardFrame 不应挡住同进程真正的 Qt 主窗口。
+        // 不足主窗口尺寸的 StandardFrame 不應擋住同進程真正的 Qt 主窗口。
         let small=CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("StandardFrame_DingTalk"),w!(""),WINDOW_STYLE(0x060f0000),-10000,-10000,220,220,None,None,instance,None).unwrap();
         let qt=CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!(""),WINDOW_STYLE(0x860f0000),-10000,-10000,1200,800,None,None,instance,None).unwrap();
         let original=Target{unread:Unread{source:Messenger::DingTalk,pid,window:qt.0 as isize},started};
@@ -456,14 +456,14 @@ mod tests{
         assert_eq!(flash_target(Messenger::DingTalk,qt,&paths),Some(original.unread));
         assert!(ready_with_paths(original,&paths));
         let new_main=CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!(""),WINDOW_STYLE(0x860f0000),-10000,-10000,1200,800,None,None,instance,None).unwrap();
-        assert_eq!(rebuild_target(original,&paths),None,"原窗口存活时不能重绑");
+        assert_eq!(rebuild_target(original,&paths),None,"原窗口存活時不能重綁");
         DestroyWindow(qt).unwrap();
         let rebuilt=Target{unread:Unread{window:new_main.0 as isize,..original.unread},..original};
-        assert_eq!(rebuild_target(original,&paths),Some(rebuilt),"原窗口销毁后允许同一进程中唯一可信的新主窗口");
-        assert_eq!(rebuild_target(Target{started:started.wrapping_add(1),..original},&paths),None,"禁止重绑到复用 PID 的新进程");
+        assert_eq!(rebuild_target(original,&paths),Some(rebuilt),"原窗口銷燬後允許同一進程中唯一可信的新主窗口");
+        assert_eq!(rebuild_target(Target{started:started.wrapping_add(1),..original},&paths),None,"禁止重綁到複用 PID 的新進程");
         DestroyWindow(small).unwrap();DestroyWindow(new_main).unwrap();
-        // 用户诊断包里钉钉 9.0.5 的窗口组合：一个 StandardFrame_DingTalk 主窗口和三个隐藏的 Qt 对话框。
-        // 主窗口最小化到任务栏和隐藏到托盘时，都必须对应到原进程。
+        // 用戶診斷包裡釘釘 9.0.5 的窗口組合：一個 StandardFrame_DingTalk 主窗口和三個隱藏的 Qt 對話框。
+        // 主窗口最小化到任務欄和隱藏到托盤時，都必須對應到原進程。
         for (state,frame_style) in [("最小化",0x260f0000u32),("隱藏到系統匣",0x060f0000)]{
             let frame=CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("StandardFrame_DingTalk"),w!("Kuidao synthetic client"),WINDOW_STYLE(frame_style),-10000,-10000,1200,800,None,None,instance,None).unwrap();
             let dialogs=[0;3].map(|_|CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!(""),WINDOW_STYLE(0x86cf0000),-10000,-10000,655,517,None,None,instance,None).unwrap());
@@ -476,29 +476,29 @@ mod tests{
             assert_eq!(flash_target(Messenger::DingTalk,dialogs[0],&paths),Some(Unread::of(Messenger::DingTalk)),"舊版多個 Qt 主視窗仍不能猜帳號");
             for dialog in dialogs{DestroyWindow(dialog).unwrap();}
         }
-        // 钉钉 9.0.5 的 Qt 主窗口最小化时样式是 0xB60F0000。收进托盘后，此处模拟它清除可见和最小化标志。
-        for (state,main_style) in [("显示",0x960f0000u32),("最小化",0xb60f0000),("关到托盘",0x860f0000)]{
+        // 釘釘 9.0.5 的 Qt 主窗口最小化時樣式是 0xB60F0000。收進托盤後，此處模擬它清除可見和最小化標誌。
+        for (state,main_style) in [("顯示",0x960f0000u32),("最小化",0xb60f0000),("關到托盤",0x860f0000)]{
             let main=CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!("Daozai synthetic client"),WINDOW_STYLE(main_style),-10000,-10000,1200,800,None,None,instance,None).unwrap();
             let dialogs=[0;3].map(|_|CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!(""),WINDOW_STYLE(0x86cf0000),-10000,-10000,655,517,None,None,instance,None).unwrap());
             let original=Target{unread:Unread{source:Messenger::DingTalk,pid,window:main.0 as isize},started};
-            assert_eq!(flash_target(Messenger::DingTalk,main,&paths),Some(original.unread),"{state}：闪动必须对应到原主窗口");
-            assert!(ready_with_paths(original,&paths),"{state}：点击时仍能确认原主窗口");
-            assert_eq!(flash_target(Messenger::DingTalk,dialogs[0],&paths),Some(Unread::of(Messenger::DingTalk)),"{state}：无归属关系的对话框不能代替主窗口");
+            assert_eq!(flash_target(Messenger::DingTalk,main,&paths),Some(original.unread),"{state}：閃動必須對應到原主窗口");
+            assert!(ready_with_paths(original,&paths),"{state}：點擊時仍能確認原主窗口");
+            assert_eq!(flash_target(Messenger::DingTalk,dialogs[0],&paths),Some(Unread::of(Messenger::DingTalk)),"{state}：無歸屬關係的對話框不能代替主窗口");
             let log=describe_process_windows(Messenger::DingTalk,pid);
-            assert!(log.contains("Qt51511QWindowIcon") && log.contains("655×517") && !log.contains("Daozai"),"{state}：诊断只记类名和尺寸，不记标题：{log}");
+            assert!(log.contains("Qt51511QWindowIcon") && log.contains("655×517") && !log.contains("Daozai"),"{state}：診斷只記類名和尺寸，不記標題：{log}");
             DestroyWindow(main).unwrap();for dialog in dialogs{DestroyWindow(dialog).unwrap();}
         }
-        // 两个同样式的 Qt 主窗口无论显示还是隐藏，都不能凭闪动猜账号。
+        // 兩個同樣式的 Qt 主窗口無論顯示還是隱藏，都不能憑閃動猜帳號。
         for style in [0x16cf0000,0x860f0000]{
             let pair=[0;2].map(|_|CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("Qt51511QWindowIcon"),w!(""),WINDOW_STYLE(style),-10000,-10000,1200,800,None,None,instance,None).unwrap());
             assert_eq!(flash_target(Messenger::DingTalk,pair[0],&paths),Some(Unread::of(Messenger::DingTalk)));
             for window in pair{DestroyWindow(window).unwrap();}
         }
-        // 本机飞书 8.6 实测：主窗口标题「飞书」，「在独立窗口打开」的会话窗口与它同进程、同类名、同样式，标题是会话名。
-        // 主窗口正常显示和关到托盘（隐藏）两种状态都要能对应到原进程，独立窗口闪动归到主窗口。
+        // 本機飛書 8.6 實測：主窗口標題「飛書」，「在獨立窗口打開」的會話窗口與它同進程、同類名、同樣式，標題是會話名。
+        // 主窗口正常顯示和關到托盤（隱藏）兩種狀態都要能對應到原進程，獨立窗口閃動歸到主窗口。
         for (state,main_style) in [("顯示",0x16cf0000u32),("關到系統匣",0x06cf0000)]{
             let frame=|title,style|CreateWindowExW(WINDOW_EX_STYLE(0x00200100),w!("Chrome_WidgetWin_1"),title,WINDOW_STYLE(style),-10000,-10000,1200,800,None,None,instance,None).unwrap();
-            let main=frame(w!("飞书"),main_style);let chat=frame(w!("少爺"),0x16cf0000);
+            let main=frame(w!("飛書"),main_style);let chat=frame(w!("少爺"),0x16cf0000);
             let original=Target{unread:Unread{source:Messenger::Feishu,pid,window:main.0 as isize},started};
             assert!(!main_window(chat,Messenger::Feishu),"{state}：獨立會話視窗不能算第二個主視窗");
             assert!(ready_with_paths(original,&paths),"{state}：有獨立會話視窗時主視窗仍可識別");
@@ -510,21 +510,21 @@ mod tests{
             assert!(main_window(chat,Messenger::Feishu),"{state}：找不到主視窗時沿用原規則");
             DestroyWindow(chat).unwrap();
         }
-        // 同名小窗与主窗口最小化后的系统矩形相似，应以恢复尺寸区分。
+        // 同名小窗與主窗口最小化後的系統矩形相似，應以恢復尺寸區分。
         let create=|title,width,height|CreateWindowExW(WINDOW_EX_STYLE(0),w!("Chrome_WidgetWin_1"),title,WS_OVERLAPPEDWINDOW,-10000,-10000,width,height,None,None,instance,None).unwrap();
-        let main=create(w!("飞书"),998,726);
+        let main=create(w!("飛書"),998,726);
         let small=create(w!("Feishu"),220,220);
-        let chat=create(w!("独立会话"),400,500);
+        let chat=create(w!("獨立會話"),400,500);
         for window in [main,small]{
             let _=ShowWindow(window,SW_SHOWMINNOACTIVE);
-            assert!(IsIconic(window).as_bool(),"测试窗口必须进入最小化状态");
+            assert!(IsIconic(window).as_bool(),"測試窗口必須進入最小化狀態");
         }
         let original=Target{unread:Unread{source:Messenger::Feishu,pid,window:main.0 as isize},started};
-        assert!(!main_window(small,Messenger::Feishu),"真正的小窗最小化后仍应被排除");
-        assert!(ready_with_paths(original,&paths),"正常的主窗口最小化后仍可识别");
+        assert!(!main_window(small,Messenger::Feishu),"真正的小窗最小化後仍應被排除");
+        assert!(ready_with_paths(original,&paths),"正常的主窗口最小化後仍可識別");
         assert_eq!(flash_target(Messenger::Feishu,main,&paths),Some(original.unread));
-        assert_eq!(flash_target(Messenger::Feishu,chat,&paths),Some(original.unread),"同名小窗不影响独立会话的归属");
-        assert_eq!(flash_target(Messenger::Feishu,small,&paths),Some(Unread::of(Messenger::Feishu)),"同名小窗闪动不应借用主窗口");
+        assert_eq!(flash_target(Messenger::Feishu,chat,&paths),Some(original.unread),"同名小窗不影響獨立會話的歸屬");
+        assert_eq!(flash_target(Messenger::Feishu,small,&paths),Some(Unread::of(Messenger::Feishu)),"同名小窗閃動不應借用主窗口");
         for window in [chat,small,main]{DestroyWindow(window).unwrap();}
     }}
     #[test]

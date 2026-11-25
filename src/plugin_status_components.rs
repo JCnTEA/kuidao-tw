@@ -1,4 +1,4 @@
-//! 状态页扩展组件和宿主图标。
+//! 狀態頁擴展組件和宿主圖標。
 
 use super::{metric_row_height, state_color, Accent, SensitiveValues, MASKED_VALUE, TEXT_RIGHT};
 use crate::{
@@ -154,7 +154,7 @@ pub(super) fn draw_chart(
         .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), &value| {
             (min.min(value), max.max(value))
         });
-    // 有限采样值相减也可能溢出。两端同时缩小一半就能保留比例。
+    // 有限採樣值相減也可能溢出。兩端同時縮小一半就能保留比例。
     let factor = if (max - min).is_finite() { 1.0 } else { 0.5 };
     let span = max * factor - min * factor;
     let steps = (series.len() - 1) as f32;
@@ -297,19 +297,19 @@ mod tests {
     #[test]
     fn plugin_status_components_fit_at_both_densities_skins_and_scales() {
         let status: PluginStatus = serde_json::from_value(json!({
-            "state":"running", "label":"最长测试标题已进入打印队列".repeat(3),
+            "state":"running", "label":"最長測試標題已進入打印隊列".repeat(3),
             "progress_pct":95,
             "items":[
-                {"label":"任务","detail":"非常长的文件名称".repeat(8),"state":"running"},
-                {"label":"列表第二条","state":"paused"},
-                {"label":"列表第三条","state":"idle"},
-                {"label":"列表第四条","state":"succeeded"}
+                {"label":"任務","detail":"非常長的文件名稱".repeat(8),"state":"running"},
+                {"label":"列表第二條","state":"paused"},
+                {"label":"列表第三條","state":"idle"},
+                {"label":"列表第四條","state":"succeeded"}
             ],
             "series":[-f64::MAX, 0.0, f64::MAX],
-            "series_label":"近期读数",
+            "series_label":"近期讀數",
             "clock":{"label":"北京","utc_offset_minutes":480,"format":"HH:mm:ss"},
-            "note":"冷却风扇运行正常\n准备打印下一件",
-            "tags":["精细打印","模拟","深度观测","标签四"]
+            "note":"冷卻風扇運行正常\n準備打印下一件",
+            "tags":["精細打印","模擬","深度觀測","標籤四"]
         }))
         .unwrap();
         assert!(status.valid());
@@ -409,25 +409,25 @@ mod tests {
                         })
                         .collect();
                     for label in [
-                        "列表第二条",
-                        "列表第三条",
-                        "冷却风扇运行正常",
-                        "准备打印下一件",
-                        "精细打印",
-                        "近期读数",
+                        "列表第二條",
+                        "列表第三條",
+                        "冷卻風扇運行正常",
+                        "準備打印下一件",
+                        "精細打印",
+                        "近期讀數",
                         "北京",
                     ] {
                         assert!(texts.contains(&label), "{label}: {density}, {scale}");
                     }
-                    assert_eq!(texts.contains(&"列表第四条"), density == "comfortable");
-                    assert_eq!(texts.contains(&"标签四"), density == "comfortable");
+                    assert_eq!(texts.contains(&"列表第四條"), density == "comfortable");
+                    assert_eq!(texts.contains(&"標籤四"), density == "comfortable");
                     assert!(contrast(accent, background) >= 3.0);
                     assert!(
                         output.shapes.iter().any(|shape| matches!(
                             &shape.shape,
                             egui::Shape::Circle(end) if end.fill == accent && end.radius == 3.0
                         )),
-                        "折线末点应使用换肤后的校正色"
+                        "折線末點應使用換膚後的校正色"
                     );
                     assert!(ctx
                         .tessellate(output.shapes, scale)

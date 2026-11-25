@@ -252,7 +252,7 @@ fn listen_window(seconds: u32) -> Window {
     let peaks: usize = signature.bands.iter().map(|(_, peaks)| peaks.len()).sum();
     log(&format!("聽 {seconds} 秒：峰值{peaks}\n"));
     if peaks < 40 {
-        // 幾乎沒有峰值：多半只是環境音或靜音，不必送出去，換長一點的取樣再聽。
+        // 幾乎沒有峰值：多半隻是環境音或靜音，不必送出去，換長一點的取樣再聽。
         return Window::Miss("聲音太小".into());
     }
     match shazam::identify(&signature) {

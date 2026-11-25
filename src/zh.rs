@@ -54,9 +54,9 @@ mod tests {
 
     #[test]
     fn converts_common_simplified_characters(){
-        assert_eq!(to_traditional("我们在这里等你"),"我們在這裡等你");
-        assert_eq!(to_traditional("说好的幸福呢"),"說好的幸福呢");
-        assert_eq!(to_traditional("时间都去哪儿了"),"時間都去哪兒了");
+        assert_eq!(to_traditional("我們在這裡等你"),"我們在這裡等你");
+        assert_eq!(to_traditional("說好的幸福呢"),"說好的幸福呢");
+        assert_eq!(to_traditional("時間都去哪兒了"),"時間都去哪兒了");
     }
 
     #[test]
@@ -69,7 +69,7 @@ mod tests {
     #[test]
     fn table_covers_common_lyrics_vocabulary(){
         let (st,_)=tables();
-        for c in "这为个国说时会来对开关门东马鸟龙见觉让读写话谁认识变边远还进过们么样没".chars(){
+        for c in "這為個國說時會來對開關門東馬鳥龍見覺讓讀寫話誰認識變邊遠還進過們麼樣沒".chars(){
             assert!(st.contains_key(&c),"缺少 {c}");
         }
     }

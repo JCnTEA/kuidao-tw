@@ -1,4 +1,4 @@
-//! 宿主内置的接收器识别表与插件集市提供的扩展数据。
+//! 宿主內置的接收器識別表與插件集市提供的擴展數據。
 use serde::Deserialize;
 use std::{
     collections::BTreeMap,
@@ -34,15 +34,15 @@ pub(crate) struct Package {
 
 impl Package {
     pub(crate) fn parse(raw: &[u8]) -> Result<Self, &'static str> {
-        let manifest: Manifest = serde_json::from_slice(raw).map_err(|_| "兼容包格式无效")?;
+        let manifest: Manifest = serde_json::from_slice(raw).map_err(|_| "兼容包格式無效")?;
         if manifest.id != PACKAGE_ID {
-            return Err("此文件不是岛仔无线设备兼容包");
+            return Err("此文件不是島仔無線設備兼容包");
         }
         if manifest.api_version != API_VERSION {
-            return Err("当前岛仔版本不支持此兼容包接口");
+            return Err("當前島仔版本不支持此兼容包接口");
         }
         if !valid_text(&manifest.version, 32) {
-            return Err("兼容包版本无效");
+            return Err("兼容包版本無效");
         }
         Ok(Self {
             version: manifest.version,
@@ -68,13 +68,13 @@ impl ReceiverTable {
         for receiver in rows {
             let vid = usb_id(&receiver.vid)
                 .filter(|id| *id != 0)
-                .ok_or("接收器 VID 无效")?;
-            let pid = usb_id(&receiver.pid).ok_or("接收器 PID 无效")?;
+                .ok_or("接收器 VID 無效")?;
+            let pid = usb_id(&receiver.pid).ok_or("接收器 PID 無效")?;
             if !valid_text(&receiver.name, 64) {
-                return Err("接收器名称无效");
+                return Err("接收器名稱無效");
             }
             if receivers.insert((vid, pid), receiver.name).is_some() {
-                return Err("兼容包有重复的接收器 VID/PID");
+                return Err("兼容包有重複的接收器 VID/PID");
             }
         }
         Ok(Self(receivers))
@@ -92,8 +92,8 @@ impl ReceiverTable {
 pub(super) fn builtin_receivers() -> &'static ReceiverTable {
     static TABLE: std::sync::OnceLock<ReceiverTable> = std::sync::OnceLock::new();
     TABLE.get_or_init(|| {
-        let rows = serde_json::from_slice(BUILTIN).expect("内置接收器识别表应使用有效的 JSON");
-        ReceiverTable::new(rows).expect("内置接收器识别表应包含有效的设备数据")
+        let rows = serde_json::from_slice(BUILTIN).expect("內置接收器識別表應使用有效的 JSON");
+        ReceiverTable::new(rows).expect("內置接收器識別表應包含有效的設備數據")
     })
 }
 
@@ -111,7 +111,7 @@ fn valid_text(text: &str, max: usize) -> bool {
         && !text.chars().any(char::is_control)
 }
 
-/// 供 USB 枚举线程读取当前启用的插件数据。安装状态由集市保存。
+/// 供 USB 枚舉線程讀取當前啟用的插件數據。安裝狀態由集市保存。
 #[derive(Clone, Default)]
 pub struct Store(Arc<Mutex<Option<Arc<Package>>>>);
 
@@ -145,13 +145,13 @@ mod tests {
             "id": PACKAGE_ID,
             "api_version": API_VERSION,
             "version": "1.1.0",
-            "receivers": [{"vid": "046D", "pid": "c542", "name": "罗技 Nano 接收器"}]
+            "receivers": [{"vid": "046D", "pid": "c542", "name": "羅技 Nano 接收器"}]
         });
         let package = Package::parse(&serde_json::to_vec(&valid).unwrap()).unwrap();
         assert_eq!(package.version(), "1.1.0");
         assert_eq!(
             package.receiver_name("VID_046D&PID_C542"),
-            Some("罗技 Nano 接收器")
+            Some("羅技 Nano 接收器")
         );
         assert_eq!(package.receiver_name("VID_046D&PID_C542&MI_00"), None);
 
@@ -176,7 +176,7 @@ mod tests {
                 "receivers",
                 json!([
                     {"vid": "046D", "pid": "C542", "name": "接收器"},
-                    {"vid": "046d", "pid": "c542", "name": "重复接收器"}
+                    {"vid": "046d", "pid": "c542", "name": "重複接收器"}
                 ]),
             ),
         ] {

@@ -1,5 +1,5 @@
-//! 天气：按城市（留空时按网络出口定位）读取 Open-Meteo 的实况与七日预报。
-//! 只保留最近一次结果用于离线展示，不读取、也不上传任何账号信息。
+//! 天氣：按城市（留空時按網絡出口定位）讀取 Open-Meteo 的實況與七日預報。
+//! 只保留最近一次結果用於離線展示，不讀取、也不上傳任何帳號信息。
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::io::Read;
@@ -7,21 +7,21 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::Duration;
 
-/// 自动刷新的间隔（秒）：Open-Meteo 的实况本身每 15 分钟更新一次。
+/// 自動刷新的間隔（秒）：Open-Meteo 的實況本身每 15 分鐘更新一次。
 pub const INTERVAL: i64 = 900;
-/// 自动定位结果的复用时长（秒）。
+/// 自動定位結果的複用時長（秒）。
 const LOCATE_TTL: i64 = 3 * 3600;
-/// 最多保存的城市数（不含自动定位）。
+/// 最多保存的城市數（不含自動定位）。
 pub const MAX_CITIES: usize = 5;
-/// 多城市缓存的条数上限：自动定位 + 已保存城市，再留一条余量给刚删除的城市。
+/// 多城市緩存的條數上限：自動定位 + 已保存城市，再留一條餘量給剛刪除的城市。
 const CACHE_LIMIT: usize = MAX_CITIES + 2;
 pub const FORECAST_DAYS: usize = 7;
 
-/// 天气现象；决定画太阳、云、雨还是雪。
+/// 天氣現象；決定畫太陽、雲、雨還是雪。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind { Sun, Moon, Partly, PartlyNight, Cloud, Fog, Drizzle, Rain, Shower, Snow, Thunder }
 
-/// WMO 天气代码 → 图标类型（`day` 决定太阳还是月亮）。
+/// WMO 天氣代碼 → 圖標類型（`day` 決定太陽還是月亮）。
 pub fn kind(code: u8, day: bool) -> Kind {
     match code {
         0 => if day { Kind::Sun } else { Kind::Moon },
@@ -38,7 +38,7 @@ pub fn kind(code: u8, day: bool) -> Kind {
     }
 }
 
-/// WMO 天气代码 → 中文描述。
+/// WMO 天氣代碼 → 中文描述。
 pub fn describe(code: u8) -> &'static str {
     match code {
         0 => "晴",
@@ -98,7 +98,7 @@ impl SunTimes {
         }).unwrap_or_else(||"--:--".into())
     }
 
-    /// 日出到日落之间的时间进度；夜间不在日照轨迹上绘制当前位置。
+    /// 日出到日落之間的時間進度；夜間不在日照軌跡上繪製當前位置。
     pub fn progress(&self, now: i64) -> Option<f32> {
         if !(self.sunrise..=self.sunset).contains(&now) {return None;}
         Some((now-self.sunrise) as f32/(self.sunset-self.sunrise).max(1) as f32)
@@ -128,7 +128,7 @@ pub struct Snapshot {
     pub place: String,
     #[serde(default)]
     pub position: Option<Position>,
-    /// 来自自动定位；多城市缓存据此区分「自动定位」与同名的指定城市。
+    /// 來自自動定位；多城市緩存據此區分「自動定位」與同名的指定城市。
     #[serde(default)]
     pub auto: bool,
     pub temp: f32,
@@ -139,7 +139,7 @@ pub struct Snapshot {
     pub day: bool,
     pub high: Option<f32>,
     pub low: Option<f32>,
-    /// 今日日出与日落（当地时间 HH:MM）；旧缓存或接口缺失时为空。
+    /// 今日日出與日落（當地時間 HH:MM）；舊緩存或接口缺失時為空。
     #[serde(default)]
     pub sunrise: Option<String>,
     #[serde(default)]
@@ -147,7 +147,7 @@ pub struct Snapshot {
     #[serde(default)]
     pub sun_times: Option<SunTimes>,
     pub days: Vec<Day>,
-    /// 取得这份数据的 Unix 时间（秒）。
+    /// 取得這份數據的 Unix 時間（秒）。
     pub at: i64,
 }
 
@@ -173,15 +173,15 @@ impl Position {
     }
 }
 
-/// 單一行政層級清理：去掉「省」「縣」後綴、把「臺灣」統一成「台灣」，
-/// 並丟掉地理庫回傳的別名串（例如「臺灣省 or 台灣省」）與國家名本身。
+/// 單一行政層級清理：去掉「省」「縣」後綴、把「台灣」統一成「台灣」，
+/// 並丟掉地理庫回傳的別名串（例如「台灣省 or 台灣省」）與國家名本身。
 fn clean_area(part: &str) -> Option<String> {
     let trimmed = part.trim();
     if trimmed.is_empty() { return None; }
     if trimmed.to_ascii_lowercase().contains(" or ") { return None; }
     // 省、縣這種上層行政區整個丟掉，不做「去掉字尾留名字」的勉強縮寫。
     if trimmed.ends_with('省') || trimmed.ends_with('縣') { return None; }
-    let name = trimmed.replace("臺灣", "台灣").replace("台湾", "台灣");
+    let name = trimmed.replace("台灣", "台灣").replace("台灣", "台灣");
     if name.is_empty() || name == "台灣" || name.eq_ignore_ascii_case("taiwan") { return None; }
     Some(name)
 }
@@ -189,7 +189,7 @@ fn clean_area(part: &str) -> Option<String> {
 /// 地點層級字串整理：台灣不帶「省」「縣」，開頭固定「台灣」，重複的層級只留一次。
 pub fn tidy_region(region: &str) -> String {
     let parts: Vec<&str> = region.split(" · ").map(str::trim).filter(|s| !s.is_empty()).collect();
-    let taiwan = parts.iter().any(|s| s.contains("台灣") || s.contains("臺灣") || s.contains("台湾") || s.eq_ignore_ascii_case("taiwan"));
+    let taiwan = parts.iter().any(|s| s.contains("台灣") || s.contains("台灣") || s.contains("台灣") || s.eq_ignore_ascii_case("taiwan"));
     let mut out: Vec<String> = Vec::new();
     if taiwan { out.push("台灣".to_string()); }
     for part in parts {
@@ -242,7 +242,7 @@ fn request(agent: &ureq::Agent, url: &url::Url, service: &str, route: &str) -> R
         })
         .and_then(|response|json(response).map_err(|error|{detail="invalid_response".into();(error,true)}));
     if !cfg!(test) {
-        // 只记录环节、域名与错误类别，不记录查询参数、IP、坐标或代理地址。
+        // 只記錄環節、域名與錯誤類別，不記錄查詢參數、IP、座標或代理地址。
         crate::resources::append_log(&crate::model::config_dir().join("diagnostics"),"weather-network.log",
             &format!("time={} stage={service} route={route} host={} elapsed_ms={} result={detail}",chrono::Utc::now().timestamp(),url.host_str().unwrap_or_default(),start.elapsed().as_millis()));
     }
@@ -262,7 +262,7 @@ fn http_agent_for(proxy: Option<&str>) -> ureq::Agent {
 
 fn http_agent() -> ureq::Agent {http_agent_for(None)}
 
-/// 按网络出口定位；国内常见出口能拿到中文城市名。
+/// 按網絡出口定位；國內常見出口能拿到中文城市名。
 pub fn locate(agent: &ureq::Agent) -> Result<Position, String> {
     locate_with_sources(agent,&[("https://ipwho.is/?lang=zh-CN",false),("https://free.freeipapi.com/api/v1/json",true)],network_proxy().as_deref())
 }
@@ -270,7 +270,7 @@ pub fn locate(agent: &ureq::Agent) -> Result<Position, String> {
 fn locate_with_sources(agent: &ureq::Agent, sources: &[(&str,bool)], proxy: Option<&str>) -> Result<Position,String> {
     let mut retry=vec![true;sources.len()];
     let mut last_error="自動定位暫不可用，請手動選擇城市".to_string();
-    // 先尝试两个直连服务，再回退到已配置的代理，避免主服务故障时过早采用代理出口的位置。
+    // 先嚐試兩個直連服務，再回退到已配置的代理，避免主服務故障時過早採用代理出口的位置。
     for through_proxy in [false,true] {
         if through_proxy && (proxy.is_none() || !retry.iter().any(|retry|*retry)) {break;}
         let configured;
@@ -304,13 +304,13 @@ fn parse_location(value: &Value, backup: bool) -> Result<Position,String> {
     Ok(position)
 }
 
-/// 中文行政区后缀：输入「广州市」时还要查「广州」，地理库里很多城市只收录了不带后缀的名字。
-/// 繁簡兩套後綴都要能拆：台灣使用者輸入「士林區」「臺北縣」時必須命中。
-const ADMIN_SUFFIXES: [char; 6] = ['市', '縣', '區', '省', '县', '区'];
+/// 中文行政區後綴：輸入「廣州市」時還要查「廣州」，地理庫裡很多城市只收錄了不帶後綴的名字。
+/// 繁簡兩套後綴都要能拆：台灣使用者輸入「士林區」「台北縣」時必須命中。
+const ADMIN_SUFFIXES: [char; 6] = ['市', '縣', '區', '省', '縣', '區'];
 
 fn is_cjk(name: &str) -> bool { name.chars().all(|c| ('\u{4e00}'..='\u{9fff}').contains(&c)) }
 
-/// 去掉行政区后缀后的基础名；去掉后不足两个字（如「津市」）时保留原名。
+/// 去掉行政區後綴後的基礎名；去掉後不足兩個字（如「津市」）時保留原名。
 fn base_name(name: &str) -> &str {
     match name.strip_suffix(ADMIN_SUFFIXES) {
         Some(base) if is_cjk(name) && base.chars().count() >= 2 => base,
@@ -318,18 +318,18 @@ fn base_name(name: &str) -> &str {
     }
 }
 
-/// 省级行政区 → 省会（首府）。地理库只收录城市，搜「新疆」「内蒙古」这类地区名查不到，
-/// 改为同时搜它的省会，用户能直接选到该地区的代表城市。
+/// 省級行政區 → 省會（首府）。地理庫只收錄城市，搜「新疆」「內蒙古」這類地區名查不到，
+/// 改為同時搜它的省會，用戶能直接選到該地區的代表城市。
 const PROVINCE_CAPITALS: [(&str, &str); 35] = [
     ("北京","北京"),("天津","天津"),("上海","上海"),("重慶","重慶"),("河北","石家莊"),("山西","太原"),
     ("遼寧","瀋陽"),("吉林","長春"),("黑龍江","哈爾濱"),("江蘇","南京"),("浙江","杭州"),("安徽","合肥"),
     ("福建","福州"),("江西","南昌"),("山東","濟南"),("河南","鄭州"),("湖北","武漢"),("湖南","長沙"),
     ("廣東","廣州"),("海南","海口"),("四川","成都"),("貴州","貴陽"),("雲南","昆明"),("陝西","西安"),
-    ("甘肅","蘭州"),("青海","西寧"),("臺灣","台北"),("台湾","台北"),("內蒙古","呼和浩特"),("廣西","南寧"),("西藏","拉薩"),
+    ("甘肅","蘭州"),("青海","西寧"),("台灣","台北"),("台灣","台北"),("內蒙古","呼和浩特"),("廣西","南寧"),("西藏","拉薩"),
     ("寧夏","銀川"),("新疆","烏魯木齊"),("香港","香港"),("澳門","澳門"),
 ];
 
-/// 输入若是省级地区（含「新疆维吾尔自治区」「广东省」等全称），返回它的省会。
+/// 輸入若是省級地區（含「新疆維吾爾自治區」「廣東省」等全稱），返回它的省會。
 fn province_capital(name: &str) -> Option<&'static str> {
     let short=["維吾爾自治區","壯族自治區","回族自治區","自治區","特別行政區","省","市"].iter()
         .find_map(|suffix|name.strip_suffix(suffix)).unwrap_or(name);
@@ -340,21 +340,21 @@ fn city_queries(name: &str) -> Vec<String> {
     let mut queries=vec![name.to_string()];
     if name.chars().count()<2 || !is_cjk(name) {return queries;}
     if let Some(capital)=province_capital(name).filter(|capital|*capital!=base_name(name)) {
-        // 「新疆」→ 也查「乌鲁木齐」。直辖市本身就是城市，不额外查。
+        // 「新疆」→ 也查「烏魯木齊」。直轄市本身就是城市，不額外查。
         queries.push(capital.to_string());
     }
     let base=base_name(name);
     if base!=name {
-        // 「广州市」→ 也查「广州」。
+        // 「廣州市」→ 也查「廣州」。
         queries.push(base.to_string());
     } else if !name.ends_with('州') {
-        // 两字简称只匹配同名乡镇时，也查完整市名，不能直接采用第一个同名地点。
+        // 兩字簡稱只匹配同名鄉鎮時，也查完整市名，不能直接採用第一個同名地點。
         queries.insert(0,format!("{name}市"));
     }
     queries
 }
 
-/// 地理库里的非居住地（机场、车站等）不作为天气地点。
+/// 地理庫裡的非居住地（機場、車站等）不作為天氣地點。
 fn skip_feature(code: &str) -> bool {
     ["AIR", "RSTN", "BUS", "PRT", "HTL", "SCH", "HSP"].iter().any(|prefix| code.starts_with(prefix))
 }
@@ -364,7 +364,7 @@ fn city_candidates(value: &Value) -> Vec<(Position, u64)> {
         if skip_feature(item["feature_code"].as_str().unwrap_or_default()) {return None;}
         let label=item["name"].as_str()?.trim().to_string();
         let country=item["country"].as_str().unwrap_or_default();
-        let taiwan=country.contains("台灣")||country.contains("臺灣")||country.contains("台湾")||country.eq_ignore_ascii_case("taiwan");
+        let taiwan=country.contains("台灣")||country.contains("台灣")||country.contains("台灣")||country.eq_ignore_ascii_case("taiwan");
         let mut areas=if taiwan {vec!["台灣".to_string()]} else {Vec::new()};
         for key in ["admin2","admin1","country"] {
             if let Some(area)=item[key].as_str().filter(|s|!s.is_empty() && *s!=label) {
@@ -372,15 +372,15 @@ fn city_candidates(value: &Value) -> Vec<(Position, u64)> {
                 if !areas.contains(&owned) {areas.push(owned);}
             }
         }
-        // 搜尋結果一律走同一套層級整理，清單就不會出現「臺灣省 or 台灣省」這種別名串。
+        // 搜尋結果一律走同一套層級整理，清單就不會出現「台灣省 or 台灣省」這種別名串。
         let region=tidy_region(&areas.join(" · "));
         let position=Position{lat:item["latitude"].as_f64()?,lon:item["longitude"].as_f64()?,label,region};
         position.valid().then_some((position,item["population"].as_u64().unwrap_or(0)))
     }).collect()
 }
 
-/// 排序：名字与输入（或去掉后缀的基础名）完全一致的排前面，其次按人口从多到少；
-/// 坐标几乎重合的同名地点只留一个。
+/// 排序：名字與輸入（或去掉後綴的基礎名）完全一致的排前面，其次按人口從多到少；
+/// 座標幾乎重合的同名地點只留一個。
 fn rank_cities(name: &str, mut found: Vec<(Position, u64)>) -> Vec<Position> {
     let base=base_name(name);
     let exact=|p:&Position|p.label==name || p.label==base || base_name(&p.label)==base;
@@ -393,7 +393,7 @@ fn rank_cities(name: &str, mut found: Vec<(Position, u64)>) -> Vec<Position> {
     ranked
 }
 
-/// 搜索多个同名地点，保留行政区供用户确认。
+/// 搜索多個同名地點，保留行政區供用戶確認。
 pub fn search_cities(agent: &ureq::Agent, name: &str) -> Result<Vec<Position>, String> {
     let name=name.trim();
     let mut found=Vec::new();
@@ -422,7 +422,7 @@ pub fn geocode(agent: &ureq::Agent, name: &str) -> Result<Position, String> {
     unique_city(search_cities(agent,name)?,name)
 }
 
-/// 拉一次天气：先定位，再取实况与七日预报。
+/// 拉一次天氣：先定位，再取實況與七日預報。
 pub fn fetch(agent: &ureq::Agent, city: &str) -> Result<Snapshot, String> {
     fetch_at(agent,city,None)
 }
@@ -435,7 +435,7 @@ fn fetch_at(agent: &ureq::Agent, city: &str, selected: Option<&Position>) -> Res
     fetch_forecast(agent, position)
 }
 
-/// 已知坐标时只请求一次预报接口。
+/// 已知座標時只請求一次預報接口。
 fn fetch_forecast(agent: &ureq::Agent, position: Position) -> Result<Snapshot, String> {
     let mut url = url::Url::parse("https://api.open-meteo.com/v1/forecast").map_err(|_| "天氣服務地址無效")?;
     {
@@ -486,7 +486,7 @@ pub fn parse(place: &str, value: &Value) -> Result<Snapshot, String> {
         });
     }
     if days.is_empty() { return Err("天氣資料不完整".into()); }
-    // timezone=auto 时 daily.sunrise/sunset 就是当地时间，直接截 HH:MM。
+    // timezone=auto 時 daily.sunrise/sunset 就是當地時間，直接截 HH:MM。
     let hhmm = |list: Option<&Vec<Value>>| list.and_then(|items| items.get(0)).and_then(Value::as_str)
         .and_then(|s| s.get(11..16)).map(str::to_string);
     Ok(Snapshot {
@@ -510,14 +510,14 @@ pub fn parse(place: &str, value: &Value) -> Result<Snapshot, String> {
     })
 }
 
-/// `17:42` 形式的更新时间。
+/// `17:42` 形式的更新時間。
 pub fn clock(at: i64) -> String {
     chrono::DateTime::from_timestamp(at, 0)
         .map(|t| t.with_timezone(&chrono::Local).format("%H:%M").to_string())
         .unwrap_or_else(|| "--:--".into())
 }
 
-/// 输入停顿后再搜索，最多一个在途请求；旧关键词的结果不覆盖新输入。
+/// 輸入停頓後再搜索，最多一個在途請求；舊關鍵詞的結果不覆蓋新輸入。
 #[derive(Default)]
 pub struct CitySearch {
     pub results: Vec<Position>,
@@ -559,38 +559,38 @@ impl CitySearch {
     }
 }
 
-/// 页面与设置页共享的天气状态；拉取在后台线程，UI 只轮询结果。
+/// 頁面與設置頁共享的天氣狀態；拉取在後台線程，UI 只輪詢結果。
 #[derive(Default)]
 pub struct State {
     pub snapshot: Option<Snapshot>,
     pub error: Option<String>,
     pub loading: bool,
     pub last_start: f64,
-    /// 城市输入草稿，确认后才写入设置并发起查询。
+    /// 城市輸入草稿，確認後才寫入設置併發起查詢。
     pub city_input: String,
     pub manual_city: bool,
     pub selected_city: Option<Position>,
     pub cities: CitySearch,
     pub active_position: Option<Position>,
     pub solar_open: bool,
-    /// 最近一次切换视图的时间（秒），驱动太阳滑入与月亮升起。
+    /// 最近一次切換視圖的時間（秒），驅動太陽滑入與月亮升起。
     pub solar_at: f64,
-    /// 点击涟漪：页面局部坐标与触发时间。
+    /// 點擊漣漪：頁面局部座標與觸發時間。
     pub tap: Option<(f32, f32, f64)>,
-    /// 连续失败次数：自动刷新按 2、4、8、16、30 分钟退避，成功后清零。
+    /// 連續失敗次數：自動刷新按 2、4、8、16、30 分鐘退避，成功後清零。
     pub failures: u32,
-    /// 自动定位结果与取得时间；3 小时内复用，不必每次刷新都查网络出口。
+    /// 自動定位結果與取得時間；3 小時內複用，不必每次刷新都查網絡出口。
     located: Option<(Position, i64)>,
-    /// 定位时使用的代理；下次请求发现代理变化就重新定位，不增加常驻网络监听。
+    /// 定位時使用的代理；下次請求發現代理變化就重新定位，不增加常駐網絡監聽。
     location_proxy: Option<String>,
-    /// 上一次请求使用的城市。
+    /// 上一次請求使用的城市。
     last_city: Option<String>,
     last_position: Option<Position>,
     rx: Option<(Receiver<Result<Snapshot, String>>, bool)>,
     cache: Option<PathBuf>,
-    /// 各城市最近一次的天气；切换城市时先显示这里的数据，不等网络。
+    /// 各城市最近一次的天氣；切換城市時先顯示這裡的數據，不等網絡。
     cached: Vec<Snapshot>,
-    /// 岛上城市下拉框是否展开。
+    /// 島上城市下拉框是否展開。
     pub picker_open: bool,
 }
 
@@ -602,40 +602,40 @@ impl State {
         let dir = crate::model::config_dir();
         let path = dir.join("weather-cities.json");
         state.cached=std::fs::read(&path).ok().and_then(|raw|serde_json::from_slice::<Vec<Snapshot>>(&raw).ok()).unwrap_or_else(||{
-            // 旧版只缓存当前城市一份；当时若是自动定位，迁移时补上标记。
+            // 舊版只緩存當前城市一份；當時若是自動定位，遷移時補上標記。
             std::fs::read(dir.join("weather.json")).ok().and_then(|raw|serde_json::from_slice::<Snapshot>(&raw).ok())
                 .map(|mut snapshot|{snapshot.auto=snapshot.auto||city.trim().is_empty();vec![snapshot]}).unwrap_or_default()
         });
         state.cached.truncate(CACHE_LIMIT);
         state.snapshot=state.cached_for(city,state.active_position.as_ref()).cloned();
-        // 快照保留用于展示；其中没有定位时刻和代理信息，启动后重新确认网络出口。
+        // 快照保留用於展示；其中沒有定位時刻和代理信息，啟動後重新確認網絡出口。
         state.cache=Some(path);
         state
     }
 
-    /// 某个城市（空串为自动定位）最近一次的天气缓存。
+    /// 某個城市（空串為自動定位）最近一次的天氣緩存。
     pub fn cached_for(&self, city: &str, position: Option<&Position>) -> Option<&Snapshot> {
         self.cached.iter().find(|snapshot|cache_matches(snapshot,city,position))
     }
 
-    /// 切换到另一个城市：丢弃在途请求，立即换上该城市的缓存；缓存仍新鲜就不再联网，
-    /// 否则交给下一次 `should_refresh`（城市变化会立刻触发，不受退避限制）。
+    /// 切換到另一個城市：丟棄在途請求，立即換上該城市的緩存；緩存仍新鮮就不再聯網，
+    /// 否則交給下一次 `should_refresh`（城市變化會立刻觸發，不受退避限制）。
     pub fn switch(&mut self, city: &str, position: Option<Position>, now: i64) {
         let city=city.trim().to_string();
         self.rx=None;self.loading=false;self.error=None;self.failures=0;
         self.picker_open=false;self.solar_open=false;
-        // 设置页的搜索框是「添加城市」用的草稿，切换城市不改动它。
+        // 設置頁的搜索框是「添加城市」用的草稿，切換城市不改動它。
         self.manual_city=position.is_some();self.active_position=position.clone();
         self.snapshot=self.cached_for(&city,position.as_ref()).cloned();
         if self.snapshot.as_ref().is_some_and(|s|(0..INTERVAL).contains(&(now-s.at))) {
             self.last_city=Some(city);self.last_position=position;
         } else if self.last_city.as_deref()==Some(city.as_str()) && self.last_position==position {
-            // 切回刚才请求过的城市：清掉记录，让城市变化重新触发刷新。
+            // 切回剛才請求過的城市：清掉記錄，讓城市變化重新觸發刷新。
             self.last_city=None;
         }
     }
 
-    /// 删除城市时一并清掉它的缓存。
+    /// 刪除城市時一併清掉它的緩存。
     pub fn forget_city(&mut self, position: &Position) {
         self.cached.retain(|s|s.auto || s.position.as_ref()!=Some(position));
         self.persist();
@@ -647,20 +647,20 @@ impl State {
         }
     }
 
-    /// 设置页搜索框里已确认的地区（输入框文字与所选地区一致）。
+    /// 設置頁搜索框裡已確認的地區（輸入框文字與所選地區一致）。
     pub fn picked_city(&self) -> Option<&Position> {
         self.selected_city.as_ref().filter(|p|p.valid() && p.label==self.city_input.trim())
     }
 
-    /// 自动刷新的退避间隔（秒）：断网时不再每两分钟起一次请求。
+    /// 自動刷新的退避間隔（秒）：斷網時不再每兩分鐘起一次請求。
     pub fn backoff(&self) -> f64 {
         if self.failures==0 {0.0} else {(120.0*2f64.powi(self.failures.min(5) as i32-1)).min(1800.0)}
     }
 
-    /// 改为自动定位时调用：下次刷新重新识别网络出口。
+    /// 改為自動定位時調用：下次刷新重新識別網絡出口。
     pub fn forget_location(&mut self) {self.located=None;}
 
-    /// 设置里的城市是否和上次请求不一致（首次启动也算）。
+    /// 設置裡的城市是否和上次請求不一致（首次啟動也算）。
     pub fn city_changed(&self, city: &str) -> bool {
         self.last_city.as_deref()!=Some(city.trim()) || self.last_position.as_ref()!=self.position_for(city)
     }
@@ -696,7 +696,7 @@ impl State {
         self.refresh_inner(city,t,false)
     }
 
-    /// 用户主动刷新：自动定位模式下同时更新位置，仍遵守加载状态与冷却间隔。
+    /// 用戶主動刷新：自動定位模式下同時更新位置，仍遵守加載狀態與冷卻間隔。
     pub fn refresh_manual(&mut self, city: &str, t: f64) -> bool {
         self.refresh_inner(city,t,true)
     }
@@ -728,7 +728,7 @@ impl State {
         true
     }
 
-    /// 是否有新结果（外壳据此立即重绘）。
+    /// 是否有新結果（外殼據此立即重繪）。
     pub fn poll(&mut self, city: &str, enabled: bool) -> bool {
         let Some((rx,fresh_location)) = &self.rx else { return false; };
         let fresh_location=*fresh_location;
@@ -736,12 +736,12 @@ impl State {
             Ok(result) => {
                 self.rx = None;
                 self.loading = false;
-                // 关闭模块或确认了别的城市后，旧请求不再更新界面和缓存。
+                // 關閉模塊或確認了別的城市後，舊請求不再更新界面和緩存。
                 if !enabled || self.city_changed(city) { return true; }
                 match result {
                     Ok(mut snapshot) => {
                         snapshot.auto=city.trim().is_empty();
-                        // 同一城市只留最新一份，新数据放最前；超出上限时丢掉最旧的。
+                        // 同一城市只留最新一份，新數據放最前；超出上限時丟掉最舊的。
                         let key=snapshot.clone();
                         self.cached.retain(|s|!(s.auto==key.auto && (key.auto || s.position==key.position)));
                         self.cached.insert(0,snapshot.clone());self.cached.truncate(CACHE_LIMIT);
@@ -767,7 +767,7 @@ impl State {
         }
     }
 
-    /// 数据是否该刷新了（首次打开也算）。
+    /// 數據是否該刷新了（首次打開也算）。
     pub fn stale(&self, now: i64) -> bool { self.snapshot.as_ref().map_or(true, |s| now - s.at >= INTERVAL) }
 }
 
@@ -792,7 +792,7 @@ mod tests {
             loop {
                 if !matches!(cancel.try_recv(),Err(TryRecvError::Empty)){return false;}
                 if let Ok((mut stream,_))=listener.accept() {
-                    // Windows 接受的连接继承监听器的非阻塞状态，先等客户端发出请求。
+                    // Windows 接受的連接繼承監聽器的非阻塞狀態，先等客戶端發出請求。
                     stream.set_nonblocking(false).unwrap();
                     stream.set_read_timeout(Some(Duration::from_secs(12))).unwrap();
                     if !matches!(stream.read(&mut [0;4096]),Ok(n) if n>0){return false;}
@@ -1043,7 +1043,7 @@ mod tests {
         assert!(unique_city(candidates.clone(),"佛山").unwrap_err().contains("同名"));
         assert_eq!(unique_city(vec![candidates[1].clone()],"佛山市").unwrap().lat,23.02677);
         assert!(unique_city(vec![],"未知城市").is_err());
-        // 完全同名的排前面，其次人口多的；坐标重合的同名地点只留一个。
+        // 完全同名的排前面，其次人口多的；座標重合的同名地點只留一個。
         let town=Position{lat:28.7,lon:98.8,label:"廣州鎮".into(),region:"雲南".into()};
         let city=Position{lat:23.13,lon:113.26,label:"廣州".into(),region:"廣東".into()};
         let ranked=rank_cities("廣州市",vec![(town.clone(),900_000),(city.clone(),13_000_000),(city.clone(),13_000_000)]);
@@ -1052,18 +1052,18 @@ mod tests {
 
     #[test]
     fn weather_taiwan_regions_never_show_province_or_alias_strings(){
-        // 地理庫把「臺灣省 / 台灣省」寫成一串別名時，不能原樣落到清單或「已選擇」提示。
-        assert_eq!(tidy_region("臺北市 · 臺灣省 or 台灣省 · 台湾"),"台灣 · 臺北市");
-        assert_eq!(tidy_region("台灣 · 臺北市 · 台湾"),"台灣 · 臺北市");
-        assert_eq!(tidy_region("臺灣省"),"台灣");
+        // 地理庫把「台灣省 / 台灣省」寫成一串別名時，不能原樣落到清單或「已選擇」提示。
+        assert_eq!(tidy_region("台北市 · 台灣省 or 台灣省 · 台灣"),"台灣 · 台北市");
+        assert_eq!(tidy_region("台灣 · 台北市 · 台灣"),"台灣 · 台北市");
+        assert_eq!(tidy_region("台灣省"),"台灣");
         assert_eq!(tidy_region("新竹縣"),"","縣級不上畫");
         assert_eq!(tidy_region(""),"");
         let candidates:Vec<Position>=city_candidates(&json!({"results":[
-            {"name":"士林","latitude":25.09071,"longitude":121.52259,"admin1":"臺灣省 or 台灣省","admin2":"臺北市","country":"台灣"},
-            {"name":"竹北","latitude":24.838,"longitude":121.008,"admin1":"新竹縣","admin2":"竹北市","country":"臺灣"}
+            {"name":"士林","latitude":25.09071,"longitude":121.52259,"admin1":"台灣省 or 台灣省","admin2":"台北市","country":"台灣"},
+            {"name":"竹北","latitude":24.838,"longitude":121.008,"admin1":"新竹縣","admin2":"竹北市","country":"台灣"}
         ]})).into_iter().map(|(p,_)|p).collect();
         assert_eq!(candidates.len(),2);
-        assert_eq!(candidates[0].region,"台灣 · 臺北市");
+        assert_eq!(candidates[0].region,"台灣 · 台北市");
         assert!(!candidates[0].region.contains('省') && !candidates[0].region.contains(" or "));
         assert_eq!(candidates[1].region,"台灣 · 竹北市");
     }
@@ -1336,6 +1336,6 @@ mod tests {
         let text = clock(0);
         assert_eq!(text.len(), 5);
         assert!(text.contains(':'));
-        let _ = clock(i64::MAX); // 极端时间只应退化成提示，不应崩溃
+        let _ = clock(i64::MAX); // 極端時間只應退化成提示，不應崩潰
     }
 }

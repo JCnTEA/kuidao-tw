@@ -47,8 +47,8 @@ fn apply_system(target: Target, enabled: bool) -> Result<(), String> {
         WDA_NONE
     };
     unsafe { SetWindowDisplayAffinity(target.hwnd, affinity) }.map_err(|error| {
-        let action = if enabled { "启用" } else { "取消" };
-        format!("{}无法{action}截图排除（{}）", target.name, error.code())
+        let action = if enabled { "啟用" } else { "取消" };
+        format!("{}無法{action}截圖排除（{}）", target.name, error.code())
     })
 }
 
@@ -82,7 +82,7 @@ impl Exclusion {
         self.ensure_with(targets, supported, |target| {
             let mut affinity = 0;
             unsafe { GetWindowDisplayAffinity(target.hwnd, &mut affinity) }
-                .map_err(|error| format!("{}无法读取截图排除（{}）", target.name, error.code()))?;
+                .map_err(|error| format!("{}無法讀取截圖排除（{}）", target.name, error.code()))?;
             Ok(affinity == WDA_EXCLUDEFROMCAPTURE.0)
         }, apply_system)
     }
@@ -146,7 +146,7 @@ impl Exclusion {
             return;
         }
         if !system_supported() {
-            self.error = Some("隐藏截图和录屏中的岛仔需要 Windows 10 2004 或更新版本".into());
+            self.error = Some("隱藏截圖和錄屏中的島仔需要 Windows 10 2004 或更新版本".into());
             return;
         }
         for target in targets.into_iter().flatten() {
@@ -201,7 +201,7 @@ impl Exclusion {
         let result = render();
         if let Err(error) = &result {
             if self.active {
-                let message = format!("截图排除期间岛仔窗口更新失败（{}）", error.code());
+                let message = format!("截圖排除期間島仔窗口更新失敗（{}）", error.code());
                 self.rollback(
                     message,
                     targets.into_iter().flatten().chain(new_target),
@@ -238,7 +238,7 @@ mod tests {
     fn target(id: usize) -> Target {
         Target {
             hwnd: HWND(id as *mut _),
-            name: "测试窗口",
+            name: "測試窗口",
         }
     }
 
@@ -258,7 +258,7 @@ mod tests {
             applied.set(false);
             assert_eq!(state.ensure_with(targets, || true, |_| Ok(applied.get()), write), Ok(true));
             assert_eq!(state.ensure_with(targets, || true, |_| Ok(applied.get()), write), Ok(false));
-            state.rollback("窗口状态改变".into(), targets.into_iter().flatten(), |_, _| Err("清除失败".into()));
+            state.rollback("窗口狀態改變".into(), targets.into_iter().flatten(), |_, _| Err("清除失敗".into()));
             assert!(applied.get());
             state.apply_to_targets(preference, targets, || true, write);
             assert_eq!(applied.get(), preference);
@@ -287,7 +287,7 @@ mod tests {
         state.set_with(
             false,
             targets,
-            || panic!("默认关闭时无需检查系统"),
+            || panic!("默認關閉時無需檢查系統"),
             &mut apply,
         );
         state.add_with(target(3), targets, &mut apply);
@@ -295,7 +295,7 @@ mod tests {
         state.set_with(
             true,
             targets,
-            || panic!("状态未变时无需检查系统"),
+            || panic!("狀態未變時無需檢查系統"),
             &mut apply,
         );
         state.add_with(target(3), targets, &mut apply);
@@ -308,7 +308,7 @@ mod tests {
         state.set_with(
             false,
             targets,
-            || panic!("状态未变时无需检查系统"),
+            || panic!("狀態未變時無需檢查系統"),
             &mut apply,
         );
         assert_eq!(
@@ -329,7 +329,7 @@ mod tests {
     fn capture_exclusion_never_calls_legacy_windows_affinity() {
         let mut state = Exclusion::default();
         let targets = [Some(target(1)), None, None, None];
-        let apply = |_: Target, _| panic!("旧版系统不能应用捕获属性");
+        let apply = |_: Target, _| panic!("舊版系統不能應用捕獲屬性");
         state.set_with(true, targets, || false, apply);
         assert!(state
             .take_error()
@@ -348,7 +348,7 @@ mod tests {
             let id = window.hwnd.0 as usize;
             changes.push((id, enabled));
             if id == 2 && enabled {
-                Err("分层窗口失败".into())
+                Err("分層窗口失敗".into())
             } else {
                 Ok(())
             }
@@ -359,7 +359,7 @@ mod tests {
             changes,
             [(1, true), (2, true), (1, false), (2, false), (3, false)]
         );
-        assert_eq!(state.take_error().as_deref(), Some("分层窗口失败"));
+        assert_eq!(state.take_error().as_deref(), Some("分層窗口失敗"));
         assert!(state.take_error().is_none());
         let mut retried = Vec::new();
         state.set_with(
@@ -384,8 +384,8 @@ mod tests {
             let id = window.hwnd.0 as usize;
             changes.push((id, enabled));
             match (id, enabled) {
-                (3, true) => Err("新底板失败".into()),
-                (2, false) => Err("旧分层窗口恢复失败".into()),
+                (3, true) => Err("新底板失敗".into()),
+                (2, false) => Err("舊分層窗口恢復失敗".into()),
                 _ => Ok(()),
             }
         };
@@ -404,8 +404,8 @@ mod tests {
             ]
         );
         let error = state.take_error().unwrap();
-        assert!(error.contains("新底板失败"));
-        assert!(error.contains("旧分层窗口恢复失败"));
+        assert!(error.contains("新底板失敗"));
+        assert!(error.contains("舊分層窗口恢復失敗"));
     }
 
     #[test]
@@ -438,7 +438,7 @@ mod tests {
         assert_eq!(changes.into_inner(), [0, 1, 2, 0]);
         assert!(state
             .take_error()
-            .is_some_and(|error| error.contains("窗口更新失败")));
+            .is_some_and(|error| error.contains("窗口更新失敗")));
         let mut attempts = 0;
         assert!(state
             .render_with(

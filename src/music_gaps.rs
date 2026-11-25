@@ -1,22 +1,22 @@
-//! 音乐识别缺口记录：一首歌播放一段时间后，歌手、时长、封面、类型等仍缺哪一样，就在
-//! `diagnostics/music-gaps.log` 记一行（每首歌最多一行，信息齐全的歌不记）。
-//! 用户反馈「没封面」「没歌词」时，诊断包里能直接看出是哪一层缺了：播放器没给，还是我们没补上。
+//! 音樂識別缺口記錄：一首歌播放一段時間後，歌手、時長、封面、類型等仍缺哪一樣，就在
+//! `diagnostics/music-gaps.log` 記一行（每首歌最多一行，信息齊全的歌不記）。
+//! 用戶反饋「沒封面」「沒歌詞」時，診斷包裡能直接看出是哪一層缺了：播放器沒給，還是我們沒補上。
 use super::{MediaKind,NowPlaying};
 use std::time::{Duration,Instant};
 
-/// 等这么久再判断：系统缩略图、本机补全和在线补全都是异步的，刚换歌时缺东西是正常的。
+/// 等這麼久再判斷：系統縮略圖、本機補全和在線補全都是異步的，剛換歌時缺東西是正常的。
 pub(crate) const SETTLE:Duration=Duration::from_secs(15);
 
-/// 一首歌最终来自哪里：系统媒体会话，还是播放器本地记录（网易云日志、波点、酷我）。
+/// 一首歌最終來自哪裡：系統媒體會話，還是播放器本地記錄（網易雲日誌、波點、酷我）。
 pub(crate) fn origin(media:&NowPlaying)->&'static str {if media.song_id.is_some(){"播放器本機記錄"}else{"系統媒體會話"}}
 
-/// 标题像节目、电台名而不是歌名（常见于电台、FM、DJ 模式）。
+/// 標題像節目、電台名而不是歌名（常見於電台、FM、DJ 模式）。
 fn looks_like_program(title:&str)->bool {
     let lower=title.to_lowercase();
-    ["電臺","廣播","fm","radio","podcast","播客","節目","dj","有聲"].iter().any(|word|lower.contains(word))
+    ["電台","廣播","fm","radio","podcast","播客","節目","dj","有聲"].iter().any(|word|lower.contains(word))
 }
 
-/// 这首歌缺了哪些信息；全都有时返回空。
+/// 這首歌缺了哪些信息；全都有時返回空。
 pub(crate) fn gaps(media:&NowPlaying)->Vec<&'static str> {
     let mut gaps=Vec::new();
     if media.artist.trim().is_empty(){gaps.push("歌手");}
@@ -31,12 +31,12 @@ pub(crate) fn gaps(media:&NowPlaying)->Vec<&'static str> {
 #[derive(Default)]
 pub(crate) struct Tracker {key:String,since:Option<Instant>,done:bool}
 impl Tracker {
-    /// 每次轮询调用；到了该判断的时候返回要写入的一行（不含时间戳）。
+    /// 每次輪詢調用；到了該判斷的時候返回要寫入的一行（不含時間戳）。
     pub(crate) fn observe(&mut self,media:&NowPlaying,now:Instant)->Option<String> {
         if media.title.is_empty(){*self=Self::default();return None;}
         let key=format!("{}|{}|{}|{:?}",media.source,media.title,media.artist,media.song_id);
         if key!=self.key{*self=Self{key,since:Some(now),done:false};return None;}
-        // 暂停中不算：播放器暂停时常常不更新封面、进度。
+        // 暫停中不算：播放器暫停時常常不更新封面、進度。
         if self.done || !media.playing || self.since.is_none_or(|since|now.duration_since(since)<SETTLE){return None;}
         self.done=true;
         let gaps=gaps(media);
@@ -50,7 +50,7 @@ impl Tracker {
     }
 }
 
-/// 写一行缺口记录，附上播放器版本（同一首歌只会写一次，读版本的开销可以忽略）。
+/// 寫一行缺口記錄，附上播放器版本（同一首歌只會寫一次，讀版本的開銷可以忽略）。
 pub(crate) fn record(line:&str,source:&str) {
     if cfg!(test){return;}
     let version=super::music_log::player_exe(source).and_then(|exe|{
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn complete_songs_are_not_recorded_and_gaps_are_named(){
         assert!(gaps(&song("晴天","周杰倫")).is_empty());
-        let mut radio=song("週末音樂電臺","");radio.artwork=None;radio.duration=0.0;
+        let mut radio=song("週末音樂電台","");radio.artwork=None;radio.duration=0.0;
         assert_eq!(gaps(&radio),vec!["歌手","時長","封面","標題疑似節目名"]);
     }
     #[test]

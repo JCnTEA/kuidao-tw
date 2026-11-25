@@ -1,14 +1,14 @@
-//! 持久化与状态模型。
+//! 持久化與狀態模型。
 //!
-//! 文件布局与原工具同名同结构（原工具字符串中可见的路径与键名），但默认目录
-//! 用独立的 `%APPDATA%\Kuidao`，避免与原工具的 `%APPDATA%\Nusa` 互相覆盖：
+//! 文件佈局與原工具同名同結構（原工具字符串中可見的路徑與鍵名），但默認目錄
+//! 用獨立的 `%APPDATA%\Kuidao`，避免與原工具的 `%APPDATA%\Nusa` 互相覆蓋：
 //!   %APPDATA%\Kuidao\settings.txt   -> pet=0/1, minimal=0/1
 //!   %APPDATA%\Kuidao\todo.txt
 //!   %APPDATA%\Kuidao\water.txt      -> bottle=<ml> / goal=<ml> / start=YYYY-MM-DD
-//!   %APPDATA%\Kuidao\shelf.txt      -> 置物清单（每行一个绝对路径）
+//!   %APPDATA%\Kuidao\shelf.txt      -> 置物清單（每行一個絕對路徑）
 //!
-//! 设置环境变量 `KUIDAO_DATA_DIR` 可把以上目录整体改到别处（用于与已安装的
-//! 原工具并存、或跑测试时不碰真实数据）。
+//! 設置環境變量 `KUIDAO_DATA_DIR` 可把以上目錄整體改到別處（用於與已安裝的
+//! 原工具並存、或跑測試時不碰真實數據）。
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -100,7 +100,7 @@ pub(crate) fn replace_file(tmp:&Path,path:&Path)->std::io::Result<()> {
         use std::os::windows::ffi::OsStrExt;
         use windows::core::PCWSTR;
         use windows::Win32::Storage::FileSystem::{MoveFileExW,MOVEFILE_COPY_ALLOWED,MOVEFILE_REPLACE_EXISTING,MOVEFILE_WRITE_THROUGH};
-        // Windows 目录映射可能将同目录替换报告为跨卷，交给系统复制并替换。
+        // Windows 目錄映射可能將同目錄替換報告為跨卷，交給系統複製並替換。
         let source:Vec<u16>=tmp.as_os_str().encode_wide().chain(Some(0)).collect();
         let target:Vec<u16>=path.as_os_str().encode_wide().chain(Some(0)).collect();
         return unsafe{MoveFileExW(PCWSTR(source.as_ptr()),PCWSTR(target.as_ptr()),MOVEFILE_REPLACE_EXISTING|MOVEFILE_COPY_ALLOWED|MOVEFILE_WRITE_THROUGH)}.map_err(std::io::Error::other);
@@ -108,9 +108,9 @@ pub(crate) fn replace_file(tmp:&Path,path:&Path)->std::io::Result<()> {
     result
 }
 
-/// 岛体配色皮肤（与形状独立，可任意组合）。
-/// - 经典：纯黑；奶油：暖白底深棕字、橙色强调（参考 Oyen）；
-/// - 毛玻璃·浅 / 毛玻璃·深：系统实时模糊 + 浅色或深色玻璃。
+/// 島體配色皮膚（與形狀獨立，可任意組合）。
+/// - 經典：純黑；奶油：暖白底深棕字、橙色強調（參考 Oyen）；
+/// - 毛玻璃·淺 / 毛玻璃·深：系統實時模糊 + 淺色或深色玻璃。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Skin {
     #[default]
@@ -163,7 +163,7 @@ impl Skin {
     pub fn is_solid(self) -> bool { matches!(self, Self::Cream) }
 }
 
-/// 岛体形状：贴着屏幕顶边的刘海，或悬浮在顶边下方的胶囊。
+/// 島體形狀：貼著屏幕頂邊的劉海，或懸浮在頂邊下方的膠囊。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum IslandShape {
     #[default]
@@ -190,7 +190,7 @@ impl IslandShape {
     }
 }
 
-/// 岛体停靠的屏幕边缘：上下为横向刘海 / 胶囊，左右两侧为竖向排列。
+/// 島體停靠的屏幕邊緣：上下為橫向劉海 / 膠囊，左右兩側為豎向排列。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Dock {
     #[default]
@@ -209,18 +209,18 @@ impl Dock {
         match value { "bottom" => Self::Bottom, "left" => Self::Left, "right" => Self::Right, _ => Self::Top }
     }
     pub fn label(self) -> &'static str {
-        match self { Self::Top => "顶部", Self::Bottom => "底部", Self::Left => "左侧", Self::Right => "右侧" }
+        match self { Self::Top => "頂部", Self::Bottom => "底部", Self::Left => "左側", Self::Right => "右側" }
     }
     pub fn is_side(self) -> bool { matches!(self, Self::Left | Self::Right) }
 }
 
-/// 岛体大小（百分比）的范围与步进。
+/// 島體大小（百分比）的範圍與步進。
 pub const ISLAND_SIZE_MIN: u32 = 80;
 pub const ISLAND_SIZE_MAX: u32 = 200;
 pub const ISLAND_SIZE_STEP: u32 = 5;
 /// 建議大小：多數螢幕在 80% 時字與圖示仍清楚，且不會擋住兩側。
 pub const ISLAND_SIZE_DEFAULT: u32 = 80;
-/// 水平位置：-100 = 最左，0 = 居中，100 = 最右（按可移动范围的百分比）。
+/// 水平位置：-100 = 最左，0 = 居中，100 = 最右（按可移動範圍的百分比）。
 pub const ISLAND_OFFSET_MAX: i32 = 100;
 
 pub fn island_size_value(value: u32) -> u32 {
@@ -260,18 +260,18 @@ impl ResidentDate {
 #[derive(Clone, Debug)]
 pub struct Settings {
     pub display_id: String,
-    /// 岛体皮肤、毛玻璃是否使用系统模糊、大小百分比、水平位置。
+    /// 島體皮膚、毛玻璃是否使用系統模糊、大小百分比、水平位置。
     pub skin: Skin,
     pub island_shape: IslandShape,
     pub glass_blur: bool,
-    /// 懸浮漸層的亮度百分比（60–100）；只影響漸層色停，不改文字與圖示。
+    /// 懸浮漸層的亮度百分比（60–100）；隻影響漸層色停，不改文字與圖示。
     pub gradient_brightness: u32,
     pub island_size: u32,
     pub island_offset: i32,
-    /// OLED 像素偏移：岛体收起静止时沿停靠边缓慢移动几个像素，减轻 OLED 静态显示留下的痕迹。
-    /// 默认关闭，开启后也不改动 `island_offset`。
+    /// OLED 像素偏移：島體收起靜止時沿停靠邊緩慢移動幾個像素，減輕 OLED 靜態顯示留下的痕跡。
+    /// 默認關閉，開啟後也不改動 `island_offset`。
     pub oled_shift: bool,
-    /// 停靠边缘；左右停靠时 `island_offset` 表示上下位置。
+    /// 停靠邊緣；左右停靠時 `island_offset` 表示上下位置。
     pub dock: Dock,
     pub settings_theme: crate::settings_theme::SettingsTheme,
     pub pet: bool,
@@ -299,27 +299,27 @@ pub struct Settings {
     pub system_hud: bool,
     pub bluetooth_notifications: bool,
     pub show_bluetooth: bool,
-    /// 自定义常驻的设备；常驻条放不下时先显示其中电量低的。
+    /// 自定義常駐的設備；常駐條放不下時先顯示其中電量低的。
     pub bluetooth_pinned: Vec<String>,
-    /// 常驻样式：0 环 + 数字，1 只显示环（偏低或充电时才显示数字）。
+    /// 常駐樣式：0 環 + 數字，1 只顯示環（偏低或充電時才顯示數字）。
     pub bluetooth_resident_style: u8,
-    /// false 自动挑电量最低的设备常驻；true 只在 bluetooth_pinned 里挑。
+    /// false 自動挑電量最低的設備常駐；true 只在 bluetooth_pinned 裡挑。
     pub bluetooth_resident_custom: bool,
-    /// 接上电源、充满、电量偏低时在岛上提示。
+    /// 接上電源、充滿、電量偏低時在島上提示。
     pub bluetooth_battery_notifications: bool,
     pub read_notifications:bool,
     pub wechat_notifications:bool,
     pub wecom_notifications:bool,
     pub feishu_notifications:bool,
     pub dingtalk_notifications:bool,
-    /// 微信缩在托盘时，点提醒通过系统托盘按钮唤起微信（默认关闭）。
+    /// 微信縮在托盤時，點提醒通過系統托盤按鈕喚起微信（默認關閉）。
     pub wechat_tray_open:bool,
     pub qq_only:bool,
     pub notification_preview:bool,
     pub notifications: bool,
-    /// 岛上提醒的同时发一条 Windows 系统通知（默认开启）；关闭后只在岛上提醒。
+    /// 島上提醒的同時發一條 Windows 系統通知（默認開啟）；關閉後只在島上提醒。
     pub system_notify: bool,
-    /// 系统通知的提示音；岛上提醒本身不发声。
+    /// 系統通知的提示音；島上提醒本身不發聲。
     pub sound: bool,
     pub lyrics_enabled:bool,
     /// 吉祥物形象（固定島虎，其餘形象已隱藏）。
@@ -348,7 +348,7 @@ pub struct Settings {
     pub lyric_karaoke_style:String,
     pub hide_fullscreen: bool,
     pub exclude_from_capture: bool,
-    /// 启用顶栏适配，按显示方式避让顶栏或保持岛体在顶栏上方。
+    /// 啟用頂欄適配，按顯示方式避讓頂欄或保持島體在頂欄上方。
     pub avoid_top_bar: bool,
     pub top_bar_on_top: bool,
     pub focus_minutes: u32,
@@ -357,14 +357,14 @@ pub struct Settings {
     pub serving_ml: u32,
     pub water_start: u32,
     pub water_end: u32,
-    /// 久坐提醒：连续使用电脑达到 sit_minutes 分钟后提醒起身；与喝水共用提醒时段。
+    /// 久坐提醒：連續使用電腦達到 sit_minutes 分鐘後提醒起身；與喝水共用提醒時段。
     pub sit_remind: bool,
     pub sit_minutes: u32,
-    /// 午休免打扰：lunch_start..lunch_end（一天中的分钟数）内喝水和久坐都不提醒。
+    /// 午休免打擾：lunch_start..lunch_end（一天中的分鐘數）內喝水和久坐都不提醒。
     pub lunch_rest: bool,
     pub lunch_start: u32,
     pub lunch_end: u32,
-    /// v0.5.5 邮件提醒：总开关、验证码高亮、轮询间隔（秒）、会议提前量（分钟）。
+    /// v0.5.5 郵件提醒：總開關、驗證碼高亮、輪詢間隔（秒）、會議提前量（分鐘）。
     pub mail_enabled: bool,
     pub mail_sync_operations:bool,
     pub mail_code_only_notifications: bool,
@@ -374,21 +374,21 @@ pub struct Settings {
     pub mail_interval: u32,
     pub mail_ics: u32,
     pub ignored_mail_events: Vec<String>,
-    /// v0.5.6 日程：还没配置时在岛上给一次「接入飞书日历」的提示；
-    /// 用户点开设置或关掉后置 false，不再弹。
+    /// v0.5.6 日程：還沒配置時在島上給一次「接入飛書日曆」的提示；
+    /// 用戶點開設置或關掉後置 false，不再彈。
     pub calendar_prompt: bool,
     pub calendar_auto_sync: bool,
-    /// 记录最近复制的文字（最近记录与固定条目均在本机保存）。
+    /// 記錄最近複製的文字（最近記錄與固定條目均在本機保存）。
     pub clipboard_history: bool,
-    /// 天气页要看的城市；留空表示按网络出口自动定位。
+    /// 天氣頁要看的城市；留空表示按網絡出口自動定位。
     pub weather_city: String,
-    /// 用户确认的具体地点；刷新时直接使用坐标，避免同名城市重新匹配。
+    /// 用戶確認的具體地點；刷新時直接使用座標，避免同名城市重新匹配。
     pub weather_position: Option<crate::weather::Position>,
-    /// 已保存、可在岛上下拉切换的城市（不含自动定位），最多 `weather::MAX_CITIES` 个。
+    /// 已保存、可在島上下拉切換的城市（不含自動定位），最多 `weather::MAX_CITIES` 個。
     pub weather_saved: Vec<crate::weather::Position>,
-    /// 兼容渲染：用 Direct3D 12 代替 OpenGL（部分显卡的 OpenGL 驱动会崩溃或画面错乱）。重启后生效。
+    /// 兼容渲染：用 Direct3D 12 代替 OpenGL（部分顯卡的 OpenGL 驅動會崩潰或畫面錯亂）。重啟後生效。
     pub render_compat: bool,
-    /// 自动切换到兼容渲染的原因；手动开启时为空。
+    /// 自動切換到兼容渲染的原因；手動開啟時為空。
     pub render_compat_reason: String,
 }
 
@@ -401,7 +401,7 @@ impl Default for Settings {
 impl Settings {
     pub fn avoids_top_bar(&self) -> bool { self.avoid_top_bar && !self.top_bar_on_top }
 
-    /// 主窗口（灵动岛）的界面缩放倍率。
+    /// 主窗口（靈動島）的界面縮放倍率。
     pub fn island_scale(&self) -> f32 {
         island_size_value(self.island_size) as f32 / 100.0
     }
@@ -433,7 +433,7 @@ impl Settings {
                 "settings_theme" => s.settings_theme=crate::settings_theme::SettingsTheme::parse(&v),
                 "display_id" => s.display_id = v,
                 "skin" => {
-                    // 早期测试版把胶囊当作皮肤保存。
+                    // 早期測試版把膠囊當作皮膚保存。
                     if v == "pill" { s.island_shape = IslandShape::Pill; }
                     s.skin = Skin::parse(&v);
                 }
@@ -491,7 +491,7 @@ impl Settings {
                 "show_bluetooth" => s.show_bluetooth=v!="0",
                 "bluetooth_pinned" => {
                     s.bluetooth_pinned=serde_json::from_str::<Vec<String>>(&v).unwrap_or_default();
-                    // 旧版只有“固定”这一种方式：固定过设备的沿用为自定义。
+                    // 舊版只有“固定”這一種方式：固定過設備的沿用為自定義。
                     if !resident_custom_seen {s.bluetooth_resident_custom=!s.bluetooth_pinned.is_empty();}
                 }
                 "bluetooth_resident_style" => s.bluetooth_resident_style=v.parse::<u8>().unwrap_or(0).min(1),
@@ -550,7 +550,7 @@ impl Settings {
             }
         }
         if !s.visible_pages.contains(&true) { s.visible_pages[0]=true; }
-        // 旧版只有一个指定城市：迁移进已保存列表，升级后下拉框里能直接看到它。
+        // 舊版只有一個指定城市：遷移進已保存列表，升級後下拉框裡能直接看到它。
         if let Some(position)=s.weather_position.clone().filter(|p|p.label==s.weather_city) {
             if !s.weather_saved.contains(&position) {s.weather_saved.insert(0,position);}
         }
@@ -665,14 +665,14 @@ impl Settings {
 #[derive(Clone, Debug, Default)]
 pub struct TodoItem {
     pub text: String,
-    /// 一次性待办：完成日期；每周重复：最近一次完成的日期（只算当天）。YYYY-MM-DD
+    /// 一次性待辦：完成日期；每週重複：最近一次完成的日期（只算當天）。YYYY-MM-DD
     pub done_on: Option<String>,
-    /// 本地日期与时间：YYYY-MM-DD HH:MM；每周重复只用其中的时间。
+    /// 本地日期與時間：YYYY-MM-DD HH:MM；每週重複只用其中的時間。
     pub due: Option<String>,
     pub reminded: bool,
-    /// 每周重复：bit0 = 周一 … bit6 = 周日；0 = 不重复（一次性待办）。
+    /// 每週重複：bit0 = 週一 … bit6 = 週日；0 = 不重複（一次性待辦）。
     pub repeat: u8,
-    /// 每周重复：当天已提醒的日期，第二天自动重新提醒。
+    /// 每週重複：當天已提醒的日期，第二天自動重新提醒。
     pub reminded_on: Option<String>,
 }
 
@@ -687,7 +687,7 @@ fn weekday_bit(date: &str) -> Option<u8> {
     Some(1 << day.weekday().num_days_from_monday())
 }
 
-/// 「每天」「工作日」「周末」「每周一、三、五」。
+/// 「每天」「工作日」「週末」「每週一、三、五」。
 pub fn repeat_label(mask: u8) -> String {
     match mask & REPEAT_ALL {
         0 => "不重複".into(),
@@ -701,7 +701,7 @@ pub fn repeat_label(mask: u8) -> String {
     }
 }
 
-/// 列表里的短标签：「每天」「工作日」「周末」「周一三五」。
+/// 列表裡的短標籤：「每天」「工作日」「週末」「週一三五」。
 pub fn repeat_tag(mask: u8) -> String {
     match mask & REPEAT_ALL {
         0 => String::new(),
@@ -719,23 +719,23 @@ impl TodoItem {
 
     pub fn is_repeating(&self) -> bool { self.repeat & REPEAT_ALL != 0 }
 
-    /// 这一天是否要做：一次性待办每天都显示；重复待办只在选中的星期几显示。
+    /// 這一天是否要做：一次性待辦每天都顯示；重複待辦只在選中的星期幾顯示。
     pub fn scheduled_on(&self, today: &str) -> bool {
         !self.is_repeating() || weekday_bit(today).is_some_and(|bit| self.repeat & bit != 0)
     }
 
-    /// 今天是否已完成：重复待办第二天自动变回未完成。
+    /// 今天是否已完成：重複待辦第二天自動變回未完成。
     pub fn done_for(&self, today: &str) -> bool {
         if self.is_repeating() { self.done_on.as_deref() == Some(today) } else { self.done_on.is_some() }
     }
 
-    /// 勾选 / 取消勾选。
+    /// 勾選 / 取消勾選。
     pub fn toggle(&mut self, today: &str) {
         self.done_on = if self.done_for(today) { None } else { Some(today.to_string()) };
     }
 
-    /// `now` 为 `YYYY-MM-DD HH:MM`。一次性待办按完整时间提醒一次；
-    /// 重复待办在每个选中的日子到点提醒一次。
+    /// `now` 為 `YYYY-MM-DD HH:MM`。一次性待辦按完整時間提醒一次；
+    /// 重複待辦在每個選中的日子到點提醒一次。
     pub fn reminder_due(&self, now: &str) -> bool {
         let Some(due) = self.due.as_deref() else { return false; };
         let today = now.get(..10).unwrap_or("");
@@ -749,7 +749,7 @@ impl TodoItem {
         if self.is_repeating() { self.reminded_on = now.get(..10).map(str::to_string); } else { self.reminded = true; }
     }
 
-    /// 悬停提示里的提醒说明。
+    /// 懸停提示裡的提醒說明。
     pub fn reminder_text(&self) -> Option<String> {
         let due = self.due.as_deref()?;
         Some(if self.is_repeating() { format!("{} {}", repeat_label(self.repeat), due.get(11..16).unwrap_or(due)) } else { due.to_string() })
@@ -773,12 +773,12 @@ impl TodoList {
                 if line.trim().is_empty() {
                     continue;
                 }
-                // 格式：<x 或 o>|<完成日期或 ->|正文；也接受纯文本行（视为未完成）
+                // 格式：<x 或 o>|<完成日期或 ->|正文；也接受純文本行（視為未完成）
                 if !line.contains('|') {
                     list.items.push(TodoItem::new(line.trim()));
                     continue;
                 }
-                // 每周重复的标记写成 `r<星期位>`（旧版本读到会当作未完成的普通待办）。
+                // 每週重複的標記寫成 `r<星期位>`（舊版本讀到會當作未完成的普通待辦）。
                 let mut parts = line.splitn(3, '|');
                 let flag = parts.next().unwrap_or("o");
                 let when = parts.next().unwrap_or("-");
@@ -841,7 +841,7 @@ impl TodoList {
             .count()
     }
 
-    /// 今天要做的待办（不在今天的重复待办除外）中，(已完成, 总数)。
+    /// 今天要做的待辦（不在今天的重複待辦除外）中，(已完成, 總數)。
     pub fn progress(&self, today: &str) -> (usize, usize) {
         let scheduled = self.items.iter().filter(|i| i.scheduled_on(today));
         let (mut done, mut total) = (0, 0);
@@ -849,7 +849,7 @@ impl TodoList {
         (done, total)
     }
 
-    /// 今天未完成在前，其他日期的未完成其次，已完成沉底；原始存储顺序不变。
+    /// 今天未完成在前，其他日期的未完成其次，已完成沉底；原始存儲順序不變。
     pub fn display_order(&self, today: &str) -> Vec<usize> {
         let mut order:Vec<_>=(0..self.items.len()).collect();
         order.sort_by_key(|&i|{let item=&self.items[i];(item.done_for(today),!item.scheduled_on(today))});
@@ -864,9 +864,9 @@ pub struct Water {
     pub start_day: String,
     pub drunk_ml: u32,
     pub refills: u32,
-    /// 每小时饮水量（ml），给饮水页的柱状图用。
+    /// 每小時飲水量（ml），給飲水頁的柱狀圖用。
     pub hours: [u32; 24],
-    /// 定时提醒开关。
+    /// 定時提醒開關。
     pub remind: bool,
 }
 
@@ -877,8 +877,8 @@ impl Default for Water {
 }
 
 impl Water {
-    /// `water.txt` 只写原工具已知的三个键；复刻版新增的进度键写到 `water-extra.txt`，
-    /// 避免给原工具的文件引入未知键。
+    /// `water.txt` 只寫原工具已知的三個鍵；復刻版新增的進度鍵寫到 `water-extra.txt`，
+    /// 避免給原工具的文件引入未知鍵。
     pub fn load(today: &str) -> Self {
         let mut w = Self::default();
         for (k, v) in read_kv(&config_dir().join("water.txt")) {
@@ -905,7 +905,7 @@ impl Water {
         w.goal_ml=w.goal_ml.clamp(500,6000);
         w.bottle_ml=w.bottle_ml.clamp(50,6000);
         if w.start_day != today {
-            // 跨天重置，与原工具 start= 字段语义一致
+            // 跨天重置，與原工具 start= 字段語義一致
             w.start_day = today.to_string();
             w.drunk_ml = 0;
             w.refills = 0;
@@ -938,7 +938,7 @@ impl Water {
         );
     }
 
-    /// 喝一口：计入总量与当前小时。
+    /// 喝一口：計入總量與當前小時。
     pub fn drink(&mut self, ml: u32, hour: usize) {
         let total=self.drunk_ml.saturating_add(ml).min(self.goal_ml.max(ml).saturating_mul(4));
         let added=total.saturating_sub(self.drunk_ml);
@@ -988,7 +988,7 @@ impl Shelf {
         let _ = atomic_write(&path, body.as_bytes());
     }
 
-    /// 原工具的做法：记录文件所在位置，不复制文件本体（官网说明
+    /// 原工具的做法：記錄文件所在位置，不復制文件本體（官網說明
     /// "the shelf remembers where your files live"）。
     pub fn add(&mut self, src: &Path) -> std::io::Result<()> {
         if !src.exists() { return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "檔案不存在")); }
@@ -1123,9 +1123,9 @@ mod tests {
 
     #[test]
     fn weekly_todos_round_trip_and_reset_each_day() {
-        // 2026-11-02 是周一。
+        // 2026-11-02 是週一。
         let mut weekly = TodoItem::new("週會 | 準備材料");
-        weekly.repeat = 0b000_0101; // 周一、周三
+        weekly.repeat = 0b000_0101; // 週一、週三
         weekly.due = Some("2026-11-02 09:30".into());
         weekly.toggle("2026-11-02");
         weekly.reminded_on = Some("2026-11-02".into());
@@ -1169,7 +1169,7 @@ mod tests {
     }
 }
 
-/// 仅保存应用标识与开关，不保存通知内容。
+/// 僅保存應用標識與開關，不保存通知內容。
 #[derive(Clone,Debug,Default)]
 pub struct NotificationApps {pub items:Vec<(String,String,bool)>}
 impl NotificationApps {

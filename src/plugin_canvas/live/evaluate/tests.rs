@@ -46,8 +46,8 @@ fn sdk_spike_canvas_countdown_shares_standard_formats_and_deadline() {
         (139, 61.0, "0天 00:02", Some(140)),
         (140, 60.0, "0天 00:01", Some(200)),
         (199, 1.0, "0天 00:01", Some(200)),
-        (200, 0.0, "已结束", None),
-        (201, 0.0, "已结束", None),
+        (200, 0.0, "已結束", None),
+        (201, 0.0, "已結束", None),
     ] {
         let sample = countdown.sample(seconds(now));
         assert_eq!(sample.numeric, Some(value));

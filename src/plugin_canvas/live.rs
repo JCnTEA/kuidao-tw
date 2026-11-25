@@ -1,4 +1,4 @@
-//! 画布中保存的实时值、动画与交互声明。
+//! 畫布中保存的實時值、動畫與交互聲明。
 
 use super::{Color, Num};
 use crate::plugin_status::CountdownFormat;

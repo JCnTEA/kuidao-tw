@@ -1,4 +1,4 @@
-//! 用岛仔画布绘制状态详情。
+//! 用島仔畫布繪製狀態詳情。
 #[path = "plugin_status_controls.rs"]
 mod controls;
 pub(crate) use controls::{extra_fields_height, ClickTarget, DEFAULT_FORM_HEIGHT, Interaction, InteractionResponse};
@@ -97,7 +97,7 @@ impl Accent {
             .then(|| skin_paint::shape_count(c.ui.ctx(), layer));
         draw(self.color);
         if let Some(from) = from {
-            // 强调色已经根据最终卡片底色校正，后续皮肤换色保留此色。
+            // 強調色已經根據最終卡片底色校正，後續皮膚換色保留此色。
             skin_paint::tone_since(c.ui.ctx(), layer, from, |color, _| color);
         }
     }
@@ -168,7 +168,7 @@ pub(crate) fn status_page_height(layout: Option<&StatusLayout>, status: Option<&
         return CONTENT_TOP + layout_card_height(layout, status).min(MAX_CANVAS_CONTENT_HEIGHT)
             + PAGE_BOTTOM_SPACE;
     }
-    // 给可出现的组件留足空间，读数缺失或断源时保留页面高度。
+    // 給可出現的組件留足空間，讀數缺失或斷源時保留頁面高度。
     let extra = status.filter(|_| layout.components.contains(&StatusComponent::Fields {}))
         .map_or(0.0, controls::extra_fields_height);
     (CONTENT_TOP + layout_card_height(layout, None) + extra + PAGE_BOTTOM_SPACE)
@@ -212,7 +212,7 @@ pub(crate) fn draw_status_page(
     }
 }
 
-/// 带按钮、输入框或可点列表的状态页。点击结果由 `interaction` 带回插件宿主。
+/// 帶按鈕、輸入框或可點列表的狀態頁。點擊結果由 `interaction` 帶回插件宿主。
 pub(crate) fn draw_interactive_status_page(
     c: &Card,
     id: &str,
@@ -288,11 +288,11 @@ pub(crate) fn draw_attribution(
 ) {
     let mut width = WIDTH;
     if let Some(time) = time {
-        let time = format!("最近取数 {}", time.format("%m-%d %H:%M"));
+        let time = format!("最近取數 {}", time.format("%m-%d %H:%M"));
         width -= c.text_w(&time, size::TINY, W::Regular) + 8.0;
         c.centered_text(LEFT + WIDTH, top + 3.0, &time, size::TINY, W::Regular, theme::DIM, H::Right);
     }
-    let label = c.fit(&format!("数据来源 {label}"), size::TINY, W::Regular, width);
+    let label = c.fit(&format!("數據來源 {label}"), size::TINY, W::Regular, width);
     let color = if url.is_some() { theme::BLUE } else { theme::DIM };
     c.centered_text(LEFT, top + 3.0, &label, size::TINY, W::Regular, color, H::Left);
     if let Some(url) = url {
@@ -312,7 +312,7 @@ fn draw_default(c: &Card, status: &PluginStatus, privacy: &SensitiveValues) {
     } else {
         56.0
     };
-    let device_offline = status.state == StatusState::Offline && status.label != "设备离线";
+    let device_offline = status.state == StatusState::Offline && status.label != "設備離線";
     let title_width = TEXT_RIGHT - head_x - if device_offline { 73.0 } else { 12.0 };
     c.circle(head_x + 3.0, 61.0, 2.8, color);
     let label = c.fit(&status.label, size::TITLE, W::Semibold, title_width);
@@ -329,7 +329,7 @@ fn draw_default(c: &Card, status: &PluginStatus, privacy: &SensitiveValues) {
         c.centered_text(
             TEXT_RIGHT,
             61.0,
-            "设备离线",
+            "設備離線",
             size::TINY,
             W::Regular,
             theme::GRAY,
@@ -347,7 +347,7 @@ fn draw_default(c: &Card, status: &PluginStatus, privacy: &SensitiveValues) {
         c.centered_text(
             head_x,
             110.0,
-            &format!("更新于 {time}"),
+            &format!("更新於 {time}"),
             size::TINY,
             W::Regular,
             theme::DIM,
@@ -536,7 +536,7 @@ fn draw_layout(
 ) {
     let height = layout_card_height(layout, Some(status));
     if height == 0.0 {
-        draw_message(c, "当前没有可显示的数据", None, theme::DIM);
+        draw_message(c, "當前沒有可顯示的數據", None, theme::DIM);
         return;
     }
     let (viewport_x, viewport_width, viewport_height) = layout_viewport(status.canvas.is_some());
@@ -668,7 +668,7 @@ fn draw_components(
                     c.centered_text(
                         x,
                         center_y,
-                        &format!("更新于 {time}"),
+                        &format!("更新於 {time}"),
                         size::TINY,
                         W::Regular,
                         theme::DIM,
@@ -778,7 +778,7 @@ fn draw_state(
     x: f32,
     y: f32,
 ) {
-    let device_offline = status.state == StatusState::Offline && status.label != "设备离线";
+    let device_offline = status.state == StatusState::Offline && status.label != "設備離線";
     let indicator = match status.state {
         StatusState::Paused | StatusState::Error | StatusState::Offline => {
             Accent::native(state_color(status.state))
@@ -803,7 +803,7 @@ fn draw_state(
         c.centered_text(
             TEXT_RIGHT,
             y,
-            "设备离线",
+            "設備離線",
             size::TINY,
             W::Regular,
             theme::GRAY,
@@ -958,18 +958,18 @@ fn draw_lines(c: &Card, text: &str, x: f32, y: f32, width: f32, color: Color32) 
 
 fn draw_unavailable(c: &Card, health: StatusHealth) {
     let (name, hint, color) = match health {
-        StatusHealth::Waiting | StatusHealth::Ready => ("等待数据", None, theme::DIM),
+        StatusHealth::Waiting | StatusHealth::Ready => ("等待數據", None, theme::DIM),
         StatusHealth::Unconfigured => {
-            ("等待数据源授权", Some("可在插件设置中授权读取"), theme::DIM)
+            ("等待數據源授權", Some("可在插件設置中授權讀取"), theme::DIM)
         }
         StatusHealth::Offline => (
-            "数据源失联",
-            Some("检查已授权的文件或本机接口"),
+            "數據源失聯",
+            Some("檢查已授權的文件或本機接口"),
             theme::ORANGE,
         ),
-        StatusHealth::Stale => ("状态已过期", None, theme::ORANGE),
-        StatusHealth::Invalid => ("状态数据格式无效", None, theme::ORANGE),
-        StatusHealth::CanvasInvalid => ("插件画面有误", None, theme::ORANGE),
+        StatusHealth::Stale => ("狀態已過期", None, theme::ORANGE),
+        StatusHealth::Invalid => ("狀態數據格式無效", None, theme::ORANGE),
+        StatusHealth::CanvasInvalid => ("插件畫面有誤", None, theme::ORANGE),
     };
     draw_message(c, name, hint, color);
 }

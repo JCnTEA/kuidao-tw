@@ -44,7 +44,7 @@ fn known_bucket(id: &str) -> Option<(&'static str, i64)> {
 }
 
 pub(super) fn usage(report: &Value) -> Result<Usage, String> {
-    let invalid = "Antigravity CLI 未返回有效的额度报告";
+    let invalid = "Antigravity CLI 未返回有效的額度報告";
     let data = report_data(report, "usage").ok_or(invalid)?;
     let groups = match data.get("groups") {
         None | Some(Value::Null) => &[][..],
@@ -70,13 +70,13 @@ pub(super) fn usage(report: &Value) -> Result<Usage, String> {
                 None => known.map(|(_, seconds)| seconds),
             };
             let period_label = match seconds {
-                Some(FIVE_HOURS) => Some("5 小时"),
-                Some(WEEKLY) => Some("本周"),
+                Some(FIVE_HOURS) => Some("5 小時"),
+                Some(WEEKLY) => Some("本週"),
                 _ => cadence,
             };
             let bucket_name = display_text(&bucket["name"]);
             let label = if let Some((pool, _)) = known {
-                format!("{pool} {}", period_label.or(bucket_name).unwrap_or("额度"))
+                format!("{pool} {}", period_label.or(bucket_name).unwrap_or("額度"))
             } else if let Some(group_name) = group_name {
                 let detail = bucket_name.or(period_label).unwrap_or(id);
                 if group_name == detail {
@@ -98,7 +98,7 @@ pub(super) fn usage(report: &Value) -> Result<Usage, String> {
                 .filter(|fraction| !disabled && (0.0..=1.0).contains(fraction));
 
             if let Some(fraction) = remaining {
-                // 转成 f32 时保留极小正数与真正耗尽的区别。
+                // 轉成 f32 時保留極小正數與真正耗盡的區別。
                 let remaining = if fraction > 0.0 {
                     ((fraction * 100.0) as f32).max(f32::MIN_POSITIVE)
                 } else {
@@ -180,10 +180,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(result.windows.len(), 2);
-        assert_eq!(result.windows[0].label, "Claude/GPT 本周");
+        assert_eq!(result.windows[0].label, "Claude/GPT 本週");
         assert_eq!(result.windows[0].remaining, 62.5);
         assert_eq!(result.windows[0].reset, None);
-        assert_eq!(result.windows[1].label, "Gemini 本周");
+        assert_eq!(result.windows[1].label, "Gemini 本週");
         assert_eq!(result.windows[1].seconds, Some(WEEKLY));
         assert_eq!(result.windows[1].remaining, 87.5);
         assert_eq!(result.windows[1].reset, Some(1_795_731_397));
@@ -224,12 +224,12 @@ mod tests {
         assert_eq!(
             labels,
             [
-                "Claude/GPT 本周",
-                "Argon 本周",
+                "Claude/GPT 本週",
+                "Argon 本週",
                 "Future Pool · Monthly Allowance",
-                "Gemini 5 小时",
-                "Gemini 本周",
-                "Claude/GPT 5 小时"
+                "Gemini 5 小時",
+                "Gemini 本週",
+                "Claude/GPT 5 小時"
             ]
         );
         assert_eq!(result.windows[0].remaining, 0.0);

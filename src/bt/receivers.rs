@@ -1,4 +1,4 @@
-//! 已识别的 2.4G USB 接收器。拔插查询独立于蓝牙枚举。
+//! 已識別的 2.4G USB 接收器。拔插查詢獨立於藍牙枚舉。
 use super::compat::{builtin_receivers, Package, Store};
 use super::{Device, DeviceKind};
 use std::{
@@ -30,7 +30,7 @@ fn receiver_snapshot(
             if serial_or_path.is_empty() || serial_or_path.contains('\\') {
                 return None;
             }
-            // 只匹配完整 USB 设备的硬件 ID，复合设备的 MI_* 子接口不会单独出现。
+            // 只匹配完整 USB 設備的硬件 ID，複合設備的 MI_* 子接口不會單獨出現。
             let name = builtin
                 .receiver_name(hardware)
                 .or_else(|| pack?.receiver_name(hardware))?;
@@ -49,7 +49,7 @@ fn receiver_snapshot(
 
 fn present_usb_instances() -> Option<Vec<String>> {
     const FLAGS: u32 = CM_GETIDLIST_FILTER_ENUMERATOR | CM_GETIDLIST_FILTER_PRESENT;
-    // 拔插发生在查询长度和读取之间时，PnP 可能要求扩大缓冲区。
+    // 拔插發生在查詢長度和讀取之間時，PnP 可能要求擴大緩衝區。
     for _ in 0..3 {
         let mut size = 0;
         if unsafe { CM_Get_Device_ID_List_SizeW(&mut size, w!("USB"), FLAGS) } != CR_SUCCESS {
@@ -109,7 +109,7 @@ impl Notification {
 
 impl Drop for Notification {
     fn drop(&mut self) {
-        // 注销成功会等回调结束。失败时保留回调上下文，避免系统仍访问已释放的发送端。
+        // 註銷成功會等回調結束。失敗時保留回調上下文，避免系統仍訪問已釋放的發送端。
         unsafe {
             if CM_Unregister_Notification(self.handle) == CR_SUCCESS {
                 drop(Box::from_raw(self.sender));
@@ -129,7 +129,7 @@ unsafe extern "system" fn on_usb_change(
         action,
         CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL | CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL
     ) {
-        // 发送端在注销成功后释放。回调只唤醒工作线程，把 PnP 查询留给工作线程。
+        // 發送端在註銷成功後釋放。回調只喚醒工作線程，把 PnP 查詢留給工作線程。
         let sender = unsafe { &*context.cast::<SyncSender<()>>() };
         let _ = sender.try_send(());
     }
@@ -144,7 +144,7 @@ pub(super) fn run(
 ) {
     let (events, changes) = mpsc::sync_channel(1);
     let notification = Notification::register(events.clone());
-    // 接口事件可能先于设备树更新。轻量的 USB 枚举为先到的通知和注册失败兜底。
+    // 接口事件可能先於設備樹更新。輕量的 USB 枚舉為先到的通知和註冊失敗兜底。
     let scan_interval = Duration::from_secs(if notification.is_some() { 2 } else { 1 });
     run_scans(
         tx,
@@ -182,7 +182,7 @@ fn run_scans(
             if let Some(found) = scan() {
                 instances = Some(found);
             }
-            // 启停和更新按最新识别表重算，刚好枚举失败时也能移除已停用的扩展项。
+            // 啟停和更新按最新識別表重算，剛好枚舉失敗時也能移除已停用的擴展項。
             latest = instances
                 .as_ref()
                 .map(|ids| receiver_snapshot(active.as_deref(), ids));
@@ -258,7 +258,7 @@ mod tests {
                     Duration::from_secs(60),
                     || {
                         let count = scans.fetch_add(1, Ordering::Relaxed);
-                        // 首次枚举成功。之后模拟 PnP 读取失败，验证启停仍能重新匹配实体列表。
+                        // 首次枚舉成功。之後模擬 PnP 讀取失敗，驗證啟停仍能重新匹配實體列表。
                         (count == 0).then(|| {
                             [
                                 r"USB\VID_2717&PID_5055\DEVICE_2",
@@ -276,12 +276,12 @@ mod tests {
             let snapshot = || service.rx.recv_timeout(Duration::from_secs(3)).unwrap();
             let baseline = snapshot();
             assert_eq!(baseline.len(), 1);
-            assert_eq!(baseline[0].name, "小米无线键鼠套装 2");
+            assert_eq!(baseline[0].name, "小米無線鍵鼠套裝 2");
             let mut data = json!({
                 "id":"daozai.wireless-receivers","api_version":1,"version":"1.1.0",
                 "receivers":[
-                    {"vid":"2717","pid":"5055","name":"兼容包里的同型号名称"},
-                    {"vid":"046D","pid":"C542","name":"罗技 Nano 接收器"}
+                    {"vid":"2717","pid":"5055","name":"兼容包裡的同型號名稱"},
+                    {"vid":"046D","pid":"C542","name":"羅技 Nano 接收器"}
                 ]
             });
             let parse = |data: &serde_json::Value| {
@@ -291,16 +291,16 @@ mod tests {
 
             let updated = snapshot();
             assert_eq!(updated.len(), 2);
-            assert_eq!(updated[0].name, "罗技 Nano 接收器");
+            assert_eq!(updated[0].name, "羅技 Nano 接收器");
             assert_eq!(updated[0].id, r"usb:USB\VID_046D&PID_C542\DEVICE_1");
             assert_eq!(updated[1], baseline[0]);
             assert_eq!(store.package().unwrap().version(), "1.1.0");
 
             data["version"] = json!("1.2.0");
-            data["receivers"][1]["name"] = json!("罗技 Nano 无线接收器");
+            data["receivers"][1]["name"] = json!("羅技 Nano 無線接收器");
             store.set(Some(parse(&data)));
             let latest = snapshot();
-            assert_eq!(latest[0].name, "罗技 Nano 无线接收器");
+            assert_eq!(latest[0].name, "羅技 Nano 無線接收器");
             assert_eq!(latest[1], baseline[0]);
 
             store.set(None);
@@ -314,7 +314,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "需本机插有小米无线键鼠套装 2 的接收器"]
+    #[ignore = "需本機插有小米無線鍵鼠套裝 2 的接收器"]
     fn receiver_live_usb_builtin_survives_plugin_lifecycle() {
         let store = Store::default();
         let assert_xiaomi = || {
@@ -324,14 +324,14 @@ mod tests {
                 .iter()
                 .filter(|device| device.id.starts_with(r"usb:USB\VID_2717&PID_5055\"))
                 .collect();
-            assert_eq!(xiaomi.len(), 1, "请插入一枚小米无线键鼠套装 2 的接收器");
-            assert_eq!(xiaomi[0].name, "小米无线键鼠套装 2");
+            assert_eq!(xiaomi.len(), 1, "請插入一枚小米無線鍵鼠套裝 2 的接收器");
+            assert_eq!(xiaomi[0].name, "小米無線鍵鼠套裝 2");
             assert_eq!(xiaomi[0].battery, None);
         };
         assert_xiaomi();
         let data = json!({
             "id":"daozai.wireless-receivers","api_version":1,"version":"1.0.1",
-            "receivers":[{"vid":"2717","pid":"5055","name":"兼容包里的同型号名称"}]
+            "receivers":[{"vid":"2717","pid":"5055","name":"兼容包裡的同型號名稱"}]
         });
         let package = Package::parse(&serde_json::to_vec(&data).unwrap()).unwrap();
         store.set(Some(package));
@@ -380,7 +380,7 @@ mod tests {
         .is_empty());
         assert_eq!(
             receiver_snapshot(None, [r"USB\VID_046D&PID_C548\A"])[0].name,
-            "罗技 Bolt 接收器"
+            "羅技 Bolt 接收器"
         );
     }
 
@@ -412,17 +412,17 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "按需验证本机 USB 通知及接收器枚举"]
+    #[ignore = "按需驗證本機 USB 通知及接收器枚舉"]
     fn receiver_live_usb_sources() {
         let (sender, _changes) = mpsc::sync_channel(1);
-        let _notification = Notification::register(sender).expect("Windows USB 拔插通知注册应成功");
+        let _notification = Notification::register(sender).expect("Windows USB 拔插通知註冊應成功");
         let devices = receiver_snapshot(
             None,
-            present_usb_instances().expect("Windows 已插入 USB 设备枚举应成功"),
+            present_usb_instances().expect("Windows 已插入 USB 設備枚舉應成功"),
         );
         for device in devices {
             println!(
-                "{} | id={} | 电量={:?}",
+                "{} | id={} | 電量={:?}",
                 device.name, device.id, device.battery
             );
         }

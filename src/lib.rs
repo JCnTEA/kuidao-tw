@@ -1,9 +1,9 @@
-//! 鬼島：Windows 顶部「灵动岛」。
+//! 鬼島：Windows 頂部「靈動島」。
 //!
-//! - `app` / `pages`：与平台无关的界面与动效（外壳与录制器共用）
-//! - `anim` / `paint` / `shape` / `theme`：弹簧、矢量绘制、面板轮廓、配色字体
-//! - `model` / `lyrics` / `smtc` / `icons`：数据、歌词、系统媒体、文件图标
-//! - `native` / `tray`：仅 Windows 的窗口区域、命中穿透与托盘
+//! - `app` / `pages`：與平台無關的界面與動效（外殼與錄製器共用）
+//! - `anim` / `paint` / `shape` / `theme`：彈簧、矢量繪製、面板輪廓、配色字體
+//! - `model` / `lyrics` / `smtc` / `icons`：數據、歌詞、系統媒體、文件圖標
+//! - `native` / `tray`：僅 Windows 的窗口區域、命中穿透與托盤
 
 #[cfg(any(feature="sdk-js",feature="sdk-wasm"))]
 #[path="../spike/mod.rs"]

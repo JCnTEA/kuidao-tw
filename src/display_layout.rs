@@ -1,15 +1,15 @@
-//! 按显示屏的物理坐标居中岛体，透明画布的额外宽度不参与居中。
+//! 按顯示屏的物理座標居中島體，透明畫布的額外寬度不參與居中。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Bounds { pub left:i32, pub top:i32, pub right:i32, pub bottom:i32 }
 
 #[derive(Clone, Debug)]
 pub struct Display { pub id:String, pub label:String, pub bounds:Bounds,
     pub work:Bounds,
-    /// 本屏底边注册的自动隐藏栏窗口句柄，0 表示没有。
+    /// 本屏底邊註冊的自動隱藏欄窗口句柄，0 表示沒有。
     pub auto_bottom:usize, pub primary:bool, pub dpi:u32 }
 
-/// 岛体摆放用的屏幕范围：开启「避开顶栏」时顶边换成工作区顶边。
-/// 只认屏幕上方三分之一以内的占用，异常的工作区不会把岛推到屏幕中间。
+/// 島體擺放用的屏幕範圍：開啟「避開頂欄」時頂邊換成工作區頂邊。
+/// 只認屏幕上方三分之一以內的佔用，異常的工作區不會把島推到屏幕中間。
 pub fn placement_bounds(display:&Display, avoid_top_bar:bool)->Bounds {
     let mut b=display.bounds;
     let reserved=display.work.top-b.top;
@@ -22,7 +22,7 @@ pub fn selected<'a>(displays:&'a [Display],id:&str)->Option<&'a Display>{
         .or_else(||displays.iter().find(|d|d.primary)).or_else(||displays.first())
 }
 
-/// 两个屏幕在光标所在行或列相接时，返回光标进入本屏的深度和本屏的停靠边。
+/// 兩個屏幕在光標所在行或列相接時，返回光標進入本屏的深度和本屏的停靠邊。
 pub(crate) fn shared_edge(b:Bounds, other:Bounds, (x,y):(i32,i32))->Option<(i32,crate::model::Dock)> {
     use crate::model::Dock;
     if (b.top.max(other.top)..b.bottom.min(other.bottom)).contains(&y) {
@@ -36,7 +36,7 @@ pub(crate) fn shared_edge(b:Bounds, other:Bounds, (x,y):(i32,i32))->Option<(i32,
     None
 }
 
-/// 光标越过共享边 16 个目标屏逻辑点后才换屏。一次快速移动可以直接命中远处的显示器。
+/// 光標越過共享邊 16 個目標屏邏輯點後才換屏。一次快速移動可以直接命中遠處的顯示器。
 pub(crate) fn drag_target<'a>(displays:&'a [Display],active:&'a Display,point:(i32,i32),zoom:f32)->&'a Display {
     displays.iter().find(|d|{
         let b=d.bounds;
@@ -46,7 +46,7 @@ pub(crate) fn drag_target<'a>(displays:&'a [Display],active:&'a Display,point:(i
 }
 
 impl Display {
-    /// 常显任务栏以本屏工作区为准。自动隐藏时，留出系统唤出热区。
+    /// 常顯任務欄以本屏工作區為準。自動隱藏時，留出系統喚出熱區。
     pub fn bottom_edge(&self)->i32 {
         let resting=self.resting_bottom_edge();
         #[cfg(windows)]
@@ -82,7 +82,7 @@ impl Display {
         unsafe {
             if !IsWindowVisible(hwnd).as_bool() || GetWindowRect(hwnd,&mut r).is_err() ||
                 !self.bottom_bar_overlaps(Bounds{left:r.left,top:r.top,right:r.right,bottom:r.bottom}) {return None;}
-            // Explorer 有时保留原窗口矩形。沿任务栏取样，避免被岛体遮住的单点造成反复显隐。
+            // Explorer 有時保留原窗口矩形。沿任務欄取樣，避免被島體遮住的單點造成反覆顯隱。
             let left=r.left.max(self.bounds.left);
             let right=r.right.min(self.bounds.right)-1;
             let y=resting-1;
@@ -142,22 +142,22 @@ pub fn island_origin(m:Bounds, island_width:f32, scale:f32)->Option<(i32,i32)> {
     Some((x.clamp(i32::MIN as f64,i32::MAX as f64) as i32,m.top))
 }
 
-/// 岛体可见内容（展开面板、肩部与阴影）距中心的最大半宽，逻辑点。
-/// 水平偏移以此为界，保证展开后面板仍完整留在屏幕内。
+/// 島體可見內容（展開面板、肩部與陰影）距中心的最大半寬，邏輯點。
+/// 水平偏移以此為界，保證展開後面板仍完整留在屏幕內。
 pub const ISLAND_HALF_EXTENT: f32 = 240.0;
 
 pub fn horizontal_half_extent(width: f32) -> f32 {
     if width > crate::app::WIN_W { width / 2.0 } else { ISLAND_HALF_EXTENT }
 }
 
-/// 岛体中心能离开屏幕中线的最大距离（物理像素）。屏幕太窄时为 0，只能居中。
+/// 島體中心能離開屏幕中線的最大距離（物理像素）。屏幕太窄時為 0，只能居中。
 pub fn island_travel(m:Bounds, scale:f32)->f64 {
     if m.right<=m.left || !scale.is_finite() || scale<=0.0 {return 0.0;}
     ((m.right as f64-m.left as f64)/2.0-ISLAND_HALF_EXTENT as f64*scale as f64).max(0.0)
 }
 
-/// 按水平偏移定位：`offset` 为 -1（最左）..0（居中）..1（最右），按可移动范围的比例换算，
-/// 所以换屏、改系统缩放或调整岛体大小后仍保持相同的相对位置。
+/// 按水平偏移定位：`offset` 為 -1（最左）..0（居中）..1（最右），按可移動範圍的比例換算，
+/// 所以換屏、改系統縮放或調整島體大小後仍保持相同的相對位置。
 pub fn island_origin_offset(m:Bounds, island_width:f32, scale:f32, offset:f32)->Option<(i32,i32)> {
     let (x,y)=island_origin(m,island_width,scale)?;
     let offset=if offset.is_finite(){offset.clamp(-1.0,1.0)}else{0.0};
@@ -187,8 +187,8 @@ pub fn horizontal_origin_for_width(
     Some((x,y))
 }
 
-/// 左右停靠：画布贴着屏幕左 / 右边，竖直方向按 `offset`（-1 最上 … 0 居中 … 1 最下）移动，
-/// 可移动范围保证展开面板始终完整留在屏幕内。返回画布左上角（物理像素）。
+/// 左右停靠：畫布貼著屏幕左 / 右邊，豎直方向按 `offset`（-1 最上 … 0 居中 … 1 最下）移動，
+/// 可移動範圍保證展開面板始終完整留在屏幕內。返回畫布左上角（物理像素）。
 pub fn side_origin(m:Bounds, dock:crate::model::Dock, canvas:(f32,f32), half_extent:f32, scale:f32, offset:f32)->Option<(i32,i32)> {
     if m.right<=m.left || m.bottom<=m.top || !scale.is_finite() || scale<=0.0 {return None;}
     let (w,h)=((canvas.0*scale) as f64,(canvas.1*scale) as f64);
@@ -199,17 +199,17 @@ pub fn side_origin(m:Bounds, dock:crate::model::Dock, canvas:(f32,f32), half_ext
     Some((x.round() as i32,(cy-h/2.0).round() as i32))
 }
 
-/// 当前站位下，OLED 像素偏移往两侧各还能走多少物理像素。
+/// 當前站位下，OLED 像素偏移往兩側各還能走多少物理像素。
 ///
-/// `half_extent` 是展开面板相对岛体中心的最大半宽（顶部停靠）或半高（左右停靠）。
-/// 留出的余量保证展开面板仍完整留在屏幕内：位置拉到最边、或屏幕窄到没有余量时，
-/// 返回值会很小甚至为 0，调用方据此少挪或不挪。返回值是 (向小坐标, 向大坐标)。
+/// `half_extent` 是展開面板相對島體中心的最大半寬（頂部停靠）或半高（左右停靠）。
+/// 留出的餘量保證展開面板仍完整留在屏幕內：位置拉到最邊、或屏幕窄到沒有餘量時，
+/// 返回值會很小甚至為 0，調用方據此少挪或不挪。返回值是 (向小座標, 向大座標)。
 pub fn shift_slack(m:Bounds, scale:f32, half_extent:f32, offset:f32, dock:crate::model::Dock)->(i32,i32) {
     if m.right<=m.left || m.bottom<=m.top || !scale.is_finite() || scale<=0.0 || !half_extent.is_finite() || half_extent<=0.0 {return (0,0);}
     let offset=if offset.is_finite() {offset.clamp(-1.0,1.0)} else {0.0} as f64;
     let half=half_extent as f64*scale as f64;
     let (low,high)=if dock.is_side() {(m.top as f64,m.bottom as f64)} else {(m.left as f64,m.right as f64)};
-    // 与 island_travel / side_origin 用同一个可移动范围，余量才不会和实际站位对不上。
+    // 與 island_travel / side_origin 用同一個可移動範圍，餘量才不會和實際站位對不上。
     let travel=((high-low)/2.0-half).max(0.0);
     let center=(low+high)/2.0+travel*offset;
     let back=(center-half-low).max(0.0);
@@ -331,7 +331,7 @@ mod bottom_dock_tests {
     fn bottom_dock_follows_taskbar_on_every_reveal_and_retraction() {
         use windows::{core::w,Win32::UI::WindowsAndMessaging::*};
         let work=connected().into_iter().find(|d|d.primary).unwrap().work;
-        // 用临时原生栏覆盖一小段测试边界，验证窗口显隐与真实命中，无需修改系统任务栏。
+        // 用臨時原生欄覆蓋一小段測試邊界，驗證窗口顯隱與真實命中，無需修改系統任務欄。
         let b=Bounds{left:work.left+30,right:work.left+150,top:work.top,bottom:work.top+90};
         unsafe {
             let hwnd=CreateWindowExW(WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_TOPMOST,w!("BUTTON"),None,
@@ -497,7 +497,7 @@ mod tests {
         if !displays.is_empty(){assert_eq!(displays.iter().filter(|d|d.primary).count(),1);}
     }
     #[test] fn display_selection_survives_reordering_disconnect_and_reconnect(){
-        let primary=Display{id:"internal".into(),label:"内屏".into(),bounds:Bounds{left:0,top:0,right:1920,bottom:1080},work:Bounds{left:0,top:0,right:1920,bottom:1080},auto_bottom:0,primary:true,dpi:96};
+        let primary=Display{id:"internal".into(),label:"內屏".into(),bounds:Bounds{left:0,top:0,right:1920,bottom:1080},work:Bounds{left:0,top:0,right:1920,bottom:1080},auto_bottom:0,primary:true,dpi:96};
         let external=Display{id:"external".into(),label:"外屏".into(),bounds:Bounds{left:-2560,top:-400,right:0,bottom:1040},work:Bounds{left:-2560,top:-400,right:0,bottom:1040},auto_bottom:0,primary:false,dpi:144};
         for displays in [vec![primary.clone(),external.clone()],vec![external.clone(),primary.clone()]] {
             assert_eq!(selected(&displays,"").unwrap().id,"internal");
@@ -526,7 +526,7 @@ mod tests {
     }
 }
 
-/// 只有鬼島所在屏幕的前台全屏窗口才触发隐藏。
+/// 只有鬼島所在屏幕的前台全屏窗口才觸發隱藏。
 pub fn hide_for_fullscreen(enabled:bool,fullscreen:Option<Bounds>,island:Option<Bounds>)->bool {
     enabled && fullscreen.is_some() && fullscreen==island
 }

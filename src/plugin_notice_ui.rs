@@ -147,7 +147,7 @@ impl App {
                     }
                 } else {
                     let generic = status || self.plugin_notice_ui.find(&source, &id).is_some_and(|notice| notice.title.is_some());
-                    self.messenger_unavailable(if generic { "暂时无法执行操作" } else { "暂时无法打开会话" });
+                    self.messenger_unavailable(if generic { "暫時無法執行操作" } else { "暫時無法打開會話" });
                 }
             }
         }
@@ -234,9 +234,9 @@ impl App {
         let caption_width = if session && preview { 84.0 } else if session || preview { 154.0 } else { 223.0 };
         c.centered_text(42.0, 30.0, &c.fit(caption, 10.5, W::Regular, caption_width), 10.5, W::Regular, theme::GRAY, H::Left);
         let open = session && button(c, 204.0, 10.0, 64.0, action_label(notice, false), ("notice-banner-open", source, id));
-        let details_label = if notice.title.is_some() { "查看详情" } else { "查看回复" };
+        let details_label = if notice.title.is_some() { "查看詳情" } else { "查看回復" };
         let details = preview && button(c, if session { 132.0 } else { 204.0 }, 10.0, 66.0, details_label, ("notice-banner-body", source, id));
-        let close = button(c, 274.0, 10.0, 47.0, "关闭", ("notice-banner-close", source, id));
+        let close = button(c, 274.0, 10.0, 47.0, "關閉", ("notice-banner-close", source, id));
         if close {
             self.notice = None;
         } else if details {
@@ -289,7 +289,7 @@ impl App {
             let id = ("plugin-stack", &notice.source);
             let hit = if horizontal { c.hit(start, 0.0, end - start, BAR_H, id) } else { c.hit(0.0, start, 32.0, end - start, id) };
             let multiple_notices = self.plugin_notice_ui.entries().filter(|(item, _)| item.source == notice.source).take(2).count() > 1;
-            let label = if multiple_sources || multiple_notices { "展开查看提醒与状态".into() } else { format!("{} · {}", notice.name, notice_title(notice, status)) };
+            let label = if multiple_sources || multiple_notices { "展開查看提醒與狀態".into() } else { format!("{} · {}", notice.name, notice_title(notice, status)) };
             if hit.on_hover_text(label).clicked() {
                 if multiple_sources || multiple_notices {
                     expand = true;
@@ -315,14 +315,14 @@ impl App {
         source_icon(c, 24.0, 27.0, &notice.name);
         let heading = format!("{} · {}", notice.name, notice_title(notice, status));
         c.centered_text(43.0, 27.0, &c.fit(&heading, size::TITLE, W::Semibold, 220.0), size::TITLE, W::Semibold, theme::WHITE, H::Left);
-        let close = button(c, 364.0, 15.0, 42.0, "关闭", "plugin-detail-close");
+        let close = button(c, 364.0, 15.0, 42.0, "關閉", "plugin-detail-close");
         let open = notice.session.is_some() && button(c, 287.0, 15.0, 70.0, action_label(notice, status), "plugin-detail-open");
         c.fill(15.0, 46.0, 389.0, 144.0, 9.0, theme::CARD);
         let rect = c.rect(27.0, 55.0, 365.0, 127.0);
         let body = if !self.settings.notification_preview {
-            "通知正文已隐藏"
+            "通知正文已隱藏"
         } else if notice.markdown.trim().is_empty() {
-            if notice.title.is_some() { "暂无详情" } else { "没有可预览的回复正文" }
+            if notice.title.is_some() { "暫無詳情" } else { "沒有可預覽的回覆正文" }
         } else {
             &notice.markdown
         };
@@ -353,14 +353,14 @@ fn hide_content(notice: &mut Completion) {
 fn notice_title(notice: &Completion, status: bool) -> &str {
     match notice.title.as_deref() {
         Some(title) if !title.is_empty() => title,
-        _ if status => "当前状态",
+        _ if status => "當前狀態",
         Some(_) => "收到新通知",
-        None => "本轮已结束",
+        None => "本輪已結束",
     }
 }
 
 fn action_label(notice: &Completion, status: bool) -> &str {
-    notice.action_label.as_deref().unwrap_or(if status { "执行操作" } else if notice.title.is_some() { "打开" } else { "回会话" })
+    notice.action_label.as_deref().unwrap_or(if status { "執行操作" } else if notice.title.is_some() { "打開" } else { "回會話" })
 }
 
 fn button(c: &Card, x: f32, y: f32, width: f32, text: &str, id: impl std::hash::Hash) -> bool {
@@ -382,7 +382,7 @@ fn draw_markdown(ui: &mut egui::Ui, text: &str) {
     let mut code = false;
     for (index, line) in text.lines().enumerate() {
         if index == 128 {
-            ui.label("其余内容已省略");
+            ui.label("其餘內容已省略");
             break;
         }
         let line = line.trim_end();
@@ -420,7 +420,7 @@ mod tests {
             name: "示例助手".into(),
             id: id.into(),
             session: Some("session-1".into()),
-            markdown: "# 私有回复".into(),
+            markdown: "# 私有回覆".into(),
             title: None,
             action_label: None,
         }
@@ -467,14 +467,14 @@ mod tests {
         app.receive_plugin_notice(completion("one"));
         app.show_plugin_notice_detail("example.agent", "one");
         assert!(app.plugin_notice_ui.unread.is_empty());
-        assert_eq!(app.plugin_notice_ui.detail.as_ref().unwrap().markdown, "# 私有回复");
+        assert_eq!(app.plugin_notice_ui.detail.as_ref().unwrap().markdown, "# 私有回覆");
 
         app.settings.notification_preview = false;
         app.tick_plugin_notices(&ctx, &Env::default());
         app.receive_plugin_notice(completion("two"));
         assert!(app.plugin_notice_ui.detail.as_ref().unwrap().markdown.is_empty());
         assert!(app.plugin_notice_ui.unread[0].markdown.is_empty());
-        assert!(app.history.iter().all(|alert| !alert.body.contains("私有回复")));
+        assert!(app.history.iter().all(|alert| !alert.body.contains("私有回覆")));
         app.remove_plugin_notice_source("example.agent");
         assert!(app.plugin_notice_ui.unread.is_empty());
         assert!(!app.plugin_notice_detail_open());
@@ -489,8 +489,8 @@ mod tests {
         app.settings.notification_preview = true;
         let source = "example.agent";
         let mut card = notice(source, "state-one");
-        card.title = Some("正在处理".into());
-        card.action_label = Some("打开详情".into());
+        card.title = Some("正在處理".into());
+        card.action_label = Some("打開詳情".into());
         app.receive_plugin_notice(Event::StatusChanged { source: source.into(), card: Some(card.clone()) });
         assert_eq!(app.plugin_notice_ui.item_count(), 1);
         assert!(app.plugin_notice_ui.unread.is_empty());
@@ -500,7 +500,7 @@ mod tests {
         let mut cmds = Vec::new();
         app.open_plugin_notice(source, "state-one", &mut cmds);
         assert!(matches!(cmds.as_slice(), [Cmd::OpenPluginNotice { id, .. }] if id == "state-one"));
-        card.title = Some("处理进度已更新".into());
+        card.title = Some("處理進度已更新".into());
         app.receive_plugin_notice(Event::StatusChanged { source: source.into(), card: Some(card.clone()) });
         assert_eq!(app.plugin_notice_ui.detail.as_ref().unwrap().title, card.title);
         app.receive_plugin_notice(Event::Opened { source: source.into(), id: card.id.clone(), ok: true });
@@ -510,8 +510,8 @@ mod tests {
         app.settings.notification_preview = false;
         app.tick_plugin_notices(&ctx, &Env::default());
         let hidden = app.plugin_notice_ui.detail.as_ref().unwrap();
-        assert_eq!(notice_title(hidden, true), "当前状态");
-        assert_eq!(action_label(hidden, true), "执行操作");
+        assert_eq!(notice_title(hidden, true), "當前狀態");
+        assert_eq!(action_label(hidden, true), "執行操作");
         assert!(hidden.markdown.is_empty());
         app.open_plugin_notice(source, "state-one", &mut cmds);
         card.session = Some("session-2".into());
@@ -534,7 +534,7 @@ mod tests {
         let mut app = App::new(&ctx, Default::default());
         app.settings.notifications = true;
         for index in 0..7 {
-            app.alert(format!("内置提醒 {index}"), "正文", 0, false);
+            app.alert(format!("內置提醒 {index}"), "正文", 0, false);
         }
         app.receive_plugin_notice(Event::Completed(notice("example.quiet", "keep")));
         for index in 0..MAX_UNREAD + 1 {
@@ -542,10 +542,10 @@ mod tests {
         }
         assert_eq!(app.plugin_notice_ui.unread.len(), MAX_UNREAD_PER_SOURCE + 1);
         assert!(app.plugin_notice_ui.unread.iter().any(|notice| notice.source == "example.quiet"));
-        app.alert("最新内置提醒", "正文", 0, false);
+        app.alert("最新內置提醒", "正文", 0, false);
         assert_eq!(app.alerts.len(), 8);
         assert!(app.alerts.iter().all(|alert| alert.source == AlertSource::Internal));
-        assert_eq!(app.alerts.front().unwrap().title, "内置提醒 0");
+        assert_eq!(app.alerts.front().unwrap().title, "內置提醒 0");
 
         for index in 0..MAX_SOURCES - 2 {
             let source = format!("example.other-{index}");

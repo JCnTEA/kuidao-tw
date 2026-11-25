@@ -9,8 +9,8 @@ fn rgba_layout(w: i32, h: i32) -> Option<(usize, usize)> {
     Some((stride, stride.checked_mul(h as usize)?))
 }
 
-/// 从当前窗口的默认双缓冲读出上一张已交换的画面。
-/// 调用方须保证这个窗口的 GL 表面当前已绑定，且其外框尚未调整。
+/// 從當前窗口的默認雙緩衝讀出上一張已交換的畫面。
+/// 調用方須保證這個窗口的 GL 表面當前已綁定，且其外框尚未調整。
 pub(crate) fn read_front(gl: &glow::Context, hw: i32, hh: i32, raw: &mut Vec<u8>) -> bool {
     let Some((stride, len)) = rgba_layout(hw, hh) else {
         return false;
@@ -21,7 +21,7 @@ pub(crate) fn read_front(gl: &glow::Context, hw: i32, hh: i32, raw: &mut Vec<u8>
     }
 
     unsafe {
-        // GL 的错误标记只能读取并清除。遇到已有错误就直接回退，保留其余标记。
+        // GL 的錯誤標記只能讀取並清除。遇到已有錯誤就直接回退，保留其餘標記。
         if gl.get_error() != glow::NO_ERROR {
             return false;
         }
@@ -50,7 +50,7 @@ pub(crate) fn read_front(gl: &glow::Context, hw: i32, hh: i32, raw: &mut Vec<u8>
         if gl.get_error() != glow::NO_ERROR {
             return false;
         }
-        // egui 按预乘色绘制，读取 RGBA 字节即可保留原来的混合结果。
+        // egui 按預乘色繪製，讀取 RGBA 字節即可保留原來的混合結果。
         gl.read_pixels(
             0,
             0,
@@ -96,7 +96,7 @@ fn flip_rows(raw: &mut [u8], stride: usize) {
     }
 }
 
-/// RECT 使用顶左原点的窗口物理像素。返回剪裁后是否还有可见像素。
+/// RECT 使用頂左原點的窗口物理像素。返回剪裁後是否還有可見像素。
 pub(crate) fn mask_outside_rect(raw: &mut [u8], w: i32, h: i32, clip: RECT) -> bool {
     let Some((stride, len)) = rgba_layout(w, h) else {
         return false;

@@ -1,4 +1,4 @@
-//! 系统会话缺少曲长时，只读酷狗本机的歌曲元数据。
+//! 系統會話缺少曲長時，只讀酷狗本機的歌曲元數據。
 use std::{ffi::c_void,time::{Duration,Instant}};
 
 fn track(raw:&[u8],filename:&str)->Option<(String,f64)>{
@@ -13,12 +13,12 @@ fn track(raw:&[u8],filename:&str)->Option<(String,f64)>{
 }
 
 fn scan(bytes:&[u8],filename:&str)->Option<(String,f64)>{
-    // 整段标记用字面量查找（内部为向量化子串搜索），不再逐个引号比对。
+    // 整段標記用字面量查找（內部為向量化子串搜索），不再逐個引號比對。
     static MARKER:std::sync::OnceLock<regex::bytes::Regex>=std::sync::OnceLock::new();
     let marker=MARKER.get_or_init(||regex::bytes::Regex::new(r#""duration":"#).unwrap());
     for found in marker.find_iter(bytes) {
         let offset=found.start();
-        // 只保留歌曲字段；不读取或记录周围的请求、账号或日志内容。
+        // 只保留歌曲字段；不讀取或記錄周圍的請求、帳號或日誌內容。
         let end=(offset+8192).min(bytes.len());
         let mut raw=Vec::with_capacity(end-offset+1);raw.push(b'{');raw.extend_from_slice(&bytes[offset..end]);
         if let Some(metadata)=track(&raw,filename){return Some(metadata);}
@@ -68,7 +68,7 @@ fn current(title:&str,artist:&str)->Option<(u32,String)>{
         let text=String::from_utf16_lossy(&text[..len as usize]);
         let Some(filename)=window_filename(&text,search.title,search.artist)else{return 1;};
         let mut pid=0;GetWindowThreadProcessId(window,&mut pid);
-        // 标题相似的其他窗口（如浏览器）只做有限查询，不申请内存读取权限。
+        // 標題相似的其他窗口（如瀏覽器）只做有限查詢，不申請內存讀取權限。
         if !super::player_process::image_is(pid,"KuGou.exe"){return 1;}
         search.result=Some((pid,filename.to_owned()));0
     }
@@ -77,7 +77,7 @@ fn current(title:&str,artist:&str)->Option<(u32,String)>{
     search.result
 }
 
-/// 酷狗主窗口的歌曲标题（「歌手 - 歌名 - 酷狗音乐」），只取酷狗进程的窗口，供诊断时对照写法。
+/// 酷狗主窗口的歌曲標題（「歌手 - 歌名 - 酷狗音樂」），只取酷狗進程的窗口，供診斷時對照寫法。
 fn kugou_windows()->Vec<String>{
     unsafe extern "system" fn visit(window:Handle,param:isize)->i32{
         let found=&mut *(param as *mut Vec<String>);
@@ -94,14 +94,14 @@ fn kugou_windows()->Vec<String>{
     found
 }
 
-/// 一轮扫描的进度：跨多次轮询接着扫，扫到地址空间末尾绕回开头，回到起点即完成一整圈。
+/// 一輪掃描的進度：跨多次輪詢接著掃，掃到地址空間末尾繞回開頭，回到起點即完成一整圈。
 #[derive(Clone,Copy,Debug,Default)]
 struct Scan {cursor:usize,start:usize,wrapped:bool,spent:Duration,bytes:u64}
 impl Scan {fn from(cursor:usize)->Self{Self{cursor,start:cursor,..Default::default()}}}
 
-/// 每次轮询最多占用媒体线程这么久，避免歌名、进度更新被长时间阻塞。
+/// 每次輪詢最多佔用媒體線程這麼久，避免歌名、進度更新被長時間阻塞。
 const SLICE:Duration=Duration::from_millis(250);
-/// 一轮的总时间预算（与原先单次 2 秒相同，但拆成多片完成，且不再限制只扫前 256MB）。
+/// 一輪的總時間預算（與原先單次 2 秒相同，但拆成多片完成，且不再限制只掃前 256MB）。
 const ATTEMPT:Duration=Duration::from_secs(2);
 
 enum Step {Found((String,f64),usize),Pending,Done}
@@ -109,11 +109,11 @@ enum Step {Found((String,f64),usize),Pending,Done}
 fn read_slice(pid:u32,filename:&str,state:&mut Scan,slice:Duration)->Step {read_slice_in(pid,"KuGou.exe",filename,state,slice)}
 
 fn read_slice_in(pid:u32,exe:&str,filename:&str,state:&mut Scan,slice:Duration)->Step {
-    // 进程号来自缓存时可能已被复用：读取前再核对一次身份。
+    // 進程號來自緩存時可能已被複用：讀取前再核對一次身份。
     if !super::player_process::image_is(pid,exe){return Step::Done;}
     let process=Process(unsafe{OpenProcess(0x410,0,pid)});if process.0.is_null(){return Step::Done;}
     let started=Instant::now();let mut bytes=Vec::new();
-    // 每片至少读一块再看时间：保证每次轮询都有进展，不会因准备工作耗时而原地打转。
+    // 每片至少讀一塊再看時間：保證每次輪詢都有進展，不會因準備工作耗時而原地打轉。
     let mut worked=false;
     let finish=|state:&mut Scan,started:Instant,step:Step|{state.spent+=started.elapsed();step};
     loop {
@@ -123,7 +123,7 @@ fn read_slice_in(pid:u32,exe:&str,filename:&str,state:&mut Scan,slice:Duration)-
         let mut region=Region::default();
         let end=(unsafe{VirtualQueryEx(process.0,state.cursor,&mut region,std::mem::size_of::<Region>())}!=0).then(||region.base.checked_add(region.size)).flatten();
         let Some(end)=end else {
-            // 地址空间末尾：绕回开头继续，已绕过一次说明整圈扫完。
+            // 地址空間末尾：繞回開頭繼續，已繞過一次說明整圈掃完。
             if state.wrapped || state.start==0 {return finish(state,started,Step::Done);}
             state.wrapped=true;state.cursor=0;continue;
         };
@@ -131,18 +131,18 @@ fn read_slice_in(pid:u32,exe:&str,filename:&str,state:&mut Scan,slice:Duration)-
         let offset=state.cursor.saturating_sub(region.base);
         if offset>=region.size {state.cursor=end;continue;}
         let size=(region.size-offset).min(1024*1024);let mut count=0;
-        // 复用同一块缓冲，避免每 1 MiB 重新分配并清零。
+        // 複用同一塊緩衝，避免每 1 MiB 重新分配並清零。
         if bytes.len()<size{bytes.resize(size,0);}
         if unsafe{ReadProcessMemory(process.0,region.base+offset,bytes.as_mut_ptr().cast(),size,&mut count)}!=0 {
             if let Some(metadata)=scan(&bytes[..count],filename){return finish(state,started,Step::Found(metadata,region.base));}
         }
         state.bytes+=size as u64;worked=true;
-        // 相邻两块重叠 8KB，跨块的歌曲字段也能完整读到。
+        // 相鄰兩塊重疊 8KB，跨塊的歌曲字段也能完整讀到。
         state.cursor=if size<=8192 || offset+size>=region.size {end}else{region.base+offset+size-8192};
     }
 }
 
-/// 每首歌的扫描结果写入歌词诊断日志（曲长影响歌词匹配），便于定位长期运行后找不到的问题。
+/// 每首歌的掃描結果寫入歌詞診斷日誌（曲長影響歌詞匹配），便於定位長期運行後找不到的問題。
 fn log_scan(filename:&str,outcome:&str,state:&Scan,round:usize){
     if cfg!(test){return;}
     let line=format!("{} 酷狗曲長 · {filename} → {outcome} 第{round}輪 掃描{}MB 用時{}ms\n",
@@ -150,26 +150,26 @@ fn log_scan(filename:&str,outcome:&str,state:&Scan,round:usize){
     crate::resources::append_log(&crate::model::config_dir().join("diagnostics"),"lyrics.log",&line);
 }
 
-/// 同一首歌最多扫描这么多次；第 n 次失败后等待 RETRY[n] 再试，用完即放弃。
+/// 同一首歌最多掃描這麼多次；第 n 次失敗後等待 RETRY[n] 再試，用完即放棄。
 const RETRY:[Duration;3]=[Duration::from_secs(5),Duration::from_secs(30),Duration::MAX];
-/// 歌曲不变时，窗口标题最多每秒核对一次（读取其他进程的窗口标题是跨进程消息）。
+/// 歌曲不變時，窗口標題最多每秒核對一次（讀取其他進程的窗口標題是跨進程消息）。
 const WINDOW_RECHECK:Duration=Duration::from_secs(1);
 
 #[derive(Default)]
 pub struct Cache {
     key:Option<(u32,String)>,value:Option<(String,f64)>,checked:Option<Instant>,seen:Option<Instant>,
     failures:usize,
-    /// 上次窗口核对：用哪组标题/歌手、何时、结果。
+    /// 上次窗口核對：用哪組標題/歌手、何時、結果。
     looked:Option<(String,String,Instant,Option<(u32,String)>)>,
-    /// 进行中的一轮扫描；一轮结束（预算用完或扫完一整圈）后，下一轮从这里接着扫，不再从头开始。
+    /// 進行中的一輪掃描；一輪結束（預算用完或掃完一整圈）後，下一輪從這裡接著掃，不再從頭開始。
     scan:Option<Scan>,resume:usize,
-    /// 上一首命中的进程和内存区块：换歌后优先从这里扫，歌曲信息通常落在同一片内存。
+    /// 上一首命中的進程和內存區塊：換歌後優先從這裡掃，歌曲信息通常落在同一片內存。
     hint:Option<(u32,usize)>,
-    /// 找不到对应酷狗窗口的歌曲：标题、歌手、开始时间、是否已写进诊断日志。
+    /// 找不到對應酷狗窗口的歌曲：標題、歌手、開始時間、是否已寫進診斷日誌。
     missing:Option<(String,String,Instant,bool)>,
 }
 impl Cache {
-    /// 同一首歌持续 3 秒对不上酷狗窗口时，把两边的写法各记一次（切歌瞬间的短暂不同步不记）。
+    /// 同一首歌持續 3 秒對不上酷狗窗口時，把兩邊的寫法各記一次（切歌瞬間的短暫不同步不記）。
     fn report_miss(&mut self,title:&str,artist:&str){
         if !self.missing.as_ref().is_some_and(|(t,a,..)|t==title && a==artist) {
             self.missing=Some((title.to_owned(),artist.to_owned(),Instant::now(),false));
@@ -204,9 +204,9 @@ impl Cache {
         self.value.is_none() && self.failures<RETRY.len()
             && self.checked.is_none_or(|at|self.failures==0 || at.elapsed()>=RETRY[self.failures-1])
     }
-    /// `need_duration` 为假（系统已给出有效曲长）时只用窗口标题补全歌手，不扫描进程内存。
+    /// `need_duration` 為假（系統已給出有效曲長）時只用窗口標題補全歌手，不掃描進程內存。
     pub fn get(&mut self,title:&str,artist:&str,need_duration:bool)->Option<(String,f64)>{
-        // 循环重载时窗口标题会短暂消失；同一首歌最多沿用两秒已核对的身份。
+        // 循環重載時窗口標題會短暫消失；同一首歌最多沿用兩秒已核對的身份。
         let key=if let Some(key)=self.window(title,artist,false){self.seen=Some(Instant::now());key}
             else if let Some(key)=self.recent_key(title,artist){key}
             else{self.report_miss(title,artist);return None;};
@@ -228,14 +228,14 @@ impl Cache {
                     self.failures+=1;self.checked=Some(Instant::now());self.resume=state.cursor;
                     log_scan(&key.1,"未找到",&state,self.failures);
                     if self.failures>=RETRY.len() {
-                        super::music_compat::set("KuGou.exe",super::music_compat::Item::Duration,super::music_compat::Support::Unavailable("这首歌在酷狗内存里没有找到时长".into()));
+                        super::music_compat::set("KuGou.exe",super::music_compat::Item::Duration,super::music_compat::Support::Unavailable("這首歌在酷狗內存裡沒有找到時長".into()));
                     }
                 }
             }
-            // 扫描期间可能已切歌，每一片之后都重新核对一次窗口。
+            // 掃描期間可能已切歌，每一片之後都重新核對一次窗口。
             if self.window(title,artist,true).is_some_and(|next|next!=key){return None;}
         }
-        // 曲长尚未就绪也能使用已核对的窗口署名，不能让合唱退化为单个歌手。
+        // 曲長尚未就緒也能使用已核對的窗口署名，不能讓合唱退化為單個歌手。
         let singer=key.1.strip_suffix(&format!(" - {title}"))?.to_owned();
         Some((singer,self.value.as_ref().map_or(0.0,|(_,duration)|*duration)))
     }
@@ -295,19 +295,19 @@ mod tests {
         assert_eq!(scan(raw,"cici_ - Song (Live)"),Some(("cici_".into(),232.0)));
         assert!(scan(&raw[..raw.len()-20],"cici_ - Song (Live)").is_none());
     }
-    /// 在本测试进程的堆内存里放一段歌曲元数据，用本进程模拟酷狗进程。
+    /// 在本測試進程的堆內存裡放一段歌曲元數據，用本進程模擬酷狗進程。
     fn own_process()->(u32,String){
         let exe=std::env::current_exe().unwrap().file_name().unwrap().to_str().unwrap().to_owned();
         (std::process::id(),exe)
     }
     fn planted(filename:&str)->Vec<u8>{
-        // 运行时拼接，避免整段元数据以字面量形式出现在映像里（只扫描可写的私有内存）。
+        // 運行時拼接，避免整段元數據以字面量形式出現在映像裡（只掃描可寫的私有內存）。
         let marker=["\"dura","tion\":"].concat();let duration=["23","2000"].concat();
         let json=format!("{{{marker}\"{duration}\",\"filename\":\"{filename}\",\"type\":\"song\",\"hash\":\"8c4c4839a9aa418f528ebb7a8ce42afe\"}}");
         let mut blob=vec![0u8;64*1024];blob[30000..30000+json.len()].copy_from_slice(json.as_bytes());blob
     }
-    /// 与 `Cache::get` 相同的续扫方式：一轮结束后下一轮从停下的位置接着扫。
-    /// 返回（结果与命中区块、是否绕回过开头、切片数）。
+    /// 與 `Cache::get` 相同的續掃方式：一輪結束後下一輪從停下的位置接著掃。
+    /// 返回（結果與命中區塊、是否繞回過開頭、切片數）。
     fn search(filename:&str,start:usize,slice:Duration)->(Option<((String,f64),usize)>,bool,usize){
         let (pid,exe)=own_process();search_in(pid,&exe,filename,start,slice)
     }
@@ -328,14 +328,14 @@ mod tests {
     #[test]
     fn sliced_scan_resumes_across_polls_and_prefers_the_last_hit(){
         let filename="測試歌手 - 切片續掃";let blob=planted(filename);
-        // 每片时间为零：每次轮询只读一块就交还线程，进度必须保留到下一次。
+        // 每片時間為零：每次輪詢只讀一塊就交還線程，進度必須保留到下一次。
         let (pid,exe)=own_process();let mut state=Scan::from(0);
         assert!(matches!(read_slice_in(pid,&exe,"測試歌手 - 不存在",&mut state,Duration::ZERO),Step::Pending));
         assert!(state.bytes>0 && state.cursor>0,"每片都應有進展");
         let (found,_,slices)=search(filename,0,Duration::ZERO);
         let (value,base)=found.expect("應能找到");
         assert_eq!(value,("測試歌手".into(),232.0));println!("零時長切片：{slices} 片後找到");
-        // 下一首从上次命中的区块开始：第一片就能找到。
+        // 下一首從上次命中的區塊開始：第一片就能找到。
         let mut hinted=Scan::from(base);
         assert!(matches!(read_slice_in(pid,&exe,filename,&mut hinted,SLICE),Step::Found(..)),"優先區塊應在第一片命中");
         drop(blob);
@@ -343,18 +343,18 @@ mod tests {
     #[test]
     fn scan_wraps_from_the_end_of_memory_and_stops_after_a_pass(){
         let filename="測試歌手 - 繞回開頭";let blob=planted(filename);
-        // 从用户地址空间顶端开始：查询失败后应绕回开头继续，而不是直接放弃。
+        // 從用戶地址空間頂端開始：查詢失敗後應繞回開頭繼續，而不是直接放棄。
         let (found,wrapped,_)=search(filename,0x7fff_ffff_0000,SLICE);
         assert_eq!(found.map(|(value,_)|value),Some(("測試歌手".into(),232.0)));assert!(wrapped);
         drop(blob);
-        // 内存里没有的歌：一轮用完预算或扫完一整圈就结束，不会一直扫下去。
+        // 內存裡沒有的歌：一輪用完預算或掃完一整圈就結束，不會一直掃下去。
         let (pid,exe)=own_process();let mut state=Scan::from(0);let started=Instant::now();
         loop {match read_slice_in(pid,&exe,"測試歌手 - 不存在",&mut state,SLICE){Step::Pending=>{},Step::Done=>break,Step::Found(..)=>panic!("不應命中")}}
         assert!(started.elapsed()<ATTEMPT+SLICE*2,"一輪不超過預算：{:?}",started.elapsed());
-        // 不是酷狗进程：直接结束，不申请读取权限。
+        // 不是酷狗進程：直接結束，不申請讀取權限。
         assert!(matches!(read_slice(pid,"測試歌手 - 不存在",&mut Scan::from(0),SLICE),Step::Done));
     }
-    /// 正在播放的酷狗：主窗口标题形如「歌手 - 歌名 - 酷狗音乐」。
+    /// 正在播放的酷狗：主窗口標題形如「歌手 - 歌名 - 酷狗音樂」。
     fn kugou_now()->Option<(u32,String)>{
         struct Found(Option<(u32,String)>);
         unsafe extern "system" fn visit(window:Handle,param:isize)->i32{
@@ -378,8 +378,8 @@ mod tests {
         let (value,mut base)=baseline.expect("從頭掃描應能找到當前歌曲");
         println!("當前歌曲：{filename}，曲長 {} 秒；從頭掃描命中，用時 {:?}",value.1,started.elapsed());
         let process=Process(unsafe{OpenProcess(0x410,0,pid)});assert!(!process.0.is_null());
-        // 从命中区块之后开始扫：数据在起点之下，只能扫到地址空间末尾、绕回开头才能找到。
-        // 内存里可能有多份副本：命中的若仍在起点之上，就把起点挪到它之后再试。
+        // 從命中區塊之後開始掃：數據在起點之下，只能掃到地址空間末尾、繞回開頭才能找到。
+        // 內存裡可能有多份副本：命中的若仍在起點之上，就把起點挪到它之後再試。
         for attempt in 1..=20 {
             let mut region=Region::default();
             assert!(unsafe{VirtualQueryEx(process.0,base,&mut region,std::mem::size_of::<Region>())}!=0);

@@ -1,4 +1,4 @@
-//! 单个标准电池服务实例的电量与供电状态（BAS 1.1）。
+//! 單個標準電池服務實例的電量與供電狀態（BAS 1.1）。
 #[derive(Debug, PartialEq)]
 pub(super) struct LevelStatus {
     present: bool,

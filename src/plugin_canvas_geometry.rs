@@ -1,4 +1,4 @@
-//! 画布图形细分与渐变着色。
+//! 畫布圖形細分與漸變著色。
 
 use crate::plugin_canvas::{Bounds, Cap, Num, PathCommand, Point};
 use eframe::{
@@ -121,7 +121,7 @@ impl Clip {
                 .all(|&(at, inward)| (point - at).dot(inward) >= 0.0)
     }
 
-    /// 保留裁剪后顶点的纹理坐标、颜色和抗锯齿透明度。
+    /// 保留裁剪後頂點的紋理座標、顏色和抗鋸齒透明度。
     pub fn mesh(
         &self,
         mesh: &mut Mesh,
@@ -302,7 +302,7 @@ pub(super) fn rectangle(bounds: &Bounds, corners: &[Num; 4], transform: Transfor
     let [nw, ne, se, sw] = corners.each_ref().map(Num::initial);
     let mut points = Vec::new();
     if rect.is_positive() {
-        // 在最终缩放下细分圆角，然后施加旋转。
+        // 在最終縮放下細分圓角，然後施加旋轉。
         rounded_rectangle(
             &mut points,
             rect * transform.scale,
@@ -458,7 +458,7 @@ fn convex(points: &[Pos2]) -> bool {
     negative || positive
 }
 
-/// 用相邻顶点的水平分带填充凹形和带孔轮廓。绕向抵消时留下孔洞。
+/// 用相鄰頂點的水平分帶填充凹形和帶孔輪廓。繞向抵消時留下孔洞。
 fn scan_fill(mesh: &mut Mesh, contours: &[&Outline], deadline: Option<Instant>) -> Option<()> {
     let mut ys = Vec::new();
     let mut edges = Vec::new();

@@ -41,9 +41,9 @@ use super::{Failure, Mode, CLI_MISSING, CLI_OLD, SLASH_DISABLED};
 const MAX_REPORT: u64 = 1024 * 1024;
 const MAX_DIAGNOSTICS: u64 = 64 * 1024;
 const UPDATE_KEY: &str = "AGY_CLI_DISABLE_AUTO_UPDATE";
-const START_ERROR: &str = "无法在后台启动 Antigravity CLI，请检查安装或系统策略";
-const TIMEOUT: &str = "Antigravity 额度查询超时";
-const SETTINGS_ERROR: &str = "无法核对 Antigravity CLI 的斜杠命令设置，请检查 CLI 设置";
+const START_ERROR: &str = "無法在後台啟動 Antigravity CLI，請檢查安裝或系統策略";
+const TIMEOUT: &str = "Antigravity 額度查詢超時";
+const SETTINGS_ERROR: &str = "無法核對 Antigravity CLI 的斜槓命令設置，請檢查 CLI 設置";
 
 pub(super) fn discover() -> Option<PathBuf> {
     let local = env::var_os("LOCALAPPDATA").map(PathBuf::from);
@@ -160,7 +160,7 @@ fn check_settings_file(path: &Path) -> Result<(), Failure> {
 }
 
 fn classify_failure(output: &Output, json: &Value) -> Failure {
-    // 来自 CLI 的诊断只用于本地分类，界面和日志使用固定提示。
+    // 來自 CLI 的診斷只用於本地分類，界面和日誌使用固定提示。
     let text_error = if output.code != 0 && json.is_null() {
         String::from_utf8_lossy(&output.stdout)
     } else {
@@ -206,9 +206,9 @@ fn classify_failure(output: &Output, json: &Value) -> Failure {
     ]) {
         Failure::Login
     } else if has(&["too many requests", "resource_exhausted", "status code 429"]) {
-        Failure::Temporary("Antigravity 额度查询暂时受限".into())
+        Failure::Temporary("Antigravity 額度查詢暫時受限".into())
     } else {
-        Failure::Temporary("暂未读到 Antigravity 额度，请稍后重试".into())
+        Failure::Temporary("暫未讀到 Antigravity 額度，請稍後重試".into())
     }
 }
 
@@ -275,7 +275,7 @@ fn start(
     }
     drop(stdin_writer);
 
-    // 在创建时指定 Job 和允许继承的句柄，子进程启动前即受 Job 管理。
+    // 在創建時指定 Job 和允許繼承的句柄，子進程啟動前即受 Job 管理。
     let mut bytes = 0;
     let _ = unsafe {
         InitializeProcThreadAttributeList(LPPROC_THREAD_ATTRIBUTE_LIST::default(), 2, 0, &mut bytes)
@@ -320,7 +320,7 @@ fn start(
     };
     let application: Vec<u16> = exe.as_os_str().encode_wide().chain([0]).collect();
     let directory: Vec<u16> = dir.as_os_str().encode_wide().chain([0]).collect();
-    // 应用路径单独交给 Windows，参数固定；argv[0] 仍提供实际安装位置。
+    // 應用路徑單獨交給 Windows，參數固定；argv[0] 仍提供實際安裝位置。
     let mut command: Vec<u16> = std::iter::once(b'"' as u16)
         .chain(exe.as_os_str().encode_wide())
         .chain("\" ".encode_utf16())
@@ -356,7 +356,7 @@ fn child_environment() -> Vec<u16> {
     let mut entries: Vec<_> = env::vars_os()
         .filter(|(key, _)| !key.eq_ignore_ascii_case(UPDATE_KEY))
         .collect();
-    // 每次查询沿用当前环境，只关闭本次官方 CLI 进程的自动更新。
+    // 每次查詢沿用當前環境，只關閉本次官方 CLI 進程的自動更新。
     entries.push((UPDATE_KEY.into(), "true".into()));
     entries.sort_unstable_by_key(|(key, _)| key.to_string_lossy().to_uppercase());
     entries
@@ -391,7 +391,7 @@ fn run(exe: &Path, arguments: &str, dir: &Path, timeout: Duration) -> Result<Out
     let deadline = Instant::now() + timeout;
     let start_error = |_| Failure::Message(START_ERROR.into());
     let (job, process, stdout, stderr) = start(exe, arguments, dir).map_err(start_error)?;
-    let pipe_error = |_| Failure::Temporary("无法读取 Antigravity CLI 输出".into());
+    let pipe_error = |_| Failure::Temporary("無法讀取 Antigravity CLI 輸出".into());
     let stdout = read_pipe(stdout, MAX_REPORT).map_err(pipe_error)?;
     let stderr = read_pipe(stderr, MAX_DIAGNOSTICS).map_err(pipe_error)?;
     let wait = deadline
@@ -400,11 +400,11 @@ fn run(exe: &Path, arguments: &str, dir: &Path, timeout: Duration) -> Result<Out
     match unsafe { WaitForSingleObject(handle(&process), wait) } {
         WAIT_OBJECT_0 => {}
         WAIT_TIMEOUT => return Err(Failure::Temporary(TIMEOUT.into())),
-        _ => return Err(Failure::Temporary("无法读取 Antigravity CLI 状态".into())),
+        _ => return Err(Failure::Temporary("無法讀取 Antigravity CLI 狀態".into())),
     }
     let mut code = 0;
     unsafe { GetExitCodeProcess(handle(&process), &mut code) }
-        .map_err(|_| Failure::Temporary("无法读取 Antigravity CLI 状态".into()))?;
+        .map_err(|_| Failure::Temporary("無法讀取 Antigravity CLI 狀態".into()))?;
     drop(job);
     let receive = |pipe: Receiver<io::Result<Vec<u8>>>| {
         let wait = deadline.saturating_duration_since(Instant::now());
@@ -479,12 +479,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "需要通过 DAOZAI_TEST_OFFICIAL_AGY 指定官方签名的 CLI，仅执行版本查询"]
+    #[ignore = "需要通過 DAOZAI_TEST_OFFICIAL_AGY 指定官方簽名的 CLI，僅執行版本查詢"]
     fn official_google_cli_passes_the_native_version_probe() {
         let exe = PathBuf::from(env::var_os("DAOZAI_TEST_OFFICIAL_AGY").unwrap())
             .canonicalize()
             .unwrap();
-        let _verified = super::super::lock_official_cli(&exe).expect("官方 CLI 应通过签名校验");
+        let _verified = super::super::lock_official_cli(&exe).expect("官方 CLI 應通過簽名校驗");
         let output = run(
             &exe,
             "--disable-slash-commands=false --version",
@@ -492,13 +492,13 @@ mod tests {
             Duration::from_secs(10),
         )
         .ok()
-        .expect("官方 CLI 应返回版本报告");
+        .expect("官方 CLI 應返回版本報告");
         assert_eq!(output.code, 0);
         assert!(supports_read_only_report(&output.stdout));
     }
 
     #[test]
-    #[ignore = "供额度子进程测试启动"]
+    #[ignore = "供額度子進程測試啟動"]
     fn process_runner_timeout_fixture() {
         std::thread::sleep(Duration::from_secs(3));
     }

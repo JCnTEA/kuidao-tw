@@ -18,7 +18,7 @@ fn field_extra_height(field: &StatusField, text: &str) -> f32 {
     if !field.multiline {
         return 0.0;
     }
-    // 状态页字段使用固定内容宽度，中文占两个半角字符的宽度。
+    // 狀態頁字段使用固定內容寬度，中文佔兩個半角字符的寬度。
     let rows: usize = text.split('\n').map(|line| {
         line.chars().map(|ch| if ch.is_ascii() { 1usize } else { 2 }).sum::<usize>()
             .div_ceil(36).max(1)
@@ -32,7 +32,7 @@ pub(crate) fn extra_fields_height(status: &PluginStatus) -> f32 {
     }).sum()
 }
 
-/// 画布外单独显示的输入框总高度；多行输入按已有内容加高。
+/// 畫布外單獨顯示的輸入框總高度；多行輸入按已有內容加高。
 pub(super) fn fields_height(status: Option<&PluginStatus>, layout: Option<&StatusLayout>) -> f32 {
     status.map_or(FIELD_HEIGHT * MAX_FIELDS as f32, |status| {
         standalone_fields(status, layout)
@@ -177,7 +177,7 @@ impl<'a> Interaction<'a> {
             body.centered_text(
                 copy_x + copy_width / 2.0,
                 y + height / 2.0,
-                "复制",
+                "複製",
                 size::TINY,
                 W::Semibold,
                 theme::WHITE,
@@ -233,7 +233,7 @@ impl<'a> Interaction<'a> {
             let [left, top, width, height] = anchor.rect.map(f32::from);
             let rect = c.rect(x + left, y + top, width, height);
             let entry = self.field(c, field, rect, Some(anchor));
-            // 单行在回车时提交；多行回车换行，Ctrl+Enter 提交。
+            // 單行在回車時提交；多行回車換行，Ctrl+Enter 提交。
             let enter = !field.multiline && c.live && self.enabled && entry.response.lost_focus()
                 && c.ui.input(|input| input.key_pressed(egui::Key::Enter));
             if enter || entry.submitted {
@@ -298,7 +298,7 @@ impl<'a> Interaction<'a> {
     }
 }
 
-/// 一个输入框本帧的结果：多行输入用 Ctrl+Enter 提交。
+/// 一個輸入框本幀的結果：多行輸入用 Ctrl+Enter 提交。
 struct FieldEntry {
     response: egui::Response,
     submitted: bool,
@@ -311,16 +311,16 @@ mod tests {
     #[test]
     fn multiline_status_field_grows_until_six_rows() {
         let field: StatusField = serde_json::from_value(serde_json::json!({
-            "key":"note","label":"便签","max":100,"multiline":true
+            "key":"note","label":"便籤","max":100,"multiline":true
         })).unwrap();
         assert!(field.accepts("第一行\n第二行"));
         assert!(!field.accepts("第一行\u{0000}"));
-        assert_eq!(field_extra_height(&field, "单行"), 0.0);
+        assert_eq!(field_extra_height(&field, "單行"), 0.0);
         assert_eq!(field_extra_height(&field, "第一行\n第二行"), MULTILINE_ROW_HEIGHT);
         assert_eq!(field_extra_height(&field, &"空行\n".repeat(10)), 5.0 * MULTILINE_ROW_HEIGHT);
         let legacy: StatusField = serde_json::from_value(serde_json::json!({
-            "key":"note","label":"便签","max":100
+            "key":"note","label":"便籤","max":100
         })).unwrap();
-        assert!(!legacy.accepts("旧版\n单行"));
+        assert!(!legacy.accepts("舊版\n單行"));
     }
 }

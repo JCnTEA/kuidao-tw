@@ -38,7 +38,7 @@ impl crate::app::App {
         ui.painter().rect_filled(stage,10.0,Color32::from_rgb(19,25,36));
         let scale=((stage.width()-28.0)/layout.width).min(1.0);
         let origin=Pos2::new(stage.center().x-layout.width*scale/2.0,stage.top());
-        // 预览跟随当前的皮肤与形状。
+        // 預覽跟隨當前的皮膚與形狀。
         let pill=self.settings.island_shape==crate::model::IslandShape::Pill;
         let origin=if pill{origin+Vec2::new(0.0,4.0)}else{origin};
         let body=Rect::from_min_size(origin,Vec2::new(layout.width*scale,30.0*scale));
@@ -65,8 +65,8 @@ impl crate::app::App {
         let dragged=egui::DragAndDrop::payload::<usize>(ui.ctx());
         let mut movement=None;
         let label=|slot|match slot{
-            CLOCK if day.is_some()=>if clock.is_some(){"时间和日期"}else{"日期"},
-            CLOCK=>"时间",BATTERY=>"电量",WEATHER=>"天气",QUOTA=>"AI 额度",MUSIC=>"音乐",FOCUS=>"专注",PERFORMANCE=>"系统性能",_=>"吉祥物"};
+            CLOCK if day.is_some()=>if clock.is_some(){"時間和日期"}else{"日期"},
+            CLOCK=>"時間",BATTERY=>"電量",WEATHER=>"天氣",QUOTA=>"AI 額度",MUSIC=>"音樂",FOCUS=>"專注",PERFORMANCE=>"系統性能",_=>"吉祥物"};
         for (index,&slot) in order.iter().enumerate(){
             let x=cx+layout.x[slot].unwrap();
             let width=match slot{CLOCK=>layout.widths[CLOCK],BATTERY=>20.0,WEATHER=>layout.widths[WEATHER],PET=>32.0,MUSIC=>14.0,FOCUS=>crate::focus_bar::WIDTH,PERFORMANCE=>layout.widths[PERFORMANCE],_=>{
@@ -117,7 +117,7 @@ impl crate::app::App {
         }
         ui.painter().text(Pos2::new(stage.center().x,stage.bottom()-22.0),egui::Align2::CENTER_CENTER,"按住圖示左右拖動",theme::font(11.0,W::Regular),Color32::from_gray(160));
         ui.add_space(8.0);
-        ui.label(RichText::new("灰色图标为暂未显示的组件；位置会保留。").size(11.0).color(ui.visuals().weak_text_color()));
+        ui.label(RichText::new("灰色圖標為暫未顯示的組件；位置會保留。").size(11.0).color(ui.visuals().weak_text_color()));
         #[cfg(feature="sdk-js")]
         self.plugins.pinned_order_settings(ui);
     }

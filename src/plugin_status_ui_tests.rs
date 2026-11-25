@@ -40,7 +40,7 @@ function refresh({source}) {
     .unwrap();
     let manifest = folder.join("plugin.json");
     let mut definition = json!({
-            "id":id, "name":name, "author":"验收", "version":"1.0.0", "api":1,
+            "id":id, "name":name, "author":"驗收", "version":"1.0.0", "api":1,
             "runtime":"js", "entry":"main.js", "cover":"cover.png", "owner":"status",
             "capabilities":["status.page","timer"], "dataVersion":1,
             "permissions":{"source.read":"file"}, "settings":[]
@@ -67,7 +67,7 @@ fn text_y(h: &H, label: &str) -> f32 {
             }
             _ => None,
         })
-        .unwrap_or_else(|| panic!("未绘制：{label}"))
+        .unwrap_or_else(|| panic!("未繪製：{label}"))
 }
 
 #[test]
@@ -76,12 +76,12 @@ fn plugin_settings_pages_gear_routes_by_id_and_sidebar_fits() {
     let mut h = H::new();
     let profile = crate::model::config_dir();
     let standalone = [
-        ("test.settings-alpha", "便签测试"),
-        ("test.settings-beta", "金价测试"),
-        ("test.settings-gamma", "工资测试"),
-        ("test.settings-delta", "时钟测试"),
+        ("test.settings-alpha", "便籤測試"),
+        ("test.settings-beta", "金價測試"),
+        ("test.settings-gamma", "工資測試"),
+        ("test.settings-delta", "時鐘測試"),
     ];
-    let task = ("test.settings-days", "日子测试");
+    let task = ("test.settings-days", "日子測試");
     for (id, name) in standalone.into_iter().chain([task]) {
         let dir = profile.join(id);
         fs::create_dir_all(&dir).unwrap();
@@ -94,10 +94,10 @@ fn plugin_settings_pages_gear_routes_by_id_and_sidebar_fits() {
         fs::write(dir.join("main.js"), format!("function refresh() {{ return {output}; }}")).unwrap();
         let manifest = dir.join("plugin.json");
         fs::write(&manifest, json!({
-            "id":id, "name":name, "author":"验收", "version":"1.0.0", "api":1,
+            "id":id, "name":name, "author":"驗收", "version":"1.0.0", "api":1,
             "runtime":"js", "entry":"main.js", "cover":"cover.png", "owner":owner,
             "capabilities":capabilities, "dataVersion":1, "permissions":{},
-            "settings":[{"key":"text","type":"text","label":format!("{name}专用参数"),"default":"值"}]
+            "settings":[{"key":"text","type":"text","label":format!("{name}專用參數"),"default":"值"}]
         }).to_string()).unwrap();
         h.app.plugins.install(&manifest).unwrap();
         if id != standalone[0].0 {
@@ -163,22 +163,22 @@ fn plugin_settings_pages_gear_routes_by_id_and_sidebar_fits() {
 
     for size in [egui::vec2(690.0, 560.0), egui::vec2(600.0, 450.0)] {
         let output = render_settings(&mut h, size);
-        for (_, name) in standalone { assert!(visible(&output, name, true), "侧栏未完整显示 {name}"); }
+        for (_, name) in standalone { assert!(visible(&output, name, true), "側欄未完整顯示 {name}"); }
         assert!(visible(&output, "插件", true));
-        assert_eq!(visible_rows(&output, "插件", false), 1, "独立详情只在标题标记插件来源");
-        assert!(visible(&output, "关于", true));
-        assert!(visible(&output, "打开功能页", false));
-        assert!(visible(&output, "启用金价测试", false));
-        assert!(visible(&output, "金价测试专用参数", false));
-        assert!(visible(&output, "在岛上常驻显示", false));
-        assert!(visible(&output, "保存设置", false));
-        assert!(!visible(&output, "便签测试专用参数", false));
+        assert_eq!(visible_rows(&output, "插件", false), 1, "獨立詳情只在標題標記插件來源");
+        assert!(visible(&output, "關於", true));
+        assert!(visible(&output, "打開功能頁", false));
+        assert!(visible(&output, "啟用金價測試", false));
+        assert!(visible(&output, "金價測試專用參數", false));
+        assert!(visible(&output, "在島上常駐顯示", false));
+        assert!(visible(&output, "保存設置", false));
+        assert!(!visible(&output, "便籤測試專用參數", false));
     }
     h.app.plugins.set_status_page_enabled(standalone[1].0, false).unwrap();
     let output = render_settings(&mut h, size);
-    assert!(!visible(&output, "打开功能页", false));
+    assert!(!visible(&output, "打開功能頁", false));
     assert!(visible(&output, standalone[1].1, true));
-    assert!(visible(&output, "金价测试专用参数", false));
+    assert!(visible(&output, "金價測試專用參數", false));
 
     h.app.show_status_page(id);
     assert!(h.app.page >= crate::app::PAGE_NAMES.len());
@@ -217,15 +217,15 @@ fn plugin_status_layout_renders_author_ring_and_bar_from_the_same_snapshot() {
     fs::write(
         &source,
         json!({
-            "state":"running", "label":"打印中", "summary":"拓竹模拟任务 · 收纳盒",
+            "state":"running", "label":"打印中", "summary":"拓竹模擬任務 · 收納盒",
             "progress_pct":48, "observed_at":1793756400,
             "metrics":[
-                {"label":"喷嘴温度","value":"220 °C"},
-                {"label":"热床温度","value":"60 °C"},
-                {"label":"层数","value":"58 / 120"},
-                {"label":"剩余时间","value":"24 分钟"}
+                {"label":"噴嘴溫度","value":"220 °C"},
+                {"label":"熱床溫度","value":"60 °C"},
+                {"label":"層數","value":"58 / 120"},
+                {"label":"剩餘時間","value":"24 分鐘"}
             ],
-            "alert":"耗材余量偏低"
+            "alert":"耗材餘量偏低"
         })
         .to_string(),
     )
@@ -234,7 +234,7 @@ fn plugin_status_layout_renders_author_ring_and_bar_from_the_same_snapshot() {
         &mut h,
         &profile,
         ring,
-        "拓竹打印（圆环）",
+        "拓竹打印（圓環）",
         &source,
         Some(json!({
             "components": [
@@ -248,7 +248,7 @@ fn plugin_status_layout_renders_author_ring_and_bar_from_the_same_snapshot() {
         &mut h,
         &profile,
         bar,
-        "拓竹打印（进度条）",
+        "拓竹打印（進度條）",
         &source,
         Some(json!({
             "components": [
@@ -274,14 +274,14 @@ fn plugin_status_layout_renders_author_ring_and_bar_from_the_same_snapshot() {
     }
     h.app.show_status_page(ring);
     h.hover(cursor, 0.8);
-    assert!(has_text(&h, "拓竹模拟任务 · 收纳盒"));
+    assert!(has_text(&h, "拓竹模擬任務 · 收納盒"));
     assert!(text_y(&h, "48") < text_y(&h, "220 °C"));
     if let Some(dir) = &dir {
         shoot_feature(
             &mut h,
             &mut feature_raster(),
             dir,
-            "拓竹模拟-圆环",
+            "拓竹模擬-圓環",
             30,
             Some(cursor),
             "2026-11-04",
@@ -290,17 +290,17 @@ fn plugin_status_layout_renders_author_ring_and_bar_from_the_same_snapshot() {
     h.app.show_status_page(bar);
     h.hover(cursor, 0.8);
     assert!(text_y(&h, "220 °C") < text_y(&h, "48"));
-    assert!(!has_text(&h, "拓竹模拟任务 · 收纳盒"));
-    assert!(has_text(&h, "耗材余量偏低"));
+    assert!(!has_text(&h, "拓竹模擬任務 · 收納盒"));
+    assert!(has_text(&h, "耗材餘量偏低"));
     assert!(h.shapes.iter().any(|shape| matches!(&shape.shape,egui::Shape::Rect(rect)
         if rect.rect.width()>90.0 && rect.rect.height()<14.0 && rect.fill==egui::Color32::from_rgb(102,184,255)
-    )), "应绘制作者指定蓝色的横向进度条");
+    )), "應繪製作者指定藍色的橫向進度條");
     if let Some(dir) = &dir {
         shoot_feature(
             &mut h,
             &mut feature_raster(),
             dir,
-            "拓竹模拟-横向进度条",
+            "拓竹模擬-橫向進度條",
             30,
             Some(cursor),
             "2026-11-04",
@@ -325,7 +325,7 @@ fn settled(h: &mut H, id: &str, expected: StatusHealth) {
         {
             return;
         }
-        assert!(Instant::now() < deadline, "状态未就绪：{id} / {expected:?}");
+        assert!(Instant::now() < deadline, "狀態未就緒：{id} / {expected:?}");
         std::thread::sleep(Duration::from_millis(4));
     }
 }
@@ -345,13 +345,13 @@ fn plugin_canvas_demo_renders_with_mixed_layout() {
     if let Some(dir) = std::env::var_os("DAOZAI_CANVAS_SCREENSHOT_DIR") {
         let dir = std::path::PathBuf::from(dir);
         fs::create_dir_all(&dir).unwrap();
-        shoot_feature(&mut h, &mut feature_raster(), &dir, "A-画布图元", 30, Some(cursor), "2026-11-24");
+        shoot_feature(&mut h, &mut feature_raster(), &dir, "A-畫布圖元", 30, Some(cursor), "2026-11-24");
     }
     h.hover(cursor, 0.8);
-    assert!(has_text(&h, "这行是与画布混排的标准状态组件。"));
-    assert!(has_text(&h, "画布"));
+    assert!(has_text(&h, "這行是與畫布混排的標準狀態組件。"));
+    assert!(has_text(&h, "畫布"));
     assert!(h.shapes.iter().any(|shape| matches!(&shape.shape,
-        egui::Shape::Text(text) if text.galley.text() == "图元"
+        egui::Shape::Text(text) if text.galley.text() == "圖元"
             && text.fallback_color == egui::Color32::from_rgb(0x34, 0x7f, 0x69))));
 }
 
@@ -369,7 +369,7 @@ fn plugin_canvas_scroll_consumes_wheel_without_turning_the_island_page() {
     h.hover(cursor, 0.8);
     let page = h.app.page();
     let last_visible = |h: &H| h.shapes.iter().any(|shape| {
-        matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text() == "记录 10"
+        matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text() == "記錄 10"
             && shape.clip_rect.contains_rect(text.visual_bounding_rect()))
     });
     assert!(!last_visible(&h));
@@ -393,24 +393,24 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
         &mut h,
         &profile,
         printer,
-        "拓竹打印（模拟）",
+        "拓竹打印（模擬）",
         &json!({
-            "state":"running", "label":"打印中", "summary":"拓竹模拟任务 · 收纳盒",
+            "state":"running", "label":"打印中", "summary":"拓竹模擬任務 · 收納盒",
             "progress_pct":48,
             "metrics":[
-                {"label":"喷嘴温度","value":"220 °C"}, {"label":"热床温度","value":"60 °C"},
-                {"label":"层数","value":"58 / 120"}, {"label":"剩余时间","value":"24 分钟"}
+                {"label":"噴嘴溫度","value":"220 °C"}, {"label":"熱床溫度","value":"60 °C"},
+                {"label":"層數","value":"58 / 120"}, {"label":"剩餘時間","value":"24 分鐘"}
             ],
-            "alert":"耗材余量偏低", "observed_at":1793785200
+            "alert":"耗材餘量偏低", "observed_at":1793785200
         }),
     );
     install(
         &mut h,
         &profile,
         companion,
-        "模拟状态源",
+        "模擬狀態源",
         &json!({
-            "state":"idle", "label":"另一来源就绪", "metrics":[{"label":"已处理","value":"42 项"}]
+            "state":"idle", "label":"另一來源就緒", "metrics":[{"label":"已處理","value":"42 項"}]
         }),
     );
     h.app.plugins = crate::sdk_spike::local::LocalPlugins::open(profile.join("local-plugins"));
@@ -424,11 +424,11 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
     h.wheel(-40.0);
     h.hover(cursor, 0.65);
     assert_eq!(h.app.page(), crate::app::PAGE_NAMES.len());
-    assert!(has_text(&h, "拓竹打印（模拟）"));
+    assert!(has_text(&h, "拓竹打印（模擬）"));
     assert!(has_text(&h, "打印中"));
     assert!(has_text(&h, "48"));
     assert!(has_text(&h, "220 °C"));
-    assert!(has_text(&h, "耗材余量偏低"));
+    assert!(has_text(&h, "耗材餘量偏低"));
     if let Some(path) = std::env::var_os("DAOZAI_PLUGIN_STATUS_PREVIEW") {
         let path = std::path::PathBuf::from(path);
         fs::create_dir_all(&path).unwrap();
@@ -436,7 +436,7 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
             &mut h,
             &mut feature_raster(),
             &path,
-            "拓竹结构化状态页",
+            "拓竹結構化狀態頁",
             30,
             Some(cursor),
             "2026-11-04",
@@ -445,7 +445,7 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
 
     h.wheel(-40.0);
     h.hover(cursor, 0.65);
-    assert!(has_text(&h, "另一来源就绪"));
+    assert!(has_text(&h, "另一來源就緒"));
     h.app
         .plugins
         .set_status_page_enabled(printer, false)
@@ -453,8 +453,8 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
     h.frame(vec![]);
     assert_eq!(h.app.page(), crate::app::PAGE_NAMES.len());
     assert!(
-        has_text(&h, "另一来源就绪"),
-        "其他插件页的编号移动后应保留所选来源"
+        has_text(&h, "另一來源就緒"),
+        "其他插件頁的編號移動後應保留所選來源"
     );
     assert!(h.app.plugins.status_page(printer).is_none());
 
@@ -466,7 +466,7 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
     settled(&mut h, printer, StatusHealth::Offline);
     h.app.show_status_page(printer);
     h.hover(cursor, 0.65);
-    assert!(has_text(&h, "数据源失联"));
+    assert!(has_text(&h, "數據源失聯"));
     assert!(!has_text(&h, "220 °C"));
 
     h.app
@@ -474,8 +474,8 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
         .set_status_page_enabled(printer, false)
         .unwrap();
     h.frame(vec![]);
-    assert_eq!(h.app.page(), todo, "关闭当前插件页后应回到仍开启的内置页");
-    assert!(has_text(&h, "待办"));
+    assert_eq!(h.app.page(), todo, "關閉當前插件頁後應回到仍開啟的內置頁");
+    assert!(has_text(&h, "待辦"));
     assert!(h
         .app
         .plugins
@@ -494,10 +494,10 @@ fn plugin_status_long_card_scrolls_without_changing_island_page() {
     fs::write(
         &source_path,
         json!({
-            "state":"running", "label":"打印任务",
-            "note":(1..=14).map(|i| format!("说明第 {i} 项")).collect::<Vec<_>>().join("\n"),
-            "items":(1..=8).map(|i| json!({"label":format!("队列第 {i} 项")})).collect::<Vec<_>>(),
-            "tags":["队列底部"]
+            "state":"running", "label":"打印任務",
+            "note":(1..=14).map(|i| format!("說明第 {i} 項")).collect::<Vec<_>>().join("\n"),
+            "items":(1..=8).map(|i| json!({"label":format!("隊列第 {i} 項")})).collect::<Vec<_>>(),
+            "tags":["隊列底部"]
         })
         .to_string(),
     )
@@ -506,7 +506,7 @@ fn plugin_status_long_card_scrolls_without_changing_island_page() {
         &mut h,
         &profile,
         id,
-        "打印任务",
+        "打印任務",
         &source_path,
         Some(json!({
             "components":[{"type":"state"},{"type":"text"},{"type":"list"},{"type":"badge"}]
@@ -523,7 +523,7 @@ fn plugin_status_long_card_scrolls_without_changing_island_page() {
         h.shapes.iter().any(|shape| {
             matches!(
                 &shape.shape,
-                egui::Shape::Text(text) if text.galley.text() == "队列底部"
+                egui::Shape::Text(text) if text.galley.text() == "隊列底部"
                     && shape.clip_rect.contains_rect(text.visual_bounding_rect())
             )
         })
@@ -532,5 +532,5 @@ fn plugin_status_long_card_scrolls_without_changing_island_page() {
     h.wheel(-350.0);
     h.hover(cursor, 0.5);
     assert_eq!(h.app.page(), page);
-    assert!(bottom_visible(&h), "滚动后应显示卡片底部的标签");
+    assert!(bottom_visible(&h), "滾動後應顯示卡片底部的標籤");
 }

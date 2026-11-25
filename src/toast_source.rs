@@ -1,4 +1,4 @@
-//! 仅在通知缺少应用标识时，按编号和创建时间核对 Windows 记录的发送方；不查询通知正文。
+//! 僅在通知缺少應用標識時，按編號和創建時間核對 Windows 記錄的發送方；不查詢通知正文。
 use std::{
     ffi::{c_char, c_int, c_void, CStr, CString},
     path::Path,
@@ -226,7 +226,7 @@ fn xml_unescape(value: &str) -> String {
         .replace("&amp;", "&")
 }
 fn sender_in(path: &Path, id: u32, created: i64) -> Option<String> {
-    // 参数均为数值，创建时间必须同时匹配，避免通知编号复用时混淆应用。
+    // 參數均為數值，創建時間必須同時匹配，避免通知編號複用時混淆應用。
     let sql=format!("SELECT h.PrimaryId FROM Notification n JOIN NotificationHandler h ON h.RecordId=n.HandlerId WHERE n.Id={id} AND n.ArrivalTime={created} AND n.Type='toast' LIMIT 1");
     let found = read_text(path, &sql)?;
     (!found.trim().is_empty()).then_some(found)

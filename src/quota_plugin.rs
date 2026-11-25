@@ -1,4 +1,4 @@
-//! 插件在额度面板上的只读展示数据。
+//! 插件在額度面板上的只讀展示數據。
 
 const MAX_TIMESTAMP: i64 = 253_402_300_799;
 const MAX_PERIOD_SECONDS: i64 = 366 * 24 * 60 * 60;
@@ -116,16 +116,16 @@ mod tests {
         let quota: PluginQuota = serde_json::from_value(json!({
             "expires_at": 1893456000,
             "windows": [
-                {"label": "本周", "remaining_pct": 0.25, "period_secs": 604800},
-                {"label": "剩余额度", "remaining": 125.5, "limit": 250, "unit": "积分"},
-                {"label": "充值余额", "remaining": 32.25, "unit": "美元"}
+                {"label": "本週", "remaining_pct": 0.25, "period_secs": 604800},
+                {"label": "剩餘額度", "remaining": 125.5, "limit": 250, "unit": "積分"},
+                {"label": "充值餘額", "remaining": 32.25, "unit": "美元"}
             ]
         }))
         .unwrap();
         assert!(quota.valid());
         assert_eq!(quota.windows[0].value_text(), "<1%");
         assert_eq!(quota.windows[0].percent(), Some(0.25));
-        assert_eq!(quota.windows[1].value_text(), "125.5 / 250 积分");
+        assert_eq!(quota.windows[1].value_text(), "125.5 / 250 積分");
         assert_eq!(quota.windows[1].percent(), Some(50.2));
         assert_eq!(quota.windows[2].value_text(), "32.25 美元");
         assert_eq!(quota.windows[2].percent(), None);
@@ -134,21 +134,21 @@ mod tests {
     #[test]
     fn plugin_quota_rejects_invalid_numbers_labels_and_dates() {
         for window in [
-            json!({"label": "本周", "remaining_pct": 101}),
-            json!({"label": "本周", "remaining_pct": 50, "remaining": 10, "unit": "点"}),
-            json!({"label": "本周", "remaining": 8, "limit": 7, "unit": "点"}),
-            json!({"label": "本周", "remaining": 0, "limit": 0, "unit": "点"}),
-            json!({"label": "本周", "remaining": -1, "unit": "点"}),
-            json!({"label": "本周", "remaining": 8}),
-            json!({"label": "本周", "remaining": 8, "unit": " "}),
-            json!({"label": "注入\n标题", "remaining_pct": 35}),
-            json!({"label": "本周", "remaining_pct": 35, "reset_at": i64::MAX}),
-            json!({"label": "本周", "remaining_pct": 35, "period_secs": 0}),
+            json!({"label": "本週", "remaining_pct": 101}),
+            json!({"label": "本週", "remaining_pct": 50, "remaining": 10, "unit": "點"}),
+            json!({"label": "本週", "remaining": 8, "limit": 7, "unit": "點"}),
+            json!({"label": "本週", "remaining": 0, "limit": 0, "unit": "點"}),
+            json!({"label": "本週", "remaining": -1, "unit": "點"}),
+            json!({"label": "本週", "remaining": 8}),
+            json!({"label": "本週", "remaining": 8, "unit": " "}),
+            json!({"label": "注入\n標題", "remaining_pct": 35}),
+            json!({"label": "本週", "remaining_pct": 35, "reset_at": i64::MAX}),
+            json!({"label": "本週", "remaining_pct": 35, "period_secs": 0}),
         ] {
             let quota: PluginQuota = serde_json::from_value(json!({"windows": [window]})).unwrap();
             assert!(!quota.valid(), "{quota:?}");
         }
-        let window = json!({"label":"本周","remaining_pct":35});
+        let window = json!({"label":"本週","remaining_pct":35});
         let quota: PluginQuota = serde_json::from_value(json!({
             "windows":[window.clone(),window.clone(),window.clone(),window.clone()]
         }))
@@ -160,7 +160,7 @@ mod tests {
         .unwrap();
         assert!(!quota.valid());
         assert!(serde_json::from_value::<PluginQuota>(json!({
-            "windows":[{"label":"本周","remaining_pct":35,"account_id":"native"}]
+            "windows":[{"label":"本週","remaining_pct":35,"account_id":"native"}]
         }))
         .is_err());
     }

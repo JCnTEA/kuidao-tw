@@ -1,4 +1,4 @@
-//! 主岛材质的装载、底片与绘制节拍。
+//! 主島材質的裝載、底片與繪製節拍。
 
 mod backdrop;
 mod controls;
@@ -39,7 +39,7 @@ pub fn configure_startup(
 pub fn take_startup_failure() -> Option<String> {
     let error = eframe::egui_wgpu::winit::take_direct_composition_error();
     if let Some(error) = &error {
-        log(&format!("透明交换链初始化失败，退回普通绘制：{error}"));
+        log(&format!("透明交換鏈初始化失敗，退回普通繪製：{error}"));
     }
     error
 }
@@ -48,7 +48,7 @@ pub fn report_run_failure(result: &eframe::Result<()>) -> bool {
     let _ = take_startup_failure();
     if let Err(eframe::Error::Wgpu(eframe::egui_wgpu::WgpuError::DirectComposition(error))) = result
     {
-        log(&format!("透明交换链运行失败，退回普通绘制：{error}"));
+        log(&format!("透明交換鏈運行失敗，退回普通繪製：{error}"));
         true
     } else {
         false
@@ -214,7 +214,7 @@ impl Motion {
             .expansion
             .replace(expansion)
             .map_or(0.0, |previous| (expansion - previous) / dt.max(0.001));
-        // 沿用 #235：取本帧速度贡献和上一帧衰减值中的较大者。
+        // 沿用 #235：取本幀速度貢獻和上一幀衰減值中的較大者。
         self.morph = (self.morph * 0.74).max((speed.abs() * 0.30).min(1.0));
         (speed, self.morph)
     }
@@ -251,14 +251,14 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    /// 用宿主已选定的材质创建管线。调用方负责先建立主岛透明交换链。
+    /// 用宿主已選定的材質創建管線。調用方負責先建立主島透明交換鏈。
     pub fn load(
         render_state: &eframe::egui_wgpu::RenderState,
         shader: &str,
         options: Options,
     ) -> Result<Self, String> {
         if render_state.adapter.get_info().backend != eframe::wgpu::Backend::Dx12 {
-            return Err("材质需要 Direct3D 12 兼容渲染".into());
+            return Err("材質需要 Direct3D 12 兼容渲染".into());
         }
         Ok(Self {
             pipeline: Pipeline::new(render_state, shader)?,
@@ -281,7 +281,7 @@ impl Runtime {
 
     pub fn debug(render_state: &eframe::egui_wgpu::RenderState) -> Result<Self, String> {
         let material = Self::load(render_state, pipeline::DEBUG_SHADER, Options::default())?;
-        log("调试材质已加载");
+        log("調試材質已加載");
         Ok(material)
     }
 
@@ -320,7 +320,7 @@ impl Runtime {
         }
     }
 
-    /// 隐藏或锁屏期间释放桌面捕获，并在恢复后重新定位底片。
+    /// 隱藏或鎖屏期間釋放桌面捕獲，並在恢復後重新定位底片。
     pub fn suspend(&mut self) {
         if self.backdrop.is_some() {
             self.clear_backdrop();
@@ -349,13 +349,13 @@ impl Runtime {
         if ctx.will_discard() {
             return Ok(None);
         }
-        let hwnd = window.material_window().ok_or("透明交换链不可用")?;
+        let hwnd = window.material_window().ok_or("透明交換鏈不可用")?;
         if !unsafe { windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(hwnd) }.as_bool() {
             return Ok(Some(Duration::from_millis(20)));
         }
         let started = Instant::now();
         if window.ensure_material_capture_exclusion()? {
-            // 原生样式恢复后，旧的抓屏会话可能含有岛体画面。
+            // 原生樣式恢復後，舊的抓屏會話可能含有島體畫面。
             self.clear_backdrop();
         }
         self.capture_ready = true;
@@ -434,7 +434,7 @@ impl Runtime {
                 0.0,
             ];
             frame.env = [time as f32, plate.brightness, ppp, 1.0];
-            // 前景与着色器使用同一帧的明暗值，下一帧再应用平滑后的值。
+            // 前景與著色器使用同一幀的明暗值，下一幀再應用平滑後的值。
             frame.motion = [speed, self.motion.light, morph, 0.0];
             light_changing = self.motion.update_light(plate.brightness, dt);
             if let Some((id, image)) = layer.artwork {
@@ -459,7 +459,7 @@ impl Runtime {
         };
 
         if self.budget.exceeded(started.elapsed()) {
-            return Err("材质通道连续 120 帧超过 4 ms".into());
+            return Err("材質通道連續 120 幀超過 4 ms".into());
         }
         self.ready = shape.is_some();
         if let Some(shape) = shape {
@@ -467,7 +467,7 @@ impl Runtime {
             if !self.has_drawn {
                 self.has_drawn = true;
                 log(&format!(
-                    "材质首帧就绪（{} × {}）",
+                    "材質首幀就緒（{} × {}）",
                     geometry.screen.width, geometry.screen.height
                 ));
             }
@@ -481,7 +481,7 @@ impl Runtime {
     }
 
     pub fn report_failure(error: &str) {
-        log(&format!("材质已停用，退回普通绘制：{error}"));
+        log(&format!("材質已停用，退回普通繪製：{error}"));
     }
 }
 

@@ -84,19 +84,19 @@ fn number(n:f64)->String {
     if raw.contains('e') { raw } else { raw.trim_end_matches('0').trim_end_matches('.').to_owned() }
 }
 
-/// 保留站点的部署路径；内置中转站模板始终要求 HTTPS。
+/// 保留站點的部署路徑；內置中轉站模板始終要求 HTTPS。
 pub fn validate_base_url(raw:&str)->Result<String,String> {site_url(raw,false)}
 
 pub(super) fn site_url(raw:&str,allow_loopback_http:bool)->Result<String,String> {
     let raw=raw.trim();
-    if raw.is_empty() || raw.chars().any(char::is_whitespace) || raw.contains('\\') { return Err("请输入有效的站点地址".into()); }
-    let url=url::Url::parse(raw).map_err(|_|"请输入完整的站点地址")?;
+    if raw.is_empty() || raw.chars().any(char::is_whitespace) || raw.contains('\\') { return Err("請輸入有效的站點地址".into()); }
+    let url=url::Url::parse(raw).map_err(|_|"請輸入完整的站點地址")?;
     let local_http=allow_loopback_http && url.scheme()=="http" && !script::loopback_ips(&url).is_empty();
     if url.scheme()!="https" && !local_http {
-        return Err(if allow_loopback_http {"仅本机回环地址可以使用 HTTP，其他站点请使用 HTTPS"}else{"站点地址必须使用 HTTPS"}.into());
+        return Err(if allow_loopback_http {"僅本機迴環地址可以使用 HTTP，其他站點請使用 HTTPS"}else{"站點地址必須使用 HTTPS"}.into());
     }
     if url.host().is_none() || !url.username().is_empty() || url.password().is_some() || url.query().is_some() || url.fragment().is_some() {
-        return Err("站点地址需要有效主机，且不能包含账号、查询参数或片段".into());
+        return Err("站點地址需要有效主機，且不能包含帳號、查詢參數或片段".into());
     }
     Ok(url.as_str().trim_end_matches('/').to_owned())
 }
@@ -141,7 +141,7 @@ pub fn parse_new_api(v:&Value)->Result<Snapshot,String> {
 pub fn parse_new_api_user(v:&Value,status:&Value)->Result<Snapshot,String>{
     if v["success"]!=true||!v["error"].is_null(){return Err("無法讀取帳戶餘額，請核對使用者 Token、使用者 ID 和查詢許可權".into());}
     let d=&v["data"];let remaining=required(d,"quota")?;let used=nonnegative(d,"used_quota")?;
-    // 账户配额按站点公开配置换算；未提供有效配置时保留原始单位。
+    // 帳戶配額按站點公開配置換算；未提供有效配置時保留原始單位。
     let conversion=(||{
         if status["success"]!=true{return None;}
         let s=&status["data"];let per=numeric(&s["quota_per_unit"]).filter(|n|*n>0.0)?;
@@ -319,7 +319,7 @@ fn detect_with(mut query:impl FnMut(&str,Duration)->Result<Value,ProbeError>,can
         if value["code"]==false||value["success"]==false||value["isValid"]==false||!value["error"].is_null(){return Err(("站點拒絕額度查詢，請核對 API Key 與查詢許可權".into(),60));}
         Ok(Some(value))
     };
-    // 优先专用额度协议；兼容计费接口不证明站点品牌，也不证明账户或 Key 范围。
+    // 優先專用額度協議；兼容計費接口不證明站點品牌，也不證明帳戶或 Key 範圍。
     for (kind,path) in [(Kind::General,"/user/balance"),(Kind::NewApi,"/api/usage/token/"),(Kind::Sub2Api,"/v1/usage"),(Kind::OneApi,"/dashboard/billing/subscription")] {
         let Some(value)=next(path)?else{continue;};
         let result=match kind{
@@ -341,7 +341,7 @@ pub fn detect_cancellable(agent:impl Fn(Duration)->ureq::Agent,base_url:&str,key
     if key.is_empty()||key.len()>8192||key.chars().any(|c|c.is_whitespace()||c.is_control()){return Err(("請輸入有效的 API Key".into(),0));}
     detect_with(|path,timeout|query(&agent(timeout),&endpoint(&base,path),key,Some(timeout)),cancelled,AUTO_TIMEOUT)
 }
-/// 已保存的协议直接查询；刷新和手动指定类型均不自动切换协议。
+/// 已保存的協議直接查詢；刷新和手動指定類型均不自動切換協議。
 pub fn request_cancellable(agent:&ureq::Agent,kind:Kind,base_url:&str,key:&str,cancelled:impl Fn()->bool)->Result<Snapshot,(String,u64)> {
     if cancelled(){return Err(("已取消連線".into(),0));}
     let base=validate_base_url(base_url).map_err(|e|(e,0))?;

@@ -1,4 +1,4 @@
-//! 原生收集诊断。命令行入口在单实例检查和图形窗口初始化之前运行。
+//! 原生收集診斷。命令行入口在單實例檢查和圖形窗口初始化之前運行。
 
 pub const ARG: &str = "--collect-diagnostics";
 
@@ -9,7 +9,7 @@ pub fn requested(mut args: impl Iterator<Item = String>) -> bool {
     args.any(|arg| arg == ARG)
 }
 
-/// 应用内按钮启动一次独立的收集进程，当前岛仔可以继续运行。
+/// 應用內按鈕啟動一次獨立的收集進程，當前島仔可以繼續運行。
 pub fn launch() -> std::io::Result<()> {
     std::process::Command::new(std::env::current_exe()?)
         .arg(ARG)
@@ -84,7 +84,7 @@ mod archive {
             Some(PathBuf::from(
                 args.next()
                     .filter(|arg| !arg.is_empty())
-                    .ok_or("请指定诊断包保存目录")?,
+                    .ok_or("請指定診斷包保存目錄")?,
             ))
         } else {
             None
@@ -98,7 +98,7 @@ mod archive {
             .filter_map(|key| std::env::var(key).ok().map(|value| (key, value)))
             .collect();
         let archive = save(data_dir, &target, environment::collect(), &private_paths)
-            .map_err(|error| format!("无法保存诊断包：{error}"))?;
+            .map_err(|error| format!("無法保存診斷包：{error}"))?;
         if output.is_none() {
             reveal(&archive);
         }
@@ -110,7 +110,7 @@ mod archive {
     }
 
     fn read_text(path: &Path) -> io::Result<String> {
-        // 只收集实际日志文件，避免从重解析点读取白名单以外的数据。
+        // 只收集實際日誌文件，避免從重解析點讀取白名單以外的數據。
         let metadata = fs::symlink_metadata(path)?;
         if !metadata.is_file() || is_reparse_point(&metadata) {
             return Err(io::Error::other("不是普通文件"));
@@ -125,7 +125,7 @@ mod archive {
         let mut bytes = Vec::new();
         file.take(MAX_LOG_SIZE + 1).read_to_end(&mut bytes)?;
         if bytes.len() as u64 > MAX_LOG_SIZE {
-            return Err(io::Error::other("日志超过收集大小上限"));
+            return Err(io::Error::other("日誌超過收集大小上限"));
         }
         let text = String::from_utf8(bytes).map_err(io::Error::other)?;
         Ok(text
@@ -146,7 +146,7 @@ mod archive {
                 let regex = RegexBuilder::new(&regex::escape(&spelling))
                     .case_insensitive(true)
                     .build()
-                    .expect("字面路径应能编译为正则表达式");
+                    .expect("字面路徑應能編譯為正則表達式");
                 masks.push((regex, format!("%{key}%")));
             }
         }
@@ -254,7 +254,7 @@ mod archive {
                 Err(error) if error.kind() == io::ErrorKind::NotFound => {
                     missing.push((*name).to_owned())
                 }
-                Err(_) => missing.push(format!("{name}：无法读取")),
+                Err(_) => missing.push(format!("{name}：無法讀取")),
             }
         }
         info.insert("CollectedAt".into(), json!(time.to_rfc3339()));
@@ -271,7 +271,7 @@ mod archive {
 
         fs::create_dir_all(output_dir)?;
         let output = output_dir.join(format!(
-            "岛仔诊断-{}-{}.zip",
+            "島仔診斷-{}-{}.zip",
             time.format("%Y%m%d-%H%M%S-%9f"),
             std::process::id()
         ));
@@ -294,7 +294,7 @@ mod archive {
 
     fn reveal(path: &Path) {
         let message = format!(
-            "诊断包已保存到：\n{}\n\n诊断包包含岛仔日志和系统状态。音乐日志可能包含歌名和歌手，请自行决定是否分享。\n\n点击确定后查看诊断包。",
+            "診斷包已保存到：\n{}\n\n診斷包包含島仔日誌和系統狀態。音樂日誌可能包含歌名和歌手，請自行決定是否分享。\n\n點擊確定後查看診斷包。",
             path.display()
         );
         let message_wide = wide(OsStr::new(&message));
@@ -303,7 +303,7 @@ mod archive {
             MessageBoxW(
                 None,
                 PCWSTR(message_wide.as_ptr()),
-                w!("岛仔诊断"),
+                w!("島仔診斷"),
                 MB_OK | MB_ICONINFORMATION,
             );
             let initialized = CoInitializeEx(None, COINIT_APARTMENTTHREADED).is_ok();

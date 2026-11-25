@@ -1,4 +1,4 @@
-//! 多来源快照：只按明确身份合并，保留读数来源、时间和连接代次。
+//! 多來源快照：只按明確身份合併，保留讀數來源、時間和連接代次。
 use std::collections::BTreeSet;
 use std::time::{Duration,Instant};
 
@@ -11,25 +11,25 @@ pub enum DeviceKind {
     #[default] Other,
 }
 impl DeviceKind {
-    /// 连接后会接管系统声音的设备；用于收起音量提示。
+    /// 連接後會接管系統聲音的設備；用於收起音量提示。
     pub fn is_audio(self)->bool {matches!(self,Self::Headphones|Self::Earbuds|Self::EarbudsStem|Self::EarbudsStemTips|Self::OpenEar|Self::Bone|Self::HearingAid|Self::Speaker)}
 }
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum BatterySource {Windows,Gatt}
 impl BatterySource {
-    pub fn label(self)->&'static str {match self {Self::Windows=>"Windows 设备电量",Self::Gatt=>"蓝牙电池服务"}}
+    pub fn label(self)->&'static str {match self {Self::Windows=>"Windows 設備電量",Self::Gatt=>"藍牙電池服務"}}
 }
 
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub struct BatteryReading {
     pub percent:u8,
     pub source:BatterySource,
-    /// 该来源最近一次成功读取的时间。
+    /// 該來源最近一次成功讀取的時間。
     pub observed:Instant,
-    /// 本机首次观察到当前读数的时间。Windows 连续读到相同电量时保留这个值。
+    /// 本機首次觀察到當前讀數的時間。Windows 連續讀到相同電量時保留這個值。
     pub value_since:Instant,
-    /// None 表示来源没有上报充电状态。
+    /// None 表示來源沒有上報充電狀態。
     pub charging:Option<bool>,
 }
 impl BatteryReading {
@@ -52,7 +52,7 @@ impl Default for Device {
 }
 impl Device {
     pub fn stale_at(&self,now:Instant)->bool {!self.connected||self.reading.as_ref().is_some_and(|r|now.saturating_duration_since(r.observed)>FRESH_FOR)}
-    pub fn summary(&self)->String {match self.battery.filter(|_|!self.stale_at(Instant::now())) {Some(b)=>format!("{} · 电量 {b}%",self.name),None=>self.name.clone()}}
+    pub fn summary(&self)->String {match self.battery.filter(|_|!self.stale_at(Instant::now())) {Some(b)=>format!("{} · 電量 {b}%",self.name),None=>self.name.clone()}}
 }
 
 #[derive(Clone,Debug)]
@@ -101,11 +101,11 @@ impl State {
             let entry=&mut self.entries[first];
             if !entry.connected {
                 self.generation+=1;entry.session=self.generation;
-                // 重连后须重新取值，同一个 Windows 缓存值仍沿用首次观察时间。
+                // 重連後須重新取值，同一個 Windows 緩存值仍沿用首次觀察時間。
                 entry.readings.retain(|r|r.value.source==BatterySource::Windows);
                 for r in &mut entry.readings {r.active=false;}
             }
-            // 同一轮按端点 ID 排序，优先使用首个端点的名称。
+            // 同一輪按端點 ID 排序，優先使用首個端點的名稱。
             if !entry.seen&&!endpoint.name.trim().is_empty() {entry.name.clone_from(&endpoint.name);}
             entry.aliases.extend(aliases);entry.connected=true;entry.seen=true;entry.last_seen=now;
             if entry.kind==DeviceKind::Other {entry.kind=endpoint.kind;}

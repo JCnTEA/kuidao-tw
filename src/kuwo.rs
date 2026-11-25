@@ -1,4 +1,4 @@
-//! 酷我 9.6：读取已验证音频服务的歌曲、输出时钟与暂停标记。
+//! 酷我 9.6：讀取已驗證音頻服務的歌曲、輸出時鐘與暫停標記。
 use super::{MediaKind,NowPlaying};
 use std::{ffi::c_void,io::Read,path::PathBuf,sync::Arc,time::{Duration,Instant}};
 use windows::{core::w,Win32::{Foundation::{CloseHandle,HWND,LPARAM,RECT,WPARAM},System::Diagnostics::ToolHelp::{CreateToolhelp32Snapshot,Process32FirstW,Process32NextW,PROCESSENTRY32W,TH32CS_SNAPPROCESS},UI::{HiDpi::{SetThreadDpiAwarenessContext,DPI_AWARENESS_CONTEXT,DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2},WindowsAndMessaging::*}}};
@@ -90,9 +90,9 @@ impl Target {
             }
         }
         let valid=target.valid(&process);
-        // 酷我在运行但音频服务不是已适配的版本：读不到歌名、进度和本机歌词。
+        // 酷我在運行但音頻服務不是已適配的版本：讀不到歌名、進度和本機歌詞。
         super::music_compat::set("kwmusic.exe",super::music_compat::Item::Reader,if valid{super::music_compat::Support::Ok}
-            else{super::music_compat::Support::Unavailable("音频服务版本不在适配表里（已适配酷我 9.6）".into())});
+            else{super::music_compat::Support::Unavailable("音頻服務版本不在適配表裡（已適配酷我 9.6）".into())});
         let stamp=process.number(target.core+60).filter(|pe|*pe<4096).and_then(|pe|process.number(target.core+pe as usize+8));
         if !valid && target.core!=0 && stamp.is_some_and(|stamp|stamp<0x6a1fa2a8) {super::music_compat::outdated("kwmusic.exe");}
         valid.then_some(target)
@@ -105,7 +105,7 @@ impl Target {
         let rid=process.string(core+0x84)?;let title=process.string(core+0xb0)?;let artist=process.string(core+0xc8)?;
         let duration=process.number(core+0xa8)? as f64;
         let decoder=process.number(self.input+0xa4f4)? as usize;let paused=process.read::<1>(decoder+0x40)?[0];
-        // 输出插件保留真实位置；服务的普通进度字段在暂停时会被置零。
+        // 輸出插件保留真實位置；服務的普通進度字段在暫停時會被置零。
         let bytes=process.number(self.output+0x1a898)?;let rate=process.number(self.output+0x1a8c8)?;
         let offset=process.number(self.output+0x1a8a4)? as i32;
         if process.string(core+0x84)?!=rid{return None;}
@@ -208,7 +208,7 @@ fn click(window:HWND,rect:RECT,x:i32)->Option<()>{
         if rect.left<0 || rect.top<0 || (!IsIconic(window).as_bool() && (rect.right>client.right || rect.bottom>client.bottom)){return None;}
         if x<rect.left || x>=rect.right{return None;}let y=rect.top+(rect.bottom-rect.top)/2;
         let point=LPARAM(((y as u32&0xffff)<<16 | (x as u32&0xffff)) as isize);
-        // 读取原生控件的位置，只向客户端投递点击，不移动鼠标或激活窗口。
+        // 讀取原生控件的位置，只向客戶端投遞點擊，不移動鼠標或激活窗口。
         let send=|message,buttons|SendMessageTimeoutW(window,message,WPARAM(buttons),point,SMTO_ABORTIFHUNG|SMTO_ERRORONEXIT,500,None).0!=0;
         if !send(WM_MOUSEMOVE,0){return None;}
         let down=send(WM_LBUTTONDOWN,1);let up=send(WM_LBUTTONUP,0);(down&&up).then_some(())
@@ -314,10 +314,10 @@ mod tests {
         let paused=paused.unwrap();assert!(was_paused && paused_seek && !paused.playing);
         assert_eq!(paused.song_id,first.song_id);assert!((paused.position-paused_target).abs()<3.0);
         assert!(restored,"應恢復原播放位置");assert_eq!(unsafe{IsIconic(window)},minimized);assert_eq!(unsafe{GetForegroundWindow()},foreground);
-        println!("暫停時跳轉 {:.2}，保持暫停；已恢復原位置和播放狀態，最小化={}，前臺未改變",paused.position,minimized.as_bool());
+        println!("暫停時跳轉 {:.2}，保持暫停；已恢復原位置和播放狀態，最小化={}，前台未改變",paused.position,minimized.as_bool());
     }
     #[test]
-    #[ignore="需要本機酷我正在播放；短暫暫停後恢復，驗證暫停位置和前臺視窗"]
+    #[ignore="需要本機酷我正在播放；短暫暫停後恢復，驗證暫停位置和前台視窗"]
     fn live_kuwo_pause_retains_position_and_focus(){
         use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
         let mut reader=Reader::default();let before=reader.poll().expect("未讀取到酷我播放狀態");assert!(before.playing);

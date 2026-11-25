@@ -1,5 +1,5 @@
-//! Gemini 网页订阅额度，接口与字段映射参考 CodexBar 的 gemini-web 插件。
-//! 浏览器连接只在用户点击时读取会话；会话由 Windows DPAPI 加密保存。
+//! Gemini 網頁訂閱額度，接口與字段映射參考 CodexBar 的 gemini-web 插件。
+//! 瀏覽器連接只在用戶點擊時讀取會話；會話由 Windows DPAPI 加密保存。
 use super::{Account,Snapshot,Window};
 use serde_json::{json,Value};
 use std::{fs,io::Read,path::PathBuf,sync::{mpsc,Arc,atomic::{AtomicBool,Ordering}}};
@@ -23,7 +23,7 @@ pub fn parse(value:&Value)->Result<Snapshot,String>{
         let used=pool["percentageUsed"].as_f64().filter(|n|n.is_finite() && *n>=0.0)?;
         Some(Window{label:label.into(),seconds:Some(seconds),remaining:(100.0-used*100.0).clamp(0.0,100.0) as f32,reset:super::reset(&pool["gxu"]["windowRefreshesAt"]),amount:None})
     }).collect::<Vec<_>>();
-    if windows.is_empty(){return Err("此 Google 账号暂未提供 Gemini 订阅额度".into());}
+    if windows.is_empty(){return Err("此 Google 帳號暫未提供 Gemini 訂閱額度".into());}
     Ok(Snapshot{plan:if usage["subscriptionTier"]=="TIER1"{"AI Pro"}else{""}.into(),windows,extra:vec![],at:chrono::Utc::now().timestamp(),..Default::default()})
 }
 fn decode(raw:&str)->Result<Snapshot,String>{
@@ -51,7 +51,7 @@ fn request_url(email:&str)->String{
 }
 fn redirect_target(current:&str,location:&str)->Option<String>{
     let target=url::Url::parse(current).ok()?.join(location).ok()?;
-    // Google 会把邮箱形式的 authuser 规范化为账号编号；只跟随同站的用量查询。
+    // Google 會把郵箱形式的 authuser 規範化為帳號編號；只跟隨同站的用量查詢。
     (target.scheme()=="https" && target.host_str()==Some("gemini.google.com") && target.port_or_known_default()==Some(443) && target.username().is_empty() && target.password().is_none() && target.path().ends_with("/_/BardChatUi/graphql/schemas/GEMINI_WEB_GRAPHQL/executeQuery")).then(||target.into())
 }
 fn request(agent:&ureq::Agent,url:&str,session:&Session)->Result<Snapshot,(String,u64)>{

@@ -1,4 +1,4 @@
-//! 自动检查正式版更新，下载与安装由用户确认。
+//! 自動檢查正式版更新，下載與安裝由用戶確認。
 use eframe::egui;
 use std::{io::{Read, Write}, path::PathBuf, sync::{mpsc::{self, Receiver}, Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 
@@ -103,7 +103,7 @@ impl State {
                 Some(Err(mpsc::TryRecvError::Disconnected)) => {
                     self.rx = None; self.cancel = None;
                     if self.automatic_check_until.take().is_some() { self.remember_check(RETRY_INTERVAL); }
-                    self.message = "检查或下载已中断，请重试。".into(); break;
+                    self.message = "檢查或下載已中斷，請重試。".into(); break;
                 }
                 _ => break,
             };
@@ -116,7 +116,7 @@ impl State {
                     self.dialog_open = matches!(&result, Ok(Some(_))) && automatic_until.is_none_or(|until| now < until && new_notice);
                     self.focus_requested = self.dialog_open;
                     if self.dialog_open { if let Ok(Some(release)) = &result { self.notified_version = Some(release.version.clone()); } }
-                    // 错过启动时段的新版留在设置里，下次启动时可以再提醒。
+                    // 錯過啟動時段的新版留在設置裡，下次啟動時可以再提醒。
                     let delay = if result.is_err() { RETRY_INTERVAL }
                         else if new_notice && !self.dialog_open { Duration::ZERO }
                         else { CHECK_INTERVAL };
@@ -163,7 +163,7 @@ impl State {
 
     pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
         let wait = self.manual_wait();
-        if ui.add_enabled(self.rx.is_none() && wait.is_zero(), egui::Button::new("检查更新")).clicked() {
+        if ui.add_enabled(self.rx.is_none() && wait.is_zero(), egui::Button::new("檢查更新")).clicked() {
             self.begin_check(ui.ctx(), None, check);
         }
         match &self.result {
@@ -314,16 +314,16 @@ impl State {
 
 }
 
-/// 只统计鬼島自己的文件（KB）。共享安装文件夹里的其他软件不算在内。
-/// 诊断脚本已内嵌在程序里（`--collect-diagnostics`），安装目录不再附带单独的诊断文件。
+/// 只統計鬼島自己的文件（KB）。共享安裝文件夾裡的其他軟件不算在內。
+/// 診斷腳本已內嵌在程序裡（`--collect-diagnostics`），安裝目錄不再附帶單獨的診斷文件。
 fn own_files_kb(dir: &std::path::Path) -> u32 {
     let bytes: u64 = ["kuidao.exe", "Uninstall.exe", "LICENSE", "THIRD_PARTY_NOTICES.txt"].iter()
         .filter_map(|name| std::fs::metadata(dir.join(name)).ok()).filter(|meta| meta.is_file()).map(|meta| meta.len()).sum();
     bytes.div_ceil(1024).min(u64::from(u32::MAX)) as u32
 }
 
-/// 启动时为安装版登记真实大小：旧版安装器没有写 `EstimatedSize`，
-/// 软件管家会统计整个安装文件夹；装进共享文件夹时会显示几十 GB。只在登记的安装位置就是本程序所在目录时写入。
+/// 啟動時為安裝版登記真實大小：舊版安裝器沒有寫 `EstimatedSize`，
+/// 軟件管家會統計整個安裝文件夾；裝進共享文件夾時會顯示幾十 GB。只在登記的安裝位置就是本程序所在目錄時寫入。
 #[cfg(windows)]
 pub fn record_install_size() {
     use windows::{core::w, Win32::System::Registry::{RegGetValueW, RegSetKeyValueW, HKEY_CURRENT_USER, REG_DWORD, RRF_RT_REG_SZ}};
@@ -372,7 +372,7 @@ unsafe fn update_window_region(rect: egui::Rect, scale: f32) -> windows::Win32::
 }
 
 fn update_agent(proxy: Option<&str>, timeout: Duration) -> Result<ureq::Agent, String> {
-    // 整体 timeout 会覆盖读取超时，分别限制连接和无数据等待。
+    // 整體 timeout 會覆蓋讀取超時，分別限制連接和無數據等待。
     let mut builder = ureq::AgentBuilder::new().try_proxy_from_env(false)
         .timeout_connect(Duration::from_secs(20)).timeout_read(timeout).timeout_write(timeout);
     if let Some(proxy) = proxy {
@@ -502,20 +502,20 @@ fn launch_installer(work: &std::path::Path) -> Result<(), String> {
     let mut child = crate::child_process::spawn(std::process::Command::new(shell).args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(work.join("apply.ps1")).arg("-WorkPath").arg(work).arg("-TargetExe").arg(target)
         .arg("-ParentProcessId").arg(std::process::id().to_string()))
-        .map_err(|_| "无法启动更新程序，请通过浏览器下载安装")?;
-    // 脚本完成二次校验和解压后，才允许主程序退出。
+        .map_err(|_| "無法啟動更新程序，請通過瀏覽器下載安裝")?;
+    // 腳本完成二次校驗和解壓後，才允許主程序退出。
     let ready = work.join("ready");
     let deadline = Instant::now() + INSTALL_PREPARE_TIMEOUT;
     let failure = loop {
         match child.try_wait() {
             Ok(None) => {}
-            Ok(Some(status)) => break format!("更新程序在准备安装时退出（退出码 {}），请通过浏览器下载后安装。", status.code().unwrap_or(-1)),
-            Err(error) => break format!("无法读取更新程序状态（{error}），请通过浏览器下载后安装。"),
+            Ok(Some(status)) => break format!("更新程序在準備安裝時退出（退出碼 {}），請通過瀏覽器下載後安裝。", status.code().unwrap_or(-1)),
+            Err(error) => break format!("無法讀取更新程序狀態（{error}），請通過瀏覽器下載後安裝。"),
         }
         if ready.is_file() { return Ok(()); }
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
-            break "安装准备超时，请稍后重试或通过浏览器下载后安装。".into();
+            break "安裝準備超時，請稍後重試或通過瀏覽器下載後安裝。".into();
         }
         std::thread::sleep(remaining.min(Duration::from_millis(50)));
     };
@@ -596,7 +596,7 @@ mod tests {
     #[test]
     fn automatic_check_records_cooldown_for_future_launches() {
         let path = std::env::temp_dir().join(format!("daozai-update-retry-{}.json", std::process::id()));
-        for (result, delay) in [(Ok(None), 24 * 3600), (Err("网络失败".into()), 3600)] {
+        for (result, delay) in [(Ok(None), 24 * 3600), (Err("網絡失敗".into()), 3600)] {
             let mut state = State::default();
             state.history_path = Some(path.clone());
             state.automatic_check_until = Some(Instant::now() + STARTUP_WINDOW);
@@ -695,7 +695,7 @@ mod tests {
         let mut state = State::default();
         let ctx = egui::Context::default();
         assert!(state.begin_check(&ctx, Some(Instant::now() + STARTUP_WINDOW), || Ok(None)));
-        assert!(!state.begin_check(&ctx, None, || panic!("已有任务时不应发起检查")));
+        assert!(!state.begin_check(&ctx, None, || panic!("已有任務時不應發起檢查")));
         assert!(matches!(state.rx.as_ref().unwrap().recv_timeout(Duration::from_secs(3)), Ok(Event::Checked(Ok(None)))));
     }
 

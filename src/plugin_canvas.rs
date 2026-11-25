@@ -1,4 +1,4 @@
-//! 自绘画布的输出契约与校验。
+//! 自繪畫布的輸出契約與校驗。
 
 use serde::{Deserialize, Deserializer};
 use std::collections::{BTreeMap, BTreeSet};
@@ -36,23 +36,23 @@ struct RawCanvas {
 impl Canvas {
     pub(crate) fn parse(value: serde_json::Value) -> Result<Self, String> {
         let raw: RawCanvas =
-            serde_json::from_value(value).map_err(|error| format!("画布格式有误（{error}）"))?;
+            serde_json::from_value(value).map_err(|error| format!("畫布格式有誤（{error}）"))?;
         if !(40.0..=360.0).contains(&raw.height) {
-            return Err("画布高度必须在 40 到 360 之间".into());
+            return Err("畫布高度必須在 40 到 360 之間".into());
         }
         Self::parse_nodes(raw, false)
     }
 
     pub(crate) fn parse_pinned(mut value: serde_json::Value) -> Result<(f32, Self), String> {
-        let obj = value.as_object_mut().ok_or("常驻画布需要一个对象")?;
+        let obj = value.as_object_mut().ok_or("常駐畫布需要一個對象")?;
         let width = obj.remove("width").and_then(|width| width.as_f64())
             .filter(|width| (1.0..=156.0).contains(width))
-            .ok_or("常驻画布宽度须在 1 到 156 之间")?;
+            .ok_or("常駐畫布寬度須在 1 到 156 之間")?;
         obj.entry("height").or_insert(serde_json::json!(22));
         let raw: RawCanvas = serde_json::from_value(value)
-            .map_err(|error| format!("常驻画布格式有误（{error}）"))?;
+            .map_err(|error| format!("常駐畫布格式有誤（{error}）"))?;
         if raw.height != 22.0 {
-            return Err("常驻画布高度须为 22".into());
+            return Err("常駐畫布高度須為 22".into());
         }
         Ok((width as f32, Self::parse_nodes(raw, true)?))
     }
@@ -60,7 +60,7 @@ impl Canvas {
     fn parse_nodes(raw: RawCanvas, pinned: bool) -> Result<Self, String> {
         for (name, binding) in &raw.binds {
             if !valid_name(name) || !binding.valid() {
-                return Err(format!("画布绑定无效（{name}）"));
+                return Err(format!("畫布綁定無效（{name}）"));
             }
         }
         let mut budget = Budget {
@@ -76,7 +76,7 @@ impl Canvas {
         let nodes = budget.nodes(raw.nodes, 1)?;
         if pinned {
             if budget.nodes > 60 {
-                return Err("常驻画布最多 60 个节点".into());
+                return Err("常駐畫布最多 60 個節點".into());
             }
             fn has_interaction(nodes: &[Node]) -> bool {
                 nodes.iter().any(|node| node.hit.is_some() || node.hover.is_some()
@@ -88,7 +88,7 @@ impl Canvas {
                     || matches!(&node.kind, Kind::Group { group, .. } if has_interaction(group)))
             }
             if has_interaction(&nodes) {
-                return Err("常驻画布只支持绑定、数字翻动与横向滚动文字".into());
+                return Err("常駐畫布只支持綁定、數字翻動與橫向滾動文字".into());
             }
         }
         Ok(Self {
@@ -103,7 +103,7 @@ impl Canvas {
             for node in nodes {
                 match &node.kind {
                     Kind::Image { image, .. } if !exists(image) => {
-                        return Err(format!("画布引用的包内图片不存在（{image}）"));
+                        return Err(format!("畫布引用的包內圖片不存在（{image}）"));
                     }
                     Kind::Group { group, .. } => check(group, exists)?,
                     _ => {}
@@ -168,7 +168,7 @@ impl<'de> Deserialize<'de> for Color {
 
         let parse = |name: String| -> Result<Self, D::Error> {
             color_name(&name)
-                .ok_or_else(|| serde::de::Error::custom(format!("画布颜色无效（{name}）")))
+                .ok_or_else(|| serde::de::Error::custom(format!("畫布顏色無效（{name}）")))
         };
         match Raw::deserialize(input)? {
             Raw::Name(name) => parse(name),
@@ -464,7 +464,7 @@ impl<'de> Deserialize<'de> for PetMood {
                 .into_iter()
                 .find(|expression| expression.key() == name)
                 .map(Self::Expression)
-                .ok_or_else(|| D::Error::custom("无效的岛仔表情")),
+                .ok_or_else(|| D::Error::custom("無效的島仔表情")),
         }
     }
 }
@@ -513,11 +513,11 @@ struct Budget<'a> {
 impl Budget<'_> {
     fn nodes(&mut self, nodes: Vec<RawNode>, depth: usize) -> Result<Vec<Node>, String> {
         if depth > MAX_DEPTH && !nodes.is_empty() {
-            return Err("画布最多嵌套 8 层".into());
+            return Err("畫布最多嵌套 8 層".into());
         }
         self.nodes += nodes.len();
         if self.nodes > MAX_NODES {
-            return Err("画布最多 1500 个节点".into());
+            return Err("畫布最多 1500 個節點".into());
         }
         nodes
             .into_iter()
@@ -529,7 +529,7 @@ impl Budget<'_> {
         if self.binds.contains_key(name) {
             Ok(())
         } else {
-            Err(format!("画布绑定不存在（{name}）"))
+            Err(format!("畫布綁定不存在（{name}）"))
         }
     }
 
@@ -538,7 +538,7 @@ impl Budget<'_> {
             if (min..=max).contains(&value) {
                 Ok(())
             } else {
-                Err(format!("画布{name}必须为 {min} 到 {max} 之间的有限值"))
+                Err(format!("畫布{name}必須為 {min} 到 {max} 之間的有限值"))
             }
         };
         match number {
@@ -555,7 +555,7 @@ impl Budget<'_> {
     }
 
     fn coord(&self, number: &Num) -> Validation {
-        self.number(number, -COORD_LIMIT, COORD_LIMIT, "坐标")
+        self.number(number, -COORD_LIMIT, COORD_LIMIT, "座標")
     }
 
     fn coords(&self, numbers: &[Num]) -> Validation {
@@ -563,11 +563,11 @@ impl Budget<'_> {
     }
 
     fn length(&self, number: &Num) -> Validation {
-        self.number(number, 0.0, COORD_LIMIT, "长度")
+        self.number(number, 0.0, COORD_LIMIT, "長度")
     }
 
     fn positive(&self, number: &Num) -> Validation {
-        self.number(number, f32::MIN_POSITIVE, COORD_LIMIT, "长度")
+        self.number(number, f32::MIN_POSITIVE, COORD_LIMIT, "長度")
     }
 
     fn bounds(&self, bounds: &Bounds) -> Validation {
@@ -590,7 +590,7 @@ impl Budget<'_> {
                 || stops.iter().any(|(pos, _)| !(0.0..=1.0).contains(pos))
                 || stops.windows(2).any(|pair| pair[0].0 > pair[1].0)
             {
-                return Err("画布渐变至少需要两个色标，位置须在 0 到 1 内按顺序排列".into());
+                return Err("畫布漸變至少需要兩個色標，位置須在 0 到 1 內按順序排列".into());
             }
             stops.iter().try_for_each(|(_, color)| self.color(color))
         };
@@ -633,18 +633,18 @@ impl Budget<'_> {
         let kind = self.kind(&mut raw, depth)?;
         if let Some(id) = &raw.id {
             if !valid_name(id) || !self.ids.insert(id.clone()) {
-                return Err(format!("画布节点 id 无效或重复（{id}）"));
+                return Err(format!("畫布節點 id 無效或重複（{id}）"));
             }
         }
         self.live_fields(&kind, &raw)?;
         let fill = match (raw.fill, raw.color) {
             (None, color) if matches!(kind, Kind::Text { .. }) => color,
             (fill, None) => fill,
-            _ => return Err("画布文字颜色只能在 fill 或 color 中定义一次".into()),
+            _ => return Err("畫布文字顏色只能在 fill 或 color 中定義一次".into()),
         };
         let glow = match raw.glow {
             Some(RawGlow::Enabled(true)) => Some(Glow::Default),
-            Some(RawGlow::Enabled(false)) => return Err("画布发光需写 true 或颜色".into()),
+            Some(RawGlow::Enabled(false)) => return Err("畫布發光需寫 true 或顏色".into()),
             Some(RawGlow::Color(color)) => {
                 self.color(&color)?;
                 Some(Glow::Color(color))
@@ -700,13 +700,13 @@ impl Budget<'_> {
         .filter(|present| *present)
         .count();
         if count != 1 {
-            return Err("画布节点必须包含一种图元".into());
+            return Err("畫布節點必須包含一種圖元".into());
         }
         if let Some(image) = raw.image.take() {
-            let rect = raw.rect.take().ok_or("画布图片缺少 rect")?;
+            let rect = raw.rect.take().ok_or("畫布圖片缺少 rect")?;
             self.bounds(&rect)?;
             if !valid_image_path(&image) {
-                return Err(format!("画布图片须为包内 PNG 或 SVG（{image}）"));
+                return Err(format!("畫布圖片須為包內 PNG 或 SVG（{image}）"));
             }
             return Ok(Kind::Image {
                 image,
@@ -715,10 +715,10 @@ impl Budget<'_> {
             });
         }
         if let Some(icon) = raw.icon.take() {
-            let rect = raw.rect.take().ok_or("画布图标缺少 rect")?;
+            let rect = raw.rect.take().ok_or("畫布圖標缺少 rect")?;
             self.bounds(&rect)?;
             let svg_path = crate::plugin_setting_catalog::icon_path(&icon)
-                .ok_or_else(|| format!("未识别的画布图标（{icon}）"))?;
+                .ok_or_else(|| format!("未識別的畫布圖標（{icon}）"))?;
             let path = path::parse(svg_path, MAX_PATH_COMMANDS - self.commands)?;
             self.commands += path.len();
             return Ok(Kind::Icon { path, rect });
@@ -750,7 +750,7 @@ impl Budget<'_> {
         }
         if let Some(points) = raw.points.take() {
             if points.len() < 2 {
-                return Err("画布折线至少需要两个点".into());
+                return Err("畫布折線至少需要兩個點".into());
             }
             for point in &points {
                 self.coords(point)?;
@@ -772,27 +772,27 @@ impl Budget<'_> {
         if let Some(pet) = raw.pet.take() {
             self.pets += 1;
             if self.pets > 1 {
-                return Err("每个画布最多放一只岛仔".into());
+                return Err("每個畫布最多放一隻島仔".into());
             }
             if raw.looping.is_some() {
-                return Err("岛仔动画通过 pet.motion 声明".into());
+                return Err("島仔動畫通過 pet.motion 聲明".into());
             }
             if pet.motion != PetMotion::None
                 || matches!(pet.mood, PetMood::Expressions | PetMood::Expression(_))
             {
                 self.loops += 1;
                 if self.loops > 8 {
-                    return Err("画布最多同时循环 8 个节点".into());
+                    return Err("畫布最多同時循環 8 個節點".into());
                 }
             }
             if let Some(id) = pet.id {
                 if raw.id.as_ref().is_some_and(|other| *other != id) {
-                    return Err("岛仔节点的 id 不一致".into());
+                    return Err("島仔節點的 id 不一致".into());
                 }
                 raw.id = Some(id);
             }
             self.coords(&pet.at)?;
-            self.number(&pet.size, 12.0, 96.0, "岛仔大小")?;
+            self.number(&pet.size, 12.0, 96.0, "島仔大小")?;
             return Ok(Kind::Pet {
                 at: pet.at,
                 size: pet.size,
@@ -800,7 +800,7 @@ impl Budget<'_> {
                 motion: pet.motion,
             });
         }
-        let group = self.nodes(raw.group.take().ok_or("画布分组缺少节点")?, depth + 1)?;
+        let group = self.nodes(raw.group.take().ok_or("畫布分組缺少節點")?, depth + 1)?;
         let clip = raw.clip.take();
         if let Some(clip) = &clip {
             self.bounds(clip)?;
@@ -826,30 +826,30 @@ impl Budget<'_> {
     fn text(&mut self, raw: &mut RawNode, text: String) -> Result<Kind, String> {
         self.text += text.chars().count();
         if self.text > MAX_TEXT {
-            return Err("画布文字最多 2000 字".into());
+            return Err("畫布文字最多 2000 字".into());
         }
         if text
             .chars()
             .any(|ch| ch.is_control() && !matches!(ch, '\n' | '\r' | '\t'))
         {
-            return Err("画布文字含非法字符".into());
+            return Err("畫布文字含非法字符".into());
         }
-        let at = raw.at.take().ok_or("画布文字缺少 at")?;
-        let size = raw.size.take().ok_or("画布文字缺少 size")?;
+        let at = raw.at.take().ok_or("畫布文字缺少 at")?;
+        let size = raw.size.take().ok_or("畫布文字缺少 size")?;
         let weight = raw.weight.take().unwrap_or(400);
         let lines = raw.lines.take().unwrap_or(1);
         let max_width = raw.max_width.take();
         let font = raw.font.take();
         self.coords(&at)?;
-        self.number(&size, 6.0, 96.0, "字号")?;
+        self.number(&size, 6.0, 96.0, "字號")?;
         if let Some(max_width) = &max_width {
             self.positive(max_width)?;
         }
         if !(1..=1000).contains(&weight) || lines == 0 {
-            return Err("画布文字需要有效字重和行数".into());
+            return Err("畫布文字需要有效字重和行數".into());
         }
         if font.as_deref().is_some_and(|name| !valid_name(name)) {
-            return Err("画布字体名称无效".into());
+            return Err("畫布字體名稱無效".into());
         }
         Ok(Kind::Text {
             text,
@@ -869,26 +869,26 @@ impl Budget<'_> {
             .as_ref()
             .is_some_and(|animation| !(120..=1200).contains(&animation.ms))
         {
-            return Err("画布过渡时长必须在 120 到 1200 毫秒之间".into());
+            return Err("畫布過渡時長必須在 120 到 1200 毫秒之間".into());
         }
         if let Some(animation) = &raw.looping {
             self.loops += 1;
             if self.loops > 8 || animation.period_ms < 800 {
-                return Err("画布最多同时循环 8 个节点，且周期至少为 800 毫秒".into());
+                return Err("畫布最多同時循環 8 個節點，且週期至少為 800 毫秒".into());
             }
         }
         if let Some(hit) = &raw.hit {
             self.hits += 1;
             if self.hits > 64 {
-                return Err("画布最多 64 个点击区域".into());
+                return Err("畫布最多 64 個點擊區域".into());
             }
             if !hit.valid() {
-                return Err("画布点击内容无效".into());
+                return Err("畫布點擊內容無效".into());
             }
         }
         if let Some(hover) = &raw.hover {
             if let Some(opacity) = &hover.opacity {
-                self.number(opacity, 0.0, 1.0, "悬停透明度")?;
+                self.number(opacity, 0.0, 1.0, "懸停透明度")?;
             }
             if let Some(lift) = &hover.lift {
                 self.coord(lift)?;
@@ -898,32 +898,32 @@ impl Budget<'_> {
             }
             if let Some(hint) = &hover.hint {
                 if !crate::plugin_status::valid_text(hint, 40) {
-                    return Err("画布悬停提示需要 1 至 40 字的单行文字".into());
+                    return Err("畫布懸停提示需要 1 至 40 字的單行文字".into());
                 }
                 self.text += hint.chars().count();
                 if self.text > MAX_TEXT {
-                    return Err("画布文字最多 2000 字".into());
+                    return Err("畫布文字最多 2000 字".into());
                 }
             }
         }
         if let Some(scroll) = &raw.scroll {
             if !matches!(kind, Kind::Group { clip: Some(_), .. }) || !scroll.valid() {
-                return Err("画布滚动区需要分组、裁剪区域和有效内容高度".into());
+                return Err("畫布滾動區需要分組、裁剪區域和有效內容高度".into());
             }
         }
         if !raw.tips.is_empty() {
             if !matches!(kind, Kind::Polyline { .. }) {
-                return Err("画布悬停读数只能用于折线".into());
+                return Err("畫布懸停讀數只能用於折線".into());
             }
             for tip in &raw.tips {
                 self.coord(&Num::Literal(tip.x))?;
             }
         }
         if raw.roll && !matches!(kind, Kind::Text { .. }) {
-            return Err("画布数字翻动只能用于文字".into());
+            return Err("畫布數字翻動只能用於文字".into());
         }
         if raw.burst.is_some() && raw.id.is_none() {
-            return Err("画布一次性效果需要节点 id".into());
+            return Err("畫布一次性效果需要節點 id".into());
         }
         Ok(())
     }

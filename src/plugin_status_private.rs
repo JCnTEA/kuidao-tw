@@ -1,4 +1,4 @@
-//! 状态页敏感值的临时显隐。
+//! 狀態頁敏感值的臨時顯隱。
 
 use crate::{app::Env, paint::Card};
 use eframe::egui::{self, CursorIcon, Id};
@@ -81,7 +81,7 @@ impl SensitiveValues {
             current.and_then(|(value, until)| (value == id && now < until).then_some(until));
         if let Some(until) = until {
             ctx.request_repaint_after(Duration::from_secs_f64(until - now));
-            // 已展开的动作行把点击交给正文与行尾按钮。
+            // 已展開的動作行把點擊交給正文與行尾按鈕。
             if !allow_rehide {
                 return (true, true);
             }

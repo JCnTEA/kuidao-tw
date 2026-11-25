@@ -1,4 +1,4 @@
-//! 启动错误与 Rust 异常保存在本机，不自动上传账号或应用数据。
+//! 啟動錯誤與 Rust 異常保存在本機，不自動上傳帳號或應用數據。
 
 use std::path::{Path, PathBuf};
 
@@ -34,7 +34,7 @@ pub fn report(title: &str, details: &str) {
     eprintln!("{text}");
 }
 
-/// 仅记录最近一次启动停留的阶段，不记录账号或用户内容。
+/// 僅記錄最近一次啟動停留的階段，不記錄帳號或用戶內容。
 pub fn startup(stage:&str) {
     let directory=daozai::model::config_dir().join("diagnostics");
     if std::fs::create_dir_all(&directory).is_ok() {
@@ -43,7 +43,7 @@ pub fn startup(stage:&str) {
     }
 }
 
-/// 记录实际使用的图形设备，避免把电脑里的显卡列表误当作当前渲染设备。
+/// 記錄實際使用的圖形設備，避免把電腦裡的顯卡列表誤當作當前渲染設備。
 pub fn graphics(cc:&eframe::CreationContext<'_>) {
     use eframe::glow::HasContext;
     let details=if let Some(gl)=&cc.gl {unsafe{format!("廠商：{}\n渲染器：{}\nOpenGL：{}\n",
@@ -59,7 +59,7 @@ static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::n
 
 fn diagnostics_dir() -> PathBuf { daozai::model::config_dir().join("diagnostics") }
 
-/// 自动重启的频率限制：本次至少运行 30 秒（避免启动即崩的死循环），且一小时内最多 3 次。
+/// 自動重啟的頻率限制：本次至少運行 30 秒（避免啟動即崩的死循環），且一小時內最多 3 次。
 fn restart_allowed(history: &str, now: u64, uptime: std::time::Duration) -> bool {
     if uptime < std::time::Duration::from_secs(30) { return false; }
     let recent = history.lines().filter_map(|line| line.split_whitespace().next()?.parse::<u64>().ok())
@@ -67,7 +67,7 @@ fn restart_allowed(history: &str, now: u64, uptime: std::time::Duration) -> bool
     recent < 3
 }
 
-/// 启动一个新的鬼島：它会先等当前进程退出，再走正常的单实例启动流程。
+/// 啟動一個新的鬼島：它會先等當前進程退出，再走正常的單實例啟動流程。
 pub fn spawn_replacement() -> bool {
     spawn_replacement_with_args(&[])
 }
@@ -80,14 +80,14 @@ pub fn spawn_replacement_with_args(args: &[&str]) -> bool {
     command.spawn().is_ok()
 }
 
-/// 异常退出后自动重新拉起（受频率限制）；返回是否已安排重启。
+/// 異常退出後自動重新拉起（受頻率限制）；返回是否已安排重啟。
 fn relaunch_after_failure(reason: &str) -> bool {
     let uptime = STARTED.get().map(|at| at.elapsed()).unwrap_or_default();
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs();
     let path = diagnostics_dir().join("auto-restart.log");
     let history = std::fs::read_to_string(&path).unwrap_or_default();
     if !restart_allowed(&history, now, uptime) { return false; }
-    // 只保留最近 20 条，避免常驻程序无限累积。
+    // 只保留最近 20 條，避免常駐程序無限累積。
     let mut lines: Vec<&str> = history.lines().collect();
     if lines.len() > 19 { lines.drain(..lines.len() - 19); }
     let reason: String = reason.chars().filter(|c| !c.is_control()).take(160).collect();
@@ -98,7 +98,7 @@ fn relaunch_after_failure(reason: &str) -> bool {
     spawn_replacement()
 }
 
-/// 自动重启的新进程：等上一个鬼島退出（最多 15 秒）再继续，避免单实例检查把自己挡住。
+/// 自動重啟的新進程：等上一個鬼島退出（最多 15 秒）再繼續，避免單實例檢查把自己擋住。
 pub fn wait_for_previous_instance() {
     let mut args = std::env::args();
     while let Some(arg) = args.next() {
@@ -118,8 +118,8 @@ pub fn wait_for_previous_instance() {
     }
 }
 
-/// 进程级崩溃（例如显卡驱动里访问了无效内存）：Rust 的 panic 记录覆盖不到，这里记下崩在哪个模块；
-/// 崩在显卡的 OpenGL 驱动里时，下次启动改用兼容渲染；随后按频率限制自动重启。
+/// 進程級崩潰（例如顯卡驅動裡訪問了無效內存）：Rust 的 panic 記錄覆蓋不到，這裡記下崩在哪個模塊；
+/// 崩在顯卡的 OpenGL 驅動裡時，下次啟動改用兼容渲染；隨後按頻率限制自動重啟。
 #[cfg(windows)]
 mod native_crash {
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -128,7 +128,7 @@ mod native_crash {
     const EXCEPTION_CONTINUE_SEARCH: i32 = 0;
     static HANDLING: AtomicBool = AtomicBool::new(false);
 
-    /// 异常地址所在的模块文件名与模块内偏移。
+    /// 異常地址所在的模塊文件名與模塊內偏移。
     unsafe fn module_at(address: usize) -> (String, usize) {
         let mut module = HMODULE::default();
         let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
@@ -156,13 +156,13 @@ mod native_crash {
         let restarted = super::relaunch_after_failure(&format!("程序崩潰（{module}）"));
         details.push_str(if restarted { "已自動重新啟動鬼島。\n" } else { "未自動重啟（執行不足 30 秒或一小時內已重啟 3 次）。\n" });
         let _ = super::write_report(&super::diagnostics_dir(), "鬼島意外退出（程序崩潰）", &details);
-        // 交给系统继续处理，Windows 事件日志里仍会留下崩溃记录。
+        // 交給系統繼續處理，Windows 事件日誌裡仍會留下崩潰記錄。
         EXCEPTION_CONTINUE_SEARCH
     }
 
     pub fn install() { unsafe { SetUnhandledExceptionFilter(Some(filter)); } }
 
-    /// 验收用：`KUIDAO_TEST_CRASH=native` 时，运行指定秒数后在鬼島自身触发一次访问违规。
+    /// 驗收用：`KUIDAO_TEST_CRASH=native` 時，運行指定秒數後在鬼島自身觸發一次訪問違規。
     pub fn test_crash_hook() {
         let Ok(value) = std::env::var("KUIDAO_TEST_CRASH") else { return };
         let Some(seconds) = value.strip_prefix("native:").and_then(|s| s.parse::<u64>().ok()) else { return };
@@ -178,11 +178,11 @@ pub fn install() {
     #[cfg(windows)]
     { native_crash::install(); native_crash::test_crash_hook(); }
     std::panic::set_hook(Box::new(|info| {
-        // 不写入 panic 的数据载荷，避免把邮件、凭据或登录信息带进日志。
+        // 不寫入 panic 的數據載荷，避免把郵件、憑據或登錄信息帶進日誌。
         let location = info.location().map(|p| format!("{}:{}:{}", p.file(), p.line(), p.column()))
             .unwrap_or_else(|| "未知".into());
         let details = format!("程式碼位置：{location}\n呼叫棧：\n{}", std::backtrace::Backtrace::force_capture());
-        // 主线程出错会让整个鬼島退出：记下原因后直接自动重启，不弹窗打断。后台线程出错不影响主界面，仍按原样提示。
+        // 主線程出錯會讓整個鬼島退出：記下原因後直接自動重啟，不彈窗打斷。後台線程出錯不影響主界面，仍按原樣提示。
         if std::thread::current().name() == Some("main") && relaunch_after_failure("程式異常") {
             let _ = write_report(&diagnostics_dir(), "鬼島發生異常，已自動重新啟動。", &details);
             return;
@@ -208,7 +208,7 @@ mod tests {
         let content = std::fs::read_to_string(&path).unwrap();
         assert!(content.contains(env!("CARGO_PKG_VERSION")));
         assert!(content.contains("OpenGL 初始化失敗"));
-        // 重复失败只保留最后一份，避免常驻程序无限累积日志。
+        // 重複失敗只保留最後一份，避免常駐程序無限累積日誌。
         write_report(&directory, "第二次失敗", "新的錯誤").unwrap();
         assert!(!std::fs::read_to_string(&path).unwrap().contains("OpenGL"));
         std::fs::remove_file(path).unwrap();

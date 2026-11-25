@@ -44,7 +44,7 @@ fn frame(
                     card.text(
                         16.0,
                         26.0,
-                        "画布实时交互",
+                        "畫布實時交互",
                         14.0,
                         W::Bold,
                         Color32::WHITE,
@@ -78,7 +78,7 @@ fn plugin_canvas_text_inside_clickable_group_keeps_rendering() {
     let canvas = Arc::new(Canvas::parse(json!({
         "height": 85,
         "nodes": [{
-            "group": [{"text":"打开详情","at":[8,20],"size":12}],
+            "group": [{"text":"打開詳情","at":[8,20],"size":12}],
             "hit":{"action":"show"}
         }]
     })).unwrap());
@@ -86,7 +86,7 @@ fn plugin_canvas_text_inside_clickable_group_keeps_rendering() {
     theme::load_fonts(&ctx);
     let (out, _) = frame(&ctx, &canvas, 0.0, 1, Vec::new(), true);
     assert!(out.shapes.iter().any(|shape| matches!(&shape.shape,
-        egui::Shape::Text(text) if text.galley.text() == "打开详情")));
+        egui::Shape::Text(text) if text.galley.text() == "打開詳情")));
 }
 
 #[test]
@@ -94,22 +94,22 @@ fn plugin_canvas_hover_hint_stays_inside_the_canvas() {
     let canvas = Arc::new(Canvas::parse(json!({
         "height": 80,
         "nodes": [{"rect":[364,0,23,25], "fill":"$card", "hit":{"action":"copy-note"},
-            "hover":{"hint":"复制当前便签"}}]
+            "hover":{"hint":"複製當前便籤"}}]
     })).unwrap());
     let ctx = egui::Context::default();
     theme::load_fonts(&ctx);
     let (output, result) = frame(&ctx, &canvas, 1.0, 1, vec![Event::PointerMoved(pos2(397.0, 50.0))], true);
     let hint = output.shapes.iter().find_map(|shape| match &shape.shape {
-        egui::Shape::Text(text) if text.galley.text() == "复制当前便签" => Some((shape.clip_rect, text.visual_bounding_rect())),
+        egui::Shape::Text(text) if text.galley.text() == "複製當前便籤" => Some((shape.clip_rect, text.visual_bounding_rect())),
         _ => None,
-    }).expect("按钮的单行提示应可见");
+    }).expect("按鈕的單行提示應可見");
     let area = Rect::from_min_max(pos2(16.0, 42.0), pos2(403.0, 122.0));
     assert!(area.contains_rect(hint.0) && hint.0.contains_rect(hint.1));
     assert!(result.hit.is_none());
     let (output, _) = frame(&ctx, &canvas, 1.1, 1, vec![Event::PointerMoved(pos2(411.0, 50.0))], true);
     assert!(!output.shapes.iter().any(|shape| matches!(&shape.shape,
-        egui::Shape::Text(text) if text.galley.text() == "复制当前便签")));
-    for hint in ["", "换\n行", &"字".repeat(41)] {
+        egui::Shape::Text(text) if text.galley.text() == "複製當前便籤")));
+    for hint in ["", "換\n行", &"字".repeat(41)] {
         assert!(Canvas::parse(json!({"height":80,"nodes":[{"rect":[0,0,10,10],"hover":{"hint":hint}}]})).is_err());
     }
 }
@@ -176,7 +176,7 @@ fn plugin_canvas_live_demo_shows_rolling_digits_and_scrolls_inside_the_group() {
         result.scroll_area,
         Some(Rect::from_min_size(pos2(222.0, 109.0), vec2(173.0, 150.0)))
     );
-    assert!(output.shapes.iter().any(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text() == "记录 7" && text.pos.y < 260.0)));
+    assert!(output.shapes.iter().any(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text() == "記錄 7" && text.pos.y < 260.0)));
     raster.update_textures(&output.textures_delta);
     if let Some(path) = std::env::var_os("DAOZAI_CANVAS_SCREENSHOTS").map(std::path::PathBuf::from)
     {

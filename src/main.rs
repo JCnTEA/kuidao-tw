@@ -1,5 +1,5 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
-//! Windows 外壳：无边框透明窗口 + 托盘 + 系统数据，界面全部交给 `daozai::app::App`。
+//! Windows 外殼：無邊框透明窗口 + 托盤 + 系統數據，界面全部交給 `daozai::app::App`。
 
 mod guard;
 use eframe::egui::{self, Color32, Pos2};
@@ -18,7 +18,7 @@ struct Shell {
     t0: Instant,
     #[cfg(windows)]
     frame_at: Instant,
-    /// 兼容渲染上一次请求读回画面的时刻（无输入的持续动画按约 30 帧/秒读回）。
+    /// 兼容渲染上一次請求讀回畫面的時刻（無輸入的持續動畫按約 30 幀/秒讀回）。
     #[cfg(windows)]
     readback_at: Option<Instant>,
     #[cfg(windows)]
@@ -31,7 +31,7 @@ struct Shell {
     resource_at:PollClock,
     guard_notified:bool,
     media_enabled: smtc::Poller,
-    /// 刚点过播放控制或音量时，短时间内按最快频率采样，让按钮状态及时回显。
+    /// 剛點過播放控制或音量時，短時間內按最快頻率採樣，讓按鈕狀態及時回顯。
     media_fast_until: Option<Instant>,
     placed: bool,
     placement_at: PollClock,
@@ -40,9 +40,9 @@ struct Shell {
     placed_bounds: Option<daozai::display_layout::Bounds>,
     #[cfg(windows)]
     horizontal_width: f32,
-    /// 上次定位时的目标屏幕、水平位置与 OLED 像素偏移；变化后立即重新定位，不等下一次轮询。
+    /// 上次定位時的目標屏幕、水平位置與 OLED 像素偏移；變化後立即重新定位，不等下一次輪詢。
     placement_key: (String, i32, daozai::model::Dock, bool, (i32, i32)),
-    /// OLED 像素偏移当前实际使用的位移；展开、拖拽、隐藏时保持不变。
+    /// OLED 像素偏移當前實際使用的位移；展開、拖拽、隱藏時保持不變。
     #[cfg(windows)]
     oled_shift: (i32, i32),
     win_x: f32,
@@ -65,12 +65,12 @@ struct Shell {
     unread_at:PollClock,
     #[cfg(windows)]
     opening_messenger:Option<(app::Unread,Instant)>,
-    /// 后台线程正在唤起消息客户端。
+    /// 後台線程正在喚起消息客戶端。
     #[cfg(windows)]
     tray_opening:Option<(app::Unread,std::sync::mpsc::Receiver<Result<messenger::Target,OpenError>>)>,
     #[cfg(windows)]
     hidden: bool,
-    /// 毛玻璃皮肤的背景亮度采样（仅毛玻璃皮肤运行）。
+    /// 毛玻璃皮膚的背景亮度採樣（僅毛玻璃皮膚運行）。
     #[cfg(windows)]
     backdrop: Option<daozai::backdrop::Sampler>,
     #[cfg(windows)]
@@ -89,7 +89,7 @@ struct Shell {
     tray: Option<daozai::tray::Tray>,
     #[cfg(windows)]
     autostart: bool,
-    /// v0.5.4：蓝牙音频设备（后台线程推送）与音量回声的静默窗口。
+    /// v0.5.4：藍牙音頻設備（後台線程推送）與音量回聲的靜默窗口。
     #[cfg(windows)]
     bt_rx: Option<daozai::bt::Service>,
     bt: Vec<daozai::bt::Device>,
@@ -98,15 +98,15 @@ struct Shell {
     receiver_rx: Option<daozai::bt::Service>,
     receivers: Vec<daozai::bt::Device>,
     volume_quiet: PollClock,
-    /// v0.5.5：邮件收信服务（工作线程），以及上次同步给它的账号/开关快照。
-    /// 邮箱模块开启时才存在；关闭后收信与整理线程随之退出。
+    /// v0.5.5：郵件收信服務（工作線程），以及上次同步給它的帳號/開關快照。
+    /// 郵箱模塊開啟時才存在；關閉後收信與整理線程隨之退出。
     mail: Option<daozai::mail::Service>,
     mail_sig: Option<(bool, u32, Vec<daozai::mail::Account>)>,
-    /// v0.5.6：日程（CalDAV）服务与上次下发的配置。
-    /// 日程模块开启时才存在。
+    /// v0.5.6：日程（CalDAV）服務與上次下發的配置。
+    /// 日程模塊開啟時才存在。
     cal: Option<daozai::calendar::Service>,
     cal_sig: Option<(Vec<daozai::calendar::Config>, bool)>,
-    /// 置物架模块开启且记录剪贴板时才监听系统剪贴板。
+    /// 置物架模塊開啟且記錄剪貼板時才監聽系統剪貼板。
     clipboard_watch: Option<daozai::clipboard::Watcher>,
     quota: daozai::quota::Service,
     quota_sig: Option<(bool,Vec<daozai::quota::Account>)>,
@@ -126,7 +126,7 @@ enum PickTarget { Shelf, Quota }
 const MODULE_OFF:&str="該功能已在「頁面管理」中關閉";
 
 impl Shell {
-    /// 按模块开关启停后台服务：关闭的模块不保留任何线程，重新开启时从头对齐配置。
+    /// 按模塊開關啟停後台服務：關閉的模塊不保留任何線程，重新開啟時從頭對齊配置。
     fn reconcile_modules(&mut self,ctx:&egui::Context){
         let mail_on=self.app.module_on(app::MAIL_PAGE);
         if mail_on!=self.mail.is_some() {self.mail=mail_on.then(daozai::mail::Service::start);self.mail_sig=None;}
@@ -176,7 +176,7 @@ impl Shell {
             && unsafe{windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow().0 as isize}!=unread.window{return false;}
         let foreground=self.messengers.foreground(&[unread.source]);
         if !self.app.confirm_messenger_open(unread,foreground){return false;}
-        messenger::windows::trace(format!("唤起 {} 账号 {}：已在前台",unread.source.name(),unread.pid));
+        messenger::windows::trace(format!("喚起 {} 帳號 {}：已在前台",unread.source.name(),unread.pid));
         self.messengers.viewed_client(unread.source,unread.pid);
         true
     }
@@ -211,7 +211,7 @@ impl Shell {
                     window.take_capture_exclusion_error()
                 })
             }),
-            None => desired.then(|| "当前窗口无法应用截图和录屏隐藏。".into()),
+            None => desired.then(|| "當前窗口無法應用截圖和錄屏隱藏。".into()),
         };
         let applied = desired && error.is_none();
         if was_enabled != applied {
@@ -221,7 +221,7 @@ impl Shell {
         let failed = error.is_some();
         if failed {
             if was_enabled && !app.settings_open {
-                app.say("截图和录屏隐藏未生效");
+                app.say("截圖和錄屏隱藏未生效");
             }
             app.capture_exclusion_error = error;
         }
@@ -249,7 +249,7 @@ impl Shell {
             self.material_requested_id = id.map(str::to_owned);
             self.material_failed = false;
         }
-        // 通用设置的兼容渲染开关在重启时切换后端，期间沿用当前已加载的材质。
+        // 通用設置的兼容渲染開關在重啟時切換後端，期間沿用當前已加載的材質。
         let Some(spec) = spec.filter(|spec| self.app.settings.render_compat
             || self.app.material_active_id.as_deref() == Some(spec.id)) else {
             if self.material.take().is_some() {
@@ -303,9 +303,9 @@ impl Shell {
         app.render_compat_running=running_compat;
         #[cfg(feature="record")] let quota_demo=std::env::var("KUIDAO_QUOTA_DEMO").is_ok();
         #[cfg(not(feature="record"))] let quota_demo=false;
-        diagnostics::startup("迁移配置");
+        diagnostics::startup("遷移配置");
         if !quota_demo{app.migrate_merged_switches();}
-        diagnostics::startup("启动剪贴板记录");
+        diagnostics::startup("啟動剪貼板記錄");
         if std::env::args().any(|arg|arg=="--settings"){app.open_settings();}
         if std::env::args().any(|arg|arg=="--calendar"){app.open_calendar(None);}
         #[cfg(feature="record")]
@@ -326,17 +326,17 @@ impl Shell {
             minimal: app.settings.minimal,
             autostart,
         })};
-        diagnostics::startup("初始化通知监听");
+        diagnostics::startup("初始化通知監聽");
         #[cfg(windows)]
         app.start_plugin_notices(&cc.egui_ctx);
         #[cfg(windows)]
-        let incoming=if app.settings.read_notifications {match daozai::system::connect_with_settings(cc.egui_ctx.clone(),&app.settings){Ok(rx)=>Some(rx),Err(e)=>{app.listener_status=format!("Windows 无法读取通知：{}",e.code());None}}}else{None};
-        // 音频、网络与输入法查询由后台完成，避免首帧等待系统服务。
+        let incoming=if app.settings.read_notifications {match daozai::system::connect_with_settings(cc.egui_ctx.clone(),&app.settings){Ok(rx)=>Some(rx),Err(e)=>{app.listener_status=format!("Windows 無法讀取通知：{}",e.code());None}}}else{None};
+        // 音頻、網絡與輸入法查詢由後台完成，避免首幀等待系統服務。
         diagnostics::startup("建立後台取樣與視窗");
         let initial_input=None;
         #[cfg(windows)] let system_state=daozai::system::Snapshot::default();
         #[cfg(windows)] let system_rx=daozai::system::observe(cc.egui_ctx.clone(),system_state.clone(),initial_input);
-        // 岛体大小只作用于主窗口，在首帧之前生效，避免启动时先按 100% 闪一下。
+        // 島體大小隻作用於主窗口，在首幀之前生效，避免啟動時先按 100% 閃一下。
         #[cfg(windows)] eframe::set_root_viewport_scale(app.settings.island_scale());
         #[cfg(windows)]
         let native = {
@@ -359,9 +359,9 @@ impl Shell {
             if !material_debug {
                 persist_material_failure(&mut app);
             }
-            app.alert("材质加载失败", error, 0, false);
+            app.alert("材質加載失敗", error, 0, false);
         } else if daozai::material::falling_back() {
-            app.say("材质加载失败，已恢复普通绘制");
+            app.say("材質加載失敗，已恢復普通繪製");
         } else {
             #[cfg(feature = "sdk-js")]
             if !material_debug
@@ -369,10 +369,10 @@ impl Shell {
                 && app.material_spec().is_some()
                 && native.as_ref().and_then(daozai::native::Window::material_window).is_none()
             {
-                let error = "无法使用 Direct3D 12 透明交换链，已恢复普通绘制";
+                let error = "無法使用 Direct3D 12 透明交換鏈，已恢復普通繪製";
                 daozai::material::Runtime::report_failure(error);
                 persist_material_failure(&mut app);
-                app.alert("材质加载失败", error, 0, false);
+                app.alert("材質加載失敗", error, 0, false);
             }
         }
         #[cfg(all(windows, feature = "sdk-material"))]
@@ -506,7 +506,7 @@ impl Shell {
             ((bounds.right - bounds.left) as f32 / scale).floor().max(app::WIN_W)
         });
         let wanted = self.app.requested_horizontal_width().max(self.horizontal_width);
-        // 预留一小段余量，常驻数值更新时不必反复调整原生窗口。
+        // 預留一小段餘量，常駐數值更新時不必反覆調整原生窗口。
         ((wanted / 64.0).ceil() * 64.0).min(available)
     }
 
@@ -520,7 +520,7 @@ impl Shell {
             }
         }
         let (clock, today, date) = local_now();
-        // 电量变化很慢，每 5 秒读一次就够
+        // 電量變化很慢，每 5 秒讀一次就夠
         if self.sys.2.ready(Duration::from_secs(5)) {
             let (b, c) = read_power();
             if self.app.settings.show_battery && self.sys.0.is_some() && self.sys.1!=c && self.app.settings.system_hud {self.app.alert(if c {"電源已連線"}else{"已切換電池供電"},b.map(|v|format!("當前電量 {v}%")).unwrap_or_else(||"桌面電源狀態已更新".into()),5,false);}
@@ -535,7 +535,7 @@ impl Shell {
         let cursor=desktop_cursor.map(|(x,y)|Pos2::new(x as f32/ppp-origin.x,y as f32/ppp-origin.y));
         #[cfg(windows)]
         let cursor=cursor.filter(|_|!self.native.as_ref().is_some_and(|w|w.holding_through_strip()));
-        // 所在屏幕换算到窗口逻辑坐标，供通知详情等浮层避开屏幕边缘。
+        // 所在屏幕換算到窗口邏輯座標，供通知詳情等浮層避開屏幕邊緣。
         #[cfg(windows)]
         let screen=self.placed_bounds.map(|b|{
             egui::Rect::from_min_max(Pos2::new(b.left as f32/ppp-origin.x,b.top as f32/ppp-origin.y),Pos2::new(b.right as f32/ppp-origin.x,b.bottom as f32/ppp-origin.y))
@@ -650,7 +650,7 @@ impl eframe::App for Shell {
         let music_on=self.app.module_on(app::MUSIC_PAGE);
         let guarded=daozai::resources::GUARD.tripped();
         if music_on && guarded && !self.guard_notified {
-            // 资源保护熔断：停止音乐会话轮询（含封面、网易云日志）与歌词查询，保住用户电脑，重启后恢复。
+            // 資源保護熔斷：停止音樂會話輪詢（含封面、網易雲日誌）與歌詞查詢，保住用戶電腦，重啟後恢復。
             self.guard_notified=true;self.app.opts.fetch_lyrics=false;
             self.app.alert("鬼島已暫停音樂功能","檢測到資源佔用異常，已暫停讀取音樂資訊和歌詞。重啟鬼島即可恢復；診斷記錄在資料目錄的 diagnostics 資料夾。",0,false);
         }
@@ -662,7 +662,7 @@ impl eframe::App for Shell {
         }
         if self.media_fast_until.is_some_and(|until|Instant::now()>=until){self.media_fast_until=None;}
         self.media_enabled.set_interval(if self.media_fast_until.is_some(){smtc::POLL_FAST}else{self.app.media_poll_interval()});
-        // 设置里改了岛体大小：下一帧起主窗口按新倍率栅格化，定位逻辑随像素比变化同步调整画布。
+        // 設置裡改了島體大小：下一幀起主窗口按新倍率柵格化，定位邏輯隨像素比變化同步調整畫布。
         #[cfg(windows)] eframe::set_root_viewport_scale(self.app.settings.island_scale());
         #[cfg(windows)]
         thread_local!{static AFTER_INTERACTIVE_CAPTURE:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
@@ -671,30 +671,30 @@ impl eframe::App for Shell {
             self.frame_at=start;
             AFTER_INTERACTIVE_CAPTURE.set(true);
         } else if AFTER_INTERACTIVE_CAPTURE.replace(false) {
-            // 交互截图帧之后紧跟的这一帧负责把读回画面交给分层窗口，只隔几毫秒就会到来。
-            // 再按帧间隔睡一次会错过下一次屏幕刷新，切页等动画掉到 30 帧；节奏已由交互截图的截止时间控制。
+            // 交互截圖幀之後緊跟的這一幀負責把讀回畫面交給分層窗口，只隔幾毫秒就會到來。
+            // 再按幀間隔睡一次會錯過下一次屏幕刷新，切頁等動畫掉到 30 幀；節奏已由交互截圖的截止時間控制。
             self.frame_at=Instant::now();
         } else {
-            // 用帧间隔限制刷新，绕过部分 Intel 驱动在垂直同步中的忙等待。
+            // 用幀間隔限制刷新，繞過部分 Intel 驅動在垂直同步中的忙等待。
             let delay=Duration::from_secs_f64(1.0/60.0).saturating_sub(self.frame_at.elapsed());
             if !delay.is_zero(){std::thread::sleep(delay);}
             self.frame_at=Instant::now();
         }
-        mark!("帧间隔等待");
+        mark!("幀間隔等待");
         #[cfg(windows)]
         self.poll_tray();
         #[cfg(windows)]
         let foreground_changed=self.native.as_mut().is_some_and(|window|window.take_foreground_change());
         #[cfg(windows)]
         if foreground_changed {
-            // 切到别的程序：收起，并在光标离开前不再自动展开
+            // 切到別的程序：收起，並在光標離開前不再自動展開
             self.app.foreground_changed(ctx);
         }
         #[cfg(windows)]
         let offset=self.app.placement_offset();
         #[cfg(windows)]
         let shift=self.oled_shift;
-        // 拖动时位置不取整，按万分之一比例比较，窗口逐帧平滑跟随。
+        // 拖動時位置不取整，按萬分之一比例比較，窗口逐幀平滑跟隨。
         #[cfg(windows)]
         if self.native.as_ref().is_some_and(|w|w.take_display_change()) {self.placement_at=PollClock::default();}
         #[cfg(windows)]
@@ -723,7 +723,7 @@ impl eframe::App for Shell {
             if bounds.is_some_and(|b|self.native.as_mut().is_some_and(|w|w.place_on_display(scale,b,offset,self.app.settings.dock,shift,self.horizontal_width))) {
                 self.placed_bounds=bounds;
                 if !self.placed {
-                    diagnostics::startup("目标屏幕物理坐标定位完成，已请求显示");
+                    diagnostics::startup("目標屏幕物理座標定位完成，已請求顯示");
                     self.placed=true;
                     ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
                 }
@@ -751,11 +751,11 @@ impl eframe::App for Shell {
                     if self.app.settings.system_hud{self.app.alert("鍵盤輸入語言",label,5,false);}
                 }
                 let new=observation.system;
-                // 切换输出设备时，系统会恢复该设备的音量；等待它稳定后再提示调节。
+                // 切換輸出設備時，系統會恢復該設備的音量；等待它穩定後再提示調節。
                 if new.audio_endpoint!=self.system_state.audio_endpoint {self.volume_quiet=PollClock::now();}
                 if self.system_ready && self.app.settings.system_hud {
                     for (title,body) in new.changes(&self.system_state) {
-                        // 拖动音量条刚改过音量时，系统回声不再单独弹一条。
+                        // 拖動音量條剛改過音量時，系統回聲不再單獨彈一條。
                         if title=="系統音量" && !self.volume_quiet.ready(Duration::from_millis(900)) { continue; }
                         self.app.alert(title,body,5,false);
                     }
@@ -765,7 +765,7 @@ impl eframe::App for Shell {
                 self.fullscreen=observation.fullscreen;
             }
             self.hidden=!self.app.dragging_position() && daozai::display_layout::hide_for_fullscreen(self.app.settings.hide_fullscreen,self.fullscreen,daozai::display_layout::selected(&self.app.displays,&self.app.settings.display_id).map(|d|d.bounds));
-            // 毛玻璃：在岛体左右两侧和画布底边（都在窗口区域之外）取样，估计岛背后的明暗。
+            // 毛玻璃：在島體左右兩側和畫布底邊（都在窗口區域之外）取樣，估計島背後的明暗。
             if self.app.effective_skin().is_glass() && !self.hidden {
                 let sampler=self.backdrop.get_or_insert_with(daozai::backdrop::Sampler::start);
                 let ppp=ctx.pixels_per_point();
@@ -776,7 +776,7 @@ impl eframe::App for Shell {
             } else {
                 self.backdrop=None;
             }
-            mark!("系统状态与取样");
+            mark!("系統狀態與取樣");
             let wireless_on=self.app.module_on(app::BLUETOOTH_PAGE);
             if self.app.settings.bluetooth_notifications || wireless_on {
                 if self.bt_rx.is_none() {self.bt_rx=Some(daozai::bt::spawn());}
@@ -803,7 +803,7 @@ impl eframe::App for Shell {
                 self.receiver_rx=None;
                 self.receivers.clear();
             }
-            mark!("蓝牙与无线");
+            mark!("藍牙與無線");
             let previous_pending=self.app.pending_messengers.clone();
             for event in self.messengers.poll_taskbar(ctx,&self.app.settings){match event{
                 TaskbarEvent::Status(client,status)=>self.app.set_messenger_status(client,status),
@@ -835,12 +835,12 @@ impl eframe::App for Shell {
                 match self.messengers.foreground(&sources){
                     Some((source,pid))=>{
                         if self.app.pending_messengers.iter().any(|u|u.viewed_by(source,pid)){
-                            messenger::windows::trace(format!("岛上清除 {} 账号 {pid}（前台切换={foreground_changed}）",source.name()));
+                            messenger::windows::trace(format!("島上清除 {} 帳號 {pid}（前台切換={foreground_changed}）",source.name()));
                             self.messengers.viewed_client(source,pid);
                             self.app.viewed_client(source,pid);
                         }
                     }
-                    None=>if foreground_changed{messenger::windows::trace(format!("前台切换但不是消息客户端主窗口：{}；岛上未读 {:?}",messenger::windows::describe_foreground(),self.app.pending_messengers.iter().map(|u|(u.source.name(),u.pid)).collect::<Vec<_>>()));},
+                    None=>if foreground_changed{messenger::windows::trace(format!("前台切換但不是消息客戶端主窗口：{}；島上未讀 {:?}",messenger::windows::describe_foreground(),self.app.pending_messengers.iter().map(|u|(u.source.name(),u.pid)).collect::<Vec<_>>()));},
                 }
             }
             if self.tray_opening.as_ref().is_some_and(|(unread,_)|!self.app.pending_messengers.contains(unread)){
@@ -880,8 +880,8 @@ impl eframe::App for Shell {
                 else if started.elapsed()>=Duration::from_secs(4){
                     self.opening_messenger=None;
                     if !self.confirm_messenger_open(unread){
-                        messenger::windows::trace(format!("唤起 {} 账号 {}：等待原窗口到前台超时（前台是 {}）",unread.source.name(),unread.pid,messenger::windows::describe_foreground()));
-                        self.app.messenger_unavailable(format!("{}尚未切到前台，可点图标重试",unread.source.name()));
+                        messenger::windows::trace(format!("喚起 {} 帳號 {}：等待原窗口到前台超時（前台是 {}）",unread.source.name(),unread.pid,messenger::windows::describe_foreground()));
+                        self.app.messenger_unavailable(format!("{}尚未切到前台，可點圖標重試",unread.source.name()));
                     }
                 }
             }
@@ -895,15 +895,15 @@ impl eframe::App for Shell {
                 if !success{self.app.say(message);}
             }
         }
-        mark!("消息客户端");
+        mark!("消息客戶端");
         let env = self.env(ctx);
-        mark!("环境");
+        mark!("環境");
         #[cfg(windows)]
         if self.native.as_ref().is_some_and(|w|w.page_scroll_cancelled()) {self.app.cancel_page_scroll();}
         self.reconcile_modules(ctx);
-        mark!("模块对齐");
-        // v0.5.5 邮件：开关 / 间隔 / 账号清单变了就重新对齐收信线程，再把事件交给界面。
-        // 每帧只比较不复制，确有变化时才复制账号清单。
+        mark!("模塊對齊");
+        // v0.5.5 郵件：開關 / 間隔 / 帳號清單變了就重新對齊收信線程，再把事件交給界面。
+        // 每幀只比較不復制，確有變化時才複製帳號清單。
         if let Some(mail)=&self.mail {
             let (mail_enabled,mail_interval)=(self.app.mail_active(),self.app.settings.mail_interval);
             if !self.mail_sig.as_ref().is_some_and(|known|(known.0,known.1)==(mail_enabled,mail_interval) && known.2.as_slice()==self.app.mail_accounts()){
@@ -914,8 +914,8 @@ impl eframe::App for Shell {
             }
             while let Some(ev)=mail.try_recv(){self.app.mail_event(ev);}
         }
-        // 日程连接或自动同步开关变化时下发给工作线程。
-        // 录制/截图演示用的是假账号，别让真服务去连（会立刻失败、把状态改成红色）。
+        // 日程連接或自動同步開關變化時下發給工作線程。
+        // 錄製/截圖演示用的是假帳號，別讓真服務去連（會立刻失敗、把狀態改成紅色）。
         #[cfg(feature="record")]
         let cal_demo=std::env::var("KUIDAO_CAL_DEMO").is_ok();
         #[cfg(not(feature="record"))]
@@ -941,7 +941,7 @@ impl eframe::App for Shell {
             }
             while let Some(ev)=self.quota.try_recv(self.app.quota_config()){self.app.quota_event(ev);}
         }
-        mark!("邮件日程额度");
+        mark!("郵件日程額度");
         let mut out = None;
         let pre_cost=frame_start.elapsed();
         let pre_parts={let mut last=Duration::ZERO;marks.iter().filter_map(|(name,at)|{let part=at.saturating_sub(last);last=*at;(part>=Duration::from_micros(500)).then(||format!("{name} {:.1}",part.as_secs_f64()*1000.0))}).collect::<Vec<_>>().join("、")};
@@ -952,7 +952,7 @@ impl eframe::App for Shell {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(Color32::TRANSPARENT))
             .show(ctx, |ui| {
-                // 左右停靠时画布是竖向的 SIDE_W × SIDE_H。
+                // 左右停靠時畫布是豎向的 SIDE_W × SIDE_H。
                 #[cfg(windows)]
                 let width = self.horizontal_width;
                 #[cfg(not(windows))]
@@ -978,8 +978,8 @@ impl eframe::App for Shell {
         #[cfg(all(windows, feature = "sdk-material"))]
         let mut out = out;
         #[cfg(windows)]
-        // 页面自己驱动的动画（天气日出日落、性能详情、翻页后的页面缓动）靠 egui 立即重绘推进，
-        // 兼容渲染下也按交互帧交付。插件状态页已经在 FrameOut 标记画布动画，截图回调的重绘只负责交付。
+        // 頁面自己驅動的動畫（天氣日出日落、性能詳情、翻頁後的頁面緩動）靠 egui 立即重繪推進，
+        // 兼容渲染下也按交互幀交付。插件狀態頁已經在 FrameOut 標記畫布動畫，截圖回調的重繪只負責交付。
         let page_animating = self.app.render_compat_running && out.expanded
             && !self.app.is_plugin_status_page() && ctx.requested_repaint_last_pass();
         #[cfg(windows)]
@@ -989,7 +989,7 @@ impl eframe::App for Shell {
 
         #[cfg(windows)]
         {
-            // 先处理本帧输入和动画，再决定是否移动，避免悬停或按下的首帧仍使用旧状态。
+            // 先處理本幀輸入和動畫，再決定是否移動，避免懸停或按下的首幀仍使用舊狀態。
             let hovering=env.cursor.is_some_and(|p|out.hit.contains(p)||out.notice_hit.is_some_and(|r|r.contains(p)));
             let shift=if !self.app.settings.oled_shift {(0,0)}
                 else if !self.hidden && !hovering && self.app.oled_shift_idle(ctx) {
@@ -1010,8 +1010,8 @@ impl eframe::App for Shell {
         #[cfg(windows)]
         if let Some(native) = &mut self.native {
             native.begin_crop_frame(_frame.root_gl_front_ready);
-            // 兼容渲染：读回的画面交给分层窗口，边缘保留抗锯齿。画面变化（或有其他输入）时才请求下一次读回，
-            // 读回完成本身触发的那一帧若画面没变就停下，静止时不会一直空转。
+            // 兼容渲染：讀回的畫面交給分層窗口，邊緣保留抗鋸齒。畫面變化（或有其他輸入）時才請求下一次讀回，
+            // 讀回完成本身觸發的那一幀若畫面沒變就停下，靜止時不會一直空轉。
             if native.wants_frames() {
                 let (shot,other_input)=ctx.input(|i|(
                     i.events.iter().rev().find_map(|e|match e{egui::Event::Screenshot{image,..}=>Some(image.clone()),_=>None}),
@@ -1020,13 +1020,13 @@ impl eframe::App for Shell {
                 let changed=shot.as_ref().is_some_and(|image|native.present_frame(image.size,image.as_raw()));
                 let startup_capture=(!self.hidden && native.waiting_for_first_layered_frame())
                     .then(||self.frame_at+Duration::from_secs_f64(1.0/60.0));
-                // 若首张截图没产生回调，也继续尝试，直到正常交接或走轮廓回退。
+                // 若首張截圖沒產生回調，也繼續嘗試，直到正常交接或走輪廓回退。
                 if let Some(deadline)=startup_capture {schedule_repaint(ctx,deadline.saturating_duration_since(Instant::now()));}
-                // 动画刚停稳时也交付最后一帧，避免最终位置延迟到下一次闲置刷新。
+                // 動畫剛停穩時也交付最後一幀，避免最終位置延遲到下一次閒置刷新。
                 let capture_transition=interactive_transition || (last_transition_frame && !self.hidden);
                 let interactive=other_input || capture_transition || startup_capture.is_some();
                 if shot.is_none() || changed || interactive {
-                    // 输入结束后，短暂的切换过渡仍需逐帧交付。
+                    // 輸入結束後，短暫的切換過渡仍需逐幀交付。
                     let now=Instant::now();
                     match daozai::layered::readback_delay(self.readback_at,now,interactive,out.repaint_after) {
                         None=>{
@@ -1043,14 +1043,14 @@ impl eframe::App for Shell {
                 }
             }
             let r = |r: egui::Rect| (r.left(), r.top(), r.width(), r.height());
-            // 保留主窗口的事件循环，避免全屏隐藏后设置窗口无法关闭或重新打开。
+            // 保留主窗口的事件循環，避免全屏隱藏後設置窗口無法關閉或重新打開。
             let region=if self.hidden {(0.0,0.0,0.0,0.0)} else {r(out.region)};
             let hit=if self.hidden || out.click_through && out.notice_hit.is_none() {(0.0,0.0,0.0,0.0)} else {r(out.hit)};
             let ppp=ctx.pixels_per_point();
             let glass=if self.hidden {None}else{out.glass.as_deref()};
             #[cfg(all(windows, feature = "sdk-material"))]
             let glass=glass.filter(|_| self.material.is_none());
-            // 系统模糊要铺满整块轮廓，开着时不收紧窗口外框。
+            // 系統模糊要鋪滿整塊輪廓，開著時不收緊窗口外框。
             let tight=(!self.hidden && native.supports_compact_bounds() && !out.blur
                 && !self.app.settings.minimal && !out.click_through).then(||{
                 let painted=ctx.paint_bounds();
@@ -1080,7 +1080,7 @@ impl eframe::App for Shell {
         }
         #[cfg(all(windows, feature = "sdk-material"))]
         if let Some((material, window)) = self.material.as_mut().zip(self.native.as_mut()) {
-            // 原生定位、裁剪及样式更新完毕后，再确认截图排除和采样位置。
+            // 原生定位、裁剪及樣式更新完畢後，再確認截圖排除和採樣位置。
             match material.finish(ctx, window, &mut out, env.t, env.desktop_cursor) {
                 Ok(delay) => {
                     self.app.material_capture_forced |= material.capture_ready();
@@ -1153,7 +1153,7 @@ impl eframe::App for Shell {
                     }
                 }
                 Cmd::RestartApp=>{
-                    // 先拉起新进程（它会等本进程退出），再像托盘「退出」一样摘图标后结束。
+                    // 先拉起新進程（它會等本進程退出），再像托盤「退出」一樣摘圖標後結束。
                     if diagnostics::spawn_replacement(){
                         self.app.save_window_before_exit();
                         #[cfg(windows)] if let Some(tray)=&self.tray {tray.exit_process();}
@@ -1222,7 +1222,7 @@ impl eframe::App for Shell {
                 cmd @ (Cmd::RequestNotifications|Cmd::RequestQqNotifications)=>{
                     #[cfg(windows)] {self.app.settings.qq_only=matches!(cmd,Cmd::RequestQqNotifications);self.app.settings.read_notifications=true;self.app.settings.save();self.incoming=None;match daozai::system::connect_with_settings(ctx.clone(),&self.app.settings){Ok(rx)=>{self.incoming=Some(rx);self.app.listener_status="正在請求 Windows 通知許可權…".into();},Err(e)=>self.app.listener_status=format!("Windows 未允許讀取通知：{}。需要相應的系統許可權或應用程式身份。",e.code())}}
                 },
-                // 模块关闭时设置项已置灰；万一仍有命令到达，只提示，不为它临时启动服务。
+                // 模塊關閉時設置項已置灰；萬一仍有命令到達，只提示，不為它臨時啟動服務。
                 Cmd::MailSync=>if let Some(mail)=&self.mail {
                     let enabled=self.app.mail_active();
                     let accounts=if enabled{self.app.mail_accounts().to_vec()}else{Vec::new()};
@@ -1258,29 +1258,29 @@ impl eframe::App for Shell {
             ctx.request_repaint();
         }
         self.app.mail_reader_ui(ctx);
-        // 交互切换以帧起点为准，扣掉本帧已经花费的时间。
+        // 交互切換以幀起點為準，扣掉本幀已經花費的時間。
         #[cfg(windows)] let repaint_after=if self.hidden {Duration::from_secs(1)}
             else if interactive_transition {out.repaint_after.saturating_sub(self.frame_at.elapsed())}
             else {out.repaint_after};
         #[cfg(not(windows))] let repaint_after=out.repaint_after;
         schedule_repaint(ctx,repaint_after);
-        // 只记慢帧：卡顿反馈时能直接看出是渲染慢还是输入被吞（页面/展开状态一并记下）。
+        // 只記慢幀：卡頓反饋時能直接看出是渲染慢還是輸入被吞（頁面/展開狀態一併記下）。
         let elapsed=frame_start.elapsed();
         if elapsed>=Duration::from_millis(60) {
             let (page,open)=self.app.debug_state();
             daozai::resources::append_log(&daozai::model::config_dir().join("diagnostics"),"frames",
-                &format!("帧 {:.0} ms｜页面 {}｜展开 {}｜前置 {:.0}｜岛体 {:.0}（插件 {:.1}）｜窗口 {:.0}｜设置 {:.0}",
+                &format!("幀 {:.0} ms｜頁面 {}｜展開 {}｜前置 {:.0}｜島體 {:.0}（插件 {:.1}）｜窗口 {:.0}｜設置 {:.0}",
                     elapsed.as_secs_f64()*1000.0,page,open,pre_cost.as_secs_f64()*1000.0,draw_cost.as_secs_f64()*1000.0,
                     daozai::resources::PLUGIN_FRAME_US.load(std::sync::atomic::Ordering::Relaxed) as f64/1000.0,
                     native_cost.as_secs_f64()*1000.0,settings_cost.as_secs_f64()*1000.0));
         }
-        // 设了 DAOZAI_FRAME_TRACE 时逐帧记下动画帧：上一帧逻辑和逻辑之外（绘制、读回、提交、等待）各占多少。
+        // 設了 DAOZAI_FRAME_TRACE 時逐幀記下動畫幀：上一幀邏輯和邏輯之外（繪製、讀回、提交、等待）各佔多少。
         thread_local!{
             static PREVIOUS_FRAME:std::cell::Cell<Option<(Instant,Duration)>>=const{std::cell::Cell::new(None)};
             static PREVIOUS_PARTS:std::cell::Cell<[Duration;4]>=const{std::cell::Cell::new([Duration::ZERO;4])};
         }
         let parts=PREVIOUS_PARTS.replace([pre_cost,settings_cost,elapsed.saturating_sub(pre_cost+draw_cost+native_cost+settings_cost),update_start.elapsed().saturating_sub(elapsed)]);
-        // 动画帧会请求很快的下一帧；闲置和定时刷新不计。
+        // 動畫幀會請求很快的下一幀；閒置和定時刷新不計。
         let animating=out.repaint_after<=Duration::from_millis(34)
             || ctx.requested_repaint_last_pass() && std::env::var_os("DAOZAI_FRAME_TRACE").is_some();
         if let Some((start,logic))=PREVIOUS_FRAME.get().filter(|_|animating) {
@@ -1288,7 +1288,7 @@ impl eframe::App for Shell {
             if std::env::var_os("DAOZAI_FRAME_TRACE").is_some() {
                 let (page,open)=self.app.debug_state();
                 daozai::resources::append_log(&daozai::model::config_dir().join("diagnostics"),"frames",
-                    &format!("间隔 {:.0} ms｜页面 {}｜展开 {}｜上帧逻辑 {:.1}（前置 {:.1}、设置窗口 {:.1}、其余 {:.1}、材质与提醒 {:.1}）｜逻辑之外 {:.1}｜本帧岛体 {:.1}（插件 {:.1}）｜窗口 {:.1}｜本帧前置：{}｜过渡 {} 交互起点 {} 兼容 {}",
+                    &format!("間隔 {:.0} ms｜頁面 {}｜展開 {}｜上幀邏輯 {:.1}（前置 {:.1}、設置窗口 {:.1}、其餘 {:.1}、材質與提醒 {:.1}）｜邏輯之外 {:.1}｜本幀島體 {:.1}（插件 {:.1}）｜窗口 {:.1}｜本幀前置：{}｜過渡 {} 交互起點 {} 兼容 {}",
                         interval.as_secs_f64()*1000.0,page,open,logic.as_secs_f64()*1000.0,
                         parts[0].as_secs_f64()*1000.0,parts[1].as_secs_f64()*1000.0,parts[2].as_secs_f64()*1000.0,parts[3].as_secs_f64()*1000.0,
                         interval.saturating_sub(logic).as_secs_f64()*1000.0,draw_cost.as_secs_f64()*1000.0,
@@ -1301,18 +1301,18 @@ impl eframe::App for Shell {
     }
 }
 
-// ---------------- 额度线程对齐 ----------------
+// ---------------- 額度線程對齊 ----------------
 
-/// 额度线程只关心总开关和账号身份；别名、置顶只影响显示，改了不重新查询。
-/// `enabled` 是生效的开关：AI 额度模块开启且额度设置里打开。
+/// 額度線程只關心總開關和帳號身份；別名、置頂隻影響顯示，改了不重新查詢。
+/// `enabled` 是生效的開關：AI 額度模塊開啟且額度設置裡打開。
 fn quota_sig(enabled:bool,config:&daozai::quota::Config)->(bool,Vec<daozai::quota::Account>){
     (enabled,config.accounts.iter().cloned().map(|mut a|{a.alias.clear();a.pinned=false;a}).collect())
 }
 
-/// 与 `quota_sig(enabled,config)==*known` 等价，但每帧调用时不复制账号。
+/// 與 `quota_sig(enabled,config)==*known` 等價，但每幀調用時不復制帳號。
 fn quota_sig_matches(known:&(bool,Vec<daozai::quota::Account>),enabled:bool,config:&daozai::quota::Config)->bool{
     known.0==enabled && known.1.len()==config.accounts.len() && known.1.iter().zip(&config.accounts).all(|(known,current)|{
-        // 不用 `..`：账号新增字段时这里会编译失败，提醒决定新字段是否需要重新查询。
+        // 不用 `..`：帳號新增字段時這裡會編譯失敗，提醒決定新字段是否需要重新查詢。
         let daozai::quota::Account{id,provider,alias:_,source,slot,enabled,pinned:_}=current;
         known.id==*id && known.provider==*provider && known.source==*source && known.slot==*slot && known.enabled==*enabled
     })
@@ -1323,7 +1323,7 @@ fn messenger_foreground_sources(pending:&[app::Unread],changed:bool,poll_due:boo
     let mut sources=Vec::new();
     if changed || poll_due{
         for unread in pending{
-            // 办公窗口的前台事件可能早于最小化状态的恢复，同一窗口恢复后无需再次换前台。
+            // 辦公窗口的前台事件可能早於最小化狀態的恢復，同一窗口恢復後無需再次換前台。
             if !changed && (unread.pid==0 || !app::Messenger::OFFICE.contains(&unread.source)){continue;}
             if !sources.contains(&unread.source){sources.push(unread.source);}
         }
@@ -1384,10 +1384,10 @@ mod quota_sig_tests {
     }
 }
 
-// ---------------- 系统信息 ----------------
+// ---------------- 系統信息 ----------------
 
 fn schedule_repaint(ctx:&egui::Context,interval:Duration){
-    // egui 会预减一帧；本程序自行调度刷新，补回后才能保持实际的等待间隔。
+    // egui 會預減一幀；本程序自行調度刷新，補回後才能保持實際的等待間隔。
     let predicted=ctx.input(|i|Duration::from_secs_f32(i.predicted_dt));
     ctx.request_repaint_after(interval.saturating_add(predicted));
 }
@@ -1552,7 +1552,7 @@ fn main() -> std::process::ExitCode {
     #[cfg(any(feature="sdk-js",feature="sdk-wasm"))]
     if let Some(code)=daozai::sdk_spike::command(){return code;}
     diagnostics::install();
-    // 收集诊断：在单实例检查、创建窗口和初始化显卡之前处理，鬼島启动即崩溃、卡死时也能用。
+    // 收集診斷：在單實例檢查、創建窗口和初始化顯卡之前處理，鬼島啟動即崩潰、卡死時也能用。
     #[cfg(windows)]
     if daozai::diagnostics_tool::requested(std::env::args()) {
         return match daozai::diagnostics_tool::run(&daozai::model::config_dir()) {
@@ -1569,7 +1569,7 @@ fn main() -> std::process::ExitCode {
     }
 }
 
-// 性能复测使用独立数据目录，避开日常岛仔的托盘和安装信息。
+// 性能複測使用獨立數據目錄，避開日常島仔的托盤和安裝信息。
 fn profiling_island()->bool {
     cfg!(feature="sdk-js") && std::env::var_os("DAOZAI_DATA_DIR").is_some() && std::env::args().any(|a|a=="--sdk-profile-island")
 }
@@ -1592,7 +1592,7 @@ fn request_material_restart(app: &mut App, ctx: &egui::Context, fallback: bool) 
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         true
     } else {
-        app.say("无法重新启动岛仔，请从托盘退出后手动打开");
+        app.say("無法重新啟動島仔，請從托盤退出後手動打開");
         ctx.request_repaint();
         false
     }
@@ -1601,7 +1601,7 @@ fn request_material_restart(app: &mut App, ctx: &egui::Context, fallback: bool) 
 #[cfg(all(windows, feature = "sdk-js", feature = "sdk-material"))]
 fn persist_material_failure(app: &mut App) {
     if let Err(error) = app.deactivate_material() {
-        daozai::material::Runtime::report_failure(&format!("无法保存材质停用状态：{error}"));
+        daozai::material::Runtime::report_failure(&format!("無法保存材質停用狀態：{error}"));
     }
 }
 
@@ -1613,14 +1613,14 @@ fn disable_material(app: &mut App, ctx: &egui::Context, error: String, _installe
         persist_material_failure(app);
     }
     if !request_material_restart(app, ctx, true) {
-        app.alert("材质加载失败", error, 0, false);
+        app.alert("材質加載失敗", error, 0, false);
     }
 }
 
 fn run() -> eframe::Result<()> {
-    // 自动重启或「立即重启」拉起的新进程：先等旧进程退出，再做单实例检查。
+    // 自動重啟或「立即重啟」拉起的新進程：先等舊進程退出，再做單實例檢查。
     diagnostics::wait_for_previous_instance();
-    // 单实例（与原版同名互斥体）
+    // 單實例（與原版同名互斥體）
     #[cfg(windows)]
     if !profiling_island() && !daozai::tray::single_instance() {
         if !daozai::tray::activate_existing(std::env::args().any(|arg|arg=="--calendar")) {
@@ -1630,7 +1630,7 @@ fn run() -> eframe::Result<()> {
     }
     #[cfg(windows)]
     if !profiling_island(){std::thread::spawn(daozai::record_install_size);}
-    diagnostics::startup("初始化图形窗口");
+    diagnostics::startup("初始化圖形窗口");
     let viewport = egui::ViewportBuilder::default()
         .with_title("鬼島").with_icon(daozai::theme::app_icon())
         .with_inner_size([app::CANVAS_W, app::WIN_H])
@@ -1643,7 +1643,7 @@ fn run() -> eframe::Result<()> {
         .with_visible(false);
     let opts = eframe::NativeOptions { viewport, vsync: !cfg!(windows), ..Default::default() };
     graphics::run(opts,|opts|{
-        let result=eframe::run_native("岛仔",opts,Box::new(|cc|Ok(Box::new(Shell::new(cc)))));
+        let result=eframe::run_native("島仔",opts,Box::new(|cc|Ok(Box::new(Shell::new(cc)))));
         #[cfg(all(windows, feature = "sdk-material"))]
         if daozai::material::report_run_failure(&result) {
             #[cfg(feature = "sdk-js")]
@@ -1651,7 +1651,7 @@ fn run() -> eframe::Result<()> {
                 use daozai::sdk_spike::LocalPlugins;
                 let mut plugins = LocalPlugins::open(daozai::model::config_dir().join("local-plugins"));
                 if let Err(error) = plugins.activate_material(None, false) {
-                    daozai::material::Runtime::report_failure(&format!("无法保存材质停用状态：{error}"));
+                    daozai::material::Runtime::report_failure(&format!("無法保存材質停用狀態：{error}"));
                 }
             }
             if replace_material_window(true) { return Ok(()); }

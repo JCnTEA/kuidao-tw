@@ -1,4 +1,4 @@
-//! Windows 状态采样与经用户授权的通知读取。
+//! Windows 狀態採樣與經用戶授權的通知讀取。
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::mpsc::{self, Receiver};
@@ -42,7 +42,7 @@ pub struct Observation {
     pub fullscreen: Option<crate::display_layout::Bounds>,
 }
 
-/// 跨进程输入法查询和 COM 状态采样留在后台，只在状态改变时唤醒界面。
+/// 跨進程輸入法查詢和 COM 狀態採樣留在後台，只在狀態改變時喚醒界面。
 pub fn observe(
     ctx: eframe::egui::Context,
     initial: Snapshot,
@@ -206,7 +206,7 @@ unsafe fn audio_device() -> Result<IMMDevice> {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
     });
-    // 每个采样线程复用枚举器，但每次仍查询当前默认设备，保留热插拔响应。
+    // 每個採樣線程複用枚舉器，但每次仍查詢當前默認設備，保留熱插拔響應。
     thread_local! {static ENUMERATOR:std::cell::RefCell<Option<IMMDeviceEnumerator>>=const{std::cell::RefCell::new(None)};}
     ENUMERATOR.with(|slot| {
         let mut slot = slot.borrow_mut();
@@ -226,7 +226,7 @@ unsafe fn audio_device() -> Result<IMMDevice> {
 unsafe fn audio() -> Result<IAudioEndpointVolume> {
     audio_device()?.Activate(CLSCTX_ALL, None)
 }
-/// 设置主音量（0..100）；同时解除静音，拖动音量条时立刻能听到。
+/// 設置主音量（0..100）；同時解除靜音，拖動音量條時立刻能聽到。
 #[cfg(windows)]
 pub fn set_volume(percent: u32) {
     unsafe {
@@ -238,7 +238,7 @@ pub fn set_volume(percent: u32) {
     }
 }
 
-/// 切换静音，返回切换后的静音状态（拿不到设备时返回 None）。
+/// 切換靜音，返回切換後的靜音狀態（拿不到設備時返回 None）。
 #[cfg(windows)]
 pub fn toggle_mute() -> Option<bool> {
     unsafe {
@@ -249,7 +249,7 @@ pub fn toggle_mute() -> Option<bool> {
     }
 }
 
-/// 当前会话是否锁屏。查询走 WTS（一次本机 RPC），按 2 秒缓存，避免每帧都查。
+/// 當前會話是否鎖屏。查詢走 WTS（一次本機 RPC），按 2 秒緩存，避免每幀都查。
 pub fn screen_locked() -> bool {
     use std::sync::Mutex;
     use std::time::{Duration, Instant};
@@ -305,30 +305,30 @@ pub fn idle_seconds() -> f64 {
         }
     }
 }
-/// 前台窗口在全屏判定里需要的信息。
+/// 前台窗口在全屏判定裡需要的信息。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Foreground {
     hwnd: isize,
     pid: u32,
-    /// 最终所有者窗口（没有所有者时是它自己）。
+    /// 最終所有者窗口（沒有所有者時是它自己）。
     root_owner: isize,
-    /// 会在任务栏单独显示按钮的普通程序窗口（不是工具窗口、对话框或浮动面板）。
+    /// 會在任務欄單獨顯示按鈕的普通程序窗口（不是工具窗口、對話框或浮動面板）。
     app_window: bool,
 }
 
-/// 前台从全屏窗口切到别的窗口时，是否仍按原来的全屏处理（鬼島保持隐藏）。
+/// 前台從全屏窗口切到別的窗口時，是否仍按原來的全屏處理（鬼島保持隱藏）。
 ///
-/// 3ds Max、Photoshop 这类软件全屏时，插件面板、浮动工具条、
-/// 属性对话框都是同一个程序的附属窗口；每点一下前台就在它们和主窗口之间来回切，
-/// 过去鬼島会跟着「出现 → 消失」闪一次。只要原来的全屏窗口还盖着屏幕，
-/// 而新的前台是它的附属窗口（被它拥有，或同一程序里不单独占任务栏的窗口），就继续隐藏。
-/// 切到另一个程序、或同一程序里另开的普通窗口（如浏览器的新窗口）时照常显示。
+/// 3ds Max、Photoshop 這類軟件全屏時，插件面板、浮動工具條、
+/// 屬性對話框都是同一個程序的附屬窗口；每點一下前台就在它們和主窗口之間來回切，
+/// 過去鬼島會跟著「出現 → 消失」閃一次。只要原來的全屏窗口還蓋著屏幕，
+/// 而新的前台是它的附屬窗口（被它擁有，或同一程序裡不單獨佔任務欄的窗口），就繼續隱藏。
+/// 切到另一個程序、或同一程序裡另開的普通窗口（如瀏覽器的新窗口）時照常顯示。
 fn keeps_fullscreen(last: Foreground, still_covers: bool, now: Option<Foreground>) -> bool {
     if !still_covers {
         return false;
     }
     match now {
-        // 激活切换的瞬间前台可能是空的，不当成离开全屏。
+        // 激活切換的瞬間前台可能是空的，不當成離開全屏。
         None => true,
         Some(now) => {
             now.hwnd == last.hwnd
@@ -359,7 +359,7 @@ unsafe fn foreground_info(hwnd: HWND) -> Foreground {
     }
 }
 
-/// 窗口盖满它所在的整块屏幕时返回该屏幕范围。
+/// 窗口蓋滿它所在的整塊屏幕時返回該屏幕範圍。
 unsafe fn covering_monitor(hwnd: HWND) -> Option<crate::display_layout::Bounds> {
     if !IsWindow(hwnd).as_bool() || !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() {
         return None;
@@ -379,9 +379,9 @@ unsafe fn covering_monitor(hwnd: HWND) -> Option<crate::display_layout::Bounds> 
         && r.top <= info.rcMonitor.top
         && r.right >= info.rcMonitor.right
         && r.bottom >= info.rcMonitor.bottom;
-    // 任务栏自动隐藏时，普通最大化窗口的外框也可能覆盖整屏，但标题栏占掉了客户区顶部。
-    // 以客户区是否盖满整屏为准，不看样式位：有的游戏全屏时保留标题栏样式和最大化标志、
-    // 实际并不画标题栏，按样式位判断会把它们当成普通最大化（0.6.65 的无畏契约回归）。
+    // 任務欄自動隱藏時，普通最大化窗口的外框也可能覆蓋整屏，但標題欄佔掉了客戶區頂部。
+    // 以客戶區是否蓋滿整屏為準，不看樣式位：有的遊戲全屏時保留標題欄樣式和最大化標誌、
+    // 實際並不畫標題欄，按樣式位判斷會把它們當成普通最大化（0.6.65 的無畏契約迴歸）。
     if covers && IsZoomed(hwnd).as_bool() && !client_covers(hwnd, &info.rcMonitor) {
         #[cfg(not(test))]
         log_maximized_exclusion(hwnd, r, info.rcMonitor);
@@ -395,7 +395,7 @@ unsafe fn covering_monitor(hwnd: HWND) -> Option<crate::display_layout::Bounds> 
     })
 }
 
-/// 客户区（不含标题栏和边框）是否盖满整块屏幕。
+/// 客戶區（不含標題欄和邊框）是否蓋滿整塊屏幕。
 unsafe fn client_covers(hwnd: HWND, monitor: &RECT) -> bool {
     use windows::Win32::Foundation::POINT;
     use windows::Win32::Graphics::Gdi::ClientToScreen;
@@ -419,7 +419,7 @@ unsafe fn client_covers(hwnd: HWND, monitor: &RECT) -> bool {
     tl.x <= monitor.left && tl.y <= monitor.top && br.x >= monitor.right && br.y >= monitor.bottom
 }
 
-/// 诊断：盖满屏幕却按普通最大化处理（不隐藏鬼島）的窗口，每个窗口只记一次，便于核对用户反馈。
+/// 診斷：蓋滿屏幕卻按普通最大化處理（不隱藏鬼島）的窗口，每個窗口只記一次，便於核對用戶反饋。
 #[cfg(not(test))]
 unsafe fn log_maximized_exclusion(hwnd: HWND, window: RECT, monitor: RECT) {
     use std::sync::Mutex;
@@ -447,19 +447,19 @@ unsafe fn log_maximized_exclusion(hwnd: HWND, window: RECT, monitor: RECT) {
 
 pub fn fullscreen() -> Option<crate::display_layout::Bounds> {
     use std::sync::Mutex;
-    // 上一次判定为全屏的窗口：前台切到它的附属窗口时沿用（见 `keeps_fullscreen`）。
+    // 上一次判定為全屏的窗口：前台切到它的附屬窗口時沿用（見 `keeps_fullscreen`）。
     static LAST: Mutex<Option<Foreground>> = Mutex::new(None);
     let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
     unsafe {
         let hwnd = GetForegroundWindow();
         let now = (!hwnd.0.is_null()).then(|| foreground_info(hwnd));
         if let Some(info) = now {
-            // 鬼島自己的窗口（设置窗口等）不算全屏，也不沿用。
+            // 鬼島自己的窗口（設置窗口等）不算全屏，也不沿用。
             if info.pid == windows::Win32::System::Threading::GetCurrentProcessId() {
                 *last = None;
                 return None;
             }
-            // 桌面与资源管理器桌面窗口不能当成全屏游戏。
+            // 桌面與資源管理器桌面窗口不能當成全屏遊戲。
             let mut cls = [0u16; 64];
             let n = GetClassNameW(hwnd, &mut cls);
             let cls = String::from_utf16_lossy(&cls[..n.max(0) as usize]);
@@ -536,7 +536,7 @@ mod fullscreen_follow_tests {
             cover();
             assert!(IsZoomed(hwnd).as_bool());
             let maximized = covering_monitor(hwnd);
-            // Chromium 进入 F11 时移除标题栏和可调整大小的边框，仍可能保留最大化标志。
+            // Chromium 進入 F11 時移除標題欄和可調整大小的邊框，仍可能保留最大化標誌。
             let style = GetWindowLongPtrW(hwnd, GWL_STYLE);
             SetWindowLongPtrW(
                 hwnd,
@@ -555,7 +555,7 @@ mod fullscreen_follow_tests {
     fn game_that_keeps_caption_style_but_draws_no_caption_still_hides_the_island() {
         use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
         unsafe extern "system" fn proc(h: HWND, m: u32, w: WPARAM, l: LPARAM) -> LRESULT {
-            // 不留非客户区：样式里有标题栏，但客户区就是整个窗口（自绘或无边框全屏的游戏）。
+            // 不留非客戶區：樣式裡有標題欄，但客戶區就是整個窗口（自繪或無邊框全屏的遊戲）。
             if m == WM_NCCALCSIZE && w.0 != 0 {
                 return LRESULT(0);
             }
@@ -615,7 +615,7 @@ mod fullscreen_follow_tests {
 
     #[test]
     fn plugin_panels_and_dialogs_of_the_fullscreen_app_keep_the_island_hidden() {
-        // 被主窗口拥有的插件面板 / 对话框
+        // 被主窗口擁有的插件面板 / 對話框
         let owned = Foreground {
             hwnd: 200,
             pid: 7,
@@ -623,7 +623,7 @@ mod fullscreen_follow_tests {
             app_window: false,
         };
         assert!(keeps_fullscreen(MAX, true, Some(owned)));
-        // 同一程序里不占任务栏的浮动工具窗口（没有设所有者）
+        // 同一程序裡不佔任務欄的浮動工具窗口（沒有設所有者）
         let tool = Foreground {
             hwnd: 201,
             pid: 7,
@@ -631,7 +631,7 @@ mod fullscreen_follow_tests {
             app_window: false,
         };
         assert!(keeps_fullscreen(MAX, true, Some(tool)));
-        // 插件放在独立进程里、但窗口挂在主窗口下面
+        // 插件放在獨立進程裡、但窗口掛在主窗口下面
         let other_process = Foreground {
             hwnd: 202,
             pid: 9,
@@ -639,7 +639,7 @@ mod fullscreen_follow_tests {
             app_window: false,
         };
         assert!(keeps_fullscreen(MAX, true, Some(other_process)));
-        // 激活切换瞬间前台为空
+        // 激活切換瞬間前台為空
         assert!(keeps_fullscreen(MAX, true, None));
     }
 
@@ -655,7 +655,7 @@ mod fullscreen_follow_tests {
             !keeps_fullscreen(MAX, true, Some(other_app)),
             "切到別的程式時照常顯示"
         );
-        // 同一程序新开的普通窗口（如浏览器的第二个窗口）也照常显示
+        // 同一程序新開的普通窗口（如瀏覽器的第二個窗口）也照常顯示
         let second_window = Foreground {
             hwnd: 301,
             pid: 7,
@@ -663,7 +663,7 @@ mod fullscreen_follow_tests {
             app_window: true,
         };
         assert!(!keeps_fullscreen(MAX, true, Some(second_window)));
-        // 原来的全屏窗口已经还原、最小化或关闭
+        // 原來的全屏窗口已經還原、最小化或關閉
         let owned = Foreground {
             hwnd: 200,
             pid: 7,
@@ -704,7 +704,7 @@ fn browser_overlaps_island(browser: RECT, island: RECT, dock: crate::model::Dock
     if dock.is_side() {
         return window_covers_side(browser, island, dock);
     }
-    // 窗口是 CANVAS_W 宽的透明画布，岛体中心固定在画布左侧 WIN_W/2 处（与水平位置、大小无关）。
+    // 窗口是 CANVAS_W 寬的透明畫布，島體中心固定在畫布左側 WIN_W/2 處（與水平位置、大小無關）。
     let scale=(island.right-island.left) as f32/crate::app::CANVAS_W;
     let center=island.left as f32+crate::app::WIN_W*scale/2.0;
     let half=crate::app::PW*scale/2.0;
@@ -714,8 +714,8 @@ fn browser_overlaps_island(browser: RECT, island: RECT, dock: crate::model::Dock
         }else{(browser.top as f32)<island.top as f32+crate::app::BAR_H*scale && browser.bottom>island.top}
 }
 
-/// 左右停靠：画布是 SIDE_W × SIDE_H，岛体贴在画布的左 / 右边、竖直居中。
-/// 前台窗口盖住岛所在的那一段屏幕边缘（例如最大化、全屏或贴边摆放）即视为遮挡。
+/// 左右停靠：畫布是 SIDE_W × SIDE_H，島體貼在畫布的左 / 右邊、豎直居中。
+/// 前台窗口蓋住島所在的那一段屏幕邊緣（例如最大化、全屏或貼邊擺放）即視為遮擋。
 fn window_covers_side(window: RECT, island: RECT, dock: crate::model::Dock) -> bool {
     let scale = (island.right - island.left) as f32 / crate::side_dock::SIDE_W;
     let cy = island.top as f32 + crate::side_dock::SIDE_H * scale / 2.0;
@@ -738,7 +738,7 @@ pub fn browser_at_top(bounds:RECT,settings:&crate::model::Settings)->Option<bool
         }
         let mut pid = 0;
         GetWindowThreadProcessId(foreground, Some(&mut pid));
-        // 设置、托盘和岛内输入沿用此前的避让状态，避免自身窗口引起反复切换。
+        // 設置、托盤和島內輸入沿用此前的避讓狀態，避免自身窗口引起反覆切換。
         if pid == GetCurrentProcessId() {
             return None;
         }
@@ -784,7 +784,7 @@ unsafe fn process_image_path(pid: u32) -> Option<String> {
     Some(String::from_utf16_lossy(&path[..length as usize]))
 }
 
-// 无所有者的工具窗可能在鬼島启动时就已打开。只有同进程的主窗口唯一时才补认宿主。
+// 無所有者的工具窗可能在鬼島啟動時就已打開。只有同進程的主窗口唯一時才補認宿主。
 unsafe fn unique_main_window(pid: u32) -> Option<HWND> {
     use windows::Win32::Foundation::{BOOL, LPARAM};
     struct Search {
@@ -842,15 +842,15 @@ unsafe fn avoidance_for_window(foreground:HWND,island:RECT,pid:u32,settings:&cra
     if rect.is_some_and(overlaps) && path.as_deref().is_some_and(matches){return Some(true);}
     if !settings.avoid_browsers && settings.avoid_apps.is_empty(){return Some(false);}
 
-    // 3ds Max 的插件可能以独立窗口获得焦点，或短暂无法读取可见矩形。
-    // 只在已登记的 Max 进程仍有窗口实际遮岛时延续避让。
+    // 3ds Max 的插件可能以獨立窗口獲得焦點，或短暫無法讀取可見矩形。
+    // 只在已登記的 Max 進程仍有窗口實際遮島時延續避讓。
     if !settings.avoid_apps.is_empty() && path.as_deref().is_some_and(|p| {
         std::path::Path::new(p).file_name().is_some_and(|name|name.eq_ignore_ascii_case("3dsmax.exe"))
             && crate::avoidance::contains_app(&settings.avoid_apps,p)
     }) && process_covers_island(pid,island,settings.dock) {return Some(true);}
 
-    // 浮窗暂时读不到矩形时，仍可沿所有者链找到盖住岛体的窗口。
-    // 这条关系也适用于由其他进程创建的浮窗。
+    // 浮窗暫時讀不到矩形時，仍可沿所有者鏈找到蓋住島體的窗口。
+    // 這條關係也適用於由其他進程創建的浮窗。
     let mut parent=owner;
     while let Some(hwnd)=parent {
         if IsIconic(hwnd).as_bool(){return Some(false);}
@@ -869,7 +869,7 @@ unsafe fn avoidance_for_window(foreground:HWND,island:RECT,pid:u32,settings:&cra
         return Some(false);
     }
     if owner.is_some() || info.app_window || !path.as_deref().is_some_and(matches){return Some(false);}
-    // 部分插件工具窗未登记 owner。优先跟随刚才操作的同进程主窗口，每次重新检查其位置。
+    // 部分插件工具窗未登記 owner。優先跟隨剛才操作的同進程主窗口，每次重新檢查其位置。
     let host = match last.get() {
         Some((hwnd, prev)) if prev == pid && foreground_info(hwnd).pid == pid => Some(hwnd),
         _ => unique_main_window(pid),
@@ -957,7 +957,7 @@ fn notification_body(n: &UserNotification) -> Result<String> {
     }
     Ok(parts.join(" · "))
 }
-/// 停止信号独立于消息队列，断开后结束等待，不再读取通知。
+/// 停止信號獨立於消息隊列，斷開後結束等待，不再讀取通知。
 pub struct Notifications {
     incoming: Receiver<Incoming>,
     stop: mpsc::Sender<()>,
@@ -1042,7 +1042,7 @@ impl NotificationBaseline {
         if old.created != version.created {
             return true;
         }
-        // 未读取、读取失败后的首次成功只建立指纹，避免通道切换和恢复读取时重放旧通知。
+        // 未讀取、讀取失敗後的首次成功只建立指紋，避免通道切換和恢復讀取時重放舊通知。
         matches!((old.body,version.body),(ToastBody::Read(before),ToastBody::Read(after)) if before!=after)
     }
     fn finish(&mut self, mut current: HashMap<u32, ToastVersion>, complete: bool) {
@@ -1080,7 +1080,7 @@ impl NotificationBaseline {
                     client,
                     body: ToastBody::Unavailable,
                 };
-                // 已确认是新通知时仍给通用提醒；恢复正文后只补指纹，不重复弹出。
+                // 已確認是新通知時仍給通用提醒；恢復正文後只補指紋，不重複彈出。
                 let message = self.changed(id, version).then(|| {
                     if tracked {
                         "有新訊息".into()
@@ -1123,7 +1123,7 @@ fn channel_status(client: crate::messenger::Messenger) -> String {
     }
 }
 
-/// 必须由窗口线程发起权限请求，后台仅读取新增或更新的通知。
+/// 必須由窗口線程發起權限請求，後台僅讀取新增或更新的通知。
 pub fn connect(
     ctx: eframe::egui::Context,
     filter: crate::messenger::NotificationFilter,
@@ -1263,7 +1263,7 @@ fn connect_inner(
                             .filter(|old| old.created == created)
                             .and_then(|old| old.client);
                         let (app, id) = notification_identity(&n, number, created, known);
-                        // 微信只走任务栏事件，即使客户端同时发送系统通知也不读取其正文。
+                        // 微信只走任務欄事件，即使客戶端同時發送系統通知也不讀取其正文。
                         let client = crate::messenger::Messenger::from_notification_id(&id);
                         if !filter.allows(&id)
                             || crate::messenger::suppresses_toast(
@@ -1276,7 +1276,7 @@ fn connect_inner(
                             continue;
                         }
                         let tracked = client.is_some();
-                        // 已适配客户端同时检查正文变化；其他应用的启动历史不需要读取正文。
+                        // 已適配客戶端同時檢查正文變化；其他應用的啟動歷史不需要讀取正文。
                         let body =
                             if tracked || baseline.previous.is_some() || created > baseline.started
                             {
@@ -1472,7 +1472,7 @@ fn pick_items_for(title:&str,options:windows::Win32::UI::Shell::FILEOPENDIALOGOP
         Ok(out)
     }
 }
-/// 构建资源管理器可识别的文件数据对象。
+/// 構建資源管理器可識別的文件數據對象。
 fn file_data_object(path: &std::path::Path) -> Result<windows::Win32::System::Com::IDataObject> {
     unsafe {
         use windows::Win32::UI::Shell::*;
@@ -1495,7 +1495,7 @@ fn file_data_object(path: &std::path::Path) -> Result<windows::Win32::System::Co
         result
     }
 }
-/// 原生拖出只允许复制，取消拖放不会改变置物架与原文件。
+/// 原生拖出只允許複製，取消拖放不會改變置物架與原文件。
 pub fn drag_file(path: &std::path::Path) -> Result<()> {
     unsafe {
         use windows::Win32::System::Ole::{OleInitialize, OleUninitialize, DROPEFFECT_COPY};
@@ -1774,7 +1774,7 @@ mod tests {
     #[test]
     fn side_dock_avoidance_checks_the_covered_screen_edge() {
         use crate::model::Dock;
-        // 1920×1080 屏幕，100% 缩放：左侧画布 0..500，竖直居中（240..840），岛体中心 y=540。
+        // 1920×1080 屏幕，100% 縮放：左側畫布 0..500，豎直居中（240..840），島體中心 y=540。
         let left = RECT {
             left: 0,
             top: 240,
@@ -2092,8 +2092,8 @@ mod avoidance_tests {
             let minimized=poll(path);
             DestroyWindow(panel).unwrap();
             DestroyWindow(host).unwrap();
-            assert_eq!(detached,Some(true),"独立浮窗获得焦点时，仍遮住岛的 Max 窗口应触发避让");
-            assert_eq!(hidden_panel,Some(true),"前台浮窗短暂不可用时，仍应检查实际遮住岛的窗口");
+            assert_eq!(detached,Some(true),"獨立浮窗獲得焦點時，仍遮住島的 Max 窗口應觸發避讓");
+            assert_eq!(hidden_panel,Some(true),"前台浮窗短暫不可用時，仍應檢查實際遮住島的窗口");
             assert_eq!([unregistered,moved,minimized],[Some(false);3]);
         }
     }
@@ -2109,7 +2109,7 @@ mod avoidance_tests {
             let path=std::env::current_exe().unwrap();
             let mut settings=crate::model::Settings::default();
             settings.browser_minimal=true;
-            settings.avoid_apps.push((path.to_string_lossy().into_owned(),"测试宿主".into()));
+            settings.avoid_apps.push((path.to_string_lossy().into_owned(),"測試宿主".into()));
             let last=std::cell::Cell::new(None);
             let mut island_rect=RECT::default();
             GetWindowRect(island,&mut island_rect).unwrap();
@@ -2120,9 +2120,9 @@ mod avoidance_tests {
             let results=[poll(host,&settings),poll(panel,&settings),poll(host,&settings)];
             let detached=create(600,300,300,200,None,WS_EX_TOOLWINDOW);
             let nested=create(700,400,100,100,Some(&panel),WS_EX_TOOLWINDOW);
-            assert_eq!(poll(detached,&settings),Some(true),"无 owner 的同进程工具窗沿用刚获得焦点的主窗口");
-            assert_eq!(poll(nested,&settings),Some(true),"嵌套插件对话框应找到宿主");
-            assert_eq!(avoidance_for_window(panel,island_rect,0,&settings,&last,||None),Some(true),"面板进程不可识别时仍可通过所有者识别宿主");
+            assert_eq!(poll(detached,&settings),Some(true),"無 owner 的同進程工具窗沿用剛獲得焦點的主窗口");
+            assert_eq!(poll(nested,&settings),Some(true),"嵌套插件對話框應找到宿主");
+            assert_eq!(avoidance_for_window(panel,island_rect,0,&settings,&last,||None),Some(true),"面板進程不可識別時仍可通過所有者識別宿主");
             let independent=create(600,300,300,200,None,WS_EX_APPWINDOW);
             last.set(None);
             assert_eq!(
@@ -2197,11 +2197,11 @@ mod avoidance_tests {
             DestroyWindow(independent).unwrap();
             DestroyWindow(host).unwrap();
             DestroyWindow(island).unwrap();
-            assert_eq!(results,[Some(true);3],"焦点从宿主切到中央插件浮窗再切回时应持续避让");
-            assert_eq!(small,Some(false),"同进程的独立小窗只检查自己的位置");
-            assert_eq!(other_screen,[Some(false);2],"主窗口移到副屏后，浮窗也应停止避让");
-            assert_eq!([hidden_panel,hidden_panel_with_unknown_process,hidden_tool],[Some(true);3],"前台浮窗不可见时仍应检查已识别的宿主");
-            assert_eq!([minimized,minimized_owner,hidden_host,hidden_independent],[Some(false);4],"宿主收起或隐藏时结束避让，独立小窗也不能借用后台窗口");
+            assert_eq!(results,[Some(true);3],"焦點從宿主切到中央插件浮窗再切回時應持續避讓");
+            assert_eq!(small,Some(false),"同進程的獨立小窗只檢查自己的位置");
+            assert_eq!(other_screen,[Some(false);2],"主窗口移到副屏後，浮窗也應停止避讓");
+            assert_eq!([hidden_panel,hidden_panel_with_unknown_process,hidden_tool],[Some(true);3],"前台浮窗不可見時仍應檢查已識別的宿主");
+            assert_eq!([minimized,minimized_owner,hidden_host,hidden_independent],[Some(false);4],"宿主收起或隱藏時結束避讓，獨立小窗也不能借用後台窗口");
             assert_eq!((disabled,removed),(Some(false),Some(false)));
         }
     }

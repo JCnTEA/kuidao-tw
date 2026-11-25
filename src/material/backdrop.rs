@@ -1,4 +1,4 @@
-//! 只在材质请求时读取岛体背后的桌面像素。
+//! 只在材質請求時讀取島體背後的桌面像素。
 
 use std::time::{Duration, Instant};
 
@@ -73,9 +73,9 @@ impl ScreenRect {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Geometry {
-    /// 抓取矩形在桌面上的物理像素坐标，允许负坐标。
+    /// 抓取矩形在桌面上的物理像素座標，允許負座標。
     pub screen: ScreenRect,
-    /// 岛体在抓取矩形内的 [x, y, w, h]，单位为物理像素。
+    /// 島體在抓取矩形內的 [x, y, w, h]，單位為物理像素。
     pub body: [f32; 4],
     pub pixels_per_point: f32,
 }
@@ -91,17 +91,17 @@ impl Geometry {
 
         let mut client = RECT::default();
         unsafe { GetClientRect(hwnd, &mut client) }
-            .map_err(|err| format!("读取岛体客户区：{err}"))?;
+            .map_err(|err| format!("讀取島體客戶區：{err}"))?;
         let mut at = POINT::default();
         if !unsafe { ClientToScreen(hwnd, &mut at) }.as_bool() {
-            return Err(format!("读取岛体屏幕原点：{}", Error::from_win32()));
+            return Err(format!("讀取島體屏幕原點：{}", Error::from_win32()));
         }
         let origin = (at.x, at.y);
         let Some(body_geometry) = Self::from_rects(body, body, origin, ppp) else {
             return Ok(None);
         };
         let Some(monitor) = Monitor::for_rect(body_geometry.screen) else {
-            return Err("无法定位岛体所在显示器".into());
+            return Err("無法定位島體所在顯示器".into());
         };
         let bounds = monitor.bounds;
         let clip = Rect::from_min_max(
@@ -118,12 +118,12 @@ impl Geometry {
         Ok(Self::from_rects(body, clipped, origin, ppp).map(|geometry| (geometry, clipped)))
     }
 
-    /// `capture` 是已裁剪到窗口和当前显示器交集的外扩矩形，`origin` 是客户区的屏幕物理坐标。
+    /// `capture` 是已裁剪到窗口和當前顯示器交集的外擴矩形，`origin` 是客戶區的屏幕物理座標。
     pub fn from_rects(body: Rect, capture: Rect, origin: (i32, i32), ppp: f32) -> Option<Self> {
         if !capture.is_finite() || !body.is_finite() || !ppp.is_finite() || ppp <= 0.0 {
             return None;
         }
-        // 与 egui 的 callback viewport 一致，两条边分别取整。岛体保留亚像素精度。
+        // 與 egui 的 callback viewport 一致，兩條邊分別取整。島體保留亞像素精度。
         let left = (capture.min.x * ppp).round();
         let top = (capture.min.y * ppp).round();
         let screen = ScreenRect::from_edges(
@@ -155,7 +155,7 @@ impl Geometry {
     }
 
     fn theme_bounds(self) -> [i32; 4] {
-        // 采样框锚在岛体上缘，切换页面高度时保持背景亮度稳定。
+        // 採樣框錨在島體上緣，切換頁面高度時保持背景亮度穩定。
         let [x, y, w, _] = self.body;
         let ppp = self.pixels_per_point;
         let width = ((520.0 * ppp).round() as i32).clamp(1, self.screen.width);
@@ -166,7 +166,7 @@ impl Geometry {
     }
 }
 
-/// 从上到下排列、无行填充的 BGRA 底片，亮度范围为 0 到 1。
+/// 從上到下排列、無行填充的 BGRA 底片，亮度範圍為 0 到 1。
 pub struct CleanPlate {
     pub geometry: Geometry,
     pub bgra: Vec<u8>,
@@ -174,7 +174,7 @@ pub struct CleanPlate {
     pub(crate) revision: u64,
 }
 
-/// 主岛专用抓屏会话。创建时无副作用，在主岛线程首次调用 `capture` 时打开。
+/// 主島專用抓屏會話。創建時無副作用，在主島線程首次調用 `capture` 時打開。
 #[derive(Default)]
 pub struct Backdrop {
     source: Option<Wgc>,
@@ -194,12 +194,12 @@ impl Backdrop {
             .filter(|plate| plate.geometry.screen == geometry.screen)
     }
 
-    /// 原生窗口确认截图排除后，返回与当前几何对齐的底片。
-    /// 失败会关闭本次会话，重新启用材质时创建新的 `Backdrop`。
+    /// 原生窗口確認截圖排除後，返回與當前幾何對齊的底片。
+    /// 失敗會關閉本次會話，重新啟用材質時創建新的 `Backdrop`。
     pub(super) fn capture(&mut self, geometry: Geometry) -> Result<Option<&CleanPlate>, &str> {
         if self.failed.is_none() {
             if let Err(error) = self.capture_frame(geometry) {
-                log(&format!("抓屏失败，退回基础皮肤：{error}"));
+                log(&format!("抓屏失敗，退回基礎皮膚：{error}"));
                 self.fail(error);
             }
         }
@@ -239,7 +239,7 @@ impl Backdrop {
                 self.source = None;
                 self.plate = None;
                 self.settle_until = Some(now + Duration::from_millis(1000));
-                log("显示器拓扑变化，等待桌面稳定后重建抓屏会话");
+                log("顯示器拓撲變化，等待桌面穩定後重建抓屏會話");
             }
             self.topology = Some(topology);
         }
@@ -249,10 +249,10 @@ impl Backdrop {
             return Ok(());
         }
         let Some(monitor) = Monitor::for_rect(rect) else {
-            return Err("无法定位岛体所在显示器".into());
+            return Err("無法定位島體所在顯示器".into());
         };
         let Some(source_box) = rect.source_box(monitor.bounds) else {
-            // 窗口在切屏时有可能还没移到新屏，先用基础皮肤等待下一帧。
+            // 窗口在切屏時有可能還沒移到新屏，先用基礎皮膚等待下一幀。
             self.plate = None;
             self.waiting_since = None;
             return Ok(());
@@ -267,17 +267,17 @@ impl Backdrop {
             self.plate = None;
         }
         if self.source.is_none() {
-            self.source = Some(Wgc::new(monitor).map_err(|err| format!("启动 WGC：{err}"))?);
+            self.source = Some(Wgc::new(monitor).map_err(|err| format!("啟動 WGC：{err}"))?);
             self.waiting_since = None;
         }
         let source = self.source.as_mut().unwrap();
         let raw = source
             .read(rect, &source_box, self.plate.is_none())
-            .map_err(|err| format!("读取 WGC 帧：{err}"))?;
+            .map_err(|err| format!("讀取 WGC 幀：{err}"))?;
         if let Some(raw) = raw {
             let island = geometry.island_bounds();
             let (inner, outer) = split_luma(&raw, rect, island);
-            // 排除属性生效前可能有黑岛残留，均匀的深色桌面仍然可以作为底片。
+            // 排除屬性生效前可能有黑島殘留，均勻的深色桌面仍然可以作為底片。
             if inner < 45.0 && outer - inner > 80.0 {
                 self.waiting_since.get_or_insert(now);
                 if let Some(plate) = &mut self.plate {
@@ -302,12 +302,12 @@ impl Backdrop {
         if self.plate.is_none() {
             self.waiting_since.get_or_insert(now);
         }
-        // 静止桌面暂无新帧时可沿用对齐的底片。等待首帧或持续出现污染帧时才超时。
+        // 靜止桌面暫無新幀時可沿用對齊的底片。等待首幀或持續出現汙染幀時才超時。
         if self
             .waiting_since
             .is_some_and(|since| now - since >= Duration::from_secs(2))
         {
-            return Err("WGC 未能提供可用的桌面帧".into());
+            return Err("WGC 未能提供可用的桌面幀".into());
         }
         Ok(())
     }
@@ -373,7 +373,7 @@ struct Apartment;
 
 impl Apartment {
     fn enter() -> windows::core::Result<Self> {
-        // winit 的 OLE 拖放会先在 UI 线程建立 STA。
+        // winit 的 OLE 拖放會先在 UI 線程建立 STA。
         match unsafe { RoInitialize(RO_INIT_SINGLETHREADED) } {
             Err(err) if err.code() == RPC_E_CHANGED_MODE => unsafe {
                 RoInitialize(RO_INIT_MULTITHREADED)
@@ -450,10 +450,10 @@ impl Wgc {
             };
             let _ = source.session.SetIsCursorCaptureEnabled(false);
             if let Err(err) = source.session.SetIsBorderRequired(false) {
-                log(&format!("保留系统捕获边框：{err}"));
+                log(&format!("保留系統捕獲邊框：{err}"));
             }
             source.session.StartCapture()?;
-            log(&format!("抓屏会话已启动：{:?}", monitor.bounds));
+            log(&format!("抓屏會話已啟動：{:?}", monitor.bounds));
             Ok(source)
         }
     }
@@ -473,7 +473,7 @@ impl Wgc {
                         let _ = old.Close();
                     }
                 }
-                // windows-rs 0.58 将成功返回的空接口投影为 Error::empty()，其错误码为 S_OK。
+                // windows-rs 0.58 將成功返回的空接口投影為 Error::empty()，其錯誤碼為 S_OK。
                 Err(err) if err.code() == S_OK => break,
                 Err(err) => return Err(err),
             }
@@ -494,7 +494,7 @@ impl Wgc {
             .as_ref()
             .map_or(true, |(current, _)| *current != size)
         {
-            // 保留最近一帧的全屏源，尺寸变化时仍从源重新裁剪，不沿用旧尺寸的纹理。
+            // 保留最近一幀的全屏源，尺寸變化時仍從源重新裁剪，不沿用舊尺寸的紋理。
             self.staging = Some((size, new_staging(&self.device, size)?));
         }
         let (_, staging) = self.staging.as_ref().unwrap();
@@ -557,7 +557,7 @@ fn new_staging(
     Ok(staging.ok_or(E_FAIL)?)
 }
 
-/// GDI 可能读到岛体自身，只能为已存在的干净底片提供岛体外像素。
+/// GDI 可能讀到島體自身，只能為已存在的乾淨底片提供島體外像素。
 fn grab_raw(rect: ScreenRect) -> Option<Vec<u8>> {
     unsafe {
         let screen = GetDC(None);
@@ -752,12 +752,12 @@ mod tests {
             plate: Some(plate(geometry)),
             ..Default::default()
         };
-        backdrop.fail("测试抓屏失败".into());
+        backdrop.fail("測試抓屏失敗".into());
         assert!(backdrop.plate.is_none());
         assert!(backdrop.source.is_none());
         assert!(matches!(
             backdrop.capture(geometry),
-            Err("测试抓屏失败")
+            Err("測試抓屏失敗")
         ));
     }
 

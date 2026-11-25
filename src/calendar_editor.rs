@@ -1,4 +1,4 @@
-//! 岛内本机日程表单。
+//! 島內本機日程表單。
 use crate::{app::{App,Cmd,CALENDAR_PAGE},local_calendar::{self,Draft},paint::{self,Card,H},theme::{self,W}};
 #[cfg(all(windows, feature = "sdk-material"))]
 use crate::material::ControlRole;
@@ -30,10 +30,10 @@ fn picker_cell(c: &Card, (x,y,width,height): (f32,f32,f32,f32), id: impl std::ha
 
 fn picker_entry(c: &Card, end: bool, date: bool, y: f32) -> bool {
     let (x, width, label) = match (end,date) {
-        (false,true) => (180.0,26.0,"选择开始日期"),
-        (true,true) => (180.0,26.0,"选择结束日期"),
-        (false,false) => (258.0,22.0,"选择开始时间"),
-        (true,false) => (258.0,22.0,"选择结束时间"),
+        (false,true) => (180.0,26.0,"選擇開始日期"),
+        (true,true) => (180.0,26.0,"選擇結束日期"),
+        (false,false) => (258.0,22.0,"選擇開始時間"),
+        (true,false) => (258.0,22.0,"選擇結束時間"),
     };
     let response = c.hit(x,y,width,23.0,("calendar-picker-entry",end,date)).on_hover_text(label);
     if response.hovered() { c.fill(x+2.0,y+2.0,width-4.0,19.0,5.0,theme::BTN_HOVER); }
@@ -76,13 +76,13 @@ fn time_wheel(c: &Card, x: f32, label: &str, value: u32, count: i64, wheel: &mut
 }
 
 impl Picker {
-    /// 返回是否继续显示选择器，确认时仅回填对应输入框。
+    /// 返回是否繼續顯示選擇器，確認時僅回填對應輸入框。
     fn draw(&mut self, c: &Card, draft: &mut Draft) -> bool {
         let title = match self {
-            Self::Date {end:false,..} => "开始日期",
-            Self::Date {end:true,..} => "结束日期",
-            Self::Time {end:false,..} => "开始时间",
-            Self::Time {end:true,..} => "结束时间",
+            Self::Date {end:false,..} => "開始日期",
+            Self::Date {end:true,..} => "結束日期",
+            Self::Time {end:false,..} => "開始時間",
+            Self::Time {end:true,..} => "結束時間",
         };
         c.centered_text(43.0,20.0,title,13.0,W::Semibold,theme::WHITE,H::Left);
         match self {
@@ -119,8 +119,8 @@ impl Picker {
                 c.fill(111.0,65.0,192.0,112.0,10.0,theme::CARD);
                 c.fill(120.0,108.0,174.0,26.0,6.0,PICKER_SELECTED);
                 c.centered_text(207.0,121.0,":",16.0,W::Semibold,theme::WHITE,H::Center);
-                let hour = time_wheel(c,124.0,"小时",time.hour(),24,&mut wheels[0]);
-                let minute = time_wheel(c,208.0,"分钟",time.minute(),60,&mut wheels[1]);
+                let hour = time_wheel(c,124.0,"小時",time.hour(),24,&mut wheels[0]);
+                let minute = time_wheel(c,208.0,"分鐘",time.minute(),60,&mut wheels[1]);
                 *time = NaiveTime::from_hms_opt(hour,minute,0).unwrap();
                 let footer = c.shifted(0.0,149.0);
                 if picker_button(&footer,224.0,64.0,"calendar-time-cancel","取消",theme::BTN) { return false; }
@@ -167,14 +167,14 @@ impl App {
         })();
         if let Err(error)=result{draft.error=error;self.calendar.draft=Some(draft);}
     }
-    /// 导入 .ics 文件到本机日程：过去 30 天到未来一年，重复日程展开；同一日程再次导入会跳过。
+    /// 導入 .ics 文件到本機日程：過去 30 天到未來一年，重複日程展開；同一日程再次導入會跳過。
     pub fn import_ics(&mut self,files:&[(String,String)])->String{
         if !self.calendar.local_error.is_empty(){return self.calendar.local_error.clone();}
         let now=chrono::Utc::now();
         let (lo,hi)=(now-chrono::Duration::days(30),now+chrono::Duration::days(366));
         let mut entries=self.calendar.local.clone();
         let mut known:std::collections::HashSet<_>=entries.iter().map(|entry|entry.event.uid.clone()).collect();
-        // 兼容旧版本对缺少 UID 的日程生成的标识，重新导入时保留已有本机记录。
+        // 兼容舊版本對缺少 UID 的日程生成的標識，重新導入時保留已有本機記錄。
         for entry in &entries{if entry.event.uid==format!("ics--{}",entry.event.start){known.insert(fallback_ics_uid(&entry.event));}}
         let (mut added,mut duplicates,mut capacity,mut errors)=(0usize,0usize,0usize,Vec::new());
         let mut report=crate::calendar::ReadReport::default();
@@ -232,15 +232,15 @@ impl App {
             return;
         }
         let accent=Color32::from_rgb(82,162,255);
-        c.centered_text(43.0,20.0,if d.uid.is_some(){"编辑日程"}else{"新建日程"},13.0,W::Semibold,theme::WHITE,H::Left);
-        // 图钉占用右侧时，将说明放到表单末行，给时间和图钉留出空间。
+        c.centered_text(43.0,20.0,if d.uid.is_some(){"編輯日程"}else{"新建日程"},13.0,W::Semibold,theme::WHITE,H::Left);
+        // 圖釘佔用右側時，將說明放到表單末行，給時間和圖釘留出空間。
         if self.hold_slot<1.0 {
-            c.faded(1.0-self.hold_slot).centered_text(370.0,20.0,"仅保存在本机",9.0,W::Regular,theme::GRAY,H::Right);
+            c.faded(1.0-self.hold_slot).centered_text(370.0,20.0,"僅保存在本機",9.0,W::Regular,theme::GRAY,H::Right);
         }
         if self.hold_slot>0.0 {
-            c.faded(self.hold_slot).centered_text(370.0,172.0,"仅保存在本机",9.0,W::Regular,theme::GRAY,H::Right);
+            c.faded(self.hold_slot).centered_text(370.0,172.0,"僅保存在本機",9.0,W::Regular,theme::GRAY,H::Right);
         }
-        for (label,y) in [("名称",49.0),("开始",82.0),("结束",114.0),("提醒",147.0)]{c.centered_text(43.0,y,label,10.0,W::Regular,theme::GRAY,H::Left);}
+        for (label,y) in [("名稱",49.0),("開始",82.0),("結束",114.0),("提醒",147.0)]{c.centered_text(43.0,y,label,10.0,W::Regular,theme::GRAY,H::Left);}
         for (x,y,w) in [(86.0,38.0,284.0),(86.0,71.0,120.0),(86.0,103.0,120.0)]{c.fill(x,y,w,23.0,6.0,theme::CARD);}
         if !d.all_day {for y in [71.0,103.0]{c.fill(214.0,y,66.0,23.0,6.0,theme::CARD);}}
         let (all_day,b)=paint::material_capsule(c,294.0,72.0,76.0,21.0,"calendar-editor-all-day",
@@ -253,7 +253,7 @@ impl App {
         }
         b.centered_text(332.0,82.5,if d.all_day{"✓ 全天"}else{"全天"},10.0,W::Regular,if glassy && d.all_day {accent}else{theme::WHITE},H::Center);
         if all_day.clicked(){d.all_day=!d.all_day;d.error.clear();}
-        if d.all_day {c.centered_text(214.0,114.0,"包含结束当天",8.5,W::Regular,theme::GRAY,H::Left);}
+        if d.all_day {c.centered_text(214.0,114.0,"包含結束當天",8.5,W::Regular,theme::GRAY,H::Left);}
         for (end,y) in [(false,71.0),(true,103.0)] {
             if picker_entry(c,end,true,y) {
                 let field=if end {&d.end_date} else {&d.start_date};
@@ -266,7 +266,7 @@ impl App {
                 d.picker=Some(Picker::Time {end,time,wheels:[WheelInput::default();2]});
             }
         }
-        let options=if d.all_day{vec![(None,"不提醒"),(Some(0),"当天 09:00")]}else{vec![(None,"不提醒"),(Some(0),"准时"),(Some(5),"提前5分"),(Some(15),"提前15分"),(Some(30),"提前30分")]};
+        let options=if d.all_day{vec![(None,"不提醒"),(Some(0),"當天 09:00")]}else{vec![(None,"不提醒"),(Some(0),"準時"),(Some(5),"提前5分"),(Some(15),"提前15分"),(Some(30),"提前30分")]};
         let width=if d.all_day{126.0}else{54.0};
         for (i,(value,label)) in options.into_iter().enumerate(){
             let x=86.0+i as f32*(width+3.0);let on=if d.all_day{d.reminder.is_some()==value.is_some()}else{d.reminder==value};
@@ -281,13 +281,13 @@ impl App {
             b.centered_text(x+width/2.0,146.5,label,8.4,W::Regular,if glassy && on {accent}else{theme::WHITE},H::Center);
             if r.clicked(){d.reminder=value;}
         }
-        let message=if d.error.is_empty(){"日期 年-月-日 · 时间 时:分"}else{&d.error};
+        let message=if d.error.is_empty(){"日期 年-月-日 · 時間 時:分"}else{&d.error};
         c.centered_text(86.0,172.0,&c.fit(message,9.0,W::Regular,284.0-68.0*self.hold_slot),9.0,W::Regular,if d.error.is_empty(){theme::GRAY}else{theme::RED},H::Left);
         let mut delete=false;
         if d.uid.is_some(){
             let (r,b)=paint::material_capsule(c,43.0,188.0,82.0,22.0,"calendar-editor-delete",theme::BTN,theme::BTN_HOVER,
                 glass(0.16),#[cfg(all(windows, feature = "sdk-material"))] ControlRole::CalDelete);
-            b.centered_text(84.0,199.0,if d.confirm_delete{"确认删除"}else{"删除日程"},9.5,W::Regular,theme::RED,H::Center);
+            b.centered_text(84.0,199.0,if d.confirm_delete{"確認刪除"}else{"刪除日程"},9.5,W::Regular,theme::RED,H::Center);
             if r.clicked(){if d.confirm_delete{delete=true;}else{d.confirm_delete=true;}}
         }
         let (cancel,b)=paint::material_capsule(c,224.0,188.0,64.0,22.0,"calendar-editor-cancel",theme::BTN,theme::BTN_HOVER,
@@ -299,7 +299,7 @@ impl App {
             let (hover,_)=c.hover_t(&save);
             b.fill(298.0,188.0,72.0,22.0,11.0,paint::alpha(accent,0.42+hover*0.16));
         }
-        b.centered_text(334.0,199.0,"保存到本机",10.0,W::Semibold,theme::WHITE,H::Center);
+        b.centered_text(334.0,199.0,"保存到本機",10.0,W::Semibold,theme::WHITE,H::Center);
         if delete{self.delete_calendar_editor();}else if cancel.clicked(){self.calendar.draft=None;}else if save.clicked(){self.save_calendar_editor();}
     }
     pub(crate) fn calendar_editor_inputs(&mut self,ui:&mut egui::Ui,origin:egui::Pos2,cmds:&mut Vec<Cmd>){

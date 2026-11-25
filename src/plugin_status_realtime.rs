@@ -1,4 +1,4 @@
-//! 由宿主按 Unix 秒计算状态页的实时值。
+//! 由宿主按 Unix 秒計算狀態頁的實時值。
 
 use super::{valid_text, valid_timestamp, MAX_TIMESTAMP};
 use serde::{Deserialize, Deserializer};
@@ -169,11 +169,11 @@ impl StatusCountdown {
 impl CountdownFormat {
     pub(crate) fn value(self, left: i64, done_label: Option<&str>) -> String {
         if left <= 0 {
-            return done_label.unwrap_or("已结束").into();
+            return done_label.unwrap_or("已結束").into();
         }
         match self {
             CountdownFormat::DayMinute => {
-                // 分钟向上取整，目标时间到达时才显示完成。
+                // 分鐘向上取整，目標時間到達時才顯示完成。
                 let minutes = (left + 59) / 60;
                 format!(
                     "{}天 {:02}:{:02}",

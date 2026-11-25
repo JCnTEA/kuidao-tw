@@ -1,4 +1,4 @@
-//! 自动避让设置与正在运行的应用选择。
+//! 自動避讓設置與正在運行的應用選擇。
 use eframe::egui::{self,Color32,Rect,Vec2};
 use crate::{extras::{settings_card,settings_label,setting_row},model::Settings};
 use std::sync::mpsc::{self,Receiver};
@@ -18,7 +18,7 @@ pub(crate) struct Picker {
     rx:Option<Receiver<Result<Vec<Candidate>,String>>>,
     error:String,
     icons:crate::icons::Cache,
-    /// 「全部添加」先进入确认状态，再点一次「确定添加」才真正添加。
+    /// 「全部添加」先進入確認狀態，再點一次「確定添加」才真正添加。
     confirm_all:bool,
 }
 impl Picker {
@@ -46,7 +46,7 @@ impl Picker {
             setting_row(ui,"自動避讓","下列應用程式遮住島時，島會收成細線",&mut settings.browser_minimal);
             ui.add_enabled_ui(settings.browser_minimal,|ui|{
                 ui.separator();
-                setting_row(ui,"常用瀏覽器","前臺瀏覽器視窗遮住島時避讓",&mut settings.avoid_browsers);
+                setting_row(ui,"常用瀏覽器","前台瀏覽器視窗遮住島時避讓",&mut settings.avoid_browsers);
                 ui.separator();
                 crate::extras::settings_control_row(ui,"自定義應用程式",100.0,|ui|{
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
@@ -135,7 +135,7 @@ impl Picker {
                 if ui.add_enabled(self.rx.is_none(),egui::Button::new("重新整理列表")).clicked(){self.refresh(ctx);}
             });
             ui.add_space(12.0);
-            // 二次确认：一次添加很多应用，先说清楚数量。
+            // 二次確認：一次添加很多應用，先說清楚數量。
             if self.confirm_all {
                 let addable=entries.iter().filter(|app|Self::reason(app,settings).is_none()).count();
                 ui.add_space(8.0);

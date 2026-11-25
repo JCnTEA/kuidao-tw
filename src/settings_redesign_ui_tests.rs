@@ -1,6 +1,6 @@
 use super::*;
 
-/// 旧版「新邮件提醒」关着的用户：升级后邮箱模块关闭，内部开关恢复为开，不会突然开始收信。
+/// 舊版「新郵件提醒」關著的用戶：升級後郵箱模塊關閉，內部開關恢復為開，不會突然開始收信。
 #[test]
 fn merged_mail_switch_migrates_old_off_to_module_off(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
@@ -25,7 +25,7 @@ fn merged_quota_switch_migrates_old_off_to_module_off(){
     assert!(!h.app.quota_active());
 }
 
-/// 已经开着的用户不受影响。
+/// 已經開著的用戶不受影響。
 #[test]
 fn merged_switches_keep_enabled_users_unchanged(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
@@ -36,7 +36,7 @@ fn merged_switches_keep_enabled_users_unchanged(){
     assert!(h.app.settings.mail_enabled && h.app.quota.config.enabled);
 }
 
-/// 只剩邮箱一个页面时模块关不掉：保持原来的“页面在、不收信”，不改变行为。
+/// 只剩郵箱一個頁面時模塊關不掉：保持原來的“頁面在、不收信”，不改變行為。
 #[test]
 fn merged_mail_switch_keeps_last_page_behavior(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
@@ -48,7 +48,7 @@ fn merged_mail_switch_keeps_last_page_behavior(){
     assert!(!h.app.mail_active());
 }
 
-/// 旧的分页序号（岛上入口、更新提示等按序号跳转）仍能打开合并后的页面，每个序号只属于一个侧栏项。
+/// 舊的分頁序號（島上入口、更新提示等按序號跳轉）仍能打開合併後的頁面，每個序號只屬於一個側欄項。
 #[test]
 fn settings_old_tab_numbers_open_merged_pages(){
     use crate::extras::settings_tab_group_for_tests as group;
@@ -79,7 +79,7 @@ fn sponsor_tab_renders_collapsed_and_expanded_author_card(){
     assert_eq!(crate::extras::settings_tab_group_for_tests(crate::extras::SETTINGS_TAB_SUPPORT),"贊助");
 }
 
-/// 每个分页都能正常绘制（含功能关闭时的提示），不会因为挪动布局而崩溃。
+/// 每個分頁都能正常繪製（含功能關閉時的提示），不會因為挪動佈局而崩潰。
 #[test]
 fn settings_every_tab_renders_with_modules_on_and_off(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
@@ -95,7 +95,7 @@ fn settings_every_tab_renders_with_modules_on_and_off(){
     }
 }
 
-/// 设置窗口拉到最小（600×450）时，侧栏 14 项都在可见区内，「贊助」與「關於」不會被擠出去。
+/// 設置窗口拉到最小（600×450）時，側欄 14 項都在可見區內，「贊助」與「關於」不會被擠出去。
 #[test]
 fn settings_sidebar_keeps_about_visible_at_minimum_height(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());

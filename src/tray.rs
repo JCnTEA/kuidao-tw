@@ -1,13 +1,13 @@
-//! 系统托盘、右键菜单与开机启动。
+//! 系統托盤、右鍵菜單與開機啟動。
 //!
-//! 托盘行为：
-//! - `uID=1`，`uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP`，回调 `WM_APP+9`，提示 `鬼島`；
-//! - 图标取 exe 内 `RT_GROUP_ICON #1`，按 `SM_CXSMICON` 走 `LoadImageW`；
-//! - 左键、右键都弹同一个菜单，没有双击分支；
-//! - 菜单固定中文，含设置入口，前三项每次打开现算勾选态；
-//! - 弹菜单前 `SetForegroundWindow`，期间 `SetTimer(12, 16ms)`，收尾 `KillTimer` +
+//! 托盤行為：
+//! - `uID=1`，`uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP`，回調 `WM_APP+9`，提示 `鬼島`；
+//! - 圖標取 exe 內 `RT_GROUP_ICON #1`，按 `SM_CXSMICON` 走 `LoadImageW`；
+//! - 左鍵、右鍵都彈同一個菜單，沒有雙擊分支；
+//! - 菜單固定中文，含設置入口，前三項每次打開現算勾選態；
+//! - 彈菜單前 `SetForegroundWindow`，期間 `SetTimer(12, 16ms)`，收尾 `KillTimer` +
 //!   `PostMessage(WM_NULL)` + `DestroyMenu`；
-//! - `Exit` 先摘图标再 `ExitProcess`；`TaskbarCreated` 广播时重建图标。
+//! - `Exit` 先摘圖標再 `ExitProcess`；`TaskbarCreated` 廣播時重建圖標。
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -31,11 +31,11 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::*;
 
-/// 原版的托盘回调消息。
+/// 原版的托盤回調消息。
 pub const WM_TRAY: u32 = WM_APP + 9;
-/// 仅构建并导出当前菜单状态，不弹出菜单（自动化取证用）。
+/// 僅構建並導出當前菜單狀態，不彈出菜單（自動化取證用）。
 pub const WM_TRAY_DUMP: u32 = WM_APP + 2;
-/// 在屏幕坐标 (wparam, lparam) 弹出菜单（隐藏桌面取证用）。
+/// 在屏幕座標 (wparam, lparam) 彈出菜單（隱藏桌面取證用）。
 pub const WM_TRAY_MENU: u32 = WM_APP + 3;
 
 const TRAY_UID: u32 = 1;
@@ -58,7 +58,7 @@ pub struct State {
     pub autostart: bool,
 }
 
-/// 菜单固定中文：启动 / 吉祥物 / 极简 / —— / 设置 / 关于 / 退出。
+/// 菜單固定中文：啟動 / 吉祥物 / 極簡 / —— / 設置 / 關於 / 退出。
 fn labels() -> [&'static str; 6] {
     ["開機啟動", "吉祥物", "極簡劉海", "關於鬼島", "退出", "設定…"]
 }
@@ -99,7 +99,7 @@ fn fill_tip(dst: &mut [u16], s: &str) {
     dst[n] = 0;
 }
 
-/// exe 里编入的 `RT_GROUP_ICON #1`，按系统小图标尺寸取最合适的一帧。
+/// exe 裡編入的 `RT_GROUP_ICON #1`，按系統小圖標尺寸取最合適的一幀。
 fn load_resource_icon() -> Option<HICON> {
     unsafe {
         let module = GetModuleHandleW(None).ok()?;
@@ -109,7 +109,7 @@ fn load_resource_icon() -> Option<HICON> {
     }
 }
 
-/// 图标取不到时，直接解析内嵌的鬼島 ICO。
+/// 圖標取不到時，直接解析內嵌的鬼島 ICO。
 fn load_embedded_icon() -> Option<HICON> {
     let ico: &[u8] = include_bytes!("../assets/kuidao.ico");
     if ico.len() < 6 {
@@ -156,7 +156,7 @@ fn add_icon(hwnd: HWND, hicon: HICON) -> bool {
     fill_tip(&mut nid.szTip, "鬼島");
     unsafe {
         if !Shell_NotifyIconW(NIM_ADD, &nid).as_bool() {
-            // explorer 里已有同名残留时，用 MODIFY 顶掉
+            // explorer 裡已有同名殘留時，用 MODIFY 頂掉
             return Shell_NotifyIconW(NIM_MODIFY, &nid).as_bool();
         }
         true
@@ -261,7 +261,7 @@ fn show_menu_at(hwnd: HWND, ctx: &Ctx, x: i32, y: i32) {
     let Ok(menu) = popup_menu(ctx.state()) else { return };
     dump_menu(hwnd, ctx, menu);
     unsafe {
-        // 不先给前台，菜单会因为焦点切换立刻消失
+        // 不先給前台，菜單會因為焦點切換立刻消失
         let _ = SetForegroundWindow(hwnd);
         let _ = SetTimer(hwnd, TIMER_MENU, 16, None);
         let cmd = TrackPopupMenu(
@@ -275,7 +275,7 @@ fn show_menu_at(hwnd: HWND, ctx: &Ctx, x: i32, y: i32) {
         )
         .0 as u32;
         let _ = KillTimer(hwnd, TIMER_MENU);
-        // 收尾：让菜单彻底消失
+        // 收尾：讓菜單徹底消失
         let _ = PostMessageW(hwnd, WM_NULL, WPARAM(0), LPARAM(0));
         let _ = DestroyMenu(menu);
         match cmd {
@@ -316,7 +316,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) 
     let ctx = &*ctx_ptr;
     if msg == WM_TRAY {
         let mouse = (lp.0 as u32) & 0xffff;
-        // 原版左右键同一个分支，没有双击行为
+        // 原版左右鍵同一個分支，沒有雙擊行為
         if matches!(mouse, WM_LBUTTONUP | WM_RBUTTONUP) {
             show_menu(hwnd, ctx);
         }
@@ -365,7 +365,7 @@ pub struct Tray {
 }
 
 impl Tray {
-    /// 与托盘菜单「退出」相同：先摘图标再结束进程（用于「立即重启」）。
+    /// 與托盤菜單「退出」相同：先摘圖標再結束進程（用於「立即重啟」）。
     pub fn exit_process(&self) -> ! {
         unsafe { remove_icon(self.hwnd); ExitProcess(0); }
     }
@@ -476,7 +476,7 @@ impl Tray {
     pub fn notify(&self,title:&str,body:&str,sound:bool) {
         let mut nid=NOTIFYICONDATAW {cbSize:std::mem::size_of::<NOTIFYICONDATAW>() as u32,hWnd:self.hwnd,uID:TRAY_UID,uFlags:NIF_INFO,dwInfoFlags:NIIF_INFO,..Default::default()};
         fill_tip(&mut nid.szInfoTitle,title);fill_tip(&mut nid.szInfo,body);
-        // NIIF_NOSOUND，默认安静提醒。
+        // NIIF_NOSOUND，默認安靜提醒。
         if !sound {nid.dwInfoFlags.0|=0x10;}
         unsafe{let _=Shell_NotifyIconW(NIM_MODIFY,&nid);}
     }
@@ -504,15 +504,15 @@ impl Drop for Tray {
     }
 }
 
-/// 健康提醒独立播放，托盘气泡被 Windows 隐藏时也能听到。
+/// 健康提醒獨立播放，托盤氣泡被 Windows 隱藏時也能聽到。
 pub fn play_health_sound() {
     use windows::Win32::Media::Audio::{PlaySoundW, SND_ASYNC, SND_MEMORY, SND_NODEFAULT, SND_NOSTOP};
-    // 异步播放期间 Windows 仍会读取这段内嵌的 WAV。
+    // 異步播放期間 Windows 仍會讀取這段內嵌的 WAV。
     let wav = include_bytes!("../assets/health-reminder.wav");
     unsafe { let _ = PlaySoundW(PCWSTR(wav.as_ptr().cast()), None, SND_MEMORY | SND_ASYNC | SND_NODEFAULT | SND_NOSTOP); }
 }
 
-/// 单实例：已有鬼島实例时返回 false。
+/// 單實例：已有鬼島實例時返回 false。
 pub fn single_instance() -> bool {
     unsafe {
         match CreateMutexW(None, false, MUTEX_NAME) {
@@ -521,7 +521,7 @@ pub fn single_instance() -> bool {
                     let _ = CloseHandle(handle);
                     false
                 } else {
-                    // HANDLE 没有 Drop，故意不 CloseHandle：进程存活期间一直持有互斥体
+                    // HANDLE 沒有 Drop，故意不 CloseHandle：進程存活期間一直持有互斥體
                     let _ = handle;
                     true
                 }
@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     fn icon_resource_is_embedded() {
-        // 托盘图标必须来自 exe 资源 #1（rc.exe 编入），不是临时画的
+        // 托盤圖標必須來自 exe 資源 #1（rc.exe 編入），不是臨時畫的
         assert!(load_resource_icon().is_some(), "RT_GROUP_ICON #1 取不到");
     }
 
@@ -647,7 +647,7 @@ mod tests {
     }
 }
 
-/// 重复启动时请求现有实例打开窗口，限制等待时间以免跟随挂起。
+/// 重複啟動時請求現有實例打開窗口，限制等待時間以免跟隨掛起。
 fn request_existing_window(hwnd:HWND,calendar:bool)->bool {unsafe{
     if hwnd.0.is_null(){return false;}
     let mut reply=0usize;
@@ -662,10 +662,10 @@ pub fn activate_existing(calendar:bool)->bool {unsafe{
     GetWindowThreadProcessId(tray,Some(&mut tray_pid));
     GetWindowThreadProcessId(window,Some(&mut window_pid));
     if tray_pid==0 || tray_pid!=window_pid{return false;}
-    // 托盘有独立线程，能接收消息不代表界面线程仍可响应。
+    // 托盤有獨立線程，能接收消息不代表界面線程仍可響應。
     if SendMessageTimeoutW(window,WM_NULL,WPARAM(0),LPARAM(0),
         SMTO_ABORTIFHUNG|SMTO_ERRORONEXIT,1500,None).0==0{return false;}
-    // 用户再次启动时，把新进程的前台激活权限交给现有实例，无需模拟按键。
+    // 用戶再次啟動時，把新進程的前台激活權限交給現有實例，無需模擬按鍵。
     let _=AllowSetForegroundWindow(tray_pid);
     request_existing_window(tray,calendar)
 }}

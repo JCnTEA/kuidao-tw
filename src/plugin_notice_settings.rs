@@ -62,14 +62,14 @@ impl App {
 
     pub(crate) fn plugin_notice_settings(&mut self, ui: &mut egui::Ui) {
         let host = &mut self.plugin_notice_host;
-        settings_label(ui, "本机通知来源");
+        settings_label(ui, "本機通知來源");
         let mut revoke = None;
         settings_card(ui, |ui| {
             let Some(bridge) = &mut host.bridge else {
                 settings_hint(
                     ui,
                     if host.message.is_empty() {
-                        "本机接入尚未启动"
+                        "本機接入尚未啟動"
                     } else {
                         &host.message
                     },
@@ -78,18 +78,18 @@ impl App {
             };
             settings_hint(
                 ui,
-                "接入端可发送通知、更新状态并处理你点击的动作。关闭提醒会暂停接收，撤销全部授权会关闭本机接口。",
+                "接入端可發送通知、更新狀態並處理你點擊的動作。關閉提醒會暫停接收，撤銷全部授權會關閉本機接口。",
             );
             for source in bridge.sources() {
                 ui.push_id(&source.id, |ui| {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("撤销授权").clicked() {
+                        if ui.button("撤銷授權").clicked() {
                             revoke = Some(source.id.clone());
                         }
-                        if ui.button("复制凭据路径").clicked() {
+                        if ui.button("複製憑據路徑").clicked() {
                             let path = bridge.connection_file(&source.id);
                             ui.ctx().copy_text(path.to_string_lossy().into_owned());
-                            host.message = "已复制凭据文件路径".into();
+                            host.message = "已複製憑據文件路徑".into();
                         }
                         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                             ui.add(egui::Label::new(&source.name).truncate())
@@ -99,23 +99,23 @@ impl App {
                 });
                 ui.separator();
             }
-            settings_control_row(ui, "来源 ID", 104.0, |ui| {
+            settings_control_row(ui, "來源 ID", 104.0, |ui| {
                 ui.add(
                     egui::TextEdit::singleline(&mut host.source_id)
                         .char_limit(64)
                         .hint_text("由接入端提供，例如 author.tool"),
                 )
             });
-            settings_control_row(ui, "显示名称", 104.0, |ui| {
+            settings_control_row(ui, "顯示名稱", 104.0, |ui| {
                 ui.add(
                     egui::TextEdit::singleline(&mut host.source_name)
                         .char_limit(40)
-                        .hint_text("显示在岛上提醒中"),
+                        .hint_text("顯示在島上提醒中"),
                 )
             });
             let ready = !host.source_id.trim().is_empty() && !host.source_name.trim().is_empty();
             if ui
-                .add_enabled(ready, egui::Button::new("授权来源"))
+                .add_enabled(ready, egui::Button::new("授權來源"))
                 .clicked()
             {
                 host.message =
@@ -123,7 +123,7 @@ impl App {
                         Ok(()) => {
                             host.source_id.clear();
                             host.source_name.clear();
-                            "已授权。将凭据文件路径交给接入端。".into()
+                            "已授權。將憑據文件路徑交給接入端。".into()
                         }
                         Err(error) => error,
                     };
@@ -132,7 +132,7 @@ impl App {
                 host.message = match bridge.revoke(&id) {
                     Ok(()) => {
                         revoke = Some(id);
-                        "已撤销授权".into()
+                        "已撤銷授權".into()
                     }
                     Err(error) => error,
                 };

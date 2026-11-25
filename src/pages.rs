@@ -1,5 +1,5 @@
-//! 五个页面：音乐 → 专注 → 饮水 → 置物 → 待办。
-//! 坐标全部是面板局部逻辑点（419×140），文字 y 是基线。
+//! 五個頁面：音樂 → 專注 → 飲水 → 置物 → 待辦。
+//! 座標全部是面板局部邏輯點（419×140），文字 y 是基線。
 
 use crate::anim::{self, lerp, smoothstep, Spring};
 use crate::app::{App, Cmd, Env, Phase};
@@ -12,7 +12,7 @@ use crate::theme::{self, size, W};
 use eframe::egui::{self, Color32, Pos2, Rect};
 use std::f32::consts::{FRAC_PI_2, TAU};
 
-/// 剪贴板分栏一屏显示的条数。
+/// 剪貼板分欄一屏顯示的條數。
 pub(crate) const CLIP_ROWS: usize = 4;
 const MUSIC_VOLUME_RECT: Rect = Rect::from_min_max(Pos2::new(345.0,6.0),Pos2::new(389.0,104.0));
 
@@ -29,7 +29,7 @@ fn mmss(secs: f64) -> String {
     format!("{:02}:{:02}", s / 60, s % 60)
 }
 
-/// 由标题生成稳定的封面渐变色。
+/// 由標題生成穩定的封面漸變色。
 fn cover_colors(title: &str) -> (Color32, Color32) {
     let mut h: u64 = 1469598103934665603;
     for b in title.bytes() {
@@ -46,7 +46,7 @@ fn cover_colors(title: &str) -> (Color32, Color32) {
 }
 
 impl App {
-    // ================= 音乐 =================
+    // ================= 音樂 =================
     pub(crate) fn page_music(&mut self, c: &Card, _env: &Env, cmds: &mut Vec<Cmd>) {
         let np=self.media.clone();
         let has=!np.title.is_empty();
@@ -93,9 +93,9 @@ impl App {
             bar.interact_pointer_pos().or_else(||ctx.input(|i|i.pointer.interact_pos()))
                 .map(|pointer|((c.to_local(pointer).x-bx)/bw).clamp(0.0,1.0) as f64*np.duration)
         }else{None};
-        // 松手后播放器的新位置要等下一轮采样才回来（QQ 音乐尤其慢），先用目标值顶着，否则滑块会先弹回旧位置再跳过去。
+        // 鬆手後播放器的新位置要等下一輪採樣才回來（QQ 音樂尤其慢），先用目標值頂著，否則滑塊會先彈回舊位置再跳過去。
         let pending_position=self.music_seek_ui.as_ref().filter(|(_,title)|*title==np.title).map(|(target,_)|*target);
-        // 切到上一首 / 下一首后先本地归零：新歌位置要等下一轮采样，否则会拿旧歌进度配新歌名停一下。
+        // 切到上一首 / 下一首後先本地歸零：新歌位置要等下一輪採樣，否則會拿舊歌進度配新歌名停一下。
         let restart=self.music_restart_at.filter(|at|self.t<at+1.5).map(|at|(self.t-at).max(0.0));
         let position=seek_position.or(pending_position).unwrap_or_else(||match restart {
             Some(fresh) if np.position>fresh+1.0=>fresh,
@@ -168,7 +168,7 @@ impl App {
             (response,card)
         };
         let (lyrics_button,lyrics_card)=btn(74.0,26.0,"m-lyr",has,#[cfg(all(windows, feature = "sdk-material"))] ControlRole::Lyric);
-        lyrics_card.text(74.0,y+5.0,"词",14.0,W::Semibold,if !has {ic}else if self.show_lyrics {theme::WHITE}else{theme::GRAY},H::Center);
+        lyrics_card.text(74.0,y+5.0,"詞",14.0,W::Semibold,if !has {ic}else if self.show_lyrics {theme::WHITE}else{theme::GRAY},H::Center);
         let (previous,previous_card)=btn(162.0,30.0,"m-prev",has,#[cfg(all(windows, feature = "sdk-material"))] ControlRole::Prev);
         paint::skip(&previous_card,162.0,y,-1.0,ic);
         let (play,play_card)=btn(210.5,30.0,"m-play",has,#[cfg(all(windows, feature = "sdk-material"))] ControlRole::Play);
@@ -202,7 +202,7 @@ impl App {
                 self.settings.save();
             }
         }
-        // 岛上歌词是横向的，只在顶部停靠时提供。
+        // 島上歌詞是橫向的，只在頂部停靠時提供。
         if has && !self.side() {
             let on=self.settings.island_lyrics;
             let (button,button_card)=paint::material_capsule(c,279.0,108.0,68.0,20.0,"m-island-lyrics",
@@ -214,8 +214,8 @@ impl App {
                 button_card.fill(279.0,108.0,68.0,20.0,10.0,Color32::from_white_alpha(24));
                 paint::chrome_since(c,from);
             }
-            button_card.text(313.0,122.0,"岛上歌词",10.0,W::Semibold,if self.settings.island_lyrics {theme::WHITE}else{theme::GRAY},H::Center);
-            if button.on_hover_text(if self.settings.island_lyrics {"关闭收起时的歌词"}else{"收起时显示当前歌词"}).clicked() {
+            button_card.text(313.0,122.0,"島上歌詞",10.0,W::Semibold,if self.settings.island_lyrics {theme::WHITE}else{theme::GRAY},H::Center);
+            if button.on_hover_text(if self.settings.island_lyrics {"關閉收起時的歌詞"}else{"收起時顯示當前歌詞"}).clicked() {
                 self.settings.island_lyrics=!self.settings.island_lyrics;
                 self.settings.save();
             }
@@ -232,7 +232,7 @@ impl App {
     }
 
     pub(crate) fn music_volume_bounds(&self)->Rect {
-        // 顶栏固定时浮条靠在扬声器左侧，给图钉留下完整热区。
+        // 頂欄固定時浮條靠在揚聲器左側，給圖釘留下完整熱區。
         MUSIC_VOLUME_RECT.translate(egui::vec2(-43.0,27.0)*self.hold_slot)
     }
 
@@ -250,12 +250,12 @@ impl App {
         if a<0.01{return;}
         let popup=c.shifted(placed.min.x-bounds.min.x,placed.min.y-bounds.min.y).faded(a);
         let popup=if self.music_volume_open{popup}else{popup.ghost()};
-        // 浮条最后绘制并占据整块命中区域，防止点击穿到后面的翻页按钮。
+        // 浮條最後繪製並佔據整塊命中區域，防止點擊穿到後面的翻頁按鈕。
         popup.hit(bounds.min.x,bounds.min.y,bounds.width(),bounds.height(),"m-volume-surface");
         let glassy=self.glassy();
         if glassy {
             let (x,y,w,h)=(bounds.min.x,bounds.min.y,bounds.width(),bounds.height());
-            // 浮层覆盖歌词，叠加同色填充补足深色玻璃调色后的透明度。
+            // 浮層覆蓋歌詞，疊加同色填充補足深色玻璃調色後的透明度。
             for _ in 0..4 { popup.fill(x,y,w,h,12.0,Color32::from_gray(26)); }
             paint::glass_chip(&popup,x,y,w,h,12.0,0.0);
         } else {
@@ -288,7 +288,7 @@ impl App {
         } else {
             popup.fill(353.0,82.0,28.0,20.0,6.0,paint::mix(theme::BTN,theme::BTN_HOVER,if muted{1.0}else{hover}));
         }
-        popup.scaled(367.0,92.0,1.0-0.06*press).centered_text(367.0,92.0,if muted{"恢复"}else{"静音"},9.5,W::Semibold,theme::WHITE,H::Center);
+        popup.scaled(367.0,92.0,1.0-0.06*press).centered_text(367.0,92.0,if muted{"恢復"}else{"靜音"},9.5,W::Semibold,theme::WHITE,H::Center);
     }
 
     fn draw_music_lyrics(&mut self,c:&Card) {
@@ -346,7 +346,7 @@ impl App {
         let (start,end)=if synced {
             (focus_slot.saturating_sub(2),focus_slot.saturating_add(2).min(visible.len().saturating_sub(1)))
         } else {
-            // KKBOX 有些台語歌只給純文字：沒有時間軸時從頭排出多行，至少能讀完整段，而不是只顯示第一句。
+            // KKBOX 有些台語歌只給純文字：沒有時間軸時從頭排出多行，至少能讀完整段，而不是隻顯示第一句。
             (0,visible.len().min(10).saturating_sub(1))
         };
         for slot in start..=end {
@@ -360,11 +360,11 @@ impl App {
             let row=col.faded(if active {1.0}else{0.7});
             let ink=row.ink(if active {theme::WHITE}else{theme::GRAY});
             let font=row.font(if active {12.0}else{10.0},if active {W::Semibold}else{W::Regular});
-            // 维语等从右到左的歌词：先按阅读顺序分行再逐行转换（#200）。
+            // 維語等從右到左的歌詞：先按閱讀順序分行再逐行轉換（#200）。
             let text=crate::rtl_text::display_wrapped(&shown,TEXT_W*c.s,|s|row.painter.layout_no_wrap(s.to_owned(),font.clone(),ink).size().x).into_owned();
             let has_space=text.contains(' ');
             let mut job=egui::text::LayoutJob::simple(text,font,ink,TEXT_W*c.s);
-            // 当前句完整折行；鄰句維持淡出的一行，避免長歌詞全部被省略號截斷。
+            // 當前句完整折行；鄰句維持淡出的一行，避免長歌詞全部被省略號截斷。
             job.wrap.max_rows=if active {3}else{1};
             job.wrap.break_anywhere=!has_space;
             let galley=row.painter.layout_job(job);
@@ -421,21 +421,21 @@ impl App {
         self.ly.lyrics=Some(lyrics);
     }
 
-    // ================= 专注（番茄钟） =================
+    // ================= 專注（番茄鍾） =================
     pub(crate) fn page_focus(&mut self, c: &Card, header: &Card, _env: &Env) {
-        if header.hit(90.0,8.0,42.0,21.0,"focus-settings").on_hover_text("专注设置").clicked(){self.open_settings_category(2);}
-        header.text(111.0,23.0,"设置",10.5,W::Regular,theme::GRAY,H::Center);
+        if header.hit(90.0,8.0,42.0,21.0,"focus-settings").on_hover_text("專注設置").clicked(){self.open_settings_category(2);}
+        header.text(111.0,23.0,"設置",10.5,W::Regular,theme::GRAY,H::Center);
         let (rx, ry, rr) = (79.0, 74.0, 32.0);
         let frac = self.ring_shown.pos.clamp(0.0, 1.0);
         let run = c.ui.ctx().animate_bool_with_time(egui::Id::new("pomo-run"), self.pomo.running, 0.3);
         let resting=self.pomo.phase!=Phase::Focus;
         let (top,bottom)=if resting{(theme::SOFT_GREEN,mix(theme::SOFT_GREEN,Color32::BLACK,0.2))}else{(theme::RED_TOP,theme::RED)};
-        // 外圈柔光；计时中缓慢呼吸
+        // 外圈柔光；計時中緩慢呼吸
         let breathe = 0.5 + 0.5 * ((self.t * 2.2).sin() as f32);
         let glow = 0.30 + 0.25 * run * breathe;
         c.glow(rx, ry, 48.0, paint::alpha(bottom, glow * 0.55));
         c.ring(rx, ry, rr, 7.0, if resting{mix(theme::CARD,top,0.18)}else{Color32::from_rgb(58,22,26)});
-        // 渐变进度环随当前阶段配色。
+        // 漸變進度環隨當前階段配色。
         if frac > 0.001 {
             let steps = (120.0 * frac).ceil().max(2.0) as usize;
             let a0 = -FRAC_PI_2;
@@ -447,7 +447,7 @@ impl App {
                 c.seg(prev, next, 7.0, mix(top, bottom, t));
                 prev = next;
             }
-            // 圆头
+            // 圓頭
             c.circle(rx, ry - rr, 3.5, top);
             c.circle(prev.0, prev.1, 3.5, mix(top, bottom, (prev.1 - (ry - rr)) / (2.0 * rr)));
         }
@@ -461,7 +461,7 @@ impl App {
         c.text(264.0, 61.0, &format!("{:02}:{:02}", secs / 60, secs % 60), size::HERO + 1.0, W::Bold, if resting{theme::SOFT_GREEN}else{theme::WHITE}, H::Center);
         c.text(264.0, 79.0, self.pomo.phase.label(), size::SMALL, W::Regular, theme::GRAY, H::Center);
 
-        // 重置：点一下图标转一圈
+        // 重置：點一下圖標轉一圈
         let r = c.hit(317.0, 38.0, 24.0, 24.0, "f-reset");
         let (h, p) = c.hover_t(&r);
         let rc = c.scaled(329.0, 50.0, 1.0 - 0.1 * p);
@@ -475,7 +475,7 @@ impl App {
 
         let glassy=self.glassy();
         let glass_gpu=c.live && self.glass_controls_ready();
-        for (phase,label,x,width,id) in [(Phase::Focus,"专注",148.0,88.0,"f-focus"),(Phase::Rest,"休息",292.0,88.0,"f-rest")] {
+        for (phase,label,x,width,id) in [(Phase::Focus,"專注",148.0,88.0,"f-focus"),(Phase::Rest,"休息",292.0,88.0,"f-rest")] {
             let selected=self.pomo.phase==phase;
             let accent=if phase==Phase::Focus{theme::RED_TOP}else{theme::SOFT_GREEN};
             let background=if selected{mix(theme::BTN,accent,0.22)}else{theme::BTN};
@@ -509,24 +509,24 @@ impl App {
         self.pomo.running = false;
     }
 
-    // ================= 饮水 =================
+    // ================= 飲水 =================
     fn next_hint(&self, env: &Env) -> String {
         Self::clock_after(env, self.settings.water_minutes as f64 * 60.0 - (self.t - self.last_reminder))
     }
-    /// 从现在起 secs 秒后的时钟读数（HH:MM）。
+    /// 從現在起 secs 秒後的時鐘讀數（HH:MM）。
     fn clock_after(env: &Env, secs: f64) -> String {
         let total = env.hour() as u32 * 60 + env.minute() + secs.max(0.0) as u32 / 60;
         format!("{:02}:{:02}", (total / 60) % 24, total % 60)
     }
 
-    /// 健康页：标题「健康」后接「喝水 | 久坐」分段切换。两种模式是同一套版式——
-    /// 大数字、右上开关、状态行、进度条、主按钮 + 设置、右侧进度环都在同一位置，
-    /// 只换内容和主色（蓝 / 绿）。设置按钮、分隔线和开关本体不随切换闪动。
+    /// 健康頁：標題「健康」後接「喝水 | 久坐」分段切換。兩種模式是同一套版式——
+    /// 大數字、右上開關、狀態行、進度條、主按鈕 + 設置、右側進度環都在同一位置，
+    /// 只換內容和主色（藍 / 綠）。設置按鈕、分隔線和開關本體不隨切換閃動。
     pub(crate) fn page_water(&mut self, c: &Card, header: &Card, env: &Env) {
         let sv = self.sit_view_t.pos.clamp(0.0, 1.0);
         self.health_tabs(header, 15.0, sv);
 
-        // 共用的开关：位置不变，颜色和旋钮图标随模式过渡。
+        // 共用的開關：位置不變，顏色和旋鈕圖標隨模式過渡。
         let sit = self.sit_mode;
         let sw = c.hit(160.0, 35.0, 38.0, 22.0, "w-remind")
             .on_hover_text(match (sit, if sit { self.settings.sit_remind } else { self.water.remind }) {
@@ -566,7 +566,7 @@ impl App {
         if s.clicked() { self.open_settings_category(1); }
         c.fill(208.0, 36.0, 1.0, 86.0, 0.5, Color32::from_rgb(30, 30, 33));
 
-        // 内容原地交叉淡化，不滑动；不可见的一侧不接收点击。
+        // 內容原地交叉淡化，不滑動；不可見的一側不接收點擊。
         if sv < 0.99 {
             let wc = c.faded(1.0 - sv);
             self.water_body(&if sit { wc.ghost() } else { wc }, env);
@@ -577,8 +577,8 @@ impl App {
         }
     }
 
-    /// 标题「健康提醒」（「提醒」随模式变蓝 / 绿）与紧跟其后的分段切换：水滴 = 喝水，椅子 = 久坐。
-    /// 胶囊外框与标题字等高（11..27），读起来像标题的一部分。设置子页的标题也用它。
+    /// 標題「健康提醒」（「提醒」隨模式變藍 / 綠）與緊跟其後的分段切換：水滴 = 喝水，椅子 = 久坐。
+    /// 膠囊外框與標題字等高（11..27），讀起來像標題的一部分。設置子頁的標題也用它。
     pub(crate) fn health_tabs(&mut self, c: &Card, x: f32, sv: f32) {
         let accent_now = mix(theme::BLUE, theme::SIT_GREEN, sv);
         let wa = c.text(x, 25.0, "健康", size::TITLE, W::Bold, theme::WHITE, H::Left);
@@ -651,7 +651,7 @@ impl App {
             }
         }
 
-        // 右侧：环形 ↔ 柱状图（点右侧区域或右上角两颗豆切换）
+        // 右側：環形 ↔ 柱狀圖（點右側區域或右上角兩顆豆切換）
         let vt = self.water_view_t.pos;
         let area = c.hit(214.0, 30.0, 166.0, 96.0, "w-view");
         if area.clicked() {
@@ -679,9 +679,9 @@ impl App {
         }
     }
 
-    /// 久坐：与喝水同一版式，但只讲一件事——「还有多久该起来」。
-    /// 左边大数字是倒计时，状态行补充已坐多久和几点提醒；右侧环是到下次提醒的进度，环心是椅子，
-    /// 提醒后保持待处理，确认或起身后才重新计时。
+    /// 久坐：與喝水同一版式，但只講一件事——「還有多久該起來」。
+    /// 左邊大數字是倒計時，狀態行補充已坐多久和幾點提醒；右側環是到下次提醒的進度，環心是椅子，
+    /// 提醒後保持待處理，確認或起身後才重新計時。
     fn sit_body(&mut self, c: &Card, env: &Env) {
         let on = self.settings.sit_remind;
         let sat = self.sat_minutes();
@@ -692,7 +692,7 @@ impl App {
         let left = ((self.sit_due() - self.t).max(0.0) / 60.0).ceil() as u32;
         let pending = on && self.health_pending[crate::extras::HealthReminder::Sit as usize];
         let counting = on && !pending && left > 0;
-        // 待处理时进度停在满环，确认后从零开始。
+        // 待處理時進度停在滿環，確認後從零開始。
         let frac = if on { (1.0 - (self.sit_due() - self.t) / (goal as f64 * 60.0)).clamp(0.0, 1.0) as f32 }
             else { (sat as f32 / goal as f32).clamp(0.0, 1.0) };
         let fill = theme::SIT_GREEN;
@@ -706,7 +706,7 @@ impl App {
             c.text(44.0,59.0,if on{"等待提醒"}else{"已關閉"},24.0,W::Bold,theme::GRAY,H::Left);
         }
 
-        // 已坐 25 分钟 · 10:45 提醒
+        // 已坐 25 分鐘 · 10:45 提醒
         let tail = if pending { "確認提醒或起身後重新計時".to_string() }
             else if !on { "久坐提醒已關閉".to_string() }
             else if lunch { "午休中不提醒".to_string() }
@@ -730,7 +730,7 @@ impl App {
         bc.text(64.0, 114.0, "起身了", size::BODY, W::Semibold, Color32::from_rgb(220, 244, 228), H::Left);
         if b.on_hover_text("確認已起身，重新計時").clicked() { self.stood_up(); }
 
-        // 右侧：与喝水同一个环，环心是椅子。
+        // 右側：與喝水同一個環，環心是椅子。
         Self::progress_ring(c, 292.0, 78.0, 33.0, 6.0, frac, Color32::from_rgb(16, 48, 32), if on { fill } else { Color32::from_gray(90) });
         let (label, ink) = if !on { ("已關", theme::GRAY) }
             else if pending { ("動一動", fill) }
@@ -739,7 +739,7 @@ impl App {
         c.text(292.0, 101.0, label, 10.5, W::Semibold, ink, H::Center);
     }
 
-    /// 底部留缺口的进度环（约 276°），起点有圆头亮点。
+    /// 底部留缺口的進度環（約 276°），起點有圓頭亮點。
     fn progress_ring(c: &Card, cx: f32, cy: f32, r: f32, thick: f32, frac: f32, track: Color32, color: Color32) {
         let start = 132.0f32.to_radians();
         let sweep = 276.0f32.to_radians();
@@ -756,7 +756,7 @@ impl App {
         }
     }
 
-    /// 今日分小时柱状图：12 根柱，从当前时间往前；柱子依次升起。
+    /// 今日分小時柱狀圖：12 根柱，從當前時間往前；柱子依次升起。
     fn water_chart(&self, c: &Card, env: &Env, vt: f32) {
         let hour = env.hour();
         let first = hour.saturating_sub(8).min(12);
@@ -795,8 +795,8 @@ impl App {
     }
 
     // ================= 置物架 =================
-    /// 标题旁的「文件 | 剪贴板」分栏，返回分栏右边缘。
-    /// 页面标题处的「置物架 | 剪贴板」分栏，返回分栏右边缘。
+    /// 標題旁的「文件 | 剪貼板」分欄，返回分欄右邊緣。
+    /// 頁面標題處的「置物架 | 剪貼板」分欄，返回分欄右邊緣。
     fn shelf_tabs(&mut self, c: &Card, x: f32) -> f32 {
         let labels = ["置物架", "剪貼簿"];
         let font = 12.0;
@@ -828,7 +828,7 @@ impl App {
     pub(crate) fn page_shelf(&mut self, c: &Card, header: &Card, env: &Env, cmds: &mut Vec<Cmd>) {
         let n = self.shelf.items.len();
         let drag = self.drag_a;
-        // 拖文件进来时回到「文件」分栏。
+        // 拖文件進來時回到「文件」分欄。
         if drag > 0.002 { self.shelf_tab = 0; }
         self.shelf_tabs(header, 13.0);
         let header=header.shifted(-self.header_music_shift(),0.0);
@@ -837,18 +837,18 @@ impl App {
             return;
         }
         header.text(344.0,23.0,"添加",size::SMALL,W::Regular,theme::GRAY,H::Right);
-        if header.hit(311.0,8.0,38.0,22.0,"shelf-add").on_hover_text("从电脑选择文件").clicked(){cmds.push(Cmd::AddFiles);}
-        if n>5 {c.text(209.5,121.0,&format!("{}–{} / {n} · 滚轮查看",self.shelf_first+1,(self.shelf_first+5).min(n)),10.5,W::Regular,theme::DIM,H::Center);}
+        if header.hit(311.0,8.0,38.0,22.0,"shelf-add").on_hover_text("從電腦選擇文件").clicked(){cmds.push(Cmd::AddFiles);}
+        if n>5 {c.text(209.5,121.0,&format!("{}–{} / {n} · 滾輪查看",self.shelf_first+1,(self.shelf_first+5).min(n)),10.5,W::Regular,theme::DIM,H::Center);}
 
         if n > 0 {
-            // 「添加」左边的「清空」：第一次点变红，3 秒内再点才真正清空。
-            // 「确认」与「清空」同宽，不会挤到顶栏时间。
+            // 「添加」左邊的「清空」：第一次點變紅，3 秒內再點才真正清空。
+            // 「確認」與「清空」同寬，不會擠到頂欄時間。
             let confirming = self.confirm_clear.is_some();
             let label = if confirming { "確認" } else { "清空" };
             let lw = c.text_w("清空", size::SMALL, W::Regular) + 16.0;
             let base = if confirming { Color32::from_rgb(120, 28, 36) } else { theme::BTN };
             let hover = if confirming { Color32::from_rgb(150, 34, 44) } else { theme::BTN_HOVER };
-            // 放在右下角：顶栏中间是日期时间，宽度随 12 小时制等设置变化。
+            // 放在右下角：頂欄中間是日期時間，寬度隨 12 小時制等設置變化。
             let (x, y) = (377.0 - lw, 109.0);
             let card=c.faded(1.0-drag);
             let (r, bc) = if self.glassy() && !confirming {
@@ -856,7 +856,7 @@ impl App {
             } else {
                 capsule(&card, x, y, lw, 17.0, "shelf-clear", base, hover)
             };
-            let r = if confirming { r.on_hover_text("再点一次清空置物架（文件本身不动）") } else { r.on_hover_text("清空置物架") };
+            let r = if confirming { r.on_hover_text("再點一次清空置物架（文件本身不動）") } else { r.on_hover_text("清空置物架") };
             bc.text(x + lw / 2.0, y + 12.0, label, size::SMALL, W::Regular, theme::WHITE, H::Center);
             if r.clicked() {
                 if confirming {
@@ -906,7 +906,7 @@ impl App {
             let target = center + (i as f32 - scroll - (visible - 1.0) / 2.0) * slot;
             let born = self.shelf_born.get(p).copied();
             let s = self.shelf_x.entry(p.clone()).or_insert_with(|| {
-                // 新放入的从右侧滑进来；启动时已有的直接就位
+                // 新放入的從右側滑進來；啟動時已有的直接就位
                 let start = if born.is_some() { target + slot * 0.9 } else { target };
                 Spring::new(start, 230.0, 0.9)
             });
@@ -956,7 +956,7 @@ impl App {
         }
     }
 
-    // ================= 剪贴板（置物架第二个分栏） =================
+    // ================= 剪貼板（置物架第二個分欄） =================
     fn page_clipboard(&mut self, c: &Card, header: &Card, _env: &Env, _cmds: &mut Vec<Cmd>) {
         if !self.settings.clipboard_history {
             c.dashed(42.0, 32.0, 335.0, 91.0, 12.0, 1.2, Color32::from_gray(70), 0.0);
@@ -972,7 +972,7 @@ impl App {
         let recent = items.iter().filter(|clip| !clip.pinned).count();
         self.clip_first = self.clip_first.min(n.saturating_sub(CLIP_ROWS));
 
-        // 右上：条数与「清空」（只清未固定的）。
+        // 右上：條數與「清空」（只清未固定的）。
         if recent > 0 {
             let confirming = self.clip_confirm_clear.is_some_and(|at| self.t - at < 3.0);
             if !confirming { self.clip_confirm_clear = None; }
@@ -1009,7 +1009,7 @@ impl App {
         }
 
         c.fill(42.0, 31.0, 335.0, 93.0, 12.0, theme::CARD);
-        // 超过一屏时右侧细滚动条，滚轮查看。
+        // 超過一屏時右側細滾動條，滾輪查看。
         if n > CLIP_ROWS {
             let (top, track) = (38.0, 79.0);
             let thumb = (track * CLIP_ROWS as f32 / n as f32).max(12.0);
@@ -1017,7 +1017,7 @@ impl App {
             c.fill(371.0, top, 2.5, track, 1.25, Color32::from_white_alpha(14));
             c.fill(371.0, y, 2.5, thumb, 1.25, Color32::from_white_alpha(70));
         }
-        let mut action: Option<(usize, u8)> = None; // 0 复制 1 固定 2 删除
+        let mut action: Option<(usize, u8)> = None; // 0 複製 1 固定 2 刪除
         for (row, (index, clip)) in items.iter().enumerate().skip(self.clip_first).take(CLIP_ROWS).enumerate() {
             let y = 44.0 + row as f32 * 22.5;
             let r = c.hit(48.0, y - 10.0, 323.0, 20.0, ("clip", index, clip.text.len(), clip.at.as_str()));
@@ -1070,7 +1070,7 @@ impl App {
         }
     }
 
-    /// 拖入遮罩：流动虚线框 + 跟随光标的柔光 + 上下轻跳的托盘图标。
+    /// 拖入遮罩：流動虛線框 + 跟隨光標的柔光 + 上下輕跳的托盤圖標。
     pub(crate) fn drag_overlay(&self, c: &Card) {
         let (x, y, w, h) = (42.0, 31.0, 335.0, 93.0);
         c.fill(x, y, w, h, 12.0, Color32::from_black_alpha(110));
@@ -1085,9 +1085,9 @@ impl App {
         c.text(209.5, 98.0, "鬆手放進置物架", 12.0, W::Semibold, theme::WHITE, H::Center);
     }
 
-    // ================= 待办 =================
+    // ================= 待辦 =================
     pub(crate) fn page_todo(&mut self, c: &Card, env: &Env, _cmds: &mut Vec<Cmd>) {
-        // 今天未完成优先，已完成沉底；不在今天的重复待办变暗显示、不能勾选。
+        // 今天未完成優先，已完成沉底；不在今天的重複待辦變暗顯示、不能勾選。
         let (done, total) = self.todos.progress(&env.today);
         let order = self.todos.display_order(&env.today);
         let count = order.len();
@@ -1125,7 +1125,7 @@ impl App {
             let mut row = 0;
             let row_y = |r: usize| 46.0 + r as f32 * 22.0;
             if editing {
-                // 输入行（文本框本身由 app::input_field 放置）
+                // 輸入行（文本框本身由 app::input_field 放置）
                 let y = row_y(0);
                 c.fill(203.0, y - 10.0, 167.0, 20.0, 7.0, Color32::from_rgb(34, 34, 38));
                 c.stroke(203.0, y - 10.0, 167.0, 20.0, 7.0, 1.0, paint::alpha(theme::BLUE, 0.7));
@@ -1164,7 +1164,7 @@ impl App {
                         paint::check(c, 212.0, y, 6.0, smoothstep(0.3, 1.0, ct), 1.4, Color32::BLACK);
                     }
                 }
-                // 每周重复：文字右侧小标签（周一三五 / 工作日 / 每天）。
+                // 每週重複：文字右側小標籤（週一三五 / 工作日 / 每天）。
                 let tag = crate::model::repeat_tag(item.repeat);
                 let tag_w = if tag.is_empty() { 0.0 } else { c.text_w(&tag, size::TINY, W::Regular) + 6.0 };
                 let text = c.fit(&item.text, size::BODY, W::Regular, 104.0 - tag_w);
@@ -1244,7 +1244,7 @@ impl App {
     }
 
     // ---------------------------------------------------------------
-    // 邮件：有验证码大卡时分栏，否则显示紧凑单行列表。
+    // 郵件：有驗證碼大卡時分欄，否則顯示緊湊單行列表。
     // ---------------------------------------------------------------
     fn visible_mail_code(&self)->Option<&mail::Item> {
         self.mail.code_item().filter(|item|!self.mail.manage.trash_open && self.settings.mail_code && !self.mail_code_hidden(item))
@@ -1271,7 +1271,7 @@ impl App {
         }
 
         self.mail_manage_tick();
-        // v0.5.5：点开某封邮件 → 整块换成正文摘要，左上「返回」回到列表。
+        // v0.5.5：點開某封郵件 → 整塊換成正文摘要，左上「返回」回到列表。
         if let Some((account, uid)) = self.mail.open_uid.clone() {
             match self.mail_rows()
                 .iter()
@@ -1390,7 +1390,7 @@ impl App {
         if c.live {self.content_scroll=Some((scroll.id,scroll.state.offset.y));}
     }
 
-    /// 岛内邮件详情可滚动，也可以进入独立窗口阅读全文。
+    /// 島內郵件詳情可滾動，也可以進入獨立窗口閱讀全文。
     pub(crate) fn mail_detail(&mut self, c: &Card, raw: &mail::Item, cmds: &mut Vec<Cmd>) {
         let hidden=self.mail_code_hidden(raw);
         let display=self.display_mail(raw);let item=&display;
@@ -1428,7 +1428,7 @@ impl App {
         c.text(46.0,92.0,&c.fit(&account,10.0,W::Regular,230.0),10.0,W::Regular,Color32::from_gray(175),H::Left);
         c.hit(46.0,80.0,230.0,16.0,("mail-account",&item.account,item.uid)).on_hover_text(&account);
 
-        // 正文和链接共用滚动区域，会议与验证码操作保留在底部。
+        // 正文和鏈接共用滾動區域，會議與驗證碼操作保留在底部。
         let mut content=egui::Ui::new(c.ui.ctx().clone(),egui::Id::new(("mail-content",&item.account,item.uid,c.live)),
             egui::UiBuilder::new().max_rect(c.rect(46.0,104.0,328.0,90.0)).layer_id(c.painter.layer_id()).style(c.ui.style().clone()));
         content.set_clip_rect(c.rect(46.0,104.0,328.0,90.0).intersect(c.painter.clip_rect()));
@@ -1456,7 +1456,7 @@ impl App {
             c.text(46.0,229.0,&c.fit(&self.mail.manage.message,8.0,W::Regular,130.0),8.0,W::Regular,theme::GRAY,H::Left);
             c.hit(44.0,219.0,132.0,15.0,"mail-detail-status").on_hover_text(&self.mail.manage.message);
         }
-        // 底部一行：会议时间（绿）优先，其次验证码（点一下复制）。
+        // 底部一行：會議時間（綠）優先，其次驗證碼（點一下複製）。
         c.seg((46.0,199.0),(374.0,199.0),0.6,Color32::from_gray(48));
         let y = 214.0;
         if hidden {

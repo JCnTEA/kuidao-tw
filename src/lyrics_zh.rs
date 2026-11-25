@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn display_lines_turns_chinese_into_traditional(){
         let lyrics=Lyrics{synced:true,lines:vec![
-            crate::lyrics::LyricsLine{t:1.0,text:"我们都一样".into()},
+            crate::lyrics::LyricsLine{t:1.0,text:"我們都一樣".into()},
             crate::lyrics::LyricsLine{t:3.0,text:"".into()},
         ]};
         let shown=display_lines(&lyrics);

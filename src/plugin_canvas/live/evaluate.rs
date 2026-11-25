@@ -1,4 +1,4 @@
-//! 按画布实际使用的绑定安排前台刷新。
+//! 按畫布實際使用的綁定安排前台刷新。
 
 use super::{Binding, Daylight, Hand, NowFormat};
 use crate::plugin_canvas::{

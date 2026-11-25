@@ -1,4 +1,4 @@
-//! 天气来源草稿、连接验证与安全启用。
+//! 天氣來源草稿、連接驗證與安全啟用。
 use crate::{app::{App,WEATHER_PAGE},extras::{settings_card,settings_hint,settings_label},settings_theme::color,qweather::{self,Client,Config,Error,Location}};
 use eframe::egui::{self,Color32,RichText};
 use std::sync::{Arc,atomic::{AtomicBool,Ordering},mpsc::Receiver};
@@ -8,7 +8,7 @@ pub(crate) fn updated_at(at:i64)->String {
     chrono::DateTime::from_timestamp(at,0).map(|d|d.with_timezone(&chrono::Local).format("%m-%d %H:%M").to_string()).unwrap_or_else(||"未取得".into())
 }
 
-/// 来源选项：地域图标、来源名、短标签；整张卡片都可点击。
+/// 來源選項：地域圖標、來源名、短標籤；整張卡片都可點擊。
 pub(crate) fn provider_option(ui:&mut egui::Ui,provider:Provider,selected:bool,width:f32)->egui::Response {
     let (rect,response)=ui.allocate_exact_size(egui::vec2(width,66.0),egui::Sense::click());
     let ctx=ui.ctx();let painter=ui.painter();
@@ -177,7 +177,7 @@ impl App {
             let Some(location)=source.city_choice.as_ref().or(source.picked.as_ref()).cloned()else{return;};
             config.host=client.host.clone();config.location=Some(location.clone());
             if !config.saved.contains(&location){if config.saved.len()>=crate::weather::MAX_CITIES{source.message=Some(("已儲存五個和風城市，請先刪除一個。",true));return;}config.saved.push(location);}
-            // 按 Host 隔离凭据，新凭据保存失败时不触碰当前来源。
+            // 按 Host 隔離憑據，新憑據保存失敗時不觸碰當前來源。
             let old_slot=config.credential.clone();
             config.credential=format!("{}-{}",client.host,chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default());
             if let Err(e)=client.store(&config.credential){source.message=Some((e.text(),true));return;}
@@ -319,7 +319,7 @@ impl App {
             egui::ComboBox::from_id_salt("qweather-province").width(108.0).height(230.0)
                 .selected_text(if self.weather_source.province.is_empty(){"不限省份"}else{&self.weather_source.province}).show_ui(ui,|ui|{
                     ui.selectable_value(&mut self.weather_source.province,String::new(),"不限省份");
-                    for province in ["北京","天津","河北","山西","內蒙古","遼寧","吉林","黑龍江","上海","江蘇","浙江","安徽","福建","江西","山東","河南","湖北","湖南","廣東","廣西","海南","重慶","四川","貴州","雲南","西藏","陝西","甘肅","青海","寧夏","新疆","香港","澳門","臺灣"]{
+                    for province in ["北京","天津","河北","山西","內蒙古","遼寧","吉林","黑龍江","上海","江蘇","浙江","安徽","福建","江西","山東","河南","湖北","湖南","廣東","廣西","海南","重慶","四川","貴州","雲南","西藏","陝西","甘肅","青海","寧夏","新疆","香港","澳門","台灣"]{
                         ui.selectable_value(&mut self.weather_source.province,province.to_string(),province);
                     }
                 });
@@ -413,7 +413,7 @@ impl App {
             }
         });
         if active {
-            // 额度：本机用量条在上，账号免费额度说明在下；本机上限只在配置里的「免费额度详情」说明。
+            // 額度：本機用量條在上，帳號免費額度說明在下；本機上限只在配置裡的「免費額度詳情」說明。
             settings_label(ui,"額度");
             settings_card(ui,|ui|{
                 let used=qweather::usage();
@@ -461,9 +461,9 @@ impl App {
                     for (index,bytes) in [include_bytes!("../assets/weather/qweather-01-project.png").as_slice(),include_bytes!("../assets/weather/qweather-02-api-key.png").as_slice(),include_bytes!("../assets/weather/qweather-03-daozai.png").as_slice()].into_iter().enumerate(){
                         let image=image::load_from_memory(bytes).expect("內建天氣教程有效").to_rgba8();
                         if index==2{self.weather_source.tutorial_step10=self.weather_source.tutorial_textures.len();}
-                        // 第 10 步使用下方的鬼島界面及最终操作说明。
+                        // 第 10 步使用下方的鬼島界面及最終操作說明。
                         let height=if index==1{1880.min(image.height())}else{image.height()};
-                        // 长图按段上传，保留原始文字清晰度，避免超过纹理高度限制。
+                        // 長圖按段上傳，保留原始文字清晰度，避免超過紋理高度限制。
                         for y in (0..height).step_by(1024){
                             let tile=image::imageops::crop_imm(&image,0,y,image.width(),1024.min(height-y)).to_image();
                             let pixels=egui::ColorImage::from_rgba_unmultiplied([tile.width()as usize,tile.height()as usize],tile.as_raw());
@@ -522,7 +522,7 @@ mod tests {
     }
 }
 
-/// 和风配置的步骤标题：绿色圆形序号 + 加粗标题。
+/// 和風配置的步驟標題：綠色圓形序號 + 加粗標題。
 fn qweather_step(ui:&mut egui::Ui,n:u8,title:&str){
     ui.add_space(4.0);
     ui.horizontal(|ui|{
@@ -533,7 +533,7 @@ fn qweather_step(ui:&mut egui::Ui,n:u8,title:&str){
         ui.label(RichText::new(title).size(13.5).strong());
     });
 }
-/// 步骤正文：与标题文字对齐缩进。
+/// 步驟正文：與標題文字對齊縮進。
 fn step_body(ui:&mut egui::Ui,add:impl FnOnce(&mut egui::Ui)){
     ui.horizontal(|ui|{ui.add_space(32.0);ui.vertical(add);});
 }

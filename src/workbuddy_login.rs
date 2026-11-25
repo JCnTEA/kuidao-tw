@@ -1,4 +1,4 @@
-//! 默认浏览器登录：官网生成一次性请求，鬼島轮询对应的授权结果。
+//! 默認瀏覽器登錄：官網生成一次性請求，鬼島輪詢對應的授權結果。
 use super::{Auth,Session,Snapshot,Failure,slot,query,save_session};
 use serde_json::Value;
 use std::io::Read;

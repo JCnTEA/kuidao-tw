@@ -9,7 +9,7 @@ pub(crate) struct WindowBounds {
 }
 
 impl WindowBounds {
-    /// 裁剪框换算到同一画布的物理像素。超出现有外框时一次恢复完整画布。
+    /// 裁剪框換算到同一畫布的物理像素。超出現有外框時一次恢復完整畫布。
     pub(crate) fn target(
         &mut self,
         current: RECT,
@@ -56,7 +56,7 @@ fn contains(outer: RECT, inner: RECT) -> bool {
         && inner.right <= outer.right && inner.bottom <= outer.bottom
 }
 
-/// 新旧客户区取屏幕坐标交集，同一矩形作为保留像素的源和目的区域。
+/// 新舊客戶區取屏幕座標交集，同一矩形作為保留像素的源和目的區域。
 pub(crate) fn preserve_overlap(old: RECT, new: RECT) -> Option<RECT> {
     let overlap = RECT {
         left: old.left.max(new.left),

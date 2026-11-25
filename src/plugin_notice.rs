@@ -277,7 +277,7 @@ impl State {
                 self.opens
                     .retain(|open| open.source != source || open.id != current.card.id);
             }
-            // 已撤下的卡片再次出现时，旧按钮和回执不能影响新卡片。
+            // 已撤下的卡片再次出現時，舊按鈕和回執不能影響新卡片。
             self.status_serial += 1;
             card.id = format!("\0{}", self.status_serial);
             self.dirty_statuses.insert(source.clone());
@@ -440,9 +440,9 @@ impl Bridge {
         let dir = dir.join("plugin-notices");
         let sources = match fs::read(dir.join("sources.json")) {
             Ok(bytes) => serde_json::from_slice::<Vec<Source>>(&bytes)
-                .map_err(|_| "插件通知授权配置无法读取".to_owned())?,
+                .map_err(|_| "插件通知授權配置無法讀取".to_owned())?,
             Err(error) if error.kind() == io::ErrorKind::NotFound => Vec::new(),
-            Err(error) => return Err(format!("插件通知授权配置无法读取：{error}")),
+            Err(error) => return Err(format!("插件通知授權配置無法讀取：{error}")),
         };
         if sources.len() > MAX_SOURCES
             || sources.iter().enumerate().any(|(index, source)| {
@@ -450,7 +450,7 @@ impl Bridge {
                     || sources[..index].iter().any(|other| other.id == source.id)
             })
         {
-            return Err("插件通知授权配置无效".into());
+            return Err("插件通知授權配置無效".into());
         }
         let mut bridge = Self {
             dir,
@@ -492,13 +492,13 @@ impl Bridge {
         let id = id.trim();
         let name = name.trim();
         if !valid_source(id, name) {
-            return Err("请输入有效的插件来源 ID 和名称".into());
+            return Err("請輸入有效的插件來源 ID 和名稱".into());
         }
         if self.sources.iter().any(|source| source.id == id) {
-            return Err("此来源已经授权".into());
+            return Err("此來源已經授權".into());
         }
         if self.sources.len() == MAX_SOURCES {
-            return Err("插件通知来源已达上限".into());
+            return Err("插件通知來源已達上限".into());
         }
         let listener = if self.listener.is_none() {
             Some(Listener::start(self.state.clone(), self.ctx.clone())?)
@@ -512,7 +512,7 @@ impl Bridge {
             .addr
             .port();
         let token = random_token()?;
-        fs::create_dir_all(&self.dir).map_err(|error| format!("无法创建插件通知目录：{error}"))?;
+        fs::create_dir_all(&self.dir).map_err(|error| format!("無法創建插件通知目錄：{error}"))?;
         let mut sources = self.sources.clone();
         sources.push(Source {
             id: id.to_owned(),
@@ -612,7 +612,7 @@ impl Bridge {
     pub(crate) fn open_session(&self, source: &str, id: &str, session: &str) -> Result<(), String> {
         let mut state = self.state.lock().unwrap();
         if state.muted || !state.sources.contains_key(source) {
-            return Err("插件来源未授权".into());
+            return Err("插件來源未授權".into());
         }
         let now = Instant::now();
         state.expire(now);
@@ -624,7 +624,7 @@ impl Bridge {
                 item.source == source && item.id == id && item.session.as_deref() == Some(session)
             })
         {
-            return Err("这条通知的会话已无法打开".into());
+            return Err("這條通知的會話已無法打開".into());
         }
         if state
             .opens
@@ -637,7 +637,7 @@ impl Bridge {
             || state.opens.iter().any(|open| open.source == source)
             || !state.has_room(source)
         {
-            return Err("会话跳转队列已满，请稍后重试".into());
+            return Err("會話跳轉隊列已滿，請稍後重試".into());
         }
         state.opens.push_back(PendingOpen {
             source: source.to_owned(),
@@ -679,7 +679,7 @@ impl Drop for Bridge {
 fn write_json(path: &Path, value: &impl Serialize) -> Result<(), String> {
     let bytes = serde_json::to_vec(value).map_err(|error| error.to_string())?;
     crate::model::atomic_write(path, &bytes)
-        .map_err(|error| format!("无法保存插件通知授权：{error}"))
+        .map_err(|error| format!("無法保存插件通知授權：{error}"))
 }
 
 fn valid_text(value: &str, max_bytes: usize) -> bool {
@@ -720,7 +720,7 @@ fn random_token() -> Result<String, String> {
     };
 
     let mut bytes = [0u8; 32];
-    // 系统首选随机源不需要预先打开算法句柄。
+    // 系統首選隨機源不需要預先打開算法句柄。
     let status = unsafe {
         BCryptGenRandom(
             BCRYPT_ALG_HANDLE::default(),
@@ -729,7 +729,7 @@ fn random_token() -> Result<String, String> {
         )
     };
     if status.0 < 0 {
-        return Err("无法生成插件通知连接凭据".into());
+        return Err("無法生成插件通知連接憑據".into());
     }
     Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
 }
@@ -755,7 +755,7 @@ struct Listener {
 impl Listener {
     fn start(state: Arc<Mutex<State>>, ctx: egui::Context) -> Result<Self, String> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
-            .map_err(|error| format!("无法启动本机插件通知连接：{error}"))?;
+            .map_err(|error| format!("無法啟動本機插件通知連接：{error}"))?;
         let addr = SocketAddrV4::new(
             Ipv4Addr::LOCALHOST,
             listener
@@ -778,7 +778,7 @@ impl Listener {
                     }
                 }
             })
-            .map_err(|error| format!("无法启动插件通知线程：{error}"))?;
+            .map_err(|error| format!("無法啟動插件通知線程：{error}"))?;
         Ok(Self { addr, stop })
     }
 }
@@ -831,7 +831,7 @@ fn read_frame(stream: &mut TcpStream) -> io::Result<Vec<u8>> {
         if frame.len() + content.len() > MAX_FRAME {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "插件通知请求过大",
+                "插件通知請求過大",
             ));
         }
         frame.extend_from_slice(content);
@@ -904,8 +904,8 @@ mod tests {
     fn busy_source_cannot_fill_the_shared_queue_or_evict_another_sources_jump() {
         let dir = TestDir::new();
         let mut bridge = Bridge::start(&dir.0, egui::Context::default()).unwrap();
-        bridge.authorize("noisy", "高频来源").unwrap();
-        bridge.authorize("other", "其他来源").unwrap();
+        bridge.authorize("noisy", "高頻來源").unwrap();
+        bridge.authorize("other", "其他來源").unwrap();
         let noisy = descriptor(&bridge, "noisy");
         let other = descriptor(&bridge, "other");
         {
@@ -992,12 +992,12 @@ mod tests {
     fn status_updates_coalesce_expire_and_invalidate_old_actions() {
         let dir = TestDir::new();
         let mut bridge = Bridge::start(&dir.0, egui::Context::default()).unwrap();
-        bridge.authorize("printer", "打印机").unwrap();
+        bridge.authorize("printer", "打印機").unwrap();
         let printer = descriptor(&bridge, "printer");
         bridge.display(true, true);
         let status = |id, title, ttl_seconds| {
             json!({"method":"status_update","id":id,"title":title,
-            "session":format!("job-{id}"),"action_label":"查看进度","ttl_seconds":ttl_seconds})
+            "session":format!("job-{id}"),"action_label":"查看進度","ttl_seconds":ttl_seconds})
         };
         let now = Instant::now();
         {
@@ -1042,7 +1042,7 @@ mod tests {
                 request_at(
                     &mut state,
                     &printer,
-                    status("two", "新任务", 20),
+                    status("two", "新任務", 20),
                     now + STATUS_INTERVAL * 2
                 )["ok"],
                 true
@@ -1066,7 +1066,7 @@ mod tests {
         let events = bridge.drain();
         assert!(
             matches!(&events[..], [Event::StatusChanged { card: Some(card), .. }]
-            if card.title.as_deref() == Some("新任务"))
+            if card.title.as_deref() == Some("新任務"))
         );
         bridge
             .state
@@ -1086,10 +1086,10 @@ mod tests {
     fn disabled_display_drops_work_until_enabled_and_redacts_queued_content() {
         let dir = TestDir::new();
         let mut bridge = Bridge::start(&dir.0, egui::Context::default()).unwrap();
-        bridge.authorize("source", "来源").unwrap();
+        bridge.authorize("source", "來源").unwrap();
         let source = descriptor(&bridge, "source");
         bridge.display(true, true);
-        let notice = json!({"method":"notify","id":"new","title":"私密标题","markdown":"正文","session":"thread"});
+        let notice = json!({"method":"notify","id":"new","title":"私密標題","markdown":"正文","session":"thread"});
         assert_eq!(exchange(&source, notice.clone())["ok"], true);
         bridge.display(true, false);
         let events = bridge.drain();
@@ -1106,7 +1106,7 @@ mod tests {
         bridge.display(true, true);
         assert_eq!(exchange(&source, notice)["ok"], true);
         assert!(
-            matches!(&bridge.drain()[..], [Event::Completed(card)] if card.title.as_deref() == Some("私密标题"))
+            matches!(&bridge.drain()[..], [Event::Completed(card)] if card.title.as_deref() == Some("私密標題"))
         );
     }
 
@@ -1115,7 +1115,7 @@ mod tests {
         let dir = TestDir::new();
         let mut bridge = Bridge::start(&dir.0, egui::Context::default()).unwrap();
         assert!(bridge.listener.is_none());
-        assert!(bridge.authorize("con.json", "错误 ID").is_err());
+        assert!(bridge.authorize("con.json", "錯誤 ID").is_err());
         bridge.authorize("codex", "Codex").unwrap();
         bridge.authorize("dsh", "DeepSeek Harness").unwrap();
         let codex = descriptor(&bridge, "codex");

@@ -1,4 +1,4 @@
-//! 关于页感谢墙的后台刷新与离线快照。
+//! 關於頁感謝牆的後台刷新與離線快照。
 
 use eframe::egui;
 use image::{codecs::webp::WebPDecoder, ImageDecoder};
@@ -118,7 +118,7 @@ fn check_when_due(
         Ok(snapshot) => (snapshot, CHECK_AFTER),
         Err(()) => (None, RETRY_AFTER),
     };
-    // 成功标记必须与当前可用的快照版号一致，失败标记也适用于首次离线。
+    // 成功標記必須與當前可用的快照版號一致，失敗標記也適用於首次離線。
     let mark = if delay == RETRY_AFTER { Some(CHECK_FAILED) }
         else { snapshot.as_ref().map(|data| data.version.as_str()).or(known).map(str::as_bytes) };
     if let Some(mark) = mark {
@@ -150,7 +150,7 @@ impl Manifest {
     fn parse(bytes: &[u8]) -> Option<Self> {
         let manifest: Self = serde_json::from_slice(bytes).ok()?;
         let version = &manifest.version;
-        // 由版号限定文件名，清单无法把请求引到站点外或其他目录。
+        // 由版號限定文件名，清單無法把請求引到站點外或其他目錄。
         (manifest.count > 0
             && version.len() == 24
             && version.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
@@ -210,7 +210,7 @@ fn check(agent: &ureq::Agent, base: &str, known: Option<&str>, cache_dir: &Path)
     let wall = fetch(agent, &format!("{base}{}", manifest.wall), WALL_LIMIT).ok_or(())?;
     let snapshot = manifest.snapshot(&recent, &wall).ok_or(())?;
 
-    // 先校验整版，再原子替换一个文件，缓存与界面始终使用同一批图。
+    // 先校驗整版，再原子替換一個文件，緩存與界面始終使用同一批圖。
     if fs::create_dir_all(cache_dir).is_ok() {
         let packed = pack(&bytes, &recent, &wall);
         let _ = crate::model::atomic_write(&cache_dir.join(CACHE_FILE), &packed);
@@ -296,7 +296,7 @@ mod tests {
                         Err(error) if error.kind() == std::io::ErrorKind::WouldBlock && Instant::now() < deadline => {
                             std::thread::sleep(Duration::from_millis(10));
                         }
-                        Err(error) => panic!("未收到 {path} 请求：{error}"),
+                        Err(error) => panic!("未收到 {path} 請求：{error}"),
                     }
                 };
                 stream.set_nonblocking(false).unwrap();
@@ -370,16 +370,16 @@ mod tests {
         let age = Duration::from_secs(60 * 60);
         opened.set_times(FileTimes::new().set_modified(SystemTime::now() - age)).unwrap();
         drop(opened);
-        let (_, next) = check_when_due(&dir, Some(&manifest.version), || panic!("有效缓存应跳过网络"));
+        let (_, next) = check_when_due(&dir, Some(&manifest.version), || panic!("有效緩存應跳過網絡"));
         let remaining = next.saturating_duration_since(Instant::now());
         assert!(remaining <= CHECK_AFTER - age);
         assert!(remaining > CHECK_AFTER - age - Duration::from_secs(60));
 
-        // 成功标记没有对应快照时，即使同进程刚启动也要去取数据。
+        // 成功標記沒有對應快照時，即使同進程剛啟動也要去取數據。
         let (_, retry) = check_when_due(&dir, None, || Err(()));
         assert!(retry.saturating_duration_since(Instant::now()) <= RETRY_AFTER);
         assert_eq!(fs::read(&marker).unwrap(), CHECK_FAILED);
-        check_when_due(&dir, None, || panic!("首次离线后的重启应遵守失败退避"));
+        check_when_due(&dir, None, || panic!("首次離線後的重啟應遵守失敗退避"));
         fs::remove_file(marker).unwrap();
         fs::remove_dir(dir).unwrap();
     }

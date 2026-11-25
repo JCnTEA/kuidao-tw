@@ -1,8 +1,8 @@
-//! 演示录制器：不开窗口，脚本驱动鼠标/键盘/拖放，egui 输出用软件光栅化，
-//! 逐帧把 RGBA 写到 stdout（或直接拉起 ffmpeg）。
+//! 演示錄製器：不開窗口，腳本驅動鼠標/鍵盤/拖放，egui 輸出用軟件光柵化，
+//! 逐幀把 RGBA 寫到 stdout（或直接拉起 ffmpeg）。
 //!
 //! 用法：`cargo run --release --features record --bin daozai-record -- out.mp4`
-//! 需要 PATH 里有 ffmpeg。画面里的歌曲、文件、待办都是演示用的假数据。
+//! 需要 PATH 裡有 ffmpeg。畫面裡的歌曲、文件、待辦都是演示用的假數據。
 
 mod raster;
 
@@ -14,26 +14,26 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-const CW: f32 = 800.0; // 画布（逻辑像素）
+const CW: f32 = 800.0; // 畫布（邏輯像素）
 const CH: f32 = 250.0;
 const PPP: f32 = 2.0;
 const FPS: f64 = 60.0;
-const WX: f32 = (CW - WIN_W) / 2.0; // 窗口在画布中的位置
+const WX: f32 = (CW - WIN_W) / 2.0; // 窗口在畫布中的位置
 
-/// 面板坐标（相对展开面板左上角）→ 画布坐标
+/// 面板座標（相對展開面板左上角）→ 畫布座標
 fn p(x: f32, y: f32) -> Pos2 {
     Pos2::new(CW / 2.0 - daozai::app::PW / 2.0 + x, y)
 }
 
 #[derive(Clone)]
 enum Act {
-    /// 在 dur 秒内把鼠标移到目标（缓动）
+    /// 在 dur 秒內把鼠標移到目標（緩動）
     Move(Pos2, f64),
     Wait(f64),
     Click,
     Type(&'static str),
     Enter,
-    /// 开始/结束拖文件
+    /// 開始/結束拖文件
     DragStart(PathBuf),
     DragDrop,
 }
@@ -50,7 +50,7 @@ impl Media {
         if self.np.playing { (self.anchor_pos + t - self.anchor_t).min(self.np.duration) } else { self.anchor_pos }
     }
     fn tick(&mut self, t: f64) {
-        // 模拟 SMTC 轮询：每秒刷新一次位置，中间由应用自己外推
+        // 模擬 SMTC 輪詢：每秒刷新一次位置，中間由應用自己外推
         if t - self.polled_at >= 1.0 {
             self.polled_at = t;
             self.np.position = self.truth(t);
@@ -75,7 +75,7 @@ impl Media {
 }
 
 fn ease(x: f64) -> f64 {
-    // 鼠标轨迹：带一点加减速，像人手
+    // 鼠標軌跡：帶一點加減速，像人手
     let x = x.clamp(0.0, 1.0);
     if x < 0.5 { 4.0 * x * x * x } else { 1.0 - (-2.0 * x + 2.0).powi(3) / 2.0 }
 }
@@ -120,7 +120,7 @@ fn script(drag: PathBuf) -> Vec<Act> {
     vec![
         Move(rest, 0.0),
         Wait(1.2),
-        // 1 悬停展开 → 音乐页
+        // 1 懸停展開 → 音樂頁
         Move(Pos2::new(424.0, 25.0), 0.55),
         Wait(1.3),
         Move(p(210.5, 118.0), 0.45),
@@ -129,18 +129,18 @@ fn script(drag: PathBuf) -> Vec<Act> {
         Wait(1.6),
         Move(p(240.0, 92.0), 0.4),
         Wait(0.2),
-        Click, // 拖进度
+        Click, // 拖進度
         Wait(1.2),
-        // 2 右箭头 → 专注
+        // 2 右箭頭 → 專注
         Move(p(398.0, 68.0), 0.45),
         Wait(0.2),
         Click,
         Wait(0.9),
         Move(p(267.0, 106.5), 0.4),
         Wait(0.2),
-        Click, // 开始专注
+        Click, // 開始專注
         Wait(1.8),
-        // 3 → 饮水
+        // 3 → 飲水
         Move(p(398.0, 68.0), 0.4),
         Wait(0.15),
         Click,
@@ -153,7 +153,7 @@ fn script(drag: PathBuf) -> Vec<Act> {
         Wait(1.0),
         Move(p(300.0, 80.0), 0.45),
         Wait(0.2),
-        Click, // 圆环 ↔ 柱状图
+        Click, // 圓環 ↔ 柱狀圖
         Wait(1.8),
         // 4 → 置物架
         Move(p(398.0, 68.0), 0.45),
@@ -164,14 +164,14 @@ fn script(drag: PathBuf) -> Vec<Act> {
         Wait(0.5),
         Move(p(250.0, 72.0), 0.6),
         Wait(0.6),
-        // 5 → 待办
+        // 5 → 待辦
         Move(p(398.0, 68.0), 0.45),
         Wait(0.15),
         Click,
         Wait(0.9),
         Move(p(78.0, 109.0), 0.45),
         Wait(0.2),
-        Click, // 加一个
+        Click, // 加一個
         Wait(0.5),
         Type("寫"),
         Wait(0.12),
@@ -185,15 +185,15 @@ fn script(drag: PathBuf) -> Vec<Act> {
         Wait(0.2),
         Click, // 勾掉
         Wait(1.4),
-        // 6 页码豆回到音乐
+        // 6 頁碼豆回到音樂
         Move(p(186.0, 132.8), 0.5),
         Wait(0.2),
         Click,
         Wait(1.4),
-        // 7 离开 → 收起
+        // 7 離開 → 收起
         Move(rest, 0.6),
         Wait(1.3),
-        // 8 从桌面拖文件进来
+        // 8 從桌面拖文件進來
         Move(Pos2::new(640.0, 200.0), 0.3),
         DragStart(drag),
         Wait(0.3),
@@ -206,7 +206,7 @@ fn script(drag: PathBuf) -> Vec<Act> {
         DragDrop,
         Wait(1.6),
         Move(rest, 0.6),
-        // 9 闲置 → 小精灵
+        // 9 閒置 → 小精靈
         Wait(8.0),
         Move(Pos2::new(420.0, 24.0), 0.6),
         Wait(1.0),
@@ -215,7 +215,7 @@ fn script(drag: PathBuf) -> Vec<Act> {
     ]
 }
 
-/// 预计算一张 Win11 风格的“光晕”壁纸（线性→gamma 后直接存预乘值）。
+/// 預計算一張 Win11 風格的“光暈”壁紙（線性→gamma 後直接存預乘值）。
 fn wallpaper(w: usize, h: usize) -> Vec<[f32; 4]> {
     let mut v = vec![[0.0; 4]; w * h];
     for y in 0..h {
@@ -236,7 +236,7 @@ fn wallpaper(w: usize, h: usize) -> Vec<[f32; 4]> {
                 let glow = [0.25, 0.55, 1.0][i] * a * 0.75 + [0.45, 0.35, 0.95][i] * b * 0.35 + [0.1, 0.6, 0.9][i] * d * 0.3;
                 c[i] = (c[i] + glow).min(1.0);
             }
-            // 轻微颗粒，避免色带
+            // 輕微顆粒，避免色帶
             let n = (daozai::anim::hash01((x * 7919 + y * 104729) as u64) - 0.5) * 0.008;
             v[y * w + x] = [c[0] + n, c[1] + n, c[2] + n, 1.0];
         }
@@ -252,7 +252,7 @@ fn cursor_shapes(at: Pos2, press: f32, dragging: Option<f32>) -> Vec<Shape> {
         .collect();
     let mut out = Vec::new();
     if let Some(a) = dragging {
-        // 被拖着的文件：半透明小卡片跟在指针右下
+        // 被拖著的文件：半透明小卡片跟在指針右下
         let r = Rect::from_min_size(at + Vec2::new(10.0, 14.0), Vec2::new(30.0, 36.0));
         out.push(Shape::rect_filled(r.translate(Vec2::new(1.5, 2.5)), 5.0, Color32::from_black_alpha((60.0 * a) as u8)));
         out.push(Shape::rect_filled(r, 5.0, Color32::from_rgba_unmultiplied(245, 246, 250, (235.0 * a) as u8)));
@@ -287,7 +287,7 @@ fn main() {
     let out_path = std::env::args().nth(1).unwrap_or_else(|| "daozai-demo.mp4".into());
     let (root, drag_file) = setup_data();
 
-    // KUIDAO_FAST=1：只跑脚本不出画面，调试点击位置用
+    // KUIDAO_FAST=1：只跑腳本不出畫面，調試點擊位置用
     let fast = std::env::var("KUIDAO_FAST").is_ok();
     let ctx = egui::Context::default();
     let mut app = App::new(&ctx, Options { fetch_lyrics: false, pet_idle: 4.0 });
@@ -316,7 +316,7 @@ fn main() {
     let mut pipe = ff.stdin.take().unwrap();
     let mut rgba = Vec::new();
 
-    // 展开脚本为逐帧事件
+    // 展開腳本為逐幀事件
     let acts = script(drag_file);
     let win = Rect::from_min_size(Pos2::new(WX, 0.0), Vec2::new(WIN_W, WIN_H));
     let mut cursor = Pos2::new(560.0, 215.0);
@@ -331,14 +331,14 @@ fn main() {
     let mut first = true;
 
     let mut queue: std::collections::VecDeque<Act> = acts.into();
-    let mut cur: Option<(Act, f64, Pos2)> = None; // (动作, 开始时间, 起点)
+    let mut cur: Option<(Act, f64, Pos2)> = None; // (動作, 開始時間, 起點)
     let mut pending_release = false;
 
     loop {
         let mut events = Vec::new();
         let mut hovered = Vec::new();
         let mut dropped = Vec::new();
-        // ---- 推进脚本 ----
+        // ---- 推進腳本 ----
         let mut done = false;
         loop {
             if cur.is_none() {
@@ -355,7 +355,7 @@ fn main() {
                 Act::Move(to, d) => {
                     let k = if d <= 0.0 { 1.0 } else { ease((t - t0) / d) };
                     cursor = from + (to - from) * k as f32;
-                    // 轻微弧线
+                    // 輕微弧線
                     let arc = (k * std::f64::consts::PI).sin() as f32 * (to - from).length() * 0.04;
                     cursor.y -= arc;
                     if k >= 1.0 {
@@ -411,7 +411,7 @@ fn main() {
         }
         drag_a = daozai::anim::approach(drag_a, if dragging.is_some() { 1.0 } else { 0.0 }, 14.0, 1.0 / 60.0);
 
-        // 鼠标只有在窗口的可交互区域里才会被应用“看见”（与真窗口的区域裁剪一致）
+        // 鼠標只有在窗口的可交互區域裡才會被應用“看見”（與真窗口的區域裁剪一致）
         let inside = region.contains(cursor) && !first;
         if inside {
             events.insert(0, Event::PointerMoved(cursor));
@@ -501,7 +501,7 @@ fn main() {
         if dbg_click && std::env::var("KUIDAO_DEBUG").is_ok() {
             eprintln!("t={t:.2} cur={cursor:?} page={} region={:?} hit={:?}", app.page(), fo.region, fo.hit);
         }
-        region = fo.region.translate(Vec2::new(WX, 0.0)); // FrameOut 是窗口局部坐标
+        region = fo.region.translate(Vec2::new(WX, 0.0)); // FrameOut 是窗口局部座標
         for c in fo.cmds {
             if let Cmd::Media(m) = c {
                 media.apply(m, t);
@@ -540,7 +540,7 @@ fn main() {
     eprintln!("{frame_no} 幀 → {out_path}");
 }
 
-/// 将实际渲染的六个页面、休息状态与提醒导出，供回归检查。
+/// 將實際渲染的六個頁面、休息狀態與提醒導出，供迴歸檢查。
 fn gallery() {
     let (root,_)=setup_data();
     let dest=std::env::args().nth(2).unwrap_or_else(||"preview".into());
@@ -565,7 +565,7 @@ fn gallery() {
             if scene==21 && frame>0 {app.show_sit_view(65.0);}
             if scene==22 && frame==1 {app.open_settings_category(1);app.show_health_time();}
             let idle=if scene==7{60.0}else if scene==8{200.0}else{0.0};
-            let env=Env{t,clock:"10:28:00".into(),today:"2026-10-28".into(),date:"10月28日 周三".into(),battery:Some(76),charging:true,cursor:if scene<6{Some(Pos2::new(320.0,60.0))}else{None},idle_seconds:Some(idle),recording:true,..Default::default()};
+            let env=Env{t,clock:"10:28:00".into(),today:"2026-10-28".into(),date:"10月28日 週三".into(),battery:Some(76),charging:true,cursor:if scene<6{Some(Pos2::new(320.0,60.0))}else{None},idle_seconds:Some(idle),recording:true,..Default::default()};
             let raw=egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(640.0,190.0))),time:Some(t),viewports:std::iter::once((egui::ViewportId::ROOT,egui::ViewportInfo{native_pixels_per_point:Some(2.0),..Default::default()})).collect(),..Default::default()};
             let output=ctx.run(raw,|ctx|{egui::CentralPanel::default().frame(egui::Frame::new().fill(Color32::from_rgb(23,28,45))).show(ctx,|ui|{let win=ui.max_rect();app.frame(ui,win,&env);});});
             ras.update_textures(&output.textures_delta);
@@ -580,6 +580,6 @@ fn gallery() {
         let mut ff=Command::new("ffmpeg").args(["-y","-loglevel","error","-f","rawvideo","-pix_fmt","rgba","-s","1280x380","-i","-","-frames:v","1",&path]).stdin(Stdio::piped()).spawn().unwrap();
         ff.stdin.take().unwrap().write_all(&rgba).unwrap();assert!(ff.wait().unwrap().success());
     }
-    // 仅移除本次创建的独立演示目录。
+    // 僅移除本次創建的獨立演示目錄。
     let _=std::fs::remove_dir_all(root);
 }

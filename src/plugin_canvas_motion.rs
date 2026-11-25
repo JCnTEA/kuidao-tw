@@ -1,4 +1,4 @@
-//! 画布声明动画的宿主状态和逐帧求值。
+//! 畫布聲明動畫的宿主狀態和逐幀求值。
 
 #[cfg(test)]
 #[path = "plugin_canvas_live_tests.rs"]
@@ -281,7 +281,7 @@ impl LiveState {
             if let Some(effect) = node.looping.as_ref() {
                 *looping = true;
                 let period = f64::from(effect.period_ms) / 1000.0;
-                // 循环相位按 30 Hz 取样，短过渡仍可按 60 Hz 绘制。
+                // 循環相位按 30 Hz 取樣，短過渡仍可按 60 Hz 繪製。
                 let phase = (((time * 30.0).floor() / 30.0).rem_euclid(period) / period) as f32;
                 match effect.kind {
                     LoopKind::Pulse => {

@@ -133,7 +133,7 @@ pub fn parse_title(raw: &str, browser_suffix: &str) -> Option<(String, String, S
     if is_plain_page(&title) {
         return None;
     }
-    // 「歌手【歌名】」是台灣 MV 常見格式；拆開後歌詞比對才不會被整串雜訊干擾。
+    // 「歌手【歌名】」是台灣 MV 常見格式；拆開後歌詞比對才不會被整串雜訊幹擾。
     if let (Some(open), Some(close)) = (title.find('【'), title.find('】')) {
         if open < close {
             let artist = title[..open].trim().to_string();
