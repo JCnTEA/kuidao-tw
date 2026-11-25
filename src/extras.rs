@@ -2045,6 +2045,13 @@ impl App {
                                         None => settings_hint(ui,"聽歌辨識狀態：待瀏覽器開始播放"),
                                     }
                                 }
+                                // 本機歌詞庫：抓過一次的歌詞就留在這台電腦，下次辨識完成立刻出詞。
+                                let library=crate::lyrics_library::stats();
+                                if library.songs==0 {
+                                    settings_hint(ui,"本機歌詞庫：還沒有存過歌詞，第一次播放時會邊抓邊存。");
+                                } else {
+                                    settings_hint(ui,&format!("本機歌詞庫：已存 {} 首（{} KB）· 抓到就存本機，下次同一首歌直接讀取、不再連網重抓。",library.songs,library.bytes.saturating_div(1024)));
+                                }
                                 ui.separator();
                                 let translate=self.settings.lyrics_translate;
                                 setting_row(ui,"自動翻譯歌詞","非中文歌詞保留原文，譯文顯示在原文下方；中文歌本身就是繁體，不做翻譯",&mut self.settings.lyrics_translate);

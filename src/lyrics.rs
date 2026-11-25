@@ -491,7 +491,19 @@ fn browser_cache_path(track:&str,artist:&str,duration:f64)->std::path::PathBuf {
     path.parent().unwrap_or(std::path::Path::new(".")).join("browser").join(name)
 }
 
+/// 先查本機歌詞庫（鍵不含影片長度），命中就完全不必連網；抓到的每次都回寫，
+/// 下次同一首歌（就算換了影片版本或來源）直接從這台電腦取。
 fn fetch_browser(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError> {
+    if let Some(lyrics)=crate::lyrics_library::read(track,artist).filter(|lyrics|!romanized(track,lyrics)) {
+        trace(||"本機歌詞庫:命中".into());
+        return Ok(lyrics);
+    }
+    let result=fetch_browser_sources(track,artist,duration);
+    if let Ok(lyrics)=&result {if lyrics.synced && !romanized(track,lyrics){crate::lyrics_library::save(track,artist,"browser",lyrics);}}
+    result
+}
+
+fn fetch_browser_sources(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError> {
     let mut hints=youtube_lyric_hints(track,artist);
     // 頻道空白或只寫「YouTube」時，候選可能整組為空；這時不能直接判定資訊不足，
     // 仍要用清洗後的歌名本體查一輪，否則單段標題的影片會完全抓不到歌詞。
@@ -506,7 +518,7 @@ fn fetch_browser(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError>
         }
     }
     let path=browser_cache_path(track,artist,duration);
-    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"瀏覽器本機快取:命中".into());return Ok(lyrics);}
+    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){crate::lyrics_library::save(track,artist,"browser-cache",&lyrics);trace(||"瀏覽器本機快取:命中".into());return Ok(lyrics);}
     let search_track=clean_youtube_title(track);
     let search_track=if search_track.trim().is_empty(){track.to_owned()}else{search_track};
     let search_artist=clean_youtube_artist(artist);
@@ -897,15 +909,17 @@ fn fetch_online(track:&str,artist:&str,duration_secs:f64,skip:Skip)->Result<Lyri
 fn fetch_online_detail(track:&str,artist:&str,duration_secs:f64,skip:Skip)->(Result<Lyrics,FetchError>,bool) {
     if track.trim().is_empty() || artist.trim().is_empty(){return (Err(FetchError::IncompleteMetadata),true);}
     let path=cache_path(track,artist,duration_secs);
+    // 先看本機歌詞庫：同一個歌名＋歌手不分長度、不分來源，抓過一次就不再連網。
+    if let Some(lyrics)=crate::lyrics_library::read(track,artist).filter(|lyrics|!romanized(track,lyrics)){trace(||"本機歌詞庫:命中".into());return (Ok(lyrics),false);}
     // 旧版本可能缓存过罗马音版本：忽略它重新查找原文。
-    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"本機快取:命中".into());return (Ok(lyrics),false);}
+    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){crate::lyrics_library::save(track,artist,"cache",&lyrics);trace(||"本機快取:命中".into());return (Ok(lyrics),false);}
     if let Some(remembered)=read_negative(&path){trace(||"近期已確認無同步歌詞".into());return (remembered,false);}
     let netease=(skip!=Skip::Netease).then_some("https://music.163.com");
     let qq=(skip!=Skip::QqMusic).then_some("https://c.y.qq.com");
     let (result,failed)=fetch_with_sources_detail(netease,qq,Some("https://lrclib.net"),track,artist,duration_secs);
     match &result {
         // 罗马音版本照常显示，但不缓存，下次仍尝试找原文。
-        Ok(lyrics) if lyrics.synced=>{if !romanized(track,lyrics){write_cache(&path,lyrics);}},
+        Ok(lyrics) if lyrics.synced=>{if !romanized(track,lyrics){write_cache(&path,lyrics);crate::lyrics_library::save(track,artist,"online",lyrics);}},
         // 每个来源都正常回应却没有同步歌词，才记为「确认没有」；有来源断网或限流时下次照常重查。
         Ok(lyrics) if !failed=>write_negative(&path,Some(lyrics)),
         Err(FetchError::NotFound) if !failed=>write_negative(&path,None),
