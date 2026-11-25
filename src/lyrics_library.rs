@@ -23,7 +23,9 @@ pub fn key(title: &str, artist: &str) -> String {
 
 fn normalize(text: &str) -> String {
     text.chars()
-        .filter(|c| !c.is_whitespace() && !"()[]{}（）【】「」《》<>.,，。!！?？:：;；/\\-_·|".contains(*c))
+        .filter(|c| {
+            !c.is_whitespace() && !"()[]{}（）【】「」《》<>.,，。!！?？:：;；/\\-_·|".contains(*c)
+        })
         .flat_map(|c| c.to_lowercase())
         .collect()
 }
@@ -59,7 +61,10 @@ fn read_file(path: &Path) -> Option<Lyrics> {
     }
     let raw = std::fs::read_to_string(path).ok()?;
     let json: serde_json::Value = serde_json::from_str(&raw).ok()?;
-    let synced = json.get("synced").and_then(|v| v.as_bool()).unwrap_or(false);
+    let synced = json
+        .get("synced")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let lines = json
         .get("lines")
         .and_then(|v| v.as_array())?
@@ -194,8 +199,14 @@ mod tests {
     fn sample() -> Lyrics {
         Lyrics {
             lines: vec![
-                LyricsLine { t: 1.5, text: "第一句".into() },
-                LyricsLine { t: 4.0, text: "第二句".into() },
+                LyricsLine {
+                    t: 1.5,
+                    text: "第一句".into(),
+                },
+                LyricsLine {
+                    t: 4.0,
+                    text: "第二句".into(),
+                },
             ],
             synced: true,
         }
@@ -215,7 +226,10 @@ mod tests {
         assert!(hit.synced);
         assert_eq!(hit.lines.len(), 2);
         assert_eq!(hit.lines[1].text, "第二句");
-        assert_eq!(read_in(&dir, "另一首", "別人"), None);
+        assert!(
+            read_in(&dir, "另一首", "別人").is_none(),
+            "沒存過的歌不該在本機出現"
+        );
         let stats = stats_in(&dir);
         assert_eq!(stats.songs, 1);
         assert!(stats.bytes > 0);
@@ -226,11 +240,17 @@ mod tests {
     fn plain_lyrics_are_not_served_as_synced() {
         let dir = temp_dir();
         let plain = Lyrics {
-            lines: vec![LyricsLine { t: 0.0, text: "純文字".into() }],
+            lines: vec![LyricsLine {
+                t: 0.0,
+                text: "純文字".into(),
+            }],
             synced: false,
         };
         write_in(&dir, "歌", "手", "netease", &plain);
-        assert!(read_in(&dir, "歌", "手").is_none(), "沒有時間軸的舊資料不當同步歌詞用");
+        assert!(
+            read_in(&dir, "歌", "手").is_none(),
+            "沒有時間軸的舊資料不當同步歌詞用"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
