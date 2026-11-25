@@ -78,7 +78,7 @@ fn reopening_reminder_modules_checks_due_items_again() {
 fn reopening_calendar_retries_interrupted_month_sync() {
     let _guard=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
-    let cfg=crate::calendar::Config{provider:crate::calendar::Provider::WeCom,username:"test".into(),href:None,server:None};
+    let cfg=crate::calendar::Config{provider:crate::calendar::Provider::ICloud,username:"test".into(),href:None,server:None};
     crate::calendar::save_config(&cfg).unwrap();
     h.app.calendar=crate::app::CalendarState::load();
     h.app.request_calendar_month(false);

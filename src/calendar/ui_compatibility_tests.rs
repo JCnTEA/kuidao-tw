@@ -113,13 +113,13 @@ fn ics_import_reports_the_capacity_limit_without_calling_new_records_duplicates(
 #[test]
 fn calendar_partial_warnings_are_scoped_and_clear_after_a_complete_refresh(){
     let _guard=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    let config=Config{provider:Provider::DingTalk,username:"mock".into(),href:None,server:None};
+    let config=Config{provider:Provider::Custom,username:"mock".into(),href:None,server:None};
     h.app.calendar.config=Some(config.clone());let month=h.app.calendar.view.month;
     h.app.calendar_event(Event::MonthLoaded{config:config.clone(),month,result:Ok(vec![])});
     let message="1 处日历读取失败；读取日程失败（403）".to_string();
     h.app.calendar_event(Event::Warning{config:config.clone(),month:Some(month),message:message.clone()});
     assert_eq!(h.app.calendar.view.warning,message);assert!(h.app.calendar.view.error.is_empty());
-    let other=Config{provider:Provider::Feishu,..config.clone()};
+    let other=Config{provider:Provider::Google,..config.clone()};
     h.app.calendar_event(Event::Warning{config:other,month:Some(month),message:"其他账号".into()});
     h.app.calendar_event(Event::Warning{config:config.clone(),month:Some(month+chrono::Duration::days(32)),message:"旧月份".into()});
     assert_eq!(h.app.calendar.view.warning,message);
@@ -137,7 +137,7 @@ fn calendar_partial_sync_preview(){
     let _guard=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let destination=std::path::PathBuf::from(std::env::var_os("DAOZAI_CALENDAR_PREVIEW").expect("需指定预览目录"));std::fs::create_dir_all(&destination).unwrap();
     for empty in [false,true]{
-        let mut h=H::new();let config=Config{provider:Provider::DingTalk,username:"mock".into(),href:None,server:None};
+        let mut h=H::new();let config=Config{provider:Provider::Custom,username:"mock".into(),href:None,server:None};
         h.app.calendar.config=Some(config.clone());let month=h.app.calendar.view.month;
         let start=(chrono::Local::now()+chrono::Duration::minutes(30)).timestamp();
         let events=if empty{vec![]}else{vec![crate::mail::Meeting{uid:"preview".into(),title:"面试安排".into(),start,end:Some(start+1800),all_day:false,at:"面试时间".into()}]};

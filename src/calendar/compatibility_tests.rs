@@ -65,7 +65,7 @@ fn caldav_connection_test_accepts_parse_errors_but_requires_read_access() {
     let invalid = "BEGIN:VEVENT\nUID:bad\nDTSTART;TZID=Unsupported/Zone:20261112T100000\nEND:VEVENT";
     let start = (chrono::Utc::now() + chrono::Duration::minutes(30)).format("%Y%m%dT%H%M%SZ");
     let mixed = format!("{invalid}\nBEGIN:VEVENT\nUID:good\nDTSTART:{start}\nEND:VEVENT");
-    for provider in [Provider::DingTalk, Provider::Feishu, Provider::ICloud, Provider::Custom] {
+    for provider in [Provider::Custom, Provider::Google, Provider::ICloud, Provider::Custom] {
         for (status, ics, count) in [(207, invalid, 0), (207, mixed.as_str(), 1), (207, "", 0), (401, "", 0), (403, "", 0)] {
             let data = if ics.is_empty() { String::new() } else { format!("<d:response><d:href>/calendar/1.ics</d:href><c:calendar-data>{ics}</c:calendar-data></d:response>") };
             let xml = format!(r#"<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">{data}</d:multistatus>"#);
@@ -83,7 +83,7 @@ fn caldav_connection_test_accepts_parse_errors_but_requires_read_access() {
 
 #[test]
 fn discovery_keeps_root_events_and_follows_calendar_home_for_every_caldav_provider(){
-    for provider in [Provider::DingTalk,Provider::Feishu,Provider::ICloud,Provider::Custom]{
+    for provider in [Provider::Custom,Provider::Google,Provider::ICloud,Provider::Custom]{
         let result=mock_fetch(provider,true,false).unwrap();
         assert_eq!(result.events.len(),2,"{provider:?} 不能因找到节气日历而漏掉主目录中的应用日历");
     }
@@ -105,7 +105,7 @@ fn external_ical_properties_and_components_are_case_insensitive(){
 
 #[test]
 fn partial_collection_failure_is_visible_for_every_caldav_provider(){
-    for provider in [Provider::DingTalk,Provider::Feishu,Provider::ICloud,Provider::Custom]{
+    for provider in [Provider::Custom,Provider::Google,Provider::ICloud,Provider::Custom]{
         let fetched=mock_fetch(provider,false,true).unwrap();
         assert_eq!(fetched.events.len(),1);assert_eq!(fetched.report.calendars,2);assert_eq!(fetched.report.failed,1);
         assert!(fetched.report.warning().contains("403"));assert!(fetched.report.warning().contains("读取失败"));
@@ -145,7 +145,7 @@ fn mixed_caldav_response_preserves_readable_events_and_reports_resource_errors()
         let xml="<d:multistatus xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\"><d:response><d:href>/good.ics</d:href><c:calendar-data>BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:good\nDTSTART:20261112T020000Z\nEND:VEVENT\nBEGIN:VEVENT\nUID:bad\nDTSTART;TZID=Unsupported/Zone:20261112T100000\nEND:VEVENT\nEND:VCALENDAR</c:calendar-data></d:response><d:response><d:href>/private.ics</d:href><d:status>HTTP/1.1 403 Forbidden</d:status></d:response></d:multistatus>";
         write!(socket,"HTTP/1.1 207 Result\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{xml}",xml.len()).unwrap();
     });
-    let config=Config{provider:Provider::DingTalk,username:"mock".into(),href:None,server:Some(base.clone())};
+    let config=Config{provider:Provider::Custom,username:"mock".into(),href:None,server:Some(base.clone())};
     let result=fetch_collection(&agent().unwrap(),&config,"mock",&base,"2026-11-01T00:00:00Z".parse().unwrap(),"2026-12-01T00:00:00Z".parse().unwrap());worker.join().unwrap();
     let fetched=result.unwrap();assert_eq!(fetched.events.len(),1);assert_eq!(fetched.events[0].uid,"good");
     assert_eq!((fetched.report.failed,fetched.report.invalid,fetched.report.status),(1,1,Some(403)));
