@@ -3062,6 +3062,15 @@ fn island_size_slider(ui: &mut egui::Ui, value: &mut u32) -> egui::Response {
     response
 }
 
+/// 目前跑的是哪一種版本：開發版主程式檔名帶「開發版」，正式版沒有。
+pub(crate) fn channel_label() -> &'static str {
+    std::env::current_exe()
+        .ok()
+        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().into_owned()))
+        .filter(|name| name.contains("開發版"))
+        .map_or("正式版", |_| "開發版")
+}
+
 pub(crate) fn settings_hint(ui: &mut egui::Ui, text: &str) {
     let ctx = &ui.ctx().clone();
     ui.add(
@@ -5168,6 +5177,31 @@ impl App {
                                 }
                                 ui.label(egui::RichText::new("裝置圖示：Solar Icons · 480 Design").size(11.0).color(settings_color(ctx,Color32::from_gray(150),Color32::from_gray(105))));
                                 ui.hyperlink_to("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/");
+                            });
+                        });
+                        // 上游與授權：衍生自原作者專案，版本資訊與授權聲明集中在一張卡，用台灣用語呈現。
+                        settings_label(ui,"上游與授權");
+                        settings_card(ui,|ui|{
+                            let strong=settings_color(ctx,Color32::from_gray(236),Color32::from_rgb(28,32,39));
+                            let sub=settings_color(ctx,Color32::from_gray(178),Color32::from_rgb(92,99,110));
+                            ui.horizontal_wrapped(|ui|{
+                                ui.label(egui::RichText::new(format!("鬼島 Kuidao 桌面靈動島 台灣版 · {}",crate::extras::channel_label())).size(13.0).strong().color(strong));
+                            });
+                            ui.add_space(3.0);
+                            ui.add(egui::Label::new(egui::RichText::new("本版版本號與功能，以鬼島自己的更新管道為準；上游原作者的版本號只當作對照，不代表本版功能範圍。").size(11.0).color(sub)).wrap());
+                            ui.add_space(4.0);
+                            ui.horizontal_wrapped(|ui|{
+                                ui.label(egui::RichText::new("原作").size(11.5).color(sub));
+                                ui.hyperlink_to("Renly1994／xiaotang-daozai（Windows 桌面靈動島）","https://github.com/Renly1994/xiaotang-daozai");
+                            });
+                            ui.horizontal_wrapped(|ui|{
+                                ui.label(egui::RichText::new("上游原作者版本 0.6.66；台灣版自 0.6.106 起獨立編號，安裝包初始版本 0.6.00。").size(11.0).color(sub));
+                            });
+                            ui.add_space(4.0);
+                            ui.add(egui::Label::new(egui::RichText::new("依 MIT 授權釋出：保留原作者版權聲明與授權條文，LICENSE 隨程式附上；介面文案、用語與功能皆由台灣版自行維護。").size(11.0).color(sub)).wrap());
+                            ui.horizontal_wrapped(|ui|{
+                                ui.label(egui::RichText::new("授權條文").size(11.0).color(sub));
+                                ui.hyperlink_to("MIT License","https://opensource.org/license/mit");
                             });
                         });
                         // 台灣版：更新內容資料庫只保留最新一筆，每次檢查成功都整份覆寫。

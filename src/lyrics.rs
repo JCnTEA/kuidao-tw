@@ -41,6 +41,17 @@ pub(crate) fn romanized(track:&str,lyrics:&Lyrics)->bool {
     latin>=40 && native*20<native+latin
 }
 
+/// 歌詞不太可能是這首歌的原文：羅馬拼音版本，或是明顯另一種語言的翻譯版。
+/// 呼叫端照舊可以拿它當備選，但不會存進快取或本機歌詞庫，下次仍會嘗試找原文。
+pub(crate) fn wrong(track:&str,artist:&str,lyrics:&Lyrics)->bool {
+    romanized(track,lyrics) || crate::lyrics_lang::mismatch(track,artist,lyrics).is_some()
+}
+
+/// 只有歌名、沒有歌手時（例如酷狗本機檔）用的版本。
+pub(crate) fn wrong_title(track:&str,lyrics:&Lyrics)->bool {
+    romanized(track,lyrics) || crate::lyrics_lang::mismatch(track,"",lyrics).is_some()
+}
+
 fn negative_path(path:&std::path::Path)->std::path::PathBuf {
     // 每次加入新的跨語言／歌手別名規則，就換一次副檔名，讓舊版寫下的「沒有歌詞」失效。
     // 0.6.78 的 No Reason 就是卡在舊記錄，明明網易雲有同步歌詞卻不再連網。
@@ -293,11 +304,11 @@ pub fn fetch_for_source(source:&str,track:&str,artist:&str,duration:f64,song_id:
     if source.to_ascii_lowercase().contains("qqmusic") {
         let common=cache_path(track,artist,duration);
         let path=common.parent().unwrap().join("qqmusic").join(common.file_name().unwrap());
-        if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"本機快取:命中".into());return Ok(lyrics);}
+        if let Some(lyrics)=read_cache(&path).filter(|lyrics|!wrong(track,artist,lyrics)){trace(||"本機快取:命中".into());return Ok(lyrics);}
         if let Some(remembered)=read_negative(&path){trace(||"近期已確認無同步歌詞".into());return remembered;}
         let preferred=fetch_qqmusic("https://c.y.qq.com",track,artist,duration);
         trace(||format!("QQ音樂:{}",outcome(&preferred)));
-        if let Ok(lyrics)=&preferred {if lyrics.synced && !romanized(track,lyrics) {write_cache(&path,lyrics);return preferred;}}
+        if let Ok(lyrics)=&preferred {if lyrics.synced && !wrong(track,artist,lyrics) {write_cache(&path,lyrics);return preferred;}}
         let (fallback,failed)=fetch_online_detail(track,artist,duration,Skip::QqMusic);
         if !failed && matches!(&preferred,Ok(_)|Err(FetchError::NotFound)) && !fallback.as_ref().is_ok_and(|l|l.synced) {
             write_negative(&path,preferred.as_ref().ok().or(fallback.as_ref().ok()));
@@ -314,7 +325,7 @@ pub fn fetch_for_source(source:&str,track:&str,artist:&str,duration:f64,song_id:
     if source.eq_ignore_ascii_case("cloudmusic.exe"){
         if let Some(id)=song_id.filter(|id|*id>0){
             let path=crate::model::config_dir().join("lyrics").join(format!("netease-{id}.lrc"));
-            if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"本機快取:命中".into());return Ok(lyrics);}
+            if let Some(lyrics)=read_cache(&path).filter(|lyrics|!wrong(track,artist,lyrics)){trace(||"本機快取:命中".into());return Ok(lyrics);}
             if let Some(remembered)=read_negative(&path){trace(||"近期已確認無同步歌詞".into());return remembered;}
             let by_id=fetch_netease_song("https://music.163.com",id);
             trace(||format!("網易雲按ID:{}",outcome(&by_id)));
@@ -323,7 +334,7 @@ pub fn fetch_for_source(source:&str,track:&str,artist:&str,duration:f64,song_id:
                 // 网易云本身只有文本歌词（「暂无自动滚动」）：不再重复搜网易云，改到 QQ 音乐、LRCLIB 找同步版本。
                 Ok(plain)=>{
                     let (other,failed)=fetch_online_detail(track,artist,duration,Skip::Netease);
-                    if let Ok(lyrics)=&other {if lyrics.synced{if !romanized(track,lyrics){write_cache(&path,lyrics);}return other;}}
+                    if let Ok(lyrics)=&other {if lyrics.synced{if !wrong(track,artist,lyrics){write_cache(&path,lyrics);}return other;}}
                     if !failed{write_negative(&path,Some(&plain));}
                     return Ok(plain);
                 }
@@ -494,12 +505,12 @@ fn browser_cache_path(track:&str,artist:&str,duration:f64)->std::path::PathBuf {
 /// 先查本機歌詞庫（鍵不含影片長度），命中就完全不必連網；抓到的每次都回寫，
 /// 下次同一首歌（就算換了影片版本或來源）直接從這台電腦取。
 fn fetch_browser(track:&str,artist:&str,duration:f64)->Result<Lyrics,FetchError> {
-    if let Some(lyrics)=crate::lyrics_library::read(track,artist).filter(|lyrics|!romanized(track,lyrics)) {
+    if let Some(lyrics)=crate::lyrics_library::read(track,artist).filter(|lyrics|!wrong(track,artist,lyrics)) {
         trace(||"本機歌詞庫:命中".into());
         return Ok(lyrics);
     }
     let result=fetch_browser_sources(track,artist,duration);
-    if let Ok(lyrics)=&result {if lyrics.synced && !romanized(track,lyrics){crate::lyrics_library::save(track,artist,"browser",lyrics);}}
+    if let Ok(lyrics)=&result {if lyrics.synced && !wrong(track,artist,lyrics){crate::lyrics_library::save(track,artist,"browser",lyrics);}}
     result
 }
 
@@ -518,7 +529,7 @@ fn fetch_browser_sources(track:&str,artist:&str,duration:f64)->Result<Lyrics,Fet
         }
     }
     let path=browser_cache_path(track,artist,duration);
-    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){crate::lyrics_library::save(track,artist,"browser-cache",&lyrics);trace(||"瀏覽器本機快取:命中".into());return Ok(lyrics);}
+    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!wrong(track,artist,lyrics)){crate::lyrics_library::save(track,artist,"browser-cache",&lyrics);trace(||"瀏覽器本機快取:命中".into());return Ok(lyrics);}
     let search_track=clean_youtube_title(track);
     let search_track=if search_track.trim().is_empty(){track.to_owned()}else{search_track};
     let search_artist=clean_youtube_artist(artist);
@@ -530,12 +541,12 @@ fn fetch_browser_sources(track:&str,artist:&str,duration:f64)->Result<Lyrics,Fet
     // 只有純文字先留住，後面若有同步版本就換掉。
     let mut plain:Option<Lyrics>=strict.as_ref().ok().filter(|lyrics|!lyrics.synced).cloned();
     if let Ok(lyrics)=&strict {
-        if lyrics.synced && !romanized(track,lyrics) {write_cache(&path,lyrics);return Ok(lyrics.clone());}
+        if lyrics.synced && !wrong(track,artist,lyrics) {write_cache(&path,lyrics);return Ok(lyrics.clone());}
     }
     match fetch_kkbox_only(track,artist,duration,&hints) {
         Ok(lyrics)=>{
             trace(||format!("瀏覽器改用KKBOX:{}行",lyrics.lines.len()));
-            if lyrics.synced && !romanized(track,&lyrics){write_cache(&path,&lyrics);return Ok(lyrics);}
+            if lyrics.synced && !wrong(track,artist,&lyrics){write_cache(&path,&lyrics);return Ok(lyrics);}
             if plain.is_none(){plain=Some(lyrics);}
         }
         Err(error)=>trace(||format!("瀏覽器KKBOX:{}",error.label())),
@@ -549,7 +560,7 @@ fn fetch_browser_sources(track:&str,artist:&str,duration:f64)->Result<Lyrics,Fet
             &search_track,&search_artist,0.0,&hints);
         match relaxed {
             Ok(lyrics) if lyrics.synced=>{
-                if !romanized(track,&lyrics){write_cache(&path,&lyrics);}
+                if !wrong(track,artist,&lyrics){write_cache(&path,&lyrics);}
                 return Ok(lyrics);
             }
             Ok(lyrics)=>{if plain.is_none(){plain=Some(lyrics);}}
@@ -595,7 +606,7 @@ fn kkbox_token_seed()->Option<String> {
 fn fetch_kkbox_impl(track:&str,artist:&str,duration:f64,hints:&[(String,String)],allow_fallback:bool)->Result<Lyrics,FetchError> {
     let common=cache_path(track,artist,duration);
     let path=common.parent().unwrap_or(std::path::Path::new(".")).join("kkbox").join(common.file_name().unwrap());
-    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){trace(||"KKBOX本機快取:命中".into());return Ok(lyrics);}
+    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!wrong(track,artist,lyrics)){trace(||"KKBOX本機快取:命中".into());return Ok(lyrics);}
     if let Some(remembered)=read_negative(&path){trace(||"KKBOX近期已確認無同步歌詞".into());return remembered;}
 
     let mut queries=Vec::new();
@@ -663,7 +674,7 @@ fn fetch_kkbox_impl(track:&str,artist:&str,duration:f64,hints:&[(String,String)]
             Ok(json)=>{
                 if let Some(lyrics)=kkbox_lyrics(&json) {
                     trace(||format!("KKBOX取詞:{}行",lyrics.lines.len()));
-                    if lyrics.synced && !romanized(track,&lyrics){write_cache(&path,&lyrics);}
+                    if lyrics.synced && !wrong(track,artist,&lyrics){write_cache(&path,&lyrics);}
                     return Ok(lyrics);
                 }
                 last_error=Some(FetchError::NotFound);
@@ -910,16 +921,16 @@ fn fetch_online_detail(track:&str,artist:&str,duration_secs:f64,skip:Skip)->(Res
     if track.trim().is_empty() || artist.trim().is_empty(){return (Err(FetchError::IncompleteMetadata),true);}
     let path=cache_path(track,artist,duration_secs);
     // 先看本機歌詞庫：同一個歌名＋歌手不分長度、不分來源，抓過一次就不再連網。
-    if let Some(lyrics)=crate::lyrics_library::read(track,artist).filter(|lyrics|!romanized(track,lyrics)){trace(||"本機歌詞庫:命中".into());return (Ok(lyrics),false);}
+    if let Some(lyrics)=crate::lyrics_library::read(track,artist).filter(|lyrics|!wrong(track,artist,lyrics)){trace(||"本機歌詞庫:命中".into());return (Ok(lyrics),false);}
     // 旧版本可能缓存过罗马音版本：忽略它重新查找原文。
-    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!romanized(track,lyrics)){crate::lyrics_library::save(track,artist,"cache",&lyrics);trace(||"本機快取:命中".into());return (Ok(lyrics),false);}
+    if let Some(lyrics)=read_cache(&path).filter(|lyrics|!wrong(track,artist,lyrics)){crate::lyrics_library::save(track,artist,"cache",&lyrics);trace(||"本機快取:命中".into());return (Ok(lyrics),false);}
     if let Some(remembered)=read_negative(&path){trace(||"近期已確認無同步歌詞".into());return (remembered,false);}
     let netease=(skip!=Skip::Netease).then_some("https://music.163.com");
     let qq=(skip!=Skip::QqMusic).then_some("https://c.y.qq.com");
     let (result,failed)=fetch_with_sources_detail(netease,qq,Some("https://lrclib.net"),track,artist,duration_secs);
     match &result {
         // 罗马音版本照常显示，但不缓存，下次仍尝试找原文。
-        Ok(lyrics) if lyrics.synced=>{if !romanized(track,lyrics){write_cache(&path,lyrics);crate::lyrics_library::save(track,artist,"online",lyrics);}},
+        Ok(lyrics) if lyrics.synced=>{if !wrong(track,artist,lyrics){write_cache(&path,lyrics);crate::lyrics_library::save(track,artist,"online",lyrics);}},
         // 每个来源都正常回应却没有同步歌词，才记为「确认没有」；有来源断网或限流时下次照常重查。
         Ok(lyrics) if !failed=>write_negative(&path,Some(lyrics)),
         Err(FetchError::NotFound) if !failed=>write_negative(&path,None),
@@ -1105,11 +1116,12 @@ fn fetch_with_sources_once(netease:Option<&str>,qq:Option<&str>,lrclib:Option<&s
     for (name,base,fetch) in attempts {
         let Some(base)=base else{continue;};
         let result=fetch(base,track,artist,duration);
-        let roman=result.as_ref().is_ok_and(|lyrics|lyrics.synced && romanized(track,lyrics));
-        trace(||format!("{name}:{}{}",outcome(&result),if roman{"(羅馬音)"}else{""}));
+        let off_language=result.as_ref().is_ok_and(|lyrics|lyrics.synced && wrong(track,artist,lyrics));
+        let reason=result.as_ref().ok().and_then(|lyrics|crate::lyrics_lang::mismatch(track,artist,lyrics));
+        trace(||format!("{name}:{}{}",outcome(&result),if off_language{format!("({})",reason.unwrap_or("非原文"))}else{String::new()}));
         match result {
-            // 罗马音版本先留作备选，继续向后面的来源找原文。
-            Ok(lyrics) if roman=>{if transliterated.is_none(){transliterated=Some(lyrics);}}
+            // 不是原文（羅馬拼音、中文翻譯）先留作備選，繼續向後面的來源找原文。
+            Ok(lyrics) if off_language=>{if transliterated.is_none(){transliterated=Some(lyrics);}}
             Ok(lyrics) if lyrics.synced=>return (Ok(lyrics),failure.is_some()),
             Ok(lyrics)=>{if plain.is_none(){plain=Some(lyrics);}}
             Err(FetchError::NotFound)=>{}
@@ -1444,7 +1456,8 @@ fn lyrics_from_items(items:&[serde_json::Value],track:&str,duration_secs:f64)->R
         if duration_secs>0.0 && d>0.0 && score>(duration_secs*0.03).max(10.0){continue;}
         if let Some(raw)=it.get("syncedLyrics").and_then(|v|v.as_str()) {
             let parsed=parse_lrc(raw);
-            let rank=(romanized(track,&parsed),score);
+            // 同一首歌常同時有原文與翻譯版：原文優先，其次才是時長接近。
+            let rank=(wrong_title(track,&parsed),score);
             if !parsed.lines.is_empty() && synced.as_ref().is_none_or(|(_,s)|rank.0<s.0 || rank.0==s.0 && rank.1<s.1){synced=Some((parsed,rank));}
         }
         if let Some(raw)=it.get("plainLyrics").and_then(|v|v.as_str()).filter(|s|!s.trim().is_empty()) {
