@@ -214,7 +214,8 @@ mod env_power_tests {
     use crate::bt::{Device,DeviceKind};
 
     fn headset(level:Option<u8>)->Device {
-        Device{id:"AA".into(),name:"Headset".into(),battery:level,kind:DeviceKind::Headphones}, ..Default::default() }
+        Device{id:"AA".into(),name:"Headset".into(),battery:level,kind:DeviceKind::Headphones,..Default::default()}
+    }
 
     #[test]
     fn system_battery_keeps_priority_over_bluetooth() {
