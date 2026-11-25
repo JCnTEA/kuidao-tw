@@ -88,7 +88,7 @@ fn pill_shadow(painter:&egui::Painter,rect:Rect,radius:f32,strength:f32){
         painter.rect_filled(r,radius+grow*0.8,Color32::from_black_alpha((255.0*a*strength) as u8));
     }
 }
-pub(crate) const PAGE_NAMES: [&str; 13] = ["音樂", "專注", "健康", "置物架", "待辦", "郵箱", "AI 額度", "日程", "天氣", "系統性能", "無線設備", "遊戲", "電量"];
+pub(crate) const PAGE_NAMES: [&str; 13] = ["音樂", "專注", "健康", "置物架", "待辦", "信箱與行程", "AI 額度", "行程", "天氣", "系統性能", "無線設備", "遊戲", "電量"];
 pub(crate) const PAGE_SHORTCUT_KEYS: [&str; PAGE_NAMES.len()] = [
     "music", "focus", "health", "shelf", "tasks", "mail", "quota", "calendar", "weather",
     "performance", "wireless", "games", "power",
@@ -1105,6 +1105,8 @@ pub struct App {
     bt_initialized: bool,
     /// v0.5.5：郵件帳號、最近郵件與設置表單。
     pub(crate) mail: MailState,
+    /// 信箱與行程合併頁目前顯示哪一個：0 信箱、1 行程。
+    pub(crate) mail_view: u8,
     /// 島內詳情與獨立閱讀窗口各保留一份排版緩存。
     mail_lines_cache: Vec<(std::sync::Arc<str>, std::sync::Arc<str>, u32, std::sync::Arc<Vec<crate::mail_format::Line>>)>,
     /// v0.5.6：日曆（CalDAV）配置、未來 24 小時事件與設置表單。
@@ -1140,7 +1142,7 @@ impl App {
         let (bw, bh) = if settings.minimal { (BAR_W_MIN, BAR_H_MIN) } else { (BAR_W, BAR_H) };
         let focus_seconds=settings.focus_minutes as f32*60.0;
         let initial_lyrics=settings.lyrics_enabled;
-        let initial_page=settings.page_order.iter().copied().find(|page|settings.visible_pages[*page]).unwrap_or(0);
+        let initial_page=settings.page_order.iter().copied().filter(|page|*page!=CALENDAR_PAGE).find(|page|settings.visible_pages[*page]).unwrap_or(0);
         let weather_source=crate::weather_source_ui::State::load();
         let mut weather=crate::weather::State::load(&settings.weather_city,settings.weather_position.as_ref());
         if weather_source.displayed==crate::weather_source_ui::Provider::Qweather {weather.snapshot=weather_source.runtime.snapshot();}
@@ -1284,6 +1286,7 @@ impl App {
             bt_shown: Vec::new(), wireless_devices:Vec::new(),wireless_offset:0,wireless_focus:None,wireless_enter_at:None,wireless_fx:Default::default(),wireless_alerted:Default::default(),wireless_seen_at:Default::default(),
             bt_initialized: false,
             mail: MailState { accounts: mail::load_accounts(), ..Default::default() },
+            mail_view: 0,
             backdrop:None, mail_unread:0, mail_bell_at:-10.0, mail_bell_account:String::new(), social:crate::social::Badges::load(), line_login:Default::default(), line_account:crate::line_login::load_account(), line_secret_input:String::new(), line_message:String::new(),
             mail_lines_cache: Vec::new(),
             calendar: CalendarState::load(),
@@ -1679,7 +1682,16 @@ impl App {
         self.mail.manage.identities.retain(|_,old|accounts.contains(old));
         self.mail.manage.next_refresh=0.0;
         mail::save_accounts(accounts);
+        // 信箱與行程共用同一組 Google 授權：Gmail 帳號一存好就順手接上行程。
+        let mut linked=false;
+        for account in accounts.iter().filter(|account|account.enabled && account.provider==mail::Provider::Gmail) {
+            if matches!(calendar::link_google_from_mail(&account.email),Ok(true)) {linked=true;}
+        }
         self.pending.push(Cmd::MailSync);
+        if linked {
+            self.calendar.config=calendar::load_config();
+            self.pending.push(Cmd::CalendarSync);
+        }
     }
 
     /// 錄製/截圖用的郵件樣例（只在 `record` feature 下編譯）。
@@ -1888,6 +1900,10 @@ impl App {
     }
 
     pub fn show_page(&mut self,page:usize) {
+        // 行程已併進信箱頁：任何想開行程頁的入口都落到合併頁的「行程」分頁。
+        if page==CALENDAR_PAGE {self.mail_view=1;}
+        else if page==MAIL_PAGE {self.mail_view=0;}
+        let page=if page==CALENDAR_PAGE {MAIL_PAGE} else {page};
         if !self.module_on(page) {
             self.open_page_settings(page);
             return;
@@ -2030,6 +2046,7 @@ impl App {
 
     fn navigation_pages(&self) -> impl Iterator<Item=usize> + '_ {
         self.settings.page_order.iter().copied()
+            .filter(|page|*page!=CALENDAR_PAGE)
             .filter(|page|self.settings.visible_pages[*page])
             .chain(PAGE_NAMES.len()..PAGE_NAMES.len()+self.status_page_count())
     }
@@ -2414,7 +2431,7 @@ impl App {
             }
             if self.page==TODO_PAGE && self.plugins.has_card(){return PH+46.0;}
         }
-        if self.page==PERFORMANCE_PAGE {crate::performance_ui::PAGE_H}else if self.page==BLUETOOTH_PAGE {194.0}else if self.page==GAME_PAGE {GAME_H}else if self.page==POWER_PAGE {POWER_H}else if self.page==CALENDAR_PAGE {CALENDAR_H}else if self.page==WEATHER_PAGE {WEATHER_H}else if self.page==6{176.0}else if self.page==5&&self.mail.open_uid.is_some(){236.0}else{PH}
+        if self.page==PERFORMANCE_PAGE {crate::performance_ui::PAGE_H}else if self.page==BLUETOOTH_PAGE {194.0}else if self.page==GAME_PAGE {GAME_H}else if self.page==POWER_PAGE {POWER_H}else if self.page==MAIL_PAGE && self.mail_view==1 {CALENDAR_H}else if self.page==WEATHER_PAGE {WEATHER_H}else if self.page==6{176.0}else if self.page==5&&self.mail.open_uid.is_some(){236.0}else{PH}
     }
 
     // ---------------------------------------------------------------
@@ -4328,7 +4345,8 @@ impl App {
             // 置物架的標題就是「置物架 | 剪貼板」分欄，由頁面自己畫。
             3 => return,
             4 => ("待辦", "清單", theme::GREEN),
-            5 => ("信箱", "", theme::CYAN),
+            5 if self.mail_view==1 => return,
+            5 => ("信箱", "與行程", theme::CYAN),
             6 => ("AI", "額度", theme::SOFT_GREEN),
             8 if self.weather.solar_open => ("日出", "日落", theme::YELLOW),
             PERFORMANCE_PAGE => ("系統", "性能", crate::performance_ui::CPU_COLOR),
@@ -4505,6 +4523,7 @@ impl App {
         let actions=header.shifted(-self.header_music_shift(),0.0);
         #[cfg(any(feature="sdk-js",feature="sdk-wasm"))]
         if page==4 && crate::sdk_spike::live_card(c){return;}
+        if page==MAIL_PAGE { self.mail_view_switch(header); }
         match page {
             0 => self.page_music(c, env, cmds),
             1 => self.page_focus(c, header, env),
@@ -4517,7 +4536,7 @@ impl App {
                     self.open_settings();
                 }
             }
-            5 => self.page_mail(c, env, cmds),
+            5 => if self.mail_view==1 {self.page_calendar(c,header,env)} else {self.page_mail(c, env, cmds)},
             6 => self.page_quota(c,&actions),
             PERFORMANCE_PAGE => self.page_performance(c),
             8 => self.page_weather(c,&actions,env,cmds),
@@ -4527,6 +4546,17 @@ impl App {
             CALENDAR_PAGE => self.page_calendar(c,header,env),
             _ => self.page_settings(c),
         }
+    }
+
+    /// 信箱與行程合併頁右上角的切換：兩個小膠囊，信箱頁顯示「行程」，行程頁顯示「信箱」。
+    fn mail_view_switch(&mut self, header:&Card) {
+        let (label,next)=if self.mail_view==1 {("信箱",0u8)} else {("行程",1u8)};
+        let (x,y,w,h)=(150.0,9.0,52.0,18.0);
+        header.fill(x,y,w,h,9.0,theme::BTN);
+        let hit=header.hit(x,y,w,h,"mail-view-switch");
+        if hit.hovered() {header.fill(x+2.0,y+2.0,w-4.0,h-4.0,7.0,theme::BTN_HOVER);}
+        header.centered_text(x+w/2.0,y+h/2.0,label,9.5,W::Semibold,theme::WHITE,H::Center);
+        if hit.clicked() {self.mail_view=next; self.notice=None;}
     }
 
     fn toast_layer(&mut self, c: &Card, base_y:f32)->Option<Rect> {

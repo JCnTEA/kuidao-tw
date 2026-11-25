@@ -295,6 +295,22 @@ pub fn save_connection(cfg: &Config, password: &str, old: Option<&Config>) -> Re
     Ok(())
 }
 
+/// 信箱的 Gmail 帳號直接兼作行程帳號：把同一個應用程式密碼複製到行事曆憑據，
+/// 使用者只要新增一次 Gmail 信箱，信箱與行程就一起抓，不必再另外輸入密碼。
+/// 已經有可用的 Google 行程憑據時不覆蓋，避免把使用者手動設定過的值洗掉。
+pub fn link_google_from_mail(email: &str) -> Result<bool, String> {
+    let email = email.trim().to_ascii_lowercase();
+    if email.is_empty() { return Ok(false); }
+    let cfg = Config { provider: Provider::Google, username: email.clone(), href: None, server: None };
+    if secrets::load(&cfg).is_ok() { return Ok(false); }
+    let password = crate::mail::secrets::load(&email)
+        .map_err(|_| "信箱還沒有存授權碼".to_string())?;
+    let password = normalize_password(Provider::Google, &password);
+    if app_password_problem(Provider::Google, &password).is_some() { return Ok(false); }
+    save_connection(&cfg, &password, None)?;
+    Ok(true)
+}
+
 pub fn forget_config() -> Result<(), String> {
     let Some(active) = load_config() else { return Ok(()); };
     let mut accounts = load_configs();

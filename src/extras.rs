@@ -4314,7 +4314,7 @@ impl App {
                             if self.plugins.page_shortcut_settings(ui,&mut self.settings.show_page_shortcuts) {
                                 ui.separator();
                             }
-                            let descriptions=["播放控制與同步歌詞","番茄鐘與休息計時","喝水與久坐提醒","臨時收納文件位置","任務清單與到期提醒","郵件摘要與驗證碼","Agent 剩餘額度和帳號切換","行事曆、郵件邀請與工作日程","當地天氣與七日預報","處理器、顯卡、記憶體、網路與磁碟","藍牙裝置連線狀態與多來源電量","小遊戲與休閒入口","電池與無線裝置電量總覽"];
+                            let descriptions=["播放控制與同步歌詞","番茄鐘與休息計時","喝水與久坐提醒","臨時收納文件位置","任務清單與到期提醒","信箱摘要、驗證碼與同一組 Google 帳號的行程","Agent 剩餘額度和帳號切換","行事曆、郵件邀請與工作日程","當地天氣與七日預報","處理器、顯卡、記憶體、網路與磁碟","藍牙裝置連線狀態與多來源電量","小遊戲與休閒入口","電池與無線裝置電量總覽"];
                             ui.label(egui::RichText::new("拖動左側手柄調整順序；關閉的功能不在後台運行，不同步也不提醒，已有數據保留。").size(11.5).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
                             #[derive(Clone)]
                             struct PageDrag(usize);
@@ -4322,6 +4322,8 @@ impl App {
                             let mut jump=None;
                             let row_w=ui.available_width();
                             for (index,page) in self.settings.page_order.into_iter().enumerate() {
+                                // 行程已併進信箱與行程頁，不再單獨列出。
+                                if page==crate::app::CALENDAR_PAGE {continue;}
                                 if index>0 {ui.separator();}
                                 let mut visible=self.settings.visible_pages[page];
                                 let can_change=!visible || self.settings.visible_pages.iter().filter(|enabled|**enabled).count()>1;

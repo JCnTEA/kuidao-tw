@@ -299,6 +299,12 @@ impl Shell {
         diagnostics::graphics(cc);
         let running_compat=cc.wgpu_render_state.is_some();
         diagnostics::startup("載入本機配置");
+        // 已存在的 Gmail 信箱在啟動時把授權碼補給行程，舊用戶不用重新設定。
+        for account in daozai::mail::load_accounts() {
+            if account.enabled && account.provider==daozai::mail::Provider::Gmail {
+                let _=daozai::calendar::link_google_from_mail(&account.email);
+            }
+        }
         let mut app = App::new(&cc.egui_ctx, Options::default());
         #[cfg(all(windows, feature = "sdk-material"))]
         let material_debug = daozai::material::debug_requested();
