@@ -3,8 +3,8 @@
 2 ICON "assets/kuidao_dev.ico"
 1 24 "app.manifest"
 1 VERSIONINFO
- FILEVERSION 0,6,133,0
- PRODUCTVERSION 0,6,132,0
+ FILEVERSION 0,6,136,0
+ PRODUCTVERSION 0,6,136,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS 0x40004L
@@ -19,8 +19,8 @@ BEGIN
             VALUE "InternalName", "KuidaoDev"
             VALUE "OriginalFilename", "kuidao-dev.exe"
             VALUE "ProductName", "鬼島 Kuidao 桌面靈動島（開發版）"
-            VALUE "ProductVersion", "0.6.135"
-            VALUE "FileVersion", "0.6.135"
+            VALUE "ProductVersion", "0.6.136"
+            VALUE "FileVersion", "0.6.136"
         END
     END
     BLOCK "VarFileInfo"
