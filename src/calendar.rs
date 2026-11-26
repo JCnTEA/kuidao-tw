@@ -37,10 +37,12 @@ pub enum Provider {
     Custom,
     /// 自建或第三方 Exchange（ActiveSync），地址由使用者填寫。
     Exchange,
+    /// 只讀訂閱：直接填行事曆服務提供的 iCal（.ics）網址，不需要帳號密碼。
+    Ical,
 }
 
 impl Provider {
-    pub const ALL: [Provider; 4] = [Provider::Google, Provider::ICloud, Provider::Custom, Provider::Exchange];
+    pub const ALL: [Provider; 5] = [Provider::Google, Provider::ICloud, Provider::Custom, Provider::Exchange, Provider::Ical];
 
     pub fn key(self) -> &'static str {
         match self {
@@ -48,6 +50,7 @@ impl Provider {
             Provider::ICloud => "icloud",
             Provider::Custom => "custom",
             Provider::Exchange => "exchange",
+            Provider::Ical => "ical",
         }
     }
 
@@ -57,6 +60,7 @@ impl Provider {
             Provider::ICloud => "iCloud",
             Provider::Custom => "CalDAV",
             Provider::Exchange => "Exchange",
+            Provider::Ical => "iCal",
         }
     }
 
@@ -65,19 +69,23 @@ impl Provider {
         match self {
             Provider::Google => "https://apidata.googleusercontent.com/caldav/v2/",
             Provider::ICloud => "https://caldav.icloud.com/",
-            Provider::Custom | Provider::Exchange => "",
+            Provider::Custom | Provider::Exchange | Provider::Ical => "",
         }
     }
 
     /// 自訂 CalDAV、Exchange 需要使用者填寫伺服器位址。
-    pub fn custom_server(self) -> bool { matches!(self, Provider::Custom | Provider::Exchange) }
+    pub fn custom_server(self) -> bool { matches!(self, Provider::Custom | Provider::Exchange | Provider::Ical) }
 
     /// 走 Exchange ActiveSync 協定，而不是 CalDAV。
     pub fn exchange(self) -> bool { matches!(self, Provider::Exchange) }
 
     /// 伺服器位址輸入框的範例。
     pub fn server_hint(self) -> &'static str {
-        if self == Provider::Exchange { "mail.example.com" } else { "https://example.com/remote.php/dav" }
+        match self {
+            Provider::Exchange => "mail.example.com",
+            Provider::Ical => "https://calendar.google.com/calendar/ical/…/basic.ics",
+            _ => "https://example.com/remote.php/dav",
+        }
     }
 
     /// 一個帳號下有多個行事曆時全部同步。
@@ -87,9 +95,9 @@ impl Provider {
     pub fn guide(self) -> [&'static str; 3] {
         match self {
             Provider::Google => [
-                "用瀏覽器開啟 myaccount.google.com，登入 Google 帳戶",
-                "安全性 → 兩步驟驗證 → 應用程式密碼，產生一組密碼（名稱可填「鬼島」）",
-                "使用者名稱要填完整 Gmail 地址（name@gmail.com），密碼填剛產生的 16 碼應用程式密碼",
+                "Google 已停止 CalDAV 的密碼登入，只接受 OAuth 2.0；應用程式密碼必定回 401",
+                "請改選「iCal」，到 Google 日曆 → 設定 → 整合行事曆，複製「秘密 iCal 網址」",
+                "把網址貼到 iCal 欄位即可只讀同步，不需要帳號密碼",
             ],
             Provider::ICloud => [
                 "用瀏覽器開啟 account.apple.com，登入 Apple 帳戶",
@@ -106,6 +114,11 @@ impl Provider {
                 "使用者名稱一般是信箱，也可能是「域\\使用者名稱」；密碼用信箱密碼",
                 "只讀同步行事曆；Microsoft 365 / Outlook.com 已不支援密碼登入，暫不能連線",
             ],
+            Provider::Ical => [
+                "Google 日曆 → 設定 → 選擇日曆 → 整合行事曆，複製「秘密 iCal 網址」",
+                "iCloud、Outlook 等服務也有類似的 .ics 訂閱網址，複製後直接貼上",
+                "只讀同步，不需要帳號密碼；Google CalDAV 已改為只接受 OAuth，密碼登入必定 401",
+            ],
         }
     }
 
@@ -119,6 +132,7 @@ impl Provider {
             "icloud" => Provider::ICloud,
             "custom" => Provider::Custom,
             "exchange" => Provider::Exchange,
+            "ical" => Provider::Ical,
             _ => Provider::Google,
         }
     }
@@ -148,6 +162,7 @@ pub fn normalize_username(provider: Provider, raw: &str) -> String {
     let user = raw.trim().replace('＠', "@").replace(' ', "");
     if user.is_empty() { return user; }
     if provider == Provider::Google && !user.contains('@') { return format!("{user}@gmail.com"); }
+    if provider == Provider::Ical { return user; }
     user
 }
 
@@ -273,6 +288,8 @@ pub fn select_provider(provider: Provider) -> Result<(), String> {
 
 /// 新連接完整保存後才移除舊憑據；配置保存失敗時恢復原憑據。
 pub fn save_connection(cfg: &Config, password: &str, old: Option<&Config>) -> Result<(), String> {
+    // iCal 訂閱只有網址，沒有密碼，不必碰 Windows 憑據管理器。
+    if cfg.provider == Provider::Ical { return save_config(cfg); }
     let saved = load_configs().into_iter().find(|saved| saved.provider == cfg.provider);
     let old = saved.as_ref().or(old.filter(|old| old.provider == cfg.provider));
     let same_account = old.is_some_and(|old|
@@ -299,16 +316,9 @@ pub fn save_connection(cfg: &Config, password: &str, old: Option<&Config>) -> Re
 /// 使用者只要新增一次 Gmail 信箱，信箱與行程就一起抓，不必再另外輸入密碼。
 /// 已經有可用的 Google 行程憑據時不覆蓋，避免把使用者手動設定過的值洗掉。
 pub fn link_google_from_mail(email: &str) -> Result<bool, String> {
-    let email = email.trim().to_ascii_lowercase();
-    if email.is_empty() { return Ok(false); }
-    let cfg = Config { provider: Provider::Google, username: email.clone(), href: None, server: None };
-    if secrets::load(&cfg).is_ok() { return Ok(false); }
-    let password = crate::mail::secrets::load(&email)
-        .map_err(|_| "信箱還沒有存授權碼".to_string())?;
-    let password = normalize_password(Provider::Google, &password);
-    if app_password_problem(Provider::Google, &password).is_some() { return Ok(false); }
-    save_connection(&cfg, &password, None)?;
-    Ok(true)
+    // Google CalDAV 只接受 OAuth 2.0，信箱的應用程式密碼不能用來同步行程。
+    let _ = email;
+    Ok(false)
 }
 
 pub fn forget_config() -> Result<(), String> {
@@ -447,6 +457,7 @@ impl Failure {
     fn status(provider: Provider, code: u16) -> Self {
         let message = match code {
             401 if provider.custom_server() => "驗證帳號失敗（401），請核對使用者名稱和密碼".to_string(),
+            401 if provider == Provider::Ical => "iCal 網址已失效（401），請回到行事曆設定重新複製「秘密 iCal 網址」".to_string(),
             401 if provider == Provider::Google => "驗證帳號失敗（401），請核對使用者名稱和Google提供的專用密碼（使用者名稱要填完整 Gmail 地址，例如 name@gmail.com）".to_string(),
             401 => format!("驗證帳號失敗（401），請核對使用者名稱和{}提供的專用密碼", provider.label()),
             403 => "行事曆伺服器拒絕訪問（403），請核對同步地址、專用密碼及行事曆授權".to_string(),
@@ -753,6 +764,7 @@ pub fn fetch_month(cfg: &Config, password: &str, month: NaiveDate) -> Result<Fet
 }
 
 fn fetch_range(cfg: &Config, password: &str, lo: chrono::DateTime<chrono::Utc>, hi: chrono::DateTime<chrono::Utc>) -> Result<Fetched, Failure> {
+    if cfg.provider == Provider::Ical { return fetch_ical_url(cfg, lo, hi); }
     if cfg.provider.exchange() { return exchange::fetch(cfg, password, lo, hi); }
     let agent = agent()?;
     // 每次都發現全部日曆：已保存的地址可能指向空日曆，會遮蔽同一帳號下的其他日曆。
@@ -772,6 +784,20 @@ fn fetch_range(cfg: &Config, password: &str, lo: chrono::DateTime<chrono::Utc>, 
     events.sort_by_key(|m|m.start);
     let mut seen=std::collections::HashSet::new();events.retain(|m|seen.insert(dedupe_key(m)));
     Ok(Fetched{href,events,report})
+}
+
+/// 直接下載 iCal（.ics）訂閱網址並解析；只接受 https，避免把憑據或行程送到明文連線。
+fn fetch_ical_url(cfg:&Config,lo:chrono::DateTime<chrono::Utc>,hi:chrono::DateTime<chrono::Utc>)->Result<Fetched,Failure>{
+    let url=url::Url::parse(&cfg.base()).map_err(|_|Failure::text("iCal 網址無效"))?;
+    if url.scheme()!="https" {return Err(Failure::text("iCal 網址必須以 https:// 開頭"));}
+    let agent=agent()?;
+    let response=agent.get(url.as_str()).call().map_err(|error|match error{
+        ureq::Error::Status(code,_)=>Failure::status(cfg.provider,code).at_url(&url),
+        other=>Failure::transport(&other),
+    })?;
+    let body=response.into_string().map_err(|error|Failure::transport(&error))?;
+    let ParsedEvents{events,report}=inspect_ics(&body,lo,hi).map_err(|message|Failure::text(message))?;
+    Ok(Fetched{href:url.to_string(),events,report})
 }
 
 fn fetch_collection(agent:&ureq::Agent,cfg:&Config,password:&str,href:&str,lo:chrono::DateTime<chrono::Utc>,hi:chrono::DateTime<chrono::Utc>)->Result<Fetched,Failure>{

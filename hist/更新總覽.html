@@ -63,6 +63,8 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
+<div class="card"><span class="badge">修正</span><h3>Google 行程改成 iCal 網址訂閱</h3><p>Google 已停止 CalDAV 的密碼登入，只接受 OAuth 2.0，所以「Gmail + 應用程式密碼」一定回 401。新增「iCal」平台：到 Google 日曆 → 設定 → 整合行事曆複製「秘密 iCal 網址」，貼上就能只讀同步，不需帳號密碼。原本的 Google 卡保留但會提示改走 iCal。</p></div>
+
 <div class="card"><span class="badge">簡化</span><h3>天氣來源只剩 Open-Meteo</h3><p>和風天氣整套拿掉：不再出現雙卡選擇、API Host／Key 表單、和風城市與配置教程。設定頁只留一張 Open-Meteo 卡，固定為預設；舊版存過和風的人啟動後也會自動回到 Open-Meteo，不需要 Key。</p></div>
 
 <div class="card"><span class="badge">調整</span><h3>吉祥物動畫包回來：可開啟資料夾、直接匯入、重新載入</h3><p>整併上游後，「外觀 → 島體顯示」只剩開關，原本的吉祥物形象說明、動畫包資料夾與重新載入都不見了。現在補回並加上「匯入動畫包…」：選一個內含 pack.json 的資料夾，會複製到 mascot-packs，重新載入後套用；沒有動畫包時照用內建石虎。</p></div>

@@ -5046,10 +5046,11 @@ impl App {
                                                 .stroke(egui::Stroke::NONE).corner_radius(6.0);
                                             let button=ui.add_enabled_ui(!self.calendar.testing,|ui|ui.add_sized([width,30.0],button)).inner;
                                             let button=match p{
-                                                crate::calendar::Provider::Google=>button.on_hover_text("Google 日曆：Gmail 地址 + 應用程式密碼"),
+                                                crate::calendar::Provider::Google=>button.on_hover_text("Google CalDAV 已停止密碼登入，請改用 iCal 訂閱"),
                                                 crate::calendar::Provider::ICloud=>button.on_hover_text("蘋果行事曆：Apple ID + App 專用密碼"),
                                                 crate::calendar::Provider::Custom=>button.on_hover_text("任意 CalDAV 行事曆：Nextcloud、群暉、Fastmail 等"),
                                                 crate::calendar::Provider::Exchange=>button.on_hover_text("公司自建或第三方 Exchange 行事曆（ActiveSync），只讀同步"),
+                                                crate::calendar::Provider::Ical=>button.on_hover_text("iCal 訂閱：貼上 .ics 網址即可，只讀同步、不需要密碼"),
                                             };
                                             if button.clicked() && !selected{
                                                 self.select_calendar_provider(p);
@@ -5060,7 +5061,7 @@ impl App {
                             });
                             ui.add_space(7.0);
                             ui.horizontal_top(|ui|{
-                                ui.allocate_ui_with_layout(egui::vec2(50.0,18.0),egui::Layout::left_to_right(egui::Align::Center),|ui|{ui.set_min_size(egui::vec2(50.0,18.0));ui.label(egui::RichText::new("伺服器").size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));});
+                                ui.allocate_ui_with_layout(egui::vec2(50.0,18.0),egui::Layout::left_to_right(egui::Align::Center),|ui|{ui.set_min_size(egui::vec2(50.0,18.0));ui.label(egui::RichText::new(if self.calendar.form.provider==crate::calendar::Provider::Ical{"iCal 網址"}else{"伺服器"}).size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));});
                                 if self.calendar.form.provider.custom_server(){
                                     ui.add_sized([ui.available_width(),22.0],egui::TextEdit::singleline(&mut self.calendar.form.server).vertical_align(egui::Align::Center)
                                         .hint_text(egui::RichText::new(self.calendar.form.provider.server_hint()).color(settings_color(ctx,Color32::from_gray(155),Color32::from_gray(100)))));
@@ -5068,6 +5069,7 @@ impl App {
                                     ui.add(egui::Label::new(egui::RichText::new(self.calendar.form.provider.server()).size(12.0).color(settings_color(ctx,Color32::from_gray(205),Color32::from_gray(55)))).wrap());
                                 }
                             });
+                            if self.calendar.form.provider!=crate::calendar::Provider::Ical {
                             settings_label(ui,"連線帳號");
                             ui.scope(|ui|{
                                 ui.visuals_mut().extreme_bg_color=settings_color(ctx,Color32::from_rgb(25,25,28),Color32::from_rgb(244,246,249));
@@ -5094,8 +5096,11 @@ impl App {
                                     if ui.add_sized([48.0,30.0],egui::Button::new(if self.calendar.form.show{"隱藏"}else{"顯示"})).clicked(){self.calendar.form.show=!self.calendar.form.show;}
                                 });
                             });
+                            }
                             ui.add_space(7.0);
-                            let guide=if self.calendar.form.guide_open{"如何獲取使用者名稱和密碼？（點選收起）"}else{"如何獲取使用者名稱和密碼？"};
+                            let guide=if self.calendar.form.provider==crate::calendar::Provider::Ical {
+                                if self.calendar.form.guide_open{"如何取得 iCal 網址？（點選收起）"}else{"如何取得 iCal 網址？"}
+                            }else if self.calendar.form.guide_open{"如何獲取使用者名稱和密碼？（點選收起）"}else{"如何獲取使用者名稱和密碼？"};
                             if ui.link(egui::RichText::new(guide).color(settings_color(ctx,Color32::from_rgb(120,185,245),Color32::from_rgb(26,100,177)))).clicked(){self.calendar.form.guide_open=!self.calendar.form.guide_open;}
                             if self.calendar.form.guide_open{
                                 ui.add_space(4.0);
@@ -5115,7 +5120,19 @@ impl App {
                                 self.calendar.form.username=user.clone();
                                 let custom=self.calendar.form.provider.custom_server();
                                 let server=crate::calendar::normalize_server(&self.calendar.form.server);
-                                if custom && server.is_none(){self.calendar.note="請填寫以 https:// 開頭的 CalDAV 伺服器地址".into();self.calendar.note_error=true;}
+                                if self.calendar.form.provider==crate::calendar::Provider::Ical {
+                                    if let Some(server)=server {
+                                        let cfg=crate::calendar::Config{provider:crate::calendar::Provider::Ical,username:String::new(),href:None,server:Some(server)};
+                                        self.calendar.testing=true;
+                                        self.calendar.test_password.clear();
+                                        self.calendar.note="正在讀取 iCal…".into();
+                                        self.calendar.note_error=false;
+                                        self.pending.push(Cmd::CalendarTest(cfg,String::new()));
+                                    }else{self.calendar.note="請貼上以 https:// 開頭、結尾為 .ics 的 iCal 網址".into();self.calendar.note_error=true;}
+                                }else if self.calendar.form.provider==crate::calendar::Provider::Google {
+                                    self.calendar.note="Google CalDAV 已改為只接受 OAuth，應用程式密碼必定回 401。請改選 iCal，貼上 Google 日曆的「秘密 iCal 網址」".into();
+                                    self.calendar.note_error=true;
+                                }else if custom && server.is_none(){self.calendar.note="請填寫以 https:// 開頭的 CalDAV 伺服器地址".into();self.calendar.note_error=true;}
                                 else if user.is_empty(){self.calendar.note="請先填使用者名稱".into();self.calendar.note_error=true;}
                                 else if self.calendar.form.password.is_empty(){self.calendar.note="請先填密碼".into();self.calendar.note_error=true;}
                                 else{
