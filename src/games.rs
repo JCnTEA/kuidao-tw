@@ -1,5 +1,5 @@
 //! 「遊戲庫」頁：從本機 Steam、Riot、Epic、GOG、Ubisoft、EA、Battle.net 與
-//! Amazon 留下的 manifest、登錄資料與安裝資料夾整理已安裝遊戲。
+//! Amazon 留下的 manifest、登入資料與安裝資料夾整理已安裝遊戲。
 //! 只在使用者打開頁面或按下重新掃描時讀取，不背景輪詢，也不上傳任何資料。
 
 use crate::app::GAME_H;

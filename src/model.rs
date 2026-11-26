@@ -377,14 +377,14 @@ pub struct Settings {
     pub mail_ics: u32,
     pub ignored_mail_events: Vec<String>,
     /// v0.5.6 行程：還沒配置時在島上給一次「接入飛書行事曆」的提示；
-    /// 用戶點開設定或關掉後置 false，不再彈。
+    /// 使用者點開設定或關掉後置 false，不再彈。
     pub calendar_prompt: bool,
     pub calendar_auto_sync: bool,
     /// 記錄最近複製的文字（最近記錄與固定條目均在本機儲存）。
     pub clipboard_history: bool,
     /// 天氣頁要看的城市；留空表示按網路出口自動定位。
     pub weather_city: String,
-    /// 用戶確認的具體地點；重新整理時直接使用座標，避免同名城市重新匹配。
+    /// 使用者確認的具體地點；重新整理時直接使用座標，避免同名城市重新匹配。
     pub weather_position: Option<crate::weather::Position>,
     /// 已儲存、可在島上下拉切換的城市（不含自動定位），最多 `weather::MAX_CITIES` 個。
     pub weather_saved: Vec<crate::weather::Position>,

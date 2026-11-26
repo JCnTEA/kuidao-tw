@@ -1,6 +1,6 @@
 use super::*;
 
-/// 舊版「新郵件提醒」關著的用戶：升級後信箱模塊關閉，內部開關恢復為開，不會突然開始收信。
+/// 舊版「新郵件提醒」關著的使用者：升級後信箱模塊關閉，內部開關恢復為開，不會突然開始收信。
 #[test]
 fn merged_mail_switch_migrates_old_off_to_module_off(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
@@ -25,7 +25,7 @@ fn merged_quota_switch_migrates_old_off_to_module_off(){
     assert!(!h.app.quota_active());
 }
 
-/// 已經開著的用戶不受影響。
+/// 已經開著的使用者不受影響。
 #[test]
 fn merged_switches_keep_enabled_users_unchanged(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);

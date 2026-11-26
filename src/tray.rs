@@ -665,7 +665,7 @@ pub fn activate_existing(calendar:bool)->bool {unsafe{
     // 託盤有獨立線程，能接收訊息不代表界面線程仍可響應。
     if SendMessageTimeoutW(window,WM_NULL,WPARAM(0),LPARAM(0),
         SMTO_ABORTIFHUNG|SMTO_ERRORONEXIT,1500,None).0==0{return false;}
-    // 用戶再次啟動時，把新進程的前台激活權限交給現有實例，無需模擬按鍵。
+    // 使用者再次啟動時，把新進程的前台激活權限交給現有實例，無需模擬按鍵。
     let _=AllowSetForegroundWindow(tray_pid);
     request_existing_window(tray,calendar)
 }}

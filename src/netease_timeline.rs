@@ -144,7 +144,7 @@ fn query(kugou:bool,playing:bool)->Option<(f64,f64)> {
                 }
                 slot.rejected=Some(learner.pid);slot.missed=Some(Instant::now());
                 let older=older_than_table(player,learner.stamp);
-                let reason=format!("{} 版本不在適配表裡，自動適配失敗（{reason}）{}",player.module,if older{"，比已適配的版本舊，提醒用戶更新"}else{"，比已適配的版本新，待補適配"});
+                let reason=format!("{} 版本不在適配表裡，自動適配失敗（{reason}）{}",player.module,if older{"，比已適配的版本舊，提醒使用者更新"}else{"，比已適配的版本新，待補適配"});
                 super::music_log::state(player.topic,&reason);
                 compat::set(player.exe,Item::Progress,Support::Unavailable(reason));
                 if older {compat::outdated(player.exe);}
@@ -397,7 +397,7 @@ mod tests {
     #[test]
     fn only_builds_older_than_the_table_ask_users_to_update(){
         assert!(older_than_table(&KUGOU,0x6ac9ec86-1));
-        assert!(!older_than_table(&KUGOU,0x6ac9ec86+1),"比已適配的新：是島仔還沒適配，不讓用戶更新");
+        assert!(!older_than_table(&KUGOU,0x6ac9ec86+1),"比已適配的新：是島仔還沒適配，不讓使用者更新");
         assert!(!older_than_table(&NETEASE,0x6ae94a6a),"#202 裡網易雲 3.1.43 比適配表新");
     }
 

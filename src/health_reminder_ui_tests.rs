@@ -278,7 +278,7 @@ fn health_sound_follows_delivery_mode_and_only_rings_when_first_due() {
 #[test]
 fn system_notify_defaults_on_and_persists(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
-    assert!(crate::model::Settings::default().system_notify,"預設開啟，老用戶升級後行為不變");
+    assert!(crate::model::Settings::default().system_notify,"預設開啟，老使用者升級後行為不變");
     h.cmds.clear();h.app.alert("待辦到時間了","檢查週報",4,true);h.frame(vec![]);
     assert!(h.cmds.iter().any(|cmd|matches!(cmd,crate::app::Cmd::Notify(t,..)if t=="待辦到時間了")),"預設仍發送系統通知");
     h.app.settings.system_notify=false;h.app.settings.save();

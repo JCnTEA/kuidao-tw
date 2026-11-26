@@ -517,7 +517,7 @@ fn query_system(artwork:&mut ArtworkCache) -> Result<Option<NowPlaying>,()> {
     })
         .min_by_key(|(_,media)|media_rank(media)).ok_or(())?;
     music_log::player(&media.source);
-    // 當前播放器正在重載時，不把暫停中的另一客戶端當成用戶切換了播放源。
+    // 當前播放器正在重載時，不把暫停中的另一客戶端當成使用者切換了播放源。
     if media_rank(&media)>0 && unreadable_previous{return Err(());}
     let key=format!("{}|{}|{}|{}",media.source,media.title,media.artist,media.album);
     let session=session.clone();

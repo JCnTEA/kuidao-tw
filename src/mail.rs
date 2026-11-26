@@ -656,7 +656,7 @@ pub mod secrets {
 pub(crate) mod net {
     //! TLS 連線 + 163/126 的 pre-login `ID` 握手。
     //!
-    //! `imap` 2.4 只在已登錄的 `Session` 上暴露 `run_command_and_check_ok`，
+    //! `imap` 2.4 只在已登入的 `Session` 上暴露 `run_command_and_check_ok`，
     //! 而網易要求 greeting → ID → LOGIN 的順序，所以這裡手工讀問候、發 ID，
     //! 再把「已經讀掉的開頭字節」原樣交回給 imap。
 
@@ -788,7 +788,7 @@ pub(crate) mod net {
             }
         }
 
-        // 3) 把問候交回 imap，再正常登錄
+        // 3) 把問候交回 imap，再正常登入
         let mut client = imap::Client::new(Prefixed::new(greeting, stream));
         client.read_greeting().map_err(|e| format!("伺服器問候異常：{e}"))?;
         let session = client
@@ -805,7 +805,7 @@ pub(crate) mod net {
         }
     }
 
-    /// 測試連線：連上、登錄、選 INBOX，然後退出。
+    /// 測試連線：連上、登入、選 INBOX，然後退出。
     pub fn probe(account: &Account, password: &str) -> Result<(), String> {
         let mut session = connect(account, password)?;
         session.select("INBOX").map_err(|e| format!("無法開啟收件箱：{e}"))?;
@@ -1785,7 +1785,7 @@ mod custom_endpoint_tests {
   }
   for email in ["user@outlook.com","user@hotmail.com","user@live.com"," USER@OUTLOOK.COM "]{
     let b=Account{email:email.into(),provider:Provider::Qq,custom:None,enabled:true,use_windows_proxy:false};
-   assert_eq!(b.endpoint().unwrap_err(),error,"誤選服務商也不能引導用戶嘗試密碼");
+   assert_eq!(b.endpoint().unwrap_err(),error,"誤選服務商也不能引導使用者嘗試密碼");
   }
  }
  use super::*;

@@ -1616,7 +1616,7 @@ mod tests {
             false
         }
         unsafe {
-            // 窗口在螢幕外可見，才能驗證實際桌面層級；不激活，也不遮擋用戶桌面。
+            // 窗口在螢幕外可見，才能驗證實際桌面層級；不激活，也不遮擋使用者桌面。
             let create=||TestWindow(CreateWindowExW(WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_TOPMOST,windows::core::w!("STATIC"),windows::core::w!(""),WS_POPUP|WS_VISIBLE,-10000,-10000,416,140,None,None,None,None).unwrap());
             let island=create();let cover=create();
             let flags=SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE;

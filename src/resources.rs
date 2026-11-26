@@ -61,7 +61,7 @@ pub static PENDING:PendingRequests=PendingRequests::new();
 pub struct Snapshot {pub private_bytes:usize,pub working_bytes:usize,pub handles:u32,pub threads:u32}
 impl Snapshot {
     pub fn abnormal(&self)->bool{self.private_bytes>=512*1024*1024 || self.threads>=128 || self.handles>=4096}
-    /// 遠超正常範圍（正常約 20–40 線程、500–600 句柄、幾百 MB）：繼續運行會拖慢用戶電腦。
+    /// 遠超正常範圍（正常約 20–40 線程、500–600 句柄、幾百 MB）：繼續運行會拖慢使用者電腦。
     pub fn severe(&self)->bool{self.private_bytes>=1536*1024*1024 || self.threads>=400 || self.handles>=16384}
 }
 

@@ -134,14 +134,14 @@ fn doubao_browser_transport_local() {
     assert!(cdp(port, &url, "Storage.getCookies").unwrap()["cookies"].as_array().unwrap().is_empty());
     let pid = browser.child.id();
     drop(browser);
-    assert!(!root.exists(), "登錄瀏覽器臨時目錄應已清理");
+    assert!(!root.exists(), "登入瀏覽器臨時目錄應已清理");
     assert!(TcpStream::connect((Ipv4Addr::LOCALHOST, port)).is_err(), "獨立瀏覽器端口應已關閉：{pid}");
 }
 
 #[test]
-#[ignore = "只讀驗證本機豆包當前登錄及額度，不儲存憑據"]
+#[ignore = "只讀驗證本機豆包當前登入及額度，不儲存憑據"]
 fn doubao_local_live_read_only() {
-    let header = local().expect("讀取本機豆包當前登錄");
+    let header = local().expect("讀取本機豆包當前登入");
     let snapshot = super::super::request(&super::super::super::http_agent(), ENDPOINT, &header).map_err(|error|error.0).expect("只讀查詢豆包額度");
     assert!(!snapshot.windows.is_empty());
     println!("本機豆包識別及額度查詢通過：{} 個週期，{} 項額外額度", snapshot.windows.len(), snapshot.extra.len());

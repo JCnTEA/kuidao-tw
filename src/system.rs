@@ -1,4 +1,4 @@
-//! Windows 狀態採樣與經用戶授權的通知讀取。
+//! Windows 狀態採樣與經使用者授權的通知讀取。
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::mpsc::{self, Receiver};
@@ -419,7 +419,7 @@ unsafe fn client_covers(hwnd: HWND, monitor: &RECT) -> bool {
     tl.x <= monitor.left && tl.y <= monitor.top && br.x >= monitor.right && br.y >= monitor.bottom
 }
 
-/// 診斷：蓋滿螢幕卻按普通最大化處理（不隱藏鬼島）的窗口，每個窗口只記一次，便於核對用戶反饋。
+/// 診斷：蓋滿螢幕卻按普通最大化處理（不隱藏鬼島）的窗口，每個窗口只記一次，便於核對使用者反饋。
 #[cfg(not(test))]
 unsafe fn log_maximized_exclusion(hwnd: HWND, window: RECT, monitor: RECT) {
     use std::sync::Mutex;

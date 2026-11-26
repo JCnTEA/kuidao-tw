@@ -105,7 +105,7 @@ fn with_transport_retry<T>(agent:&ureq::Agent,origin:&str,request:impl Fn(&ureq:
         .resolver(move |name:&str|if name==endpoint{Ok(ips.clone())}else{Err(std::io::Error::other("官網地址不匹配"))}).build();
     request(&direct)
 }
-// 只讀取客戶端當前會話；未知加密格式交給獨立官網登錄，不改寫客戶端檔案。
+// 只讀取客戶端當前會話；未知加密格式交給獨立官網登入，不改寫客戶端檔案。
 fn local_snapshot(agent:&ureq::Agent,expected:Option<&str>)->Result<(String,Snapshot),String>{
     let base=std::env::var_os("LOCALAPPDATA").ok_or("未找到本機使用者目錄")?;
     let path=std::path::PathBuf::from(base).join("CodeBuddyExtension/Data/Public/auth/workbuddy-desktop-ai.info");

@@ -52,7 +52,7 @@ fn select(raw:&str,title:&str,artist:&str,duration:f64)->Option<Lyrics>{
             if total>0 && (total as f64/1000.0-duration).abs()>2.0{return None;}
         }
     }
-    // 檔案自身的校準量屬於原生時間軸，用戶的提前量仍由界面單獨應用。
+    // 檔案自身的校準量屬於原生時間軸，使用者的提前量仍由界面單獨應用。
     let offset=header(raw,"offset").and_then(|s|s.parse::<i32>().ok()).unwrap_or_default() as f32/1000.0;
     for line in &mut lyrics.lines{line.t=(line.t+offset).max(0.0);}
     Some(lyrics)

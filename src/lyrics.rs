@@ -58,7 +58,7 @@ fn negative_path(path:&std::path::Path)->std::path::PathBuf {
     path.with_extension("none3")
 }
 thread_local!{static SKIP_NEGATIVE:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
-/// 用戶手動點「重試」時，本線程的這次查詢跳過「近期已確認沒有歌詞」的記錄，真正重新聯網。
+/// 使用者手動點「重試」時，本線程的這次查詢跳過「近期已確認沒有歌詞」的記錄，真正重新聯網。
 /// 查詢結束（含提前返回）後自動恢復，不影響之後的自動查詢。
 struct SkipNegative(bool);
 impl SkipNegative {fn set(on:bool)->Self {Self(SKIP_NEGATIVE.with(|skip|skip.replace(on)))}}
@@ -250,7 +250,7 @@ pub fn fetch_for_display(source:&str,track:&str,artist:&str,duration:f64,song_id
     fetch_for_display_with(source,track,artist,duration,song_id,cached,false)
 }
 
-/// `manual`：用戶手動重試，跳過近期「沒有歌詞」的記錄。網路失敗仍不會被記成沒有歌詞。
+/// `manual`：使用者手動重試，跳過近期「沒有歌詞」的記錄。網路失敗仍不會被記成沒有歌詞。
 pub fn fetch_for_display_with(source:&str,track:&str,artist:&str,duration:f64,song_id:Option<u64>,cached:Option<Lyrics>,manual:bool)->Result<(Lyrics,bool),FetchError>{
     take_trace();
     let _skip=SkipNegative::set(manual);
@@ -278,7 +278,7 @@ pub fn fetch_for_display_with(source:&str,track:&str,artist:&str,duration:f64,so
     let line=format!("{} {source} · {track} - {artist}{id} → {} → 結果:{summary} 用時{}ms\n",
         std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs(),
         take_trace().join(" → "),started.elapsed().as_millis());
-    // 測試時不寫，免得把模擬數據混進用戶的真實診斷日誌。
+    // 測試時不寫，免得把模擬數據混進使用者的真實診斷日誌。
     if !cfg!(test) {crate::resources::append_log(&crate::model::config_dir().join("diagnostics"),"lyrics.log",&line);}
     result
 }

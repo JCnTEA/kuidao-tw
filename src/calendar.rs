@@ -5,7 +5,7 @@
 //! 沒有 OAuth、沒有回呼，使用者在客戶端自己生成帳號密碼即可。
 //!
 //! 硬約束：只讀；憑據只進 Windows 憑據管理器（`keyring`，和郵件同一套庫），
-//! 配置檔案裡只有平台、用戶名、行事曆地址；不落盤正文、不進日誌。
+//! 配置檔案裡只有平台、使用者名、行事曆地址；不落盤正文、不進日誌。
 
 mod exchange;
 #[cfg(test)]
@@ -230,7 +230,7 @@ pub fn selected_provider() -> Provider {
         .unwrap_or_default()
 }
 
-/// 純解析：只有平台、用戶名、行事曆地址，沒有任何密碼字段。
+/// 純解析：只有平台、使用者名、行事曆地址，沒有任何密碼字段。
 pub fn decode_config(raw: &[u8]) -> Option<Config> {
     let json: serde_json::Value = serde_json::from_slice(raw).ok()?;
     if let Some(accounts) = json.get("accounts").and_then(|v| v.as_array()) {
@@ -332,7 +332,7 @@ pub fn forget_config() -> Result<(), String> {
 
 #[cfg(windows)]
 pub mod secrets {
-    /// 憑據只進 Windows 憑據管理器；鍵是「平台:用戶名」，值是密碼。
+    /// 憑據只進 Windows 憑據管理器；鍵是「平台:使用者名」，值是密碼。
     pub fn save(cfg: &super::Config, password: &str) -> Result<(), String> {
         let entry = keyring::Entry::new(super::SERVICE, &name(cfg))
             .map_err(|e| format!("憑據管理器不可用：{e}"))?;
@@ -369,7 +369,7 @@ pub mod secrets {
 
 // ---------------------------------------------------------------- 粘貼拆分
 
-/// 從整段粘貼裡拆出用戶名和密碼。只認帶標籤的文本（用戶名/帳號/信箱、
+/// 從整段粘貼裡拆出使用者名和密碼。只認帶標籤的文本（使用者名/帳號/信箱、
 /// 密碼/口令），標籤之間用冒號、等號或空格分隔都行；拆不出就返回 `None`，
 /// 不靠位置猜。
 pub fn parse_paste(text: &str) -> Option<(String, String)> {
@@ -397,7 +397,7 @@ pub fn parse_paste(text: &str) -> Option<(String, String)> {
         return None;
     }
     marks.sort_by_key(|m| m.0);
-    // 同一位置被多個標籤命中時保留最長的（"用戶名" 優於 "用戶" 之類）。
+    // 同一位置被多個標籤命中時保留最長的（"使用者名" 優於 "使用者" 之類）。
     let mut picked: Vec<(usize, usize, u8)> = Vec::new();
     for m in marks {
         if let Some(last) = picked.last_mut() {
@@ -586,14 +586,14 @@ fn agent() -> Result<ureq::Agent, Failure> {
         .timeout(Duration::from_secs(30))
         .redirects(0)
         .user_agent(concat!("Kuidao/",env!("CARGO_PKG_VERSION")));
-    // 僅行事曆使用系統證書驗證，繼承用戶已信任的自簽證書和私有 CA。
+    // 僅行事曆使用系統證書驗證，繼承使用者已信任的自簽證書和私有 CA。
     #[cfg(windows)]
     let builder = builder.tls_connector(std::sync::Arc::new(native_tls::TlsConnector::new()
         .map_err(|_| Failure::text("無法初始化行事曆安全連線，請重啟鬼島後重試"))?));
     Ok(builder.build())
 }
 
-/// `Authorization: Basic base64(用戶名:密碼)`。
+/// `Authorization: Basic base64(使用者名:密碼)`。
 pub fn basic_auth(user: &str, password: &str) -> String {
     use base64::Engine;
     format!("Basic {}",base64::engine::general_purpose::STANDARD.encode(format!("{user}:{password}")))
@@ -610,7 +610,7 @@ fn dav(
 ) -> Result<String, Failure> {
     let (xml, _) = dav_response(agent, method, url, depth, body, cfg, password)?;
     if !roxmltree::Document::parse(&xml).is_ok_and(|doc| doc.root_element().has_tag_name(("DAV:", "multistatus"))) {
-        return Err(Failure::text("伺服器未返回有效的 CalDAV 響應，請核對行事曆同步地址和登錄方式"));
+        return Err(Failure::text("伺服器未返回有效的 CalDAV 響應，請核對行事曆同步地址和登入方式"));
     }
     Ok(xml)
 }
@@ -1833,7 +1833,7 @@ mod tests {
                     if index != 1 { assert!(request.contains("<c:expand")); }
                     if index==2 {assert!(request.contains("<d:href>/calendar/item/</d:href>"));}
                     if login_at == Some(index) {
-                        let html = "<html><body><form>登錄</form></body></html>";
+                        let html = "<html><body><form>登入</form></body></html>";
                         write!(socket,"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{html}",html.len()).unwrap();
                         break;
                     }

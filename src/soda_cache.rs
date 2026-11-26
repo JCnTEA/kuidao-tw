@@ -1,4 +1,4 @@
-//! 只讀解析汽水 3.7 媒體緩存中的原生歌詞；不讀取登錄配置或音頻。
+//! 只讀解析汽水 3.7 媒體緩存中的原生歌詞；不讀取登入配置或音頻。
 use serde_json::{Value,Map};
 use std::collections::{HashMap,HashSet};
 

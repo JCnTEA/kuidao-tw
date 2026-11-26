@@ -187,7 +187,7 @@ pub(crate) fn flash_account(client:Messenger,window:HWND,paths:&[String])->Optio
 pub(crate) fn flash_target(client:Messenger,window:HWND,paths:&[String])->Option<Unread>{
     flash_account(client,window,paths).map(|target|target.map_or_else(||Unread::of(client),|t|t.unread))
 }
-/// 釘釘 9.0.5 掃碼前會閃動豎版登錄窗口，登錄成功後在同一進程中另建訊息主窗口。
+/// 釘釘 9.0.5 掃碼前會閃動豎版登入窗口，登入成功後在同一進程中另建訊息主窗口。
 unsafe fn dingtalk_login_window(window:HWND)->bool{
     let class=class_name(window);
     let style=GetWindowLongW(window,GWL_STYLE) as u32;
@@ -462,7 +462,7 @@ mod tests{
         assert_eq!(rebuild_target(original,&paths),Some(rebuilt),"原窗口銷燬後允許同一進程中唯一可信的新主窗口");
         assert_eq!(rebuild_target(Target{started:started.wrapping_add(1),..original},&paths),None,"禁止重綁到複用 PID 的新進程");
         DestroyWindow(small).unwrap();DestroyWindow(new_main).unwrap();
-        // 用戶診斷包裡釘釘 9.0.5 的窗口組合：一個 StandardFrame_DingTalk 主窗口和三個隱藏的 Qt 對話框。
+        // 使用者診斷包裡釘釘 9.0.5 的窗口組合：一個 StandardFrame_DingTalk 主窗口和三個隱藏的 Qt 對話框。
         // 主窗口最小化到任務欄和隱藏到託盤時，都必須對應到原進程。
         for (state,frame_style) in [("最小化",0x260f0000u32),("隱藏到系統匣",0x060f0000)]{
             let frame=CreateWindowExW(WINDOW_EX_STYLE(0x100),w!("StandardFrame_DingTalk"),w!("Kuidao synthetic client"),WINDOW_STYLE(frame_style),-10000,-10000,1200,800,None,None,instance,None).unwrap();

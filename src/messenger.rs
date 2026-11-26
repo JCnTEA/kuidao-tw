@@ -128,7 +128,7 @@ impl Unread {
     }
 }
 
-/// 進程創建時間用來區分進程號複用，不等同於客戶端內部的登錄帳號標識。
+/// 進程創建時間用來區分進程號複用，不等同於客戶端內部的登入帳號標識。
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub struct Target {pub unread:Unread,pub(crate) started:u64}
 

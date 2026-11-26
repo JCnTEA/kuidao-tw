@@ -1,5 +1,5 @@
 //! Grok Bot 周額度。憑據與接口映射參考 ai-usagebar，瀏覽器授權參考 gbu。
-//! 原客戶端登錄檔案只讀；獨立授權儲存在 Windows 憑據管理器。
+//! 原客戶端登入檔案只讀；獨立授權儲存在 Windows 憑據管理器。
 use super::{Account,Snapshot,Window};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD,Engine};
 use ring::{digest,rand::{SecureRandom,SystemRandom}};

@@ -1,4 +1,4 @@
-//! 只讀 Claude 本機用量；不解密登錄令牌，不請求遠程接口。
+//! 只讀 Claude 本機用量；不解密登入令牌，不請求遠程接口。
 use super::{Account,Snapshot,Window};
 use ring::digest;
 use serde_json::{json,Value};
@@ -32,7 +32,7 @@ fn read_json(path:&Path)->Result<Value,String>{
 }
 fn slot(owner:&str,org:&str)->String{digest::digest(&digest::SHA256,format!("{owner}|{org}").as_bytes()).as_ref().iter().map(|b|format!("{b:02x}")).collect()}
 fn desktop_identity(path:&Path)->Result<(String,i64),String>{
-    // 只反序列化帳號標識，忽略同檔案中的加密登錄緩存。
+    // 只反序列化帳號標識，忽略同檔案中的加密登入緩存。
     #[derive(serde::Deserialize)]
     struct Identity {#[serde(rename="lastKnownAccountUuid")] owner:String}
     use std::io::Read;

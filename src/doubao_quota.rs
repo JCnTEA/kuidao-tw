@@ -1,4 +1,4 @@
-//! 豆包網頁會員額度。基於 0011-joe 的 #42 實現，登錄狀態僅在本機加密儲存。
+//! 豆包網頁會員額度。基於 0011-joe 的 #42 實現，登入狀態僅在本機加密儲存。
 use super::{Account, Config, Provider, Snapshot, Window};
 use serde_json::{json, Value};
 use std::{fs, io::Read, path::PathBuf, sync::{mpsc, Arc, atomic::{AtomicBool, Ordering}}};

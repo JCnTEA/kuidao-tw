@@ -299,7 +299,7 @@ impl Shell {
         diagnostics::graphics(cc);
         let running_compat=cc.wgpu_render_state.is_some();
         diagnostics::startup("載入本機配置");
-        // 已存在的 Gmail 信箱在啟動時把授權碼補給行程，舊用戶不用重新設定。
+        // 已存在的 Gmail 信箱在啟動時把授權碼補給行程，舊使用者不用重新設定。
         for account in daozai::mail::load_accounts() {
             if account.enabled && account.provider==daozai::mail::Provider::Gmail {
                 let _=daozai::calendar::link_google_from_mail(&account.email);
@@ -660,7 +660,7 @@ impl eframe::App for Shell {
         let music_on=self.app.module_on(app::MUSIC_PAGE);
         let guarded=daozai::resources::GUARD.tripped();
         if music_on && guarded && !self.guard_notified {
-            // 資源保護熔斷：停止音樂會話輪詢（含封面、網易雲日誌）與歌詞查詢，保住用戶電腦，重啟後恢復。
+            // 資源保護熔斷：停止音樂會話輪詢（含封面、網易雲日誌）與歌詞查詢，保住使用者電腦，重啟後恢復。
             self.guard_notified=true;self.app.opts.fetch_lyrics=false;
             self.app.alert("鬼島已暫停音樂功能","檢測到資源佔用異常，已暫停讀取音樂資訊和歌詞。重啟鬼島即可恢復；診斷記錄在資料目錄的 diagnostics 資料夾。",0,false);
         }

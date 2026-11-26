@@ -302,7 +302,7 @@ pub(super) fn control(command:super::Transport)->bool{
     let id=match command{super::Transport::Toggle=>1,super::Transport::Next=>3,super::Transport::Prev=>4,_=>return false};
     (||->Option<()> {
         let target=Target::discover()?;let process=Process::open(target.pid)?;
-        // 僅使用已實測版本的四個原生媒體熱鍵；用戶重新註冊熱鍵後不猜測新的編號。
+        // 僅使用已實測版本的四個原生媒體熱鍵；使用者重新註冊熱鍵後不猜測新的編號。
         if !process.module(target.main,0x69fea107,0x57000) || !process.module(target.keys,0x69fea0d4,0x1e000){return None;}
         let manager=process.pointer(target.keys+0x19510)?;
         let registrars=process.pointer(manager)?;let registrar=process.pointer(process.pointer(registrars)?+40)?;
@@ -424,7 +424,7 @@ mod tests {
     }
 }
 
-/// 進程快照一次要十幾毫秒：有波點窗口線索時 3 秒查一次，沒有線索時（多數用戶沒裝波點）30 秒才兜底查一次。
+/// 進程快照一次要十幾毫秒：有波點窗口線索時 3 秒查一次，沒有線索時（多數使用者沒裝波點）30 秒才兜底查一次。
 const DISCOVER_HINTED:Duration=Duration::from_secs(3);
 const DISCOVER_FALLBACK:Duration=Duration::from_secs(30);
 fn discovery_due(last:Option<Instant>,hint:impl FnOnce()->bool)->bool{

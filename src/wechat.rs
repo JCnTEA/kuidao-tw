@@ -97,7 +97,7 @@ impl TrayLog {
         Self(vec![format!("鬼島 {} · Windows 內部版本 {build} ({display}) · 帳號程序 {} · 閃動視窗 {:#x}",env!("CARGO_PKG_VERSION"),unread.pid,unread.window)])
     }
     fn step(&mut self,line:impl Into<String>){self.0.push(line.into());}
-    /// 寫入日誌並返回給用戶看的提示（帶錯誤碼，便於反饋）。
+    /// 寫入日誌並返回給使用者看的提示（帶錯誤碼，便於反饋）。
     fn fail(&mut self,code:&str,reason:&str)->String{
         self.step(format!("失敗 {code}：{reason}"));
         let directory=crate::model::config_dir().join("diagnostics");
@@ -167,7 +167,7 @@ unsafe fn account_main_window(pid:u32,source:crate::app::Messenger,paths:&[Strin
     visible_main_window_of(owner,source,paths)
 }
 
-/// 該帳號縮在託盤（沒有可見主窗口，但有託盤圖標）時返回 Ok；否則返回給用戶的提示，並記錄診斷。
+/// 該帳號縮在託盤（沒有可見主窗口，但有託盤圖標）時返回 Ok；否則返回給使用者的提示，並記錄診斷。
 pub fn wechat_in_tray(unread:crate::app::Unread)->Result<(),String>{
     if unread.source!=crate::app::Messenger::Wechat {return Err("請從工作列或系統匣開啟微信".into());}
     let paths=client_paths(unread.source);
@@ -648,7 +648,7 @@ mod tests {
                     let _=ShowWindow(login,SW_SHOWNOACTIVATE);
                     SendMessageW(hwnd,message,WPARAM(FLASH),LPARAM(login.0 as isize));
                     DestroyWindow(login).unwrap();
-                    assert!(listener.take().is_empty(),"掃碼登錄窗口的閃動不應產生未讀提醒");
+                    assert!(listener.take().is_empty(),"掃碼登入窗口的閃動不應產生未讀提醒");
                 }
             }
             let (first,second)=(create(),create());
@@ -757,7 +757,7 @@ mod tests {
     }
     #[test]
     fn offscreen_wechat_frame_is_not_treated_as_open(){unsafe{
-        // 復現雙開主號：有一個「可見」但不在任何顯示器上的微信窗口，過去會被當成主窗口「切換」過去，用戶什麼也看不到。
+        // 復現雙開主號：有一個「可見」但不在任何顯示器上的微信窗口，過去會被當成主窗口「切換」過去，使用者什麼也看不到。
         use windows::Win32::System::LibraryLoader::GetModuleHandleW;
         unsafe extern "system" fn proc(h:HWND,m:u32,w:WPARAM,l:LPARAM)->LRESULT{DefWindowProcW(h,m,w,l)}
         let instance=GetModuleHandleW(None).unwrap().into();

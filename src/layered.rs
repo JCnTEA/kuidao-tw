@@ -27,7 +27,7 @@ pub fn image_hash(size: [usize; 2], rgba: &[u8]) -> u64 {
     h
 }
 
-/// 畫面自己在動（歌詞滾動、動效）而沒有用戶輸入時，兩次讀回的最小間隔：約 30 幀/秒。
+/// 畫面自己在動（歌詞滾動、動效）而沒有使用者輸入時，兩次讀回的最小間隔：約 30 幀/秒。
 /// 每次讀回都要 GPU 回傳整幀、換通道再交給系統合成，2 倍縮放下每幀約 2ms，60 幀/秒會持續佔掉十幾個百分點的單核。
 pub const AMBIENT_READBACK: std::time::Duration = std::time::Duration::from_millis(33);
 

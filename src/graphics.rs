@@ -2,7 +2,7 @@
 //!
 //! 典型場景：筆記本接擴展塢 / DisplayLink 外接屏、遠程桌面、顯卡驅動缺失時，窗口所在的顯示裝置
 //! 只有 Windows 自帶的 OpenGL 1.1（GDI Generic），egui_glow 報「requires OpenGL 2.0+」。
-//! 這時改用 Direct3D 12 重新啟動，不需要用戶拔擴展塢。
+//! 這時改用 Direct3D 12 重新啟動，不需要使用者拔擴展塢。
 
 /// 相容圖形後端（低功耗顯卡優先）：指定 Direct3D 12 或 Vulkan。
 fn compatible(mut options:eframe::NativeOptions,backends:eframe::wgpu::Backends)->eframe::NativeOptions {
@@ -47,7 +47,7 @@ fn launch_compatible(options:eframe::NativeOptions,launch:&mut impl FnMut(eframe
 }
 
 /// 驗收與排障：設定環境變量 `KUIDAO_RENDERER=wgpu` 直接使用相容圖形後端，
-/// 在正常電腦上也能檢查 OpenGL 失敗後用戶會看到的畫面。
+/// 在正常電腦上也能檢查 OpenGL 失敗後使用者會看到的畫面。
 fn forced_compatible()->bool {
     std::env::var("KUIDAO_RENDERER").is_ok_and(|value|value.trim().eq_ignore_ascii_case("wgpu"))
 }
@@ -86,7 +86,7 @@ fn opengl(mut options:eframe::NativeOptions)->eframe::NativeOptions {
 fn run_with(compat_first:bool,options:eframe::NativeOptions,mut launch:impl FnMut(eframe::NativeOptions)->eframe::Result<()>)->eframe::Result<()> {
     if compat_first {
         // 相容渲染是被要求的（設定、崩潰標記或環境變量），但這台電腦可能根本沒有 DX12 / Vulkan 裝置
-        // （遠程桌面、虛擬機、只有基本顯示適配器、老顯卡）。這時退回 OpenGL，不讓用戶每次都打不開。
+        // （遠程桌面、虛擬機、只有基本顯示適配器、老顯卡）。這時退回 OpenGL，不讓使用者每次都打不開。
         daozai::renderer::set_compat_active(true);
         let error=match launch_compatible(options.clone(),&mut launch) {
             Err(error @ eframe::Error::Wgpu(_))=>error,

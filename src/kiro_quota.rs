@@ -1,4 +1,4 @@
-//! Kiro 額度：只讀登錄緩存與 GetUsageLimits，不回寫、不續期；令牌是否失效以服務端 401/403 為準（本機 expiresAt 只是客戶端的續期計劃時間）。
+//! Kiro 額度：只讀登入緩存與 GetUsageLimits，不回寫、不續期；令牌是否失效以服務端 401/403 為準（本機 expiresAt 只是客戶端的續期計劃時間）。
 use super::{Account, Amount, Config, Provider, Snapshot, Window};
 use serde_json::{json, Value};
 use std::{io::Read, path::{Path, PathBuf}, sync::mpsc};
@@ -59,7 +59,7 @@ pub(crate) fn add(config:&mut Config,path:&Path,alias:&str)->Result<(),String>{
     let next=config.accounts.iter().filter(|a|a.provider==Provider::Kiro).count()+1;
     let id=format!("Kiro-{}",std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos());
     if config.selected.is_empty(){config.selected=id.clone();}
-    // 首次查詢後綁定服務端用戶標識，客戶端註冊及令牌不作為用戶身份。
+    // 首次查詢後綁定服務端使用者標識，客戶端註冊及令牌不作為使用者身份。
     config.accounts.push(Account{id,provider:Provider::Kiro,alias:if alias.trim().is_empty(){format!("Kiro · 帳號 {next}")}else{alias.trim().into()},source:path,slot:None,enabled:true,pinned:config.accounts.is_empty()});
     Ok(())
 }

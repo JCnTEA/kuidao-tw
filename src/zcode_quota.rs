@@ -66,7 +66,7 @@ fn login(root:&Value,path:&Path)->Result<Login,String>{
     let payload=jwt.split('.').nth(1).and_then(|s|URL_SAFE_NO_PAD.decode(s).ok()).and_then(|s|serde_json::from_slice::<Value>(&s).ok()).ok_or("ZCode 帳號標識無效")?;
     let id=payload["sub"].as_str().or_else(||payload["user_id"].as_str()).ok_or("ZCode 未返回帳號標識")?;
     let slot=hash(format!("{family}/{id}").as_bytes());
-    // 國內新登錄的套餐身份來自顯式關聯，ZCode JWT 的主體只用於識別本機帳號。
+    // 國內新登入的套餐身份來自顯式關聯，ZCode JWT 的主體只用於識別本機帳號。
     let coding_subject=if provider=="zai_cn"{
         if root.get("oauth:linked_bigmodel").is_some(){
             let linked:Value=serde_json::from_str(&value(root,"oauth:linked_bigmodel",path)?).map_err(|_|"ZCode 關聯的 BigModel 帳號資訊無效")?;

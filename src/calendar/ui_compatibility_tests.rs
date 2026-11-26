@@ -8,7 +8,7 @@ fn caldav_login_page_blocks_saving_but_empty_calendar_can_be_saved() {
 
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let cases = [
-        (200, "text/html", "<!DOCTYPE html><html><body><form>登錄</form></body></html>", false),
+        (200, "text/html", "<!DOCTYPE html><html><body><form>登入</form></body></html>", false),
         (200, "application/xml", r#"<html><body><multistatus xmlns="DAV:"/></body></html>"#, false),
         (200, "application/xml", "", false),
         (200, "application/xml", r#"<multistatus xmlns="urn:other"/>"#, false),

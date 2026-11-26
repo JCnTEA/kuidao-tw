@@ -86,7 +86,7 @@ fn endpoint(cfg: &Config) -> Result<url::Url, Failure> {
     let base = url::Url::parse(&cfg.base()).map_err(|_| invalid())?;
     let local = base.host_str().is_some_and(|h| h.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback()));
     if !(base.scheme() == "https" || base.scheme() == "http" && local) || !base.username().is_empty() || base.password().is_some() { return Err(Failure::text("行事曆伺服器地址不安全")); }
-    // 用戶可能直接粘貼完整的 ActiveSync 地址；只填主機名時補上標準路徑。
+    // 使用者可能直接粘貼完整的 ActiveSync 地址；只填主機名時補上標準路徑。
     if base.path().trim_end_matches('/').to_ascii_lowercase().ends_with("/microsoft-server-activesync") {
         let mut full = base; full.set_query(None); full.set_fragment(None);
         return Ok(full);

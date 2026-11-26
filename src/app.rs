@@ -155,7 +155,7 @@ pub struct Env {
     /// 窗口移開後也能在原生桌面上識別鬆手。
     pub primary_down: Option<bool>,
     pub idle_seconds: Option<f64>,
-    /// 當前會話是否處於鎖屏（Win + L、自動鎖屏、喚醒後的登錄界面）。
+    /// 當前會話是否處於鎖屏（Win + L、自動鎖屏、喚醒後的登入界面）。
     pub screen_locked: bool,
     /// 正在生成島仔演示錄屏。
     pub recording: bool,
@@ -691,7 +691,7 @@ pub(crate) struct LyricsState {
     pub song_id: Option<u64>,
     /// 同一首歌已自動重試的次數；達到上限後停止，避免整首歌期間反覆讀盤或聯網。
     pub attempts: u32,
-    /// 用戶點了「重試」：下一次查詢跳過近期「沒有歌詞」的記錄。
+    /// 使用者點了「重試」：下一次查詢跳過近期「沒有歌詞」的記錄。
     pub manual_retry: bool,
     pub lyrics: Option<lyrics::Lyrics>,
     /// 主歌詞顯示字：中文歌已轉繁體，其餘保留原文；長度與 lyrics.lines 對齊。

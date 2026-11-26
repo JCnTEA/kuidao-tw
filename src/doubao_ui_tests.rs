@@ -57,9 +57,9 @@ fn doubao_connection_offers_official_login_without_an_extension() {
     let _guard=ENV_LOCK.lock().unwrap_or_else(|error|error.into_inner());let mut h=H::new();
     h.app.open_settings();h.app.quota.provider=crate::quota::Provider::Doubao;h.app.quota.connect_open=true;
     for _ in 0..5 { settings_frame(&mut h,vec![]); }
-    for label in ["新增帳號","瀏覽器登錄","從本機匯入","使用 Cookie 連線"] { assert!(has_text(&h,label),"連線窗口缺少 {label}"); }
-    assert!(!has_text(&h,"Kimi"),"豆包登錄不能依賴瀏覽器擴展");
-    assert!(!has_text(&h,"登錄 JSON"),"豆包不應走登錄檔案匯入");
+    for label in ["新增帳號","瀏覽器登入","從本機匯入","使用 Cookie 連線"] { assert!(has_text(&h,label),"連線窗口缺少 {label}"); }
+    assert!(!has_text(&h,"Kimi"),"豆包登入不能依賴瀏覽器擴展");
+    assert!(!has_text(&h,"登入 JSON"),"豆包不應走登入檔案匯入");
 }
 
 #[test]

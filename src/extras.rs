@@ -708,7 +708,7 @@ impl App {
         self.pending_messengers.retain(|u| u.source != source);
         self.clear_messenger_notices(source);
     }
-    /// 只清已查看的帳號；無法確認帳號的 QQ 提醒由用戶明確關閉。
+    /// 只清已查看的帳號；無法確認帳號的 QQ 提醒由使用者明確關閉。
     pub fn viewed_client(&mut self, source: crate::app::Messenger, pid: u32) {
         self.pending_messengers
             .retain(|u| !u.viewed_by(source, pid));
@@ -4929,7 +4929,7 @@ impl App {
                                     let email = target.email.clone();
                                     if !email.contains('@'){self.mail.note="請先填信箱地址".into();}
                                     else if let Err(error)=target.endpoint(){self.mail.note=error;}
-                                    else if self.mail.form.password.is_empty(){self.mail.note="請先填授權碼（不是信箱登錄密碼）".into();}
+                                    else if self.mail.form.password.is_empty(){self.mail.note="請先填授權碼（不是信箱登入密碼）".into();}
                                     else if test {
                                         self.mail.testing=Some(email.clone());
                                         self.mail.note=format!("{email}：正在測試連線…");
@@ -4952,7 +4952,7 @@ impl App {
                             }
                                                     if !self.mail.note.is_empty(){ui.add_space(3.0);ui.add(egui::Label::new(egui::RichText::new(&self.mail.note).size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75)))).wrap());}
                             });
-                            // 儲存後彈窗保持打開，結果和「測試連線」都在這裡；用戶自己關閉。
+                            // 儲存後彈窗保持打開，結果和「測試連線」都在這裡；使用者自己關閉。
                             if close || modal.should_close() {
                                 self.mail.form.open = false;
                                 self.mail.form.use_windows_proxy = false;

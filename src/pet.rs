@@ -244,7 +244,7 @@ impl Pet {
             _ => t,
         }
     }
-    /// 反饋只在實際可見時計時，避免用戶還在面板裡操作時就播完。
+    /// 反饋只在實際可見時計時，避免使用者還在面板裡操作時就播完。
     pub fn advance(&mut self, dt: f32, visible: bool) {
         if visible {
             if let Some((_, remaining)) = &mut self.reaction {

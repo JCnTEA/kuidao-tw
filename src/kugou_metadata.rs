@@ -343,7 +343,7 @@ mod tests {
     #[test]
     fn scan_wraps_from_the_end_of_memory_and_stops_after_a_pass(){
         let filename="測試歌手 - 繞回開頭";let blob=planted(filename);
-        // 從用戶地址空間頂端開始：查詢失敗後應繞回開頭繼續，而不是直接放棄。
+        // 從使用者地址空間頂端開始：查詢失敗後應繞回開頭繼續，而不是直接放棄。
         let (found,wrapped,_)=search(filename,0x7fff_ffff_0000,SLICE);
         assert_eq!(found.map(|(value,_)|value),Some(("測試歌手".into(),232.0)));assert!(wrapped);
         drop(blob);

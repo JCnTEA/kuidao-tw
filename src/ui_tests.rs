@@ -106,14 +106,14 @@ fn gemini_connect_form_opens_default_browser_without_claiming_connection(){
             raster.update_textures(&out.textures_delta);h.shapes=out.shapes;
         }
         let texts=h.shapes.iter().filter_map(|s|if let egui::Shape::Text(t)=&s.shape{Some(t.galley.text())}else{None}).collect::<Vec<_>>();
-        assert!(texts.contains(&"打開預設瀏覽器登錄"),"Gemini 應在系統預設瀏覽器中登錄");
-        assert!(texts.contains(&"連線已登錄的 Chrome"),"Gemini 應支援本人授權連線現有 Chrome 會話");
+        assert!(texts.contains(&"打開預設瀏覽器登入"),"Gemini 應在系統預設瀏覽器中登入");
+        assert!(texts.contains(&"連線已登入的 Chrome"),"Gemini 應支援本人授權連線現有 Chrome 會話");
         assert!(texts.iter().any(|s|s.contains("chrome://inspect/#remote-debugging")),"首次連線應提供 Chrome 原生設定入口");
-        assert!(!texts.iter().any(|s|s.contains("自動連線")),"打開官網不能表示島仔已獲得登錄會話");
+        assert!(!texts.iter().any(|s|s.contains("自動連線")),"打開官網不能表示島仔已獲得登入會話");
         assert!(!texts.iter().any(|s|s.contains("Kimi 瀏覽器擴展")),"Gemini 連線不應要求額外安裝擴展");
         assert!(texts.contains(&"Google 信箱"));
         let original=h.app.quota.config.clone();
-        let point=h.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="打開預設瀏覽器登錄"=>Some(t.visual_bounding_rect().center()),_=>None}).unwrap();
+        let point=h.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="打開預設瀏覽器登入"=>Some(t.visual_bounding_rect().center()),_=>None}).unwrap();
         for pressed in [true,false]{
             let _=h.ctx.run(egui::RawInput{screen_rect:Some(Rect::from_min_size(Pos2::ZERO,egui::vec2(640.0,760.0))),events:vec![egui::Event::PointerMoved(point),egui::Event::PointerButton{pos:point,button:egui::PointerButton::Primary,pressed,modifiers:Default::default()}],..Default::default()},|ctx|{egui::CentralPanel::default().show(ctx,|ui|h.app.quota_settings(ui));});
         }
@@ -1169,7 +1169,7 @@ fn calendar_month_errors_remain_visible_until_retry_or_month_change(){
     assert!(!h.app.calendar.view.loading,"失敗後不能逐幀重試，覆蓋錯誤狀態");
     assert!(h.app.pending.is_empty());
     h.app.request_calendar_month(true);
-    assert!(h.app.calendar.view.loading,"用戶手動重試應立即生效");
+    assert!(h.app.calendar.view.loading,"使用者手動重試應立即生效");
 }
 
 #[test]
@@ -2090,7 +2090,7 @@ fn web_video_is_hidden_without_changing_music_preferences(){
     assert!(tx.send(Ok((crate::lyrics::parse_lrc("[00:01.00]late song"),false))).is_err(),"影片不能接收舊歌曲遲到的查詢結果");
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
     h.click(H::local(74.0,118.0));
-    assert!(h.app.show_lyrics,"影片頁面的標籤不應切換用戶的歌曲歌詞偏好");
+    assert!(h.app.show_lyrics,"影片頁面的標籤不應切換使用者的歌曲歌詞偏好");
     h.click(H::local(210.5,118.0));
     assert!(!h.cmds.iter().any(|cmd|matches!(cmd,crate::app::Cmd::Media(_))),"音樂頁不應控制被隱藏的影片");
     assert!(!matches!(h.app.pet_state(),crate::extras::PetState::Music),"影片不應觸發聽歌表情");
@@ -2124,7 +2124,7 @@ fn minimal_mode_stays_a_line_with_music_and_after_media_changes(){
     assert!(h.region.height()<20.0,"暫停或切歌不能覆蓋極簡開關");
     h.media=Default::default();
     for _ in 0..90 {h.frame(vec![]);}
-    assert!(h.region.height()<20.0,"沒有媒體時恢復用戶選擇的極簡狀態");
+    assert!(h.region.height()<20.0,"沒有媒體時恢復使用者選擇的極簡狀態");
 }
 
 #[test]
@@ -3833,7 +3833,7 @@ fn kiro_simulated_states_gallery(){
             }
             match scene{
                 "loading"=>{h.app.quota.busy.insert(id.clone());},
-                "expired"=>h.app.quota_event(Event{id:id.clone(),result:Err("Kiro 登錄已過期，請打開 Kiro 重新登錄後重新整理額度".into())}),
+                "expired"=>h.app.quota_event(Event{id:id.clone(),result:Err("Kiro 登入已過期，請打開 Kiro 重新登入後重新整理額度".into())}),
                 "stale"=>{h.app.quota_event(Event{id:id.clone(),result:Err("無法連線 Kiro 額度服務，請檢查網路或代理".into())});assert_eq!(h.app.quota.rows[&id].as_ref().unwrap().at,at);assert!(h.app.quota.stale.contains_key(&id));},
                 "identity"=>{
                     let account=h.app.quota.config.accounts[0].clone();let mut other=value.clone();other["userInfo"]["userId"]=serde_json::json!("simulation-user-b");let other=crate::quota::parse(Provider::Kiro,&other).unwrap();
@@ -3868,7 +3868,7 @@ fn kiro_simulated_states_gallery(){
                     let output=h.ctx.run(raw,|ctx|{egui::CentralPanel::default().frame(egui::Frame::NONE).show(ctx,|ui|{h.app.frame(ui,Rect::from_min_size(ui.max_rect().min,Vec2::new(WIN_W,WIN_H)),&env);});});raster.update_textures(&output.textures_delta);
                     if frame==74{
                         let texts=output.shapes.iter().filter_map(|s|match &s.shape{egui::Shape::Text(t)=>Some(t.galley.text()),_=>None}).collect::<Vec<_>>().join(" ");
-                        if scene=="small"{assert!(texts.contains("0.01"));}if scene=="loading"{assert!(texts.contains("正在更新"));}if scene=="expired"{assert!(texts.contains("登錄已過期"));}
+                        if scene=="small"{assert!(texts.contains("0.01"));}if scene=="loading"{assert!(texts.contains("正在更新"));}if scene=="expired"{assert!(texts.contains("登入已過期"));}
                         raster.buf.fill([0.20,0.24,0.32,1.0]);raster.draw(&h.ctx.tessellate(output.shapes,output.pixels_per_point),output.pixels_per_point);let mut rgba=Vec::new();raster.to_rgba8(&mut rgba);
                         let image=image::RgbaImage::from_raw(raster.w as u32,raster.h as u32,rgba).unwrap();image::imageops::crop_imm(&image,200,0,880,380).to_image().save(dest.join(format!("{theme}-{scene}.png"))).unwrap();
                     }raster.free_textures(&output.textures_delta);
@@ -4013,7 +4013,7 @@ fn quota_accounts_switch_independently_and_hide_with_the_page() {
     for id in ["personal","work"] {h.app.quota.config.accounts.push(Account{id:id.into(),provider:Provider::Codex,alias:id.into(),source:format!("{id}.json").into(),slot:None,enabled:true,pinned:true});}
     h.app.quota.config.selected="personal".into();
     h.app.quota_event(crate::quota::Event{id:"personal".into(),result:crate::quota::parse(Provider::Codex,&serde_json::json!({"rate_limit":{"secondary_window":{"used_percent":20,"limit_window_seconds":604800}}}))});
-    h.app.quota_event(crate::quota::Event{id:"work".into(),result:Err("登錄已失效".into())});
+    h.app.quota_event(crate::quota::Event{id:"work".into(),result:Err("登入已失效".into())});
     assert_eq!(h.app.quota.rows["personal"].as_ref().unwrap().windows[0].remaining,80.0);
     assert!(h.app.quota.rows["work"].is_err());assert_eq!(h.app.quota_bar_indices().len(),2);
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);h.app.show_page(6);h.hover(H::local(300.0,60.0),0.7);
@@ -4262,8 +4262,8 @@ fn mail_code_only_notifications_filter_new_mail_across_accounts() {
         (false, addresses[0], "訂閱週報", true, true),
         (true, addresses[0], "春招崗位更新", true, false),
         (true, addresses[1], "電子賬單", true, false),
-        (true, addresses[1], "登錄驗證碼 482913", true, true),
-        (true, addresses[0], "登錄驗證碼 654321", false, false),
+        (true, addresses[1], "登入驗證碼 482913", true, true),
+        (true, addresses[0], "登入驗證碼 654321", false, false),
     ].into_iter().enumerate() {
         h.app.settings.mail_code_only_notifications = only_codes;
         let raw = format!("Subject: {subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n");
@@ -4400,7 +4400,7 @@ fn mail_code_banner_respects_opt_in_and_mail_privacy() {
             "普通郵件" => {
                 item.code = None;
                 item.from = "帳號中心".into();
-                item.subject = "登錄動態".into();
+                item.subject = "登入動態".into();
                 item.summary = "".into();
             }
             _ => h.app.settings.notifications = false,
@@ -4430,8 +4430,8 @@ fn mail_code_banner_harness() -> H {
 fn mail_code_banner_item(uid: u32) -> crate::mail::Item {
     crate::mail::Item {
         account: "test@example.com".into(), uid, time: "09:41".into(),
-        received_unix: None, from: "帳號中心 482731".into(), subject: "登錄驗證碼 482731".into(),
-        code: Some("482731".into()), summary: "登錄驗證碼 482731".into(),
+        received_unix: None, from: "帳號中心 482731".into(), subject: "登入驗證碼 482731".into(),
+        code: Some("482731".into()), summary: "登入驗證碼 482731".into(),
         html: "".into(), links: vec![], meeting: None,
     }
 }
@@ -5298,7 +5298,7 @@ fn switching_to_rest_waits_for_the_start_button(){
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);h.app.go(1,1.0);h.hover(H::local(260.0,70.0),1.0);
     h.click(H::local(296.0,106.5));
     assert!(h.app.pomo.phase==crate::app::Phase::Rest);
-    assert!(!h.app.pomo.running,"切換階段應等待用戶點擊開始");
+    assert!(!h.app.pomo.running,"切換階段應等待使用者點擊開始");
 }
 
 #[test]
@@ -6057,7 +6057,7 @@ fn mail_meeting_notice_opens_its_calendar_day() {
     h.click_text("檢視");
     assert_eq!(h.app.page,crate::app::MAIL_PAGE);
     assert!(h.app.open);
-    assert_ne!(h.app.page,5);
+    assert_eq!(h.app.mail_view,1,"會議提醒應切到信箱頁的行程分頁");
     let entries=h.app.calendar_entries(h.app.calendar.view.day);
     assert_eq!(entries.len(),1);
     assert!(matches!(entries[0].sources[0],crate::calendar_ui::Source::Mail("demo@example.com")));
@@ -6495,7 +6495,7 @@ fn bottom_page_shortcuts_follow_the_installed_plugin_and_saved_preference() {
     h.app.show_page(crate::app::MUSIC_PAGE);
     assert_eq!(h.app.expanded_height(),PH);
     install_page_shortcuts_fixture(&mut h);
-    assert_eq!(h.app.expanded_height(),PH,"安裝後仍應等待用戶啟用");
+    assert_eq!(h.app.expanded_height(),PH,"安裝後仍應等待使用者啟用");
     h.app.plugins.enable(SHORTCUT_FIXTURE_ID,true).unwrap();
     assert_eq!(h.app.expanded_height(),PH+24.0);
     h.app.set_page_visible(crate::app::TODO_PAGE,false);
@@ -6996,7 +6996,7 @@ fn code_copy_confirmation_stays_below_the_island_and_does_not_capture_hover() {
     for detail in [false,true] {
         let mut h=H::new();
         h.app.mail.accounts=vec![crate::mail::Account {use_windows_proxy: false, custom: None, email:"a@qq.com".into(),provider:crate::mail::Provider::Qq,enabled:true}];
-        h.app.mail.recent=vec![crate::mail::Item {received_unix: None, account:"a@qq.com".into(),from:"GitHub".into(),subject:"登錄驗證碼".into(),time:"09:41".into(),code:Some("482913".into()),html: String::new().into(), summary:"請勿向他人透露驗證碼。".into(),links:vec![],meeting:None,uid:42}];
+        h.app.mail.recent=vec![crate::mail::Item {received_unix: None, account:"a@qq.com".into(),from:"GitHub".into(),subject:"登入驗證碼".into(),time:"09:41".into(),code:Some("482913".into()),html: String::new().into(), summary:"請勿向他人透露驗證碼。".into(),links:vec![],meeting:None,uid:42}];
         for item in h.app.mail.recent.clone(){h.app.mail.privacy.observe(&item,true,h.app.t,chrono::Utc::now().timestamp());}
         if detail {h.app.mail.open_uid=Some(("a@qq.com".into(),42));}
         h.app.show_page(5);h.hover(H::local(300.0,60.0),4.2);
@@ -7269,7 +7269,7 @@ fn mail_microsoft_settings_only_explains_unsupported_access(){
     let child=output.lock().unwrap().take().unwrap();
     let texts=child.shapes.iter().filter_map(|s|match &s.shape{egui::Shape::Text(t)=>Some(t.galley.text()),_=>None}).collect::<Vec<_>>();
     assert!(texts.iter().any(|t|t.contains("OAuth")&&t.contains("暫不支援")),"應明確說明微軟信箱的支援狀態");
-    for absent in ["使用 Microsoft 登錄","可留空，在瀏覽器選擇帳號","輸入信箱授權碼","測試連線","儲存並開始監控","應用 ID"]{
+    for absent in ["使用 Microsoft 登入","可留空，在瀏覽器選擇帳號","輸入信箱授權碼","測試連線","儲存並開始監控","應用 ID"]{
         assert!(!texts.iter().any(|t|t.contains(absent)),"暫不支援時不應出現誤匯入口：{absent}");
     }
     assert!(h.app.mail.accounts.is_empty());
@@ -7778,9 +7778,9 @@ fn mailbox_readability_gallery(){
         let mut h=H::new();h.app.settings.pet=false;h.app.settings.mail_sync_operations=true;
         h.app.mail.accounts=vec![crate::mail::Account {use_windows_proxy: false, custom: None, email:"work@qq.com".into(),provider:crate::mail::Provider::Qq,enabled:true}];
         if multiple {h.app.mail.accounts.push(crate::mail::Account {use_windows_proxy: false, custom: None, email:"personal@gmail.com".into(),provider:crate::mail::Provider::Gmail,enabled:true});}
-        h.app.mail.recent=[("GitHub","登錄驗證碼 · 本次登錄有效期 10 分鐘",Some("274630")),("Figma","產品設計評審 · 查看本輪修改意見",None),("Notion","確認你的信箱地址",Some("815926")),("產品團隊","週五項目安排與交付清單",None),("Microsoft","你的賬戶安全通知",None)].into_iter().enumerate().map(|(i,(from,subject,code))|crate::mail::Item {html:String::new().into(),received_unix: None, account:if multiple&&i%2==1{"personal@gmail.com"}else{"work@qq.com"}.into(),from:from.into(),subject:subject.into(),time:format!("11-03 09:{:02}",41-i),code:code.map(str::to_string),summary:String::new().into(),links:vec![],meeting:None,uid:i as u32+1}).collect();
+        h.app.mail.recent=[("GitHub","登入驗證碼 · 本次登入有效期 10 分鐘",Some("274630")),("Figma","產品設計評審 · 查看本輪修改意見",None),("Notion","確認你的信箱地址",Some("815926")),("產品團隊","週五項目安排與交付清單",None),("Microsoft","你的帳戶安全通知",None)].into_iter().enumerate().map(|(i,(from,subject,code))|crate::mail::Item {html:String::new().into(),received_unix: None, account:if multiple&&i%2==1{"personal@gmail.com"}else{"work@qq.com"}.into(),from:from.into(),subject:subject.into(),time:format!("11-03 09:{:02}",41-i),code:code.map(str::to_string),summary:String::new().into(),links:vec![],meeting:None,uid:i as u32+1}).collect();
         if detail {
-            h.app.mail.recent[0].summary="你好，\n\n你的登錄驗證碼是 274630，有效期為 10 分鐘。\n\n如果這不是你本人的操作，請忽略這封郵件。請勿將驗證碼透露給他人。\n\n這封郵件由系統自動發送，無需回覆。".into();
+            h.app.mail.recent[0].summary="你好，\n\n你的登入驗證碼是 274630，有效期為 10 分鐘。\n\n如果這不是你本人的操作，請忽略這封郵件。請勿將驗證碼透露給他人。\n\n這封郵件由系統自動發送，無需回覆。".into();
             h.app.mail.open_uid=Some(("work@qq.com".into(),1));
         }
         if variant==4{for item in h.app.mail.recent.clone(){h.app.mail.privacy.observe(&item,true,0.0,chrono::Utc::now().timestamp());}}
@@ -7812,7 +7812,7 @@ fn mailbox_large_code_card_preserves_copy_and_identifies_source(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
     h.app.settings.show_page_shortcuts=false;
     h.app.mail.accounts=["work@qq.com","personal@gmail.com"].into_iter().map(|email|crate::mail::Account {use_windows_proxy: false, custom: None, email:email.into(),provider:crate::mail::Provider::Qq,enabled:true}).collect();
-    h.app.mail.recent=[("work@qq.com","GitHub","274630"),("personal@gmail.com","Notion","815926")].into_iter().map(|(account,from,code)|crate::mail::Item {received_unix: None, account:account.into(),from:from.into(),subject:"登錄驗證碼".into(),time:"09:41".into(),code:Some(code.into()),html: String::new().into(), summary:String::new().into(),links:vec![],meeting:None,uid:42}).collect();
+    h.app.mail.recent=[("work@qq.com","GitHub","274630"),("personal@gmail.com","Notion","815926")].into_iter().map(|(account,from,code)|crate::mail::Item {received_unix: None, account:account.into(),from:from.into(),subject:"登入驗證碼".into(),time:"09:41".into(),code:Some(code.into()),html: String::new().into(), summary:String::new().into(),links:vec![],meeting:None,uid:42}).collect();
     for item in h.app.mail.recent.clone(){h.app.mail.privacy.observe(&item,true,h.app.t,chrono::Utc::now().timestamp());}
     h.app.show_page(5);h.hover(H::local(200.0,90.0),1.0);
     assert!(h.shapes.iter().any(|shape|matches!(&shape.shape,egui::Shape::Text(t) if t.galley.text()=="GitHub")));
@@ -8052,8 +8052,8 @@ fn settings_theme_follows_system_and_preserves_island_style() {
                         2=>&[("專注","25 分鐘"),("休息","5 分鐘")],
                         3=>&[("每日目標","2000 ml"),("每次記錄","250 ml"),("提醒間隔","45 分鐘"),("提醒時段","9 時")],
                         7=>&[("信箱","輸入信箱地址"),("授權碼","輸入信箱授權碼")],
-                        8=>&[("會議提前","15 分鐘"),("用戶名","輸入用戶名或粘貼帳號資訊"),("密碼","輸入平台生成的密碼")],
-                        11=>&[("服務","Codex"),("備註","例如：個人、工作、備用"),("選擇該帳號的登錄檔案","選擇…")],
+                        8=>&[("會議提前","15 分鐘"),("使用者名","輸入使用者名或粘貼帳號資訊"),("密碼","輸入平台生成的密碼")],
+                        11=>&[("服務","Codex"),("備註","例如：個人、工作、備用"),("選擇該帳號的登入檔案","選擇…")],
                         _=>&[],
                     };
                     for (label,value) in pairs {
@@ -9150,7 +9150,7 @@ fn relay_icon_accounts(h:&mut H) {
         h.app.quota_event(quota::Event{id,result:Ok(Snapshot{
             at:chrono::Local::now().timestamp(),
             relay:Some(quota::relay::Quota{source:"通用餘額".into(),expires_at:None,amounts:vec![
-                quota::relay::Amount{scope:quota::relay::Scope::Account,label:"賬戶餘額".into(),unit:"元".into(),
+                quota::relay::Amount{scope:quota::relay::Scope::Account,label:"帳戶餘額".into(),unit:"元".into(),
                     remaining:Some(remaining),limit:None,used:None,unlimited:false}
             ]}),
             ..Default::default()
@@ -9674,7 +9674,7 @@ fn workbuddy_balance_gallery(){
 fn new_mail_notification_masks_codes_in_sender_and_history(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
     h.app.mail.accounts=vec![crate::mail::Account{email:"a@example.com".into(),provider:crate::mail::Provider::Qq,custom:None,enabled:true,use_windows_proxy:false}];
-    let item=crate::mail::Item{received_unix:None,account:"a@example.com".into(),from:"登錄驗證碼 123456".into(),subject:"驗證碼 123456".into(),time:"09:41".into(),code:Some("123456".into()),html: String::new().into(), summary:"驗證碼 123456".into(),links:vec![],meeting:None,uid:42};
+    let item=crate::mail::Item{received_unix:None,account:"a@example.com".into(),from:"登入驗證碼 123456".into(),subject:"驗證碼 123456".into(),time:"09:41".into(),code:Some("123456".into()),html: String::new().into(), summary:"驗證碼 123456".into(),links:vec![],meeting:None,uid:42};
     h.app.mail_event(crate::mail::Event::Mail{item,new:true});
     assert!(!h.app.history.is_empty());
     for alert in h.app.alerts.iter().chain(h.app.history.iter()) {
@@ -10955,13 +10955,13 @@ fn quota_new_api_user_connection_switches_without_reusing_api_key(){
         h.app.settings_open=true;h.app.quota.provider=crate::quota::Provider::NewApi;h.app.quota.connect_open=true;h.app.quota.source="https://relay.example/tenant".into();h.app.quota.api_key="synthetic-api-key".into();
         let mut raster=crate::preview_raster::Raster::new(780,850);
         let _=draw(&mut h,&mut raster,vec![]);let _=draw(&mut h,&mut raster,vec![]);let output=draw(&mut h,&mut raster,vec![]);
-        let pos=output.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="用戶 Token（賬戶餘額）"=>Some(t.visual_bounding_rect().center()),_=>None}).expect("應提供用戶 Token 連線入口");
+        let pos=output.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="使用者 Token（帳戶餘額）"=>Some(t.visual_bounding_rect().center()),_=>None}).expect("應提供使用者 Token 連線入口");
         let _=draw(&mut h,&mut raster,vec![egui::Event::PointerMoved(pos),egui::Event::PointerButton{pos,button:egui::PointerButton::Primary,pressed:true,modifiers:Default::default()}]);
         let _=draw(&mut h,&mut raster,vec![egui::Event::PointerButton{pos,button:egui::PointerButton::Primary,pressed:false,modifiers:Default::default()}]);
         assert!(h.app.quota.relay_user_token);assert!(h.app.quota.api_key.is_empty());assert_eq!(h.app.quota.source,"https://relay.example/tenant");
         h.app.quota.relay_user_id="42".into();h.app.quota.api_key="synthetic-user-access-token".into();
         let _=draw(&mut h,&mut raster,vec![]);let output=draw(&mut h,&mut raster,vec![]);
-        assert!(output.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="用戶 ID")));
+        assert!(output.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="使用者 ID")));
         assert!(!output.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text().contains("synthetic-user-access-token"))));
         if let Some(dest)=std::env::var_os("DAOZAI_NEW_API_PREVIEW"){
             raster.draw(&h.ctx.tessellate(output.shapes,output.pixels_per_point),output.pixels_per_point);let mut rgba=Vec::new();raster.to_rgba8(&mut rgba);

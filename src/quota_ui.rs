@@ -62,7 +62,7 @@ impl State {
         let Some(path)=&self.cache_path else{return;};
         let mut entries=serde_json::Map::new();
         for a in &self.config.accounts {
-            // CLI 的額度報告不含帳號 ID，跨啟動無法確認讀數屬於當前登錄。
+            // CLI 的額度報告不含帳號 ID，跨啟動無法確認讀數屬於當前登入。
             if a.provider==Provider::Antigravity{continue;}
             if let Some(Ok(snapshot))=self.rows.get(&a.id) {
                 let mut entry=serde_json::json!({"provider":a.provider.name(),"slot":a.slot,"source":a.source,"snapshot":snapshot});
@@ -647,7 +647,7 @@ impl App {
                 let at=at.with_timezone(&chrono::Local);let time=at.format(if at.date_naive()==chrono::Local::now().date_naive(){"%H:%M"}else{"%m/%d %H:%M"}).to_string();
                 let busy=self.quota.busy.contains(&a.id);let stale=self.quota.stale.get(&a.id);
                 let status=if busy{format!("{} · {time}",if a.provider==Provider::Claude{"讀取中…"}else{"正在更新…"})}
-                    else if stale.map(String::as_str)==Some(quota::KIMI_RELOGIN){"上次記錄 · 請在 Kimi Code 重新登錄".to_owned()}
+                    else if stale.map(String::as_str)==Some(quota::KIMI_RELOGIN){"上次記錄 · 請在 Kimi Code 重新登入".to_owned()}
                     else if stale.is_some(){format!("上次記錄 · {time}")}
                     else if a.provider==Provider::Claude{format!("本機記錄 · {time}")}
                     else if let Some(wallet)=&s.wallet{let b=wallet.primary();if wallet.balances.len()>1{let other=wallet.balances.iter().find(|other|other.currency!=b.currency).unwrap();format!("另有 {} {} · {time}",other.currency,other.full(other.total))}else{format!("{} · {time} 更新",b.currency)}}
@@ -1000,9 +1000,9 @@ impl App {
                     if provider.relay(){
                         if self.quota.connect_target.is_some(){ui.label(format!("使用已儲存的 {} 接口",provider.name()));}
                         else if !self.quota.relay_manual&&!user_token{ui.label("自動識別站點類型");}
-                        ui.label(if custom{"支援粘貼 CC Switch 的 request / extractor 查詢腳本。"}else if user_token{"填寫 New API 站點個人設定中的 Access Token 和用戶 ID，查詢帳戶餘額。"}else{"填寫站點網站地址和 API Key，讀取站點提供的額度。"});
+                        ui.label(if custom{"支援粘貼 CC Switch 的 request / extractor 查詢腳本。"}else if user_token{"填寫 New API 站點個人設定中的 Access Token 和使用者 ID，查詢帳戶餘額。"}else{"填寫站點網站地址和 API Key，讀取站點提供的額度。"});
                         ui.add_sized([ui.available_width(),27.0],egui::TextEdit::singleline(&mut self.quota.source).hint_text(if custom{"HTTPS 站點或本機 HTTP 地址（可含子目錄）"}else{"https://你的站點地址（可含子目錄）"}));
-                        if user_token{settings_control_row(ui,"用戶 ID",64.0,|ui|{ui.add_sized([ui.available_width(),27.0],egui::TextEdit::singleline(&mut self.quota.relay_user_id).hint_text("站點個人資料中的數字 ID"))});}
+                        if user_token{settings_control_row(ui,"使用者 ID",64.0,|ui|{ui.add_sized([ui.available_width(),27.0],egui::TextEdit::singleline(&mut self.quota.relay_user_id).hint_text("站點個人資料中的數字 ID"))});}
                     }else if matches!(provider,Provider::MiniMax|Provider::Glm){
                         if !matches!(self.quota.source.as_str(),"cn"|"global"){self.quota.source="cn".into();}
                         ui.horizontal(|ui|{
@@ -1014,7 +1014,7 @@ impl App {
                         });
                         ui.label(if provider==Provider::Glm{"請填寫 Coding Plan 套餐 Key。ZCode 體驗額度可在官方客戶端查看。"}else{"讀取 MiniMax Coding Plan；按量 API 餘額暫不包含。"});
                     }else{ui.label("查詢 OpenCode Go 套餐使用率，不查詢 Zen 按量餘額。");}
-                    ui.add_sized([ui.available_width(),27.0],egui::TextEdit::singleline(&mut self.quota.api_key).password(true).hint_text(if custom{"API Key（腳本需要時填寫）"}else if user_token{"粘貼用戶 Access Token（非 API Key）"}else{"粘貼 API Key"}));
+                    ui.add_sized([ui.available_width(),27.0],egui::TextEdit::singleline(&mut self.quota.api_key).password(true).hint_text(if custom{"API Key（腳本需要時填寫）"}else if user_token{"粘貼使用者 Access Token（非 API Key）"}else{"粘貼 API Key"}));
                     if custom{
                         ui.collapsing("其他指令碼變數（可選）",|ui|{
                             ui.add_sized([ui.available_width(),27.0],egui::TextEdit::singleline(&mut self.quota.relay_access_token).password(true).hint_text("Access Token"));
@@ -1089,10 +1089,10 @@ impl App {
                     if ui.add_enabled(self.quota.login.is_none(),egui::Button::new("瀏覽器登入")).clicked(){self.quota_login(self.quota.alias.clone());}
                     if ui.button("從本機匯入").clicked(){self.quota.note=match quota::grok::native_path(){Some(path)=>match self.quota.config.import_grok(&path,&self.quota.alias){Ok(n)=>format!("新增 {n} 個 Grok Bot 帳號"),Err(e)=>e},None=>"請先安裝 Grok Bot 並登入，或使用瀏覽器連線".into()};}
                 });
-                ui.collapsing("匯入其他登錄檔案",|ui|{self.quota_file_form(ui);});
-                ui.label(egui::RichText::new("使用 Grok Bot 對應的 Cursor 帳號登錄，瀏覽器授權支援自動續期。").size(12.0).color(crate::settings_theme::color(ui.ctx(),Color32::from_gray(180),Color32::from_gray(75))));
+                ui.collapsing("匯入其他登入檔案",|ui|{self.quota_file_form(ui);});
+                ui.label(egui::RichText::new("使用 Grok Bot 對應的 Cursor 帳號登入，瀏覽器授權支援自動續期。").size(12.0).color(crate::settings_theme::color(ui.ctx(),Color32::from_gray(180),Color32::from_gray(75))));
             }else if self.quota.provider==Provider::Antigravity{
-                ui.add(egui::Label::new("讀取當前 Antigravity CLI 登錄帳號的額度。請先在官方 CLI 中登錄。").wrap());
+                ui.add(egui::Label::new("讀取當前 Antigravity CLI 登入帳號的額度。請先在官方 CLI 中登入。").wrap());
                 ui.horizontal_wrapped(|ui|{
                     if ui.button("連線本機 CLI").clicked(){
                         let reconnect=self.quota.connect_target.is_some();

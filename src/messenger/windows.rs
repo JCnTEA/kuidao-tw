@@ -454,7 +454,7 @@ impl OpenRequest {
         let steps=WAKE_STEPS.with(|steps|std::mem::take(&mut *steps.borrow_mut()));
         let line=wake_line(&head,&steps,result.as_ref().err(),started.elapsed());
         #[cfg(test)] LAST_WAKE.with(|last|*last.borrow_mut()=line.clone());
-        // 測試時不寫，免得把模擬數據混進用戶的真實診斷日誌。
+        // 測試時不寫，免得把模擬數據混進使用者的真實診斷日誌。
         if !cfg!(test){trace(line);}
         result
     }

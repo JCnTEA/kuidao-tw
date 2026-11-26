@@ -34,7 +34,7 @@ pub fn report(title: &str, details: &str) {
     eprintln!("{text}");
 }
 
-/// 僅記錄最近一次啟動停留的階段，不記錄帳號或用戶內容。
+/// 僅記錄最近一次啟動停留的階段，不記錄帳號或使用者內容。
 pub fn startup(stage:&str) {
     let directory=daozai::model::config_dir().join("diagnostics");
     if std::fs::create_dir_all(&directory).is_ok() {
@@ -178,7 +178,7 @@ pub fn install() {
     #[cfg(windows)]
     { native_crash::install(); native_crash::test_crash_hook(); }
     std::panic::set_hook(Box::new(|info| {
-        // 不寫入 panic 的數據載荷，避免把郵件、憑據或登錄資訊帶進日誌。
+        // 不寫入 panic 的數據載荷，避免把郵件、憑據或登入資訊帶進日誌。
         let location = info.location().map(|p| format!("{}:{}:{}", p.file(), p.line(), p.column()))
             .unwrap_or_else(|| "未知".into());
         let details = format!("程式碼位置：{location}\n呼叫棧：\n{}", std::backtrace::Backtrace::force_capture());

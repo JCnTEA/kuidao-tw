@@ -387,7 +387,7 @@ fn queue_fingerprint(root:&Path)->Vec<Option<(std::time::SystemTime,u64)>>{
     QUEUE_FILES.iter().map(|(file,_)|std::fs::metadata(root.join("webdata/file").join(file)).ok().and_then(|meta|Some((meta.modified().ok()?,meta.len())))).collect()
 }
 
-/// 隊列檔案只防異常：長期用戶的「我喜歡」等大歌單可達上萬首（約 2KB/首）。
+/// 隊列檔案只防異常：長期使用者的「我喜歡」等大歌單可達上萬首（約 2KB/首）。
 const QUEUE_LIMIT:u64=256*1024*1024;
 
 /// 隊列查找結果：找到（可能缺時長）、兩個隊列都完整讀過且沒有這首歌、或有隊列暫時讀不了。

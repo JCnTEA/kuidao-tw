@@ -137,7 +137,7 @@ fn is_monochrome(id: egui::TextureId) -> bool {
 }
 
 /// 鬼島自己的主題藍（按鈕、進度、飲水等）。只有這幾種藍會換成皮膚的主題色；
-/// 用戶為 AI 帳號等選的品牌色一律保留色相。
+/// 使用者為 AI 帳號等選的品牌色一律保留色相。
 fn theme_blue(c: [f32; 3]) -> Option<bool> {
     let near = |t: eframe::egui::Color32| {
         let d = |a: f32, b: u8| (a * 255.0 - b as f32).abs();

@@ -101,7 +101,7 @@ mod tests {
     fn account()->Account{Account {custom: None, email:"test@example.com".into(),provider:super::super::Provider::Qq,enabled:true,use_windows_proxy:false}}
     #[test]
     fn out_of_sync_response_reports_an_error_instead_of_crashing(){
-        // 用戶崩潰日誌：vendor\imap\src\client.rs:1369 的標籤斷言。a2 的位置收到上一條命令遲到的 a1 結束行。
+        // 使用者崩潰日誌：vendor\imap\src\client.rs:1369 的標籤斷言。a2 的位置收到上一條命令遲到的 a1 結束行。
         let (mut session,output)=wire("a1 OK late\r\n* 1 FETCH (UID 42 BODY[HEADER] {9}\r\nSubject:\n)\r\na2 OK fetch\r\n");
         assert!(item(&mut session,42,&account()).is_err(),"錯位的連線應交給上層重連");
         let commands=String::from_utf8(output.lock().unwrap().clone()).unwrap();

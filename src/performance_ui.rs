@@ -1191,7 +1191,7 @@ impl App {
         let user = r.cpu.zip(r.cpu_kernel).map(|(all, kernel)| (all - kernel).max(0.));
         self.hero_rows(c, [
             ("頻率", r.cpu_mhz.map_or_else(|| "—".into(), |m| format!("{:.2} GHz", m / 1000.)), INK),
-            ("用戶態", percent(user), INK),
+            ("使用者態", percent(user), INK),
             ("內核態", percent(r.cpu_kernel), INK),
             ("一分鐘峰值", percent(self.peak(|s| s.cpu, 60.)), INK),
         ]);

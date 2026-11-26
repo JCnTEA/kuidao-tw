@@ -319,7 +319,7 @@ fn base_name(name: &str) -> &str {
 }
 
 /// 省級行政區 → 省會（首府）。地理庫只收錄城市，搜「新疆」「內蒙古」這類地區名查不到，
-/// 改為同時搜它的省會，用戶能直接選到該地區的代表城市。
+/// 改為同時搜它的省會，使用者能直接選到該地區的代表城市。
 const PROVINCE_CAPITALS: [(&str, &str); 35] = [
     ("北京","北京"),("天津","天津"),("上海","上海"),("重慶","重慶"),("河北","石家莊"),("山西","太原"),
     ("遼寧","瀋陽"),("吉林","長春"),("黑龍江","哈爾濱"),("江蘇","南京"),("浙江","杭州"),("安徽","合肥"),
@@ -393,7 +393,7 @@ fn rank_cities(name: &str, mut found: Vec<(Position, u64)>) -> Vec<Position> {
     ranked
 }
 
-/// 搜尋多個同名地點，保留行政區供用戶確認。
+/// 搜尋多個同名地點，保留行政區供使用者確認。
 pub fn search_cities(agent: &ureq::Agent, name: &str) -> Result<Vec<Position>, String> {
     let name=name.trim();
     let mut found=Vec::new();
@@ -696,7 +696,7 @@ impl State {
         self.refresh_inner(city,t,false)
     }
 
-    /// 用戶主動重新整理：自動定位模式下同時更新位置，仍遵守載入狀態與冷卻間隔。
+    /// 使用者主動重新整理：自動定位模式下同時更新位置，仍遵守載入狀態與冷卻間隔。
     pub fn refresh_manual(&mut self, city: &str, t: f64) -> bool {
         self.refresh_inner(city,t,true)
     }

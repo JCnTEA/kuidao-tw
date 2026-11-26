@@ -1,5 +1,5 @@
 //! Gemini 網頁訂閱額度，接口與字段映射參考 CodexBar 的 gemini-web 插件。
-//! 瀏覽器連線只在用戶點擊時讀取會話；會話由 Windows DPAPI 加密儲存。
+//! 瀏覽器連線只在使用者點擊時讀取會話；會話由 Windows DPAPI 加密儲存。
 use super::{Account,Snapshot,Window};
 use serde_json::{json,Value};
 use std::{fs,io::Read,path::PathBuf,sync::{mpsc,Arc,atomic::{AtomicBool,Ordering}}};
