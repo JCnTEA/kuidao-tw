@@ -1,6 +1,6 @@
-//! 系統性能：展開頁、常駐徽標、側邊停靠與設置。
+//! 系統性能：展開頁、常駐徽標、側邊停靠與設定。
 //!
-//! 展開頁先是總覽：處理器、顯卡、內存三張「玻璃液位」卡，磁盤和網絡兩張霓虹曲線卡；點哪張進哪類硬件的詳情。
+//! 展開頁先是總覽：處理器、顯卡、內存三張「玻璃液位」卡，磁盤和網路兩張霓虹曲線卡；點哪張進哪類硬件的詳情。
 //! 底部程序區左右兩欄並排「CPU 最高」和「內存最多」，只看不點。
 //! 詳情頁是五個孿生版式：頂部帶迷你曲線的頁籤條，左側大環與三行讀數，右上主視圖，右下三行列表。
 //! 質感取自玻璃格：染色的暗底、霓虹描邊、底邊發亮，格子裡的細顆粒隨負載閃爍。
@@ -64,7 +64,7 @@ const LIST_Y: f32 = 234.0;
 const ROW: f32 = 18.0;
 const BODY_BOTTOM: f32 = APP_Y + APP_H;
 const GB: f64 = 1073741824.0;
-/// 顆粒閃爍的刷新間隔：只在展開頁可見時按這個節奏重繪，不跑滿幀。
+/// 顆粒閃爍的重新整理間隔：只在展開頁可見時按這個節奏重繪，不跑滿幀。
 const SHIMMER: Duration = Duration::from_millis(90);
 
 fn tab_w() -> f32 {
@@ -78,7 +78,7 @@ fn io_card(i: usize) -> [f32; 4] {
     let w = (RIGHT - LEFT - CARD_GAP) / 2.;
     [LEFT + i as f32 * (w + CARD_GAP), IO_Y, w, IO_H]
 }
-/// 總覽裡通向詳情頁的卡片位置（處理器、顯卡、內存、磁盤、網絡）。
+/// 總覽裡通向詳情頁的卡片位置（處理器、顯卡、內存、磁盤、網路）。
 fn overview_card(view: View) -> [f32; 4] {
     match view {
         View::Cpu | View::Overview => top_card(0),
@@ -496,7 +496,7 @@ impl App {
         self.module_on(PERFORMANCE_PAGE) && self.settings.show_performance && !self.effective_minimal()
             && (self.settings.performance_bar != BarStyle::Custom || self.settings.performance_metrics != 0)
     }
-    /// 島內當前顯示的頁面：先看島內的臨時選擇，沒有就用設置裡的。
+    /// 島內當前顯示的頁面：先看島內的臨時選擇，沒有就用設定裡的。
     fn performance_view(&self) -> View {
         self.performance.view.unwrap_or(self.settings.performance_view)
     }
@@ -746,7 +746,7 @@ impl App {
         if crate::quota_ui::bar_tooltip(c.hit(x - width / 2., 0., width, 30., "performance-open"), "打開系統性能".into())
             .clicked()
         {
-            // 點常駐指標是重新打開：從設置裡的起始頁開始。
+            // 點常駐指標是重新打開：從設定裡的起始頁開始。
             self.performance.view = None;
             self.show_page(PERFORMANCE_PAGE);
         }
@@ -827,7 +827,7 @@ impl App {
         if crate::quota_ui::bar_tooltip(c.hit(x - 16., y - height / 2., 32., height, "side-performance"), "打開系統性能".into())
             .clicked()
         {
-            // 點常駐指標是重新打開：從設置裡的起始頁開始。
+            // 點常駐指標是重新打開：從設定裡的起始頁開始。
             self.performance.view = None;
             self.show_page(PERFORMANCE_PAGE);
         }
@@ -929,7 +929,7 @@ impl App {
                 }
             }
         }
-        // ---- 磁盤、網絡：窄條，兩項讀數一行，背後墊一層淡淡的一分鐘曲線 ----
+        // ---- 磁盤、網路：窄條，兩項讀數一行，背後墊一層淡淡的一分鐘曲線 ----
         for (j, view) in [View::Disk, View::Network].into_iter().enumerate() {
             let [x, y, w, h] = io_card(j);
             let color = view_color(view);
@@ -1219,12 +1219,12 @@ impl App {
         let peak = self.peak(|s| s.gpu, 60.).map(|p| format!("峰值 {p:.0}%")).unwrap_or_default();
         self.section(c, VIZ_Y - 7., "最近一分鐘", &peak, FAINT);
         self.trend(c, |s| s.gpu, 100., color, [COL_X, VIZ_Y, COL_W, 56.]);
-        // 引擎：3D、視頻解碼、視頻編碼、複製……各一行，同類取最忙的那個。
+        // 引擎：3D、影片解碼、影片編碼、複製……各一行，同類取最忙的那個。
         let bar_x = COL_X + 50.;
         self.section(c, 180., "引擎", "", FAINT);
         let engines: Vec<_> = r.gpu_engines.iter().take(4).collect();
         if engines.is_empty() {
-            c.text(COL_X, 198., "顯卡驅動沒有提供引擎信息", 9.5, W::Regular, FAINT, H::Left);
+            c.text(COL_X, 198., "顯卡驅動沒有提供引擎資訊", 9.5, W::Regular, FAINT, H::Left);
         }
         for (i, (label, load)) in engines.iter().enumerate() {
             let base = 198. + i as f32 * ROW;
@@ -1371,7 +1371,7 @@ impl App {
             glass_bar(c, [COL_X + 20., base - 11., 112., 14.], &[(used, tint)], None, energy, t, 23 + i as u32, &format!("volume-{}", volume.letter));
             c.text(RIGHT, base, &capacity(Some((volume.used, volume.total))), 10., W::Bold, INK, H::Right);
         }
-        // 讀寫最多的程序：按進程的讀寫字節數（含文件、管道等全部讀寫），和任務管理器的「磁盤」列口徑不完全一樣。
+        // 讀寫最多的程序：按進程的讀寫字節數（含檔案、管道等全部讀寫），和任務管理器的「磁盤」列口徑不完全一樣。
         let list_y = 198. + r.volumes.len().clamp(1, 3) as f32 * ROW + 6.;
         let limit = (((BODY_BOTTOM - 10. - (list_y + 20.)) / ROW).floor() as usize + 1).min(5);
         self.section(c, list_y, "讀寫最多的程序", "", FAINT);
@@ -1409,9 +1409,9 @@ impl App {
         }
     }
 
-    // ---------- 設置頁 ----------
+    // ---------- 設定頁 ----------
 
-    /// 設置裡的樣式縮略：一段島身，裡面直接畫常駐樣式本身，寬的樣式整體縮小。
+    /// 設定裡的樣式縮略：一段島身，裡面直接畫常駐樣式本身，寬的樣式整體縮小。
     fn performance_style_preview(&self, ui: &egui::Ui, style: BarStyle, rect: egui::Rect) {
         let width = style.width(self.settings.performance_metrics).max(40.);
         let body_w = width + 18.;

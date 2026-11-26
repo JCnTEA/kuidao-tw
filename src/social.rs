@@ -1,5 +1,5 @@
 //! 社群訊息來源：從 Windows 通知辨識 Threads／Messenger／Facebook／LINE／Instagram，
-//! 只記住「有幾則」與應用程式開關，不保存訊息內容。
+//! 只記住「有幾則」與應用程式開關，不儲存訊息內容。
 use crate::paint::Card;
 use eframe::egui;
 

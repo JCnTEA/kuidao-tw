@@ -89,7 +89,7 @@ impl App {
                         if ui.button("複製憑據路徑").clicked() {
                             let path = bridge.connection_file(&source.id);
                             ui.ctx().copy_text(path.to_string_lossy().into_owned());
-                            host.message = "已複製憑據文件路徑".into();
+                            host.message = "已複製憑據檔案路徑".into();
                         }
                         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                             ui.add(egui::Label::new(&source.name).truncate())
@@ -123,7 +123,7 @@ impl App {
                         Ok(()) => {
                             host.source_id.clear();
                             host.source_name.clear();
-                            "已授權。將憑據文件路徑交給接入端。".into()
+                            "已授權。將憑據檔案路徑交給接入端。".into()
                         }
                         Err(error) => error,
                     };

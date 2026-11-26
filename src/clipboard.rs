@@ -1,7 +1,7 @@
 //! 剪貼板記錄：最近複製的文字，在置物架頁的「剪貼板」裡查看、再次複製、固定。
 //!
-//! - 只記文字；圖片和文件不記錄。
-//! - 最近記錄與固定條目都保存在本機 `clipboard.json`。
+//! - 只記文字；圖片和檔案不記錄。
+//! - 最近記錄與固定條目都儲存在本機 `clipboard.json`。
 //! - 密碼管理器等標記為「不進剪貼板歷史」的內容一律跳過
 //!   （`ExcludeClipboardContentFromMonitorProcessing` / `CanIncludeInClipboardHistory = 0`）。
 //! - Windows 上用 `AddClipboardFormatListener` 等系統通知，沒有輪詢；
@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 
 /// 未固定條目的上限；固定的不佔這個名額。
 pub const MAX_RECENT: usize = 30;
-/// 單條最長字符數，超過的不記錄（大段日誌、整份文件內容）。
+/// 單條最長字符數，超過的不記錄（大段日誌、整份檔案內容）。
 pub const MAX_CHARS: usize = 20_000;
 pub const MAX_PINNED: usize = 20;
 
@@ -195,7 +195,7 @@ mod win {
 
     struct State { shared: Shared, repaint: Box<dyn Fn() + Send> }
 
-    /// 監聽線程建好消息窗口後登記線程號；持有者銷燬時先置位再讀線程號，兩邊總有一方看到對方。
+    /// 監聽線程建好訊息窗口後登記線程號；持有者銷燬時先置位再讀線程號，兩邊總有一方看到對方。
     #[derive(Default)]
     pub struct Stop { requested: std::sync::atomic::AtomicBool, thread: std::sync::atomic::AtomicU32 }
     impl Stop {
@@ -283,7 +283,7 @@ mod win {
             let wc = WNDCLASSW { lpfnWndProc: Some(proc), hInstance: instance.into(), lpszClassName: class, ..Default::default() };
             RegisterClassW(&wc);
             let hwnd = CreateWindowExW(WINDOW_EX_STYLE(0), class, PCWSTR::null(), WINDOW_STYLE(0), 0, 0, 0, 0, HWND_MESSAGE, None, instance, None)?;
-            // 消息窗口建好後線程已有消息隊列，此後投遞的 WM_QUIT 不會丟。
+            // 訊息窗口建好後線程已有訊息隊列，此後投遞的 WM_QUIT 不會丟。
             if !stop.register() { let _ = DestroyWindow(hwnd); return Ok(()); }
             STATE.with(|state| *state.borrow_mut() = Some(State { shared, repaint }));
             AddClipboardFormatListener(hwnd)?;

@@ -1,4 +1,4 @@
-//! Agent 額度。配置只保存登錄引用，獨立授權由系統安全保存。
+//! Agent 額度。配置只儲存登錄引用，獨立授權由系統安全儲存。
 use serde_json::{json, Value};
 use std::{collections::HashMap, fs, io::Read, path::{Path, PathBuf}, sync::mpsc, time::{Duration, Instant}};
 use base64::Engine;
@@ -28,7 +28,7 @@ pub(crate) mod antigravity;
 mod native_auth;
 
 pub struct Discovery {pub added:usize,pub notes:Vec<String>}
-pub(crate) const ZCODE_RECONNECT:&str="請用 GLM Coding Plan 套餐 Key 重新連接。ZCode 體驗額度可在官方客戶端查看。";
+pub(crate) const ZCODE_RECONNECT:&str="請用 GLM Coding Plan 套餐 Key 重新連線。ZCode 體驗額度可在官方客戶端查看。";
 impl Discovery {
     pub fn message(&self)->String{
         let mut text=if self.added>0{format!("新增 {} 個帳號",self.added)}else{"未發現新的本機帳號".into()};
@@ -87,11 +87,11 @@ impl RelayIcon {
 
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::Key => "默認鑰匙",
+            Self::Key => "預設鑰匙",
             Self::Layers => "疊層",
             Self::Plane => "紙飛機",
             Self::Bolt => "閃電",
-            Self::Link => "連接",
+            Self::Link => "連線",
             Self::Arrows => "雙向箭頭",
             Self::Box => "方盒",
         }
@@ -140,9 +140,9 @@ impl Config {
         crate::model::atomic_write(&dir.join("ai-quota.json"),&raw).map_err(|_|"無法儲存額度配置，原帳號未變更".into())
     }
     pub fn add(&mut self,provider:Provider,alias:String,source:PathBuf)->Result<(),String>{
-        if provider.api_key(){return Err("請使用 API Key 連接，無需登錄 JSON".into());}
+        if provider.api_key(){return Err("請使用 API Key 連線，無需登錄 JSON".into());}
         if provider==Provider::ZCode{return Err(ZCODE_RECONNECT.into());}
-        if provider==Provider::Antigravity{return Err("請從當前 Antigravity CLI 登錄連接".into());}
+        if provider==Provider::Antigravity{return Err("請從當前 Antigravity CLI 登錄連線".into());}
         if provider==Provider::Kiro{return kiro::add(self,&source,&alias);}
         if provider==Provider::WorkBuddy{return Err("請使用瀏覽器連線 WorkBuddy".into());}
         if provider==Provider::DeepSeek{return Err("請使用 API Key 連線 DeepSeek".into());}
@@ -314,7 +314,7 @@ impl Window {
     pub fn value_text(&self)->String{self.amount.as_ref().map(Amount::full).unwrap_or_else(||{
         if self.remaining>0.0 && self.remaining<1.0{"<1%".into()}else{format!("{:.0}%",self.remaining)}
     })}
-    /// 一句話額度摘要，用於小島提示與設置頁。
+    /// 一句話額度摘要，用於小島提示與設定頁。
     pub fn summary(&self)->String{format!("{}剩餘 {}",self.label,self.value_text())}
 }
 #[derive(Clone, Debug, Default)]
@@ -452,7 +452,7 @@ impl Service {
                 }
             }
             if accounts.is_empty(){continue;}
-            // 停用後保留退避記錄，重新啟用時仍尊重服務器的限流時間。
+            // 停用後保留退避記錄，重新啟用時仍尊重伺服器的限流時間。
             let pending=self.workers.get(&group).map(|worker|worker.pending.clone()).unwrap_or_default();
             {let Ok(mut next)=pending.lock()else{return false;};next.accounts=Some(accounts);next.running=true;}
             let next=pending.clone();let results=self.results.clone();let run=run.clone();
@@ -547,10 +547,10 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
         ureq::Error::Status(401|403,_)=>("登錄已失效或權限不足，請在對應工具中重新登錄".into(),0),
         ureq::Error::Status(429,r)=>("請求過於頻繁，稍後自動重試".into(),r.header("Retry-After").and_then(|s|s.parse().ok()).unwrap_or(180).clamp(30,3600)),
         ureq::Error::Status(n,_)=>(format!("額度服務暫不可用（{n}）"),60),
-        _=>("無法連接額度服務，請檢查網絡或代理".into(),30),
+        _=>("無法連線額度服務，請檢查網路或代理".into(),30),
     })?;
     let mut body=String::new();response.into_reader().take(1024*1024).read_to_string(&mut body).map_err(|_|("讀取額度響應失敗".into(),30))?;
-    if auth.stamp!=fs::metadata(&account.source).and_then(|m|m.modified()).ok(){return Err(("登錄信息已變化，請刷新額度".into(),0));}
+    if auth.stamp!=fs::metadata(&account.source).and_then(|m|m.modified()).ok(){return Err(("登錄資訊已變化，請重新整理額度".into(),0));}
     let value=serde_json::from_str(&body).map_err(|_|("服務沒有返回有效的額度數據".into(),60))?;
     parse(account.provider,&value).map_err(|e|(e,60))
 }
@@ -769,7 +769,7 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
         for provider in Provider::ALL{println!("provider={} accounts={}",provider.name(),config.accounts.iter().filter(|a|a.provider==provider).count());}
         let agent=http_agent();
         for account in config.accounts.iter().filter(|a|a.provider==Provider::Claude&&a.slot.is_some()){
-            let snapshot=fetch(&agent,account).expect("Claude 桌面版本機額度應可只讀獲取");
+            let snapshot=fetch(&agent,account).expect("Claude 桌面版本機額度應可只讀取得");
             println!("claude_windows={:?}",snapshot.windows.iter().map(|w|(&w.label,w.remaining)).collect::<Vec<_>>());
         }
         for account in config.accounts.iter().skip(before){

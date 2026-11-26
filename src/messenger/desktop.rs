@@ -117,7 +117,7 @@ pub(crate) fn describe_process_windows(client:Messenger,pid:u32)->String{unsafe{
     if total>12{lines.push(format!("另有 {} 個",total-12));}
     format!("進程 {pid} 頂層窗口 {total} 個：{}",lines.join("；"))
 }}
-/// 飛書主窗口的標題固定為應用名（切換消息、雲文檔等頁面不變，關到託盤後仍保留）；
+/// 飛書主窗口的標題固定為應用名（切換訊息、雲文檔等頁面不變，關到託盤後仍保留）；
 /// 「在獨立窗口打開」的會話、文檔窗口與主窗口同進程、同類名、同樣式，只有標題是會話或文檔名。
 const FEISHU_TITLES:[&str;3]=["飛書","Feishu","Lark"];
 const FEISHU_FRAME:&str="Chrome_WidgetWin_1";
@@ -187,7 +187,7 @@ pub(crate) fn flash_account(client:Messenger,window:HWND,paths:&[String])->Optio
 pub(crate) fn flash_target(client:Messenger,window:HWND,paths:&[String])->Option<Unread>{
     flash_account(client,window,paths).map(|target|target.map_or_else(||Unread::of(client),|t|t.unread))
 }
-/// 釘釘 9.0.5 掃碼前會閃動豎版登錄窗口，登錄成功後在同一進程中另建消息主窗口。
+/// 釘釘 9.0.5 掃碼前會閃動豎版登錄窗口，登錄成功後在同一進程中另建訊息主窗口。
 unsafe fn dingtalk_login_window(window:HWND)->bool{
     let class=class_name(window);
     let style=GetWindowLongW(window,GWL_STYLE) as u32;
@@ -238,7 +238,7 @@ fn open(target:Target,paths:&[String],_:bool)->Result<Target,OpenError>{unsafe{
     if unread.pid==0 || window_pid(window)!=unread.pid {wake_step("提醒視窗已不屬於該帳號");return Err(OpenError::Unavailable);}
     if !main_window(window,unread.source){wake_step(format!("提醒視窗不是主視窗（{}）",describe_window(window)));return Err(OpenError::Unavailable);}
     if !matches(window,paths){wake_step("提醒視窗所屬程式不在已知安裝路徑中");return Err(OpenError::Unavailable);}
-    // 不執行協議、託盤回調或鼠標鍵盤模擬，只恢復該消息保存的主窗口。
+    // 不執行協議、託盤回調或鼠標鍵盤模擬，只恢復該訊息儲存的主窗口。
     wake_step(format!("切前台 {}",describe_window(window)));
     let show_queued=match wake_route(unread.source,IsWindowVisible(window).as_bool(),IsIconic(window).as_bool()) {
         WakeRoute::Restore=>Some(ShowWindowAsync(window,SW_RESTORE).as_bool()),
@@ -264,7 +264,7 @@ fn finish_open(show_queued:Option<bool>,focus:impl FnOnce()->bool)->Result<(),Op
 #[derive(Debug,PartialEq,Eq)]
 enum WakeRoute {Focus,Restore,Show,Relaunch}
 /// 怎樣把主窗口帶到前台。飛書關到託盤後窗口被隱藏，若由鬼島直接 `ShowWindow`，飛書不會恢復渲染，
-/// 頁面停在加載骨架、點擊無響應（#181，本機飛書 8.6 復現）；改為再啟動一次飛書主程序，由飛書自己顯示原窗口。
+/// 頁面停在載入骨架、點擊無響應（#181，本機飛書 8.6 復現）；改為再啟動一次飛書主程序，由飛書自己顯示原窗口。
 /// 最小化的窗口照常還原（實測正常）；其他客戶端未驗證，保持原做法。
 fn wake_route(source:Messenger,visible:bool,iconic:bool)->WakeRoute {
     if !visible && source==Messenger::Feishu {WakeRoute::Relaunch}

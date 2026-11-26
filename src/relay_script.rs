@@ -81,11 +81,11 @@ pub fn request(agent:&ureq::Agent,base:&str,credential:&Credential,cancelled:imp
     let origin=url::Url::parse(&base).unwrap();
     if url.origin()!=origin.origin()||!url.username().is_empty()||url.password().is_some()||url.fragment().is_some(){return Err(("查詢腳本必須請求所填站點的同源接口".into(),0));}
     let method=config["method"].as_str().unwrap_or("GET");
-    if !matches!(method,"GET"|"POST"){return Err(("額度查詢腳本僅支持 GET 或 POST".into(),0));}
+    if !matches!(method,"GET"|"POST"){return Err(("額度查詢腳本僅支援 GET 或 POST".into(),0));}
     let direct;
     let agent=if url.scheme()=="http" {
         let ips=loopback_ips(&url);
-        let port=url.port_or_known_default().expect("HTTP 有默認端口");
+        let port=url.port_or_known_default().expect("HTTP 有預設端口");
         direct=ureq::AgentBuilder::new().try_proxy_from_env(false).redirects(0)
             .resolver(move |_:&str|Ok(ips.iter().map(|ip|std::net::SocketAddr::new(*ip,port)).collect()))
             .build();

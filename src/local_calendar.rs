@@ -1,4 +1,4 @@
-//! 本機日程：獨立保存，不需要連接工作帳號。
+//! 本機行程：獨立儲存，不需要連線工作帳號。
 use chrono::{Duration, Local, NaiveDate, NaiveTime, Timelike};
 use crate::mail::Meeting;
 

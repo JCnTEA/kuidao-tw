@@ -1,4 +1,4 @@
-//! 豆包獨立官網登錄及本機客戶端導入，不依賴瀏覽器擴展。
+//! 豆包獨立官網登錄及本機客戶端匯入，不依賴瀏覽器擴展。
 use super::{cookie, ENDPOINT, MAX_BODY};
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, fs, net::{Ipv4Addr, SocketAddr, TcpStream}, os::windows::process::CommandExt,

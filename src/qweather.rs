@@ -1,4 +1,4 @@
-//! 和風天氣：憑據保存在系統憑據庫，所有出站請求先持久化計數。
+//! 和風天氣：憑據儲存在系統憑據庫，所有出站請求先持久化計數。
 use crate::weather::{Day,Position,Snapshot,SunTimes};
 use serde::{Deserialize,Serialize};
 use serde_json::Value;
@@ -67,7 +67,7 @@ fn reserve(path:&Path,month:&str)->Result<(),Error> {
 }
 pub fn usage()->u32 {let _g=USAGE_LOCK.lock().unwrap_or_else(|e|e.into_inner());std::fs::read(crate::model::config_dir().join("qweather-usage.json")).ok().and_then(|b|serde_json::from_slice::<Usage>(&b).ok()).filter(|u|u.month==month()).map_or(0,|u|u.attempts)}
 
-/// 不派生 Debug；密鑰不進入錯誤、URL、普通配置或天氣緩存。
+/// 不派生 Debug；金鑰不進入錯誤、URL、普通配置或天氣緩存。
 #[derive(Clone)]
 pub(crate) struct Client {
     pub host:String,key:String,pub gate:Arc<AtomicBool>,
@@ -92,7 +92,7 @@ impl Client {
         #[cfg(test)]{return self.mock.as_ref().ok_or(Error::Network)?(&url,&self.key);}
         #[cfg(not(test))]
         {
-        // 禁止重定向及隱式網絡重試；每次調用僅對應一次已計數的出站嘗試。
+        // 禁止重定向及隱式網路重試；每次調用僅對應一次已計數的出站嘗試。
         let response=ureq::AgentBuilder::new().redirects(0).timeout(Duration::from_secs(18)).build().get(url.as_str())
             .set("X-QW-Api-Key",&self.key).set("Accept","application/json").call().map_err(|e|match e {
                 ureq::Error::Status(401|403,_)=>Error::Auth,ureq::Error::Status(429,_)=>Error::Rate,
@@ -166,7 +166,7 @@ impl Runtime {
         changed
     }
     pub fn loading(&self)->bool {self.current.is_some()||self.daily.is_some()}
-    /// 連續實況失敗，或憑據、額度等錯誤已暫停刷新。
+    /// 連續實況失敗，或憑據、額度等錯誤已暫停重新整理。
     pub fn current_refresh_failed(&self)->bool {self.current_failures>=2||(self.paused&&self.error.is_some())}
     pub fn can_refresh(&self,now:i64)->bool {!self.loading()&&now-self.last_current.max(self.last_daily)>=30}
     pub fn refresh(&mut self,client:&Client,now:i64,manual:bool){

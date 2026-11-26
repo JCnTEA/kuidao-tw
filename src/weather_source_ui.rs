@@ -1,4 +1,4 @@
-//! 天氣來源草稿、連接驗證與安全啟用。
+//! 天氣來源草稿、連線驗證與安全啟用。
 use crate::{app::{App,WEATHER_PAGE},extras::{settings_card,settings_hint,settings_label},settings_theme::color,qweather::{self,Client,Config,Error,Location}};
 use eframe::egui::{self,Color32,RichText};
 use std::sync::{Arc,atomic::{AtomicBool,Ordering},mpsc::Receiver};
@@ -178,7 +178,7 @@ impl App {
             let Some(location)=source.city_choice.as_ref().or(source.picked.as_ref()).cloned()else{return;};
             config.host=client.host.clone();config.location=Some(location.clone());
             if !config.saved.contains(&location){if config.saved.len()>=crate::weather::MAX_CITIES{source.message=Some(("已儲存五個和風城市，請先刪除一個。",true));return;}config.saved.push(location);}
-            // 按 Host 隔離憑據，新憑據保存失敗時不觸碰當前來源。
+            // 按 Host 隔離憑據，新憑據儲存失敗時不觸碰當前來源。
             let old_slot=config.credential.clone();
             config.credential=format!("{}-{}",client.host,chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default());
             if let Err(e)=client.store(&config.credential){source.message=Some((e.text(),true));return;}

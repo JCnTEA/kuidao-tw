@@ -45,7 +45,7 @@ pub fn lines(html: &str, text: &str) -> Vec<Line> {
     if rich.is_empty() || score(&rich) * 2 < score(&plain) { plain } else { rich }
 }
 
-/// 零寬空格、零寬連接符、軟連字符都不佔位，留著只會讓斷行和複製變得古怪。
+/// 零寬空格、零寬連線符、軟連字符都不佔位，留著只會讓斷行和複製變得古怪。
 fn clean(text: &str) -> std::borrow::Cow<'_, str> {
     let noisy = |c: char| matches!(c, '\u{200b}' | '\u{200c}' | '\u{200d}' | '\u{2060}' | '\u{feff}' | '\u{00ad}');
     if text.contains(noisy) {
@@ -278,7 +278,7 @@ fn from_html(html: &str) -> Vec<Line> {
     let strong = STRONG.get_or_init(|| regex::Regex::new(r"(?i)</?(?:strong|b)\b[^>]*>").expect("strong"));
     // 表頭和數據單元格一樣按「·」分隔，但保留粗體以便和正文區分。
     let header_cell = HEADER_CELL.get_or_init(|| regex::Regex::new(r"(?i)<th\b[^>]*>|</th\s*>").expect("th"));
-    // 圖片本身渲染不了，只把有信息量的 alt 留成佔位，裝飾圖直接丟掉。
+    // 圖片本身渲染不了，只把有資訊量的 alt 留成佔位，裝飾圖直接丟掉。
     let image = IMAGE.get_or_init(|| regex::Regex::new(r"(?is)<img\b[^>]*>").expect("img"));
     let cell = CELL.get_or_init(|| regex::Regex::new(r"(?i)</t[dh]>").expect("cell"));
     let hard = HARD.get_or_init(|| {

@@ -1,4 +1,4 @@
-//! 島內本機日程表單。
+//! 島內本機行程表單。
 use crate::{app::{App,Cmd,CALENDAR_PAGE},local_calendar::{self,Draft},paint::{self,Card,H},theme::{self,W}};
 #[cfg(all(windows, feature = "sdk-material"))]
 use crate::material::ControlRole;
@@ -167,14 +167,14 @@ impl App {
         })();
         if let Err(error)=result{draft.error=error;self.calendar.draft=Some(draft);}
     }
-    /// 導入 .ics 文件到本機日程：過去 30 天到未來一年，重複日程展開；同一日程再次導入會跳過。
+    /// 匯入 .ics 檔案到本機行程：過去 30 天到未來一年，重複行程展開；同一行程再次匯入會跳過。
     pub fn import_ics(&mut self,files:&[(String,String)])->String{
         if !self.calendar.local_error.is_empty(){return self.calendar.local_error.clone();}
         let now=chrono::Utc::now();
         let (lo,hi)=(now-chrono::Duration::days(30),now+chrono::Duration::days(366));
         let mut entries=self.calendar.local.clone();
         let mut known:std::collections::HashSet<_>=entries.iter().map(|entry|entry.event.uid.clone()).collect();
-        // 兼容舊版本對缺少 UID 的日程生成的標識，重新導入時保留已有本機記錄。
+        // 兼容舊版本對缺少 UID 的行程生成的標識，重新匯入時保留已有本機記錄。
         for entry in &entries{if entry.event.uid==format!("ics--{}",entry.event.start){known.insert(fallback_ics_uid(&entry.event));}}
         let (mut added,mut duplicates,mut capacity,mut errors)=(0usize,0usize,0usize,Vec::new());
         let mut report=crate::calendar::ReadReport::default();
@@ -232,13 +232,13 @@ impl App {
             return;
         }
         let accent=Color32::from_rgb(82,162,255);
-        c.centered_text(43.0,20.0,if d.uid.is_some(){"編輯日程"}else{"新建日程"},13.0,W::Semibold,theme::WHITE,H::Left);
+        c.centered_text(43.0,20.0,if d.uid.is_some(){"編輯行程"}else{"新建行程"},13.0,W::Semibold,theme::WHITE,H::Left);
         // 圖釘佔用右側時，將說明放到表單末行，給時間和圖釘留出空間。
         if self.hold_slot<1.0 {
-            c.faded(1.0-self.hold_slot).centered_text(370.0,20.0,"僅保存在本機",9.0,W::Regular,theme::GRAY,H::Right);
+            c.faded(1.0-self.hold_slot).centered_text(370.0,20.0,"僅儲存在本機",9.0,W::Regular,theme::GRAY,H::Right);
         }
         if self.hold_slot>0.0 {
-            c.faded(self.hold_slot).centered_text(370.0,172.0,"僅保存在本機",9.0,W::Regular,theme::GRAY,H::Right);
+            c.faded(self.hold_slot).centered_text(370.0,172.0,"僅儲存在本機",9.0,W::Regular,theme::GRAY,H::Right);
         }
         for (label,y) in [("名稱",49.0),("開始",82.0),("結束",114.0),("提醒",147.0)]{c.centered_text(43.0,y,label,10.0,W::Regular,theme::GRAY,H::Left);}
         for (x,y,w) in [(86.0,38.0,284.0),(86.0,71.0,120.0),(86.0,103.0,120.0)]{c.fill(x,y,w,23.0,6.0,theme::CARD);}
@@ -287,7 +287,7 @@ impl App {
         if d.uid.is_some(){
             let (r,b)=paint::material_capsule(c,43.0,188.0,82.0,22.0,"calendar-editor-delete",theme::BTN,theme::BTN_HOVER,
                 glass(0.16),#[cfg(all(windows, feature = "sdk-material"))] ControlRole::CalDelete);
-            b.centered_text(84.0,199.0,if d.confirm_delete{"確認刪除"}else{"刪除日程"},9.5,W::Regular,theme::RED,H::Center);
+            b.centered_text(84.0,199.0,if d.confirm_delete{"確認刪除"}else{"刪除行程"},9.5,W::Regular,theme::RED,H::Center);
             if r.clicked(){if d.confirm_delete{delete=true;}else{d.confirm_delete=true;}}
         }
         let (cancel,b)=paint::material_capsule(c,224.0,188.0,64.0,22.0,"calendar-editor-cancel",theme::BTN,theme::BTN_HOVER,
@@ -299,7 +299,7 @@ impl App {
             let (hover,_)=c.hover_t(&save);
             b.fill(298.0,188.0,72.0,22.0,11.0,paint::alpha(accent,0.42+hover*0.16));
         }
-        b.centered_text(334.0,199.0,"保存到本機",10.0,W::Semibold,theme::WHITE,H::Center);
+        b.centered_text(334.0,199.0,"儲存到本機",10.0,W::Semibold,theme::WHITE,H::Center);
         if delete{self.delete_calendar_editor();}else if cancel.clicked(){self.calendar.draft=None;}else if save.clicked(){self.save_calendar_editor();}
     }
     pub(crate) fn calendar_editor_inputs(&mut self,ui:&mut egui::Ui,origin:egui::Pos2,cmds:&mut Vec<Cmd>){

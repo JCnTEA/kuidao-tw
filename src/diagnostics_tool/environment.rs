@@ -114,7 +114,7 @@ fn process_details(info: &mut Map<String, Value>) {
             let exe = utf16(&entry.szExeFile).to_ascii_lowercase();
             let name = exe.strip_suffix(".exe").unwrap_or(&exe);
             let pid = entry.th32ProcessID;
-            // 核對快照中的 PID 仍屬於目標應用，僅查詢文件版本與進程計數。
+            // 核對快照中的 PID 仍屬於目標應用，僅查詢檔案版本與進程計數。
             let path = || player_process::image_path(pid)
                 .filter(|path| path.rsplit(['\\', '/']).next().is_some_and(|file| file.eq_ignore_ascii_case(&exe)));
             if name == "daozai" {

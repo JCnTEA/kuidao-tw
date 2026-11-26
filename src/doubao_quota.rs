@@ -1,4 +1,4 @@
-//! 豆包網頁會員額度。基於 0011-joe 的 #42 實現，登錄狀態僅在本機加密保存。
+//! 豆包網頁會員額度。基於 0011-joe 的 #42 實現，登錄狀態僅在本機加密儲存。
 use super::{Account, Config, Provider, Snapshot, Window};
 use serde_json::{json, Value};
 use std::{fs, io::Read, path::PathBuf, sync::{mpsc, Arc, atomic::{AtomicBool, Ordering}}};
@@ -180,7 +180,7 @@ pub fn fetch(agent: &ureq::Agent, account: &Account) -> Result<Snapshot, (String
     request(agent, ENDPOINT, &header)
 }
 
-/// 驗證結果不包含已落盤的憑據；只有仍打開的連接窗口才提交保存。
+/// 驗證結果不包含已落盤的憑據；只有仍打開的連線窗口才提交儲存。
 pub struct Validated { alias: String, header: String, snapshot: Snapshot, expected: Option<String> }
 pub struct Connected { pub id: String, pub snapshot: Snapshot, pub cleanup_error: Option<String> }
 impl Validated {

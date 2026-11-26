@@ -20,7 +20,7 @@ fn header<'a>(raw:&'a str,key:&str)->Option<&'a str>{
 }
 
 /// 去掉標題末尾括號裡的譯名或別名：「ANGEL (天使)」→「ANGEL」。
-/// 括號裡是版本信息（Live、Remix、伴奏、現場等）時保留，避免把其他版本的歌詞當成原版。
+/// 括號裡是版本資訊（Live、Remix、伴奏、現場等）時保留，避免把其他版本的歌詞當成原版。
 fn without_alias(title:&str)->&str {
     static ALIAS:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
     static VERSION:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
@@ -35,7 +35,7 @@ fn without_alias(title:&str)->&str {
 fn select(raw:&str,title:&str,artist:&str,duration:f64)->Option<Lyrics>{
     let mut lyrics=parse_krc(raw);
     if !lyrics.synced{return None;}
-    // 文件名已經嚴格匹配完整歌手與歌名；頭部可能為空，合唱也可能只標主歌手。
+    // 檔案名已經嚴格匹配完整歌手與歌名；頭部可能為空，合唱也可能只標主歌手。
     if header(raw,"ti").filter(|s|!s.is_empty()).is_some_and(|s|song_identity(s,artist).0!=song_identity(title,artist).0
         && song_identity(without_alias(s),artist).0!=song_identity(without_alias(title),artist).0) {
         // 酷狗頭部可能保留舊別名；僅在正文開頭的完整歌名和歌手也吻合時接受。
@@ -52,7 +52,7 @@ fn select(raw:&str,title:&str,artist:&str,duration:f64)->Option<Lyrics>{
             if total>0 && (total as f64/1000.0-duration).abs()>2.0{return None;}
         }
     }
-    // 文件自身的校準量屬於原生時間軸，用戶的提前量仍由界面單獨應用。
+    // 檔案自身的校準量屬於原生時間軸，用戶的提前量仍由界面單獨應用。
     let offset=header(raw,"offset").and_then(|s|s.parse::<i32>().ok()).unwrap_or_default() as f32/1000.0;
     for line in &mut lyrics.lines{line.t=(line.t+offset).max(0.0);}
     Some(lyrics)
@@ -91,7 +91,7 @@ fn read_directory(root:&Path,title:&str,artist:&str,duration:f64)->Option<Lyrics
         let Some(candidate)=select(&raw,&name,&singer,duration) else{continue;};
         // 同一首歌可能緩存過多份歌詞：正文是羅馬音的那份只作備選，優先用原文。
         if romanized(title,&candidate) {if transliterated.is_none(){transliterated=Some(candidate);}continue;}
-        // 時長明確匹配的緩存優先；沒有時長信息時才沿用最新的兼容緩存。
+        // 時長明確匹配的緩存優先；沒有時長資訊時才沿用最新的兼容緩存。
         if duration<=0.0 || header(&raw,"total").and_then(|s|s.parse::<u32>().ok()).is_some_and(|total|total>0){return Some(candidate);}
         if fallback.is_none(){fallback=Some(candidate);}
     }
@@ -113,7 +113,7 @@ pub fn read(title:&str,artist:&str,duration:f64)->Option<Lyrics>{
 mod tests{
     #[test]
     fn translated_alias_in_the_lyric_header_still_matches_but_versions_do_not(){
-        // 酷狗實際緩存：文件名為「尹美萊、Tiger JK、Bizzy - Angel」，頭部標題帶中文譯名。
+        // 酷狗實際緩存：檔案名為「尹美萊、Tiger JK、Bizzy - Angel」，頭部標題帶中文譯名。
         let krc=|ti:&str|format!("[ar:尹美萊/Tiger JK/Bizzy]\n[ti:{ti}]\n[total:0]\n[offset:0]\n[819,3016]<0,328,0>ANGEL (天使) - 尹美萊/Tiger JK/Bizzy\n[15670,1288]<0,205,0>You will always be my\n[20000,1500]<0,300,0>넌 나의 ANGEL");
         assert!(select(&krc("ANGEL (天使)"),"Angel","尹美萊、Tiger JK、Bizzy",255.0).is_some(),"只多了譯名的同一首歌應能讀取");
         assert!(select(&krc("ANGEL"),"Angel","尹美萊、Tiger JK、Bizzy",255.0).is_some());

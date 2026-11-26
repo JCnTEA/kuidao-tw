@@ -1,4 +1,4 @@
-//! 換歌與歌曲信息補全時的歌詞狀態：不串歌、不閃爍、不疊加網絡線程。
+//! 換歌與歌曲資訊補全時的歌詞狀態：不串歌、不閃爍、不疊加網路線程。
 use super::*;
 use crate::smtc::NowPlaying;
 
@@ -10,7 +10,7 @@ fn song(source:&str,title:&str,artist:&str,duration:f64)->NowPlaying{
 
 fn lyrics_on(h:&mut H){h.app.opts.fetch_lyrics=true;h.app.settings.island_lyrics=true;h.app.show_lyrics=true;}
 
-/// 用一個阻塞中的假線程佔住網絡名額：排隊的查詢不會真的聯網。
+/// 用一個阻塞中的假線程佔住網路名額：排隊的查詢不會真的聯網。
 fn busy(h:&mut H)->(std::sync::mpsc::Sender<()>,std::thread::ThreadId){
     let (release,wait)=std::sync::mpsc::channel::<()>();
     let worker=std::thread::spawn(move||{let _=wait.recv();});
@@ -163,18 +163,18 @@ fn song_with_system_position_keeps_lyrics_after_player_fallback_fails(){
 
 #[test]
 #[cfg(windows)]
-#[ignore="按需導出：設置音樂頁、收起時讀不到進度的歌名，以及播放器版本較舊時的更新提醒"]
+#[ignore="按需匯出：設定音樂頁、收起時讀不到進度的歌名，以及播放器版本較舊時的更新提醒"]
 fn music_compat_gallery(){
     use crate::smtc::music_compat::{self as compat,Item,Support};
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
-    let dest=std::path::PathBuf::from(std::env::var_os("DAOZAI_MUSIC_COMPAT_PREVIEW").expect("設置導出目錄"));
+    let dest=std::path::PathBuf::from(std::env::var_os("DAOZAI_MUSIC_COMPAT_PREVIEW").expect("設定匯出目錄"));
     std::fs::create_dir_all(&dest).unwrap();
     compat::set_version("QQMusic.exe","21.10.0.0");
     compat::set_version("bodian_pc.exe","1.2.0");compat::set("bodian_pc.exe",Item::Reader,Support::Unavailable("播放組件版本不在適配表裡（已適配波點 1.1.7）".into()));
     compat::set_version("cloudmusic.exe","3.1.43.9019");compat::set("cloudmusic.exe",Item::Progress,Support::Learned);
     compat::set_version("KuGou.exe","20.1.61.28014");
     compat::set("KuGou.exe",Item::Progress,Support::Ok);compat::set("KuGou.exe",Item::Duration,Support::Ok);compat::set("KuGou.exe",Item::Seek,Support::Ok);
-    // 設置頁：深色、淺色。
+    // 設定頁：深色、淺色。
     for (name,theme) in [("settings-music-dark",crate::settings_theme::SettingsTheme::Dark),("settings-music-light",crate::settings_theme::SettingsTheme::Light)] {
         let mut h=H::new();h.app.settings.island_lyrics=true;h.app.settings.settings_theme=theme;h.app.settings_tab=1;h.app.open_settings();h.ctx.set_embed_viewports(false);
         let size=egui::vec2(740.0,1180.0);let scale=1.5;

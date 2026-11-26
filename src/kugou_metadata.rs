@@ -152,7 +152,7 @@ fn log_scan(filename:&str,outcome:&str,state:&Scan,round:usize){
 
 /// 同一首歌最多掃描這麼多次；第 n 次失敗後等待 RETRY[n] 再試，用完即放棄。
 const RETRY:[Duration;3]=[Duration::from_secs(5),Duration::from_secs(30),Duration::MAX];
-/// 歌曲不變時，窗口標題最多每秒核對一次（讀取其他進程的窗口標題是跨進程消息）。
+/// 歌曲不變時，窗口標題最多每秒核對一次（讀取其他進程的窗口標題是跨進程訊息）。
 const WINDOW_RECHECK:Duration=Duration::from_secs(1);
 
 #[derive(Default)]
@@ -163,7 +163,7 @@ pub struct Cache {
     looked:Option<(String,String,Instant,Option<(u32,String)>)>,
     /// 進行中的一輪掃描；一輪結束（預算用完或掃完一整圈）後，下一輪從這裡接著掃，不再從頭開始。
     scan:Option<Scan>,resume:usize,
-    /// 上一首命中的進程和內存區塊：換歌後優先從這裡掃，歌曲信息通常落在同一片內存。
+    /// 上一首命中的進程和內存區塊：換歌後優先從這裡掃，歌曲資訊通常落在同一片內存。
     hint:Option<(u32,usize)>,
     /// 找不到對應酷狗窗口的歌曲：標題、歌手、開始時間、是否已寫進診斷日誌。
     missing:Option<(String,String,Instant,bool)>,

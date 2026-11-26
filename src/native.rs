@@ -73,7 +73,7 @@ unsafe fn route_page_wheel(msg:u32,event:&MSLLHOOKSTRUCT,modified:bool)->bool {
     false
 }
 
-// `WS_EX_NOREDIRECTIONBITMAP` 只能在 CreateWindowEx 時設置（運行時 SetWindowLongPtrW
+// `WS_EX_NOREDIRECTIONBITMAP` 只能在 CreateWindowEx 時設定（運行時 SetWindowLongPtrW
 // 會回 ERROR_INVALID_PARAMETER），本項目用 GL 合成窗口，加上這一位後畫面上什麼都
 // 看不到，因此不使用；具體見 `apply_style` 註釋與交付說明。
 
@@ -107,7 +107,7 @@ impl DragCapture {
         let inside=|(x,y):(i32,i32)|zone.is_some_and(|(l,t,r,b)|x>=l && x<r && y>=t && y<b);
         let origin=*self.origin.get_or_insert(cursor);
         self.moved|=(cursor.0-origin.0).abs()>threshold.0 || (cursor.1-origin.1).abs()>threshold.1;
-        // 只接收從感應區外拖進來的文件：在島下方的標籤欄裡按下（含連續點擊、拖標籤、選文字）
+        // 只接收從感應區外拖進來的檔案：在島下方的標籤欄裡按下（含連續點擊、拖標籤、選文字）
         // 不能擴大窗口區域，否則 HTTRANSPARENT 攔不住跨進程點擊，下層窗口會點不動。
         self.moved && !inside(origin) && inside(cursor)
     }
@@ -136,7 +136,7 @@ fn collapsed_pill_edge(hit:eframe::egui::Rect,ppp:f32,dock:crate::model::Dock)->
     Some(RECT{left:px(hit.left()),top:px(top),right:px(hit.right()),bottom:px(bottom)})
 }
 
-/// 每 80 ms 檢查一次拖放感應區，以及收不到鼠標消息的極簡細條和膠囊空隙。
+/// 每 80 ms 檢查一次拖放感應區，以及收不到鼠標訊息的極簡細條和膠囊空隙。
 fn watch_drag(hwnd:HWND,ctx:eframe::egui::Context,wake:Arc<Mutex<PointerWake>>){
     let raw=hwnd.0 as isize;
     let mut was_down=false;
@@ -287,7 +287,7 @@ unsafe fn glass_region(key: &[i32]) -> Option<HRGN> {
     out
 }
 
-/// 窗口接管設置成功的區域，設置失敗時由調用方釋放。
+/// 窗口接管設定成功的區域，設定失敗時由調用方釋放。
 pub(crate) fn apply_outline(hwnd:HWND,key:&[i32],redraw:bool)->bool {
     apply_outline_with_feather(hwnd,key,redraw,false,[0,0])
 }
@@ -361,7 +361,7 @@ unsafe extern "system" fn subclass(
         let previous=(*params).rgrc[2];
         let result=DefSubclassProc(hwnd,msg,wp,lp);
         if let Some(common)=preserve_overlap(previous,(*params).rgrc[0]) {
-            // 有效源和目標都是同一塊屏幕區域。默認保留客戶區左上角會把舊畫面搬走。
+            // 有效源和目標都是同一塊螢幕區域。預設保留客戶區左上角會把舊畫面搬走。
             (*params).rgrc[1]=common;
             (*params).rgrc[2]=common;
             RESIZING_CROP.set(Some((hwnd,true)));
@@ -444,7 +444,7 @@ unsafe fn apply_style(hwnd: HWND, editing: bool, raise: bool) {
         frame_changed = true;
     }
     let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-    // 透明交換鏈的 WS_EX_NOREDIRECTIONBITMAP 在創建窗口時設置，這裡保留已有的位。
+    // 透明交換鏈的 WS_EX_NOREDIRECTIONBITMAP 在創建窗口時設定，這裡保留已有的位。
     // 去掉會露在任務欄的 APPWINDOW；拖放由 OLE RegisterDragDrop 處理，也去掉 ACCEPTFILES。
     // 置頂由 SetWindowPos 管理，避免樣式標記與實際窗口層級脫節。
     let mut want_ex = (ex | WS_EX_TOOLWINDOW.0 as isize)
@@ -491,7 +491,7 @@ fn surface_needs_outline_clip(backend:Option<eframe::wgpu::Backend>,vendor:&str,
     })
 }
 
-/// 只識別同屏頂部的寬條窗口，普通彈窗、全屏窗口和其他屏幕不觸發抬高。
+/// 只識別同屏頂部的寬條窗口，普通彈窗、全屏窗口和其他螢幕不觸發抬高。
 unsafe fn top_bar_above(hwnd:HWND,bounds:crate::display_layout::Bounds,target:Option<RECT>)->bool {
     use windows::Win32::Graphics::Gdi::{GetWindowRgnBox, NULLREGION};
     use windows::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled;
@@ -746,9 +746,9 @@ impl Window {
         Some(Self { hwnd, capture_exclusion: capture::Exclusion::default(), crop, layering, region: (i32::MIN, 0, 0, 0), expanded: false, hook, page_wheel_hook:None, browser_state:(None,PollClock::default()), drag_capture:DragCapture::default(), glass:None, backdrop:None, blur:false, blur_unavailable:false, opaque_surface, outline:ShapeAlpha::default() })
     }
 
-    /// 使用目標屏幕的物理座標定位，並在縮放、島體大小、水平位置或屏幕連接變化後重新校正。
+    /// 使用目標螢幕的物理座標定位，並在縮放、島體大小、水平位置或螢幕連線變化後重新校正。
     /// `scale` 是主窗口的實際像素比（系統 DPI × 島體大小），畫布按它同步調整物理尺寸。
-    /// `shift` 是 OLED 像素偏移的位移（物理像素），按當前停靠畫面的屏幕餘量收窄後疊加。
+    /// `shift` 是 OLED 像素偏移的位移（物理像素），按當前停靠畫面的螢幕餘量收窄後疊加。
     pub fn place_on_display(&mut self, scale:f32, bounds:crate::display_layout::Bounds, offset:f32, dock:crate::model::Dock, shift:(i32,i32), horizontal_width:f32)->bool {
         unsafe {
             let horizontal_width=horizontal_width.max(crate::app::WIN_W);
@@ -757,8 +757,8 @@ impl Window {
                 crate::display_layout::side_origin(bounds,dock,(crate::side_dock::SIDE_W,crate::side_dock::SIDE_H),crate::side_dock::SIDE_HALF_EXTENT,scale,offset)
             } else {crate::display_layout::horizontal_origin_for_width(bounds,dock,scale,offset,horizontal_width)};
             let Some((x,y))=origin else{return false;};
-            // OLED 像素偏移只沿不貼邊的一軸讓開。位置拉滿或屏幕太窄時少挪、不挪，
-            // 貼邊的一側也保持嚴絲合縫，劉海不會和屏幕邊緣裂開。
+            // OLED 像素偏移只沿不貼邊的一軸讓開。位置拉滿或螢幕太窄時少挪、不挪，
+            // 貼邊的一側也保持嚴絲合縫，劉海不會和螢幕邊緣裂開。
             let half=if dock.is_side() {crate::side_dock::SIDE_HALF_EXTENT}
                 else {crate::display_layout::horizontal_half_extent(horizontal_width)};
             let (back,forth)=crate::display_layout::shift_slack(bounds,scale,half,offset,dock);
@@ -865,7 +865,7 @@ impl Window {
     }
 
     fn resize_crop(&mut self, canvas:RECT, current:RECT, target:RECT, frame:RECT)->bool {
-        // 上一幀的畫面單獨留在原屏幕位置，本輪移動的 HWND 只承載新畫面與輸入。
+        // 上一幀的畫面單獨留在原螢幕位置，本輪移動的 HWND 只承載新畫面與輸入。
         if !self.cover_previous_frame(current) {return false;}
         // 改外框之前保留舊畫面和當前保守剪區。外框切換後下一幀再安裝精確的剪區。
         let current_region=RECT{
@@ -896,7 +896,7 @@ impl Window {
             self.crop.applied=(Some(target)!=self.crop.full).then_some(target);
             self.crop.managed_surface=true;
             if !preserved {
-                // 合成器未接受同屏幕座標保留，後續沿用原固定外框。
+                // 合成器未接受同螢幕座標保留，後續沿用原固定外框。
                 self.crop.supported=false;
                 self.crop.requested=None;
             }
@@ -1007,7 +1007,7 @@ impl Window {
         if self.browser_state.1.ready(Duration::from_millis(100)) {
             let bounds=self.canvas_rect().map(|mut rect|{
                 if let Some((width,scale))=self.crop.wide_placement {
-                    // 瀏覽器避讓以原有面板寬度為判斷區間，保持實際屏幕中心和 DPI。
+                    // 瀏覽器避讓以原有面板寬度為判斷區間，保持實際螢幕中心和 DPI。
                     rect.left+=((width-crate::app::WIN_W)*scale/2.0).round() as i32;
                     rect.right=rect.left+(crate::app::CANVAS_W*scale).round() as i32;
                 }
@@ -1226,7 +1226,7 @@ mod tests {
                 // 裁緊後的 HWND 可以挪到膠囊邊框內，喚醒座標仍使用原畫布起點。
                 let wake=PointerWake{canvas:Some(canvas),pill_edge:collapsed_pill_edge(hit,ppp,dock)};
                 let point=POINT{x:canvas.left+px(300.0),y:canvas.top+edge};
-                assert!(wake.pill_edge_contains(point),"{dock:?} / {ppp}：屏幕邊緣應喚醒");
+                assert!(wake.pill_edge_contains(point),"{dock:?} / {ppp}：螢幕邊緣應喚醒");
                 assert!(!wake.pill_edge_contains(POINT{x:canvas.left+px(199.0),..point}));
                 assert!(!wake.pill_edge_contains(POINT{y:canvas.top+past_edge,..point}));
                 let disabled=PointerWake{pill_edge:None,..wake};
@@ -1521,7 +1521,7 @@ mod tests {
                 assert_eq!(GetForegroundWindow(),foreground,"置頂不能搶走輸入焦點");
                 for (x,y,w,h) in [(-10000,-10000,400,140),(-10480,-10000,1920,300),(-10480,-10000,1920,1080),(-10480,-9600,1920,32),(-12400,-10000,1920,32)] {
                     SetWindowPos(cover.0,HWND_TOPMOST,x,y,w,h,flags).unwrap();
-                    assert!(!top_bar_above(display,bounds,None),"普通彈窗、全屏窗口和其他屏幕不觸發頂欄適配");
+                    assert!(!top_bar_above(display,bounds,None),"普通彈窗、全屏窗口和其他螢幕不觸發頂欄適配");
                     native.keep_above_top_bar(bounds,None);
                     assert!(above(cover.0,display),"不應越過無關彈窗爭搶置頂");
                 }
@@ -1540,7 +1540,7 @@ mod tests {
 
         unsafe {
             use eframe::egui::{Pos2,Rect};
-            // 屏幕外的可見窗口也參與命中測試，不遮擋實際桌面或移動鼠標。
+            // 螢幕外的可見窗口也參與命中測試，不遮擋實際桌面或移動鼠標。
             let bounds=crate::display_layout::Bounds{left:-12000,top:-10000,right:-10080,bottom:-8920};
             let (left,top)=(bounds.left+900,bounds.top);
             let create=|x,w,h|TestWindow(CreateWindowExW(WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_TOPMOST,
@@ -1616,7 +1616,7 @@ mod tests {
             false
         }
         unsafe {
-            // 窗口在屏幕外可見，才能驗證實際桌面層級；不激活，也不遮擋用戶桌面。
+            // 窗口在螢幕外可見，才能驗證實際桌面層級；不激活，也不遮擋用戶桌面。
             let create=||TestWindow(CreateWindowExW(WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_TOPMOST,windows::core::w!("STATIC"),windows::core::w!(""),WS_POPUP|WS_VISIBLE,-10000,-10000,416,140,None,None,None,None).unwrap());
             let island=create();let cover=create();
             let flags=SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE;

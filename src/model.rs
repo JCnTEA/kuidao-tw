@@ -1,13 +1,13 @@
 //! 持久化與狀態模型。
 //!
-//! 文件佈局與原工具同名同結構（原工具字符串中可見的路徑與鍵名），但默認目錄
+//! 檔案佈局與原工具同名同結構（原工具字符串中可見的路徑與鍵名），但預設目錄
 //! 用獨立的 `%APPDATA%\Kuidao`，避免與原工具的 `%APPDATA%\Nusa` 互相覆蓋：
 //!   %APPDATA%\Kuidao\settings.txt   -> pet=0/1, minimal=0/1
 //!   %APPDATA%\Kuidao\todo.txt
 //!   %APPDATA%\Kuidao\water.txt      -> bottle=<ml> / goal=<ml> / start=YYYY-MM-DD
 //!   %APPDATA%\Kuidao\shelf.txt      -> 置物清單（每行一個絕對路徑）
 //!
-//! 設置環境變量 `KUIDAO_DATA_DIR` 可把以上目錄整體改到別處（用於與已安裝的
+//! 設定環境變量 `KUIDAO_DATA_DIR` 可把以上目錄整體改到別處（用於與已安裝的
 //! 原工具並存、或跑測試時不碰真實數據）。
 
 use std::fs;
@@ -18,8 +18,8 @@ fn env_dir(key: &str) -> PathBuf {
 }
 
 pub fn config_dir() -> PathBuf {
-    if let Ok(root) = std::env::var("KUIDAO_DATA_DIR") {
-        return PathBuf::from(root);
+    for key in ["KUIDAO_DATA_DIR", "DAOZAI_DATA_DIR"] {
+        if let Ok(root) = std::env::var(key) { return PathBuf::from(root); }
     }
     env_dir("APPDATA").join("Kuidao")
 }
@@ -163,7 +163,7 @@ impl Skin {
     pub fn is_solid(self) -> bool { matches!(self, Self::Cream) }
 }
 
-/// 島體形狀：貼著屏幕頂邊的劉海，或懸浮在頂邊下方的膠囊。
+/// 島體形狀：貼著螢幕頂邊的劉海，或懸浮在頂邊下方的膠囊。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum IslandShape {
     #[default]
@@ -190,7 +190,7 @@ impl IslandShape {
     }
 }
 
-/// 島體停靠的屏幕邊緣：上下為橫向劉海 / 膠囊，左右兩側為豎向排列。
+/// 島體停靠的螢幕邊緣：上下為橫向劉海 / 膠囊，左右兩側為豎向排列。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Dock {
     #[default]
@@ -271,7 +271,7 @@ pub struct Settings {
     pub island_size: u32,
     pub island_offset: i32,
     /// OLED 像素偏移：島體收起靜止時沿停靠邊緩慢移動幾個像素，減輕 OLED 靜態顯示留下的痕跡。
-    /// 默認關閉，開啟後也不改動 `island_offset`。
+    /// 預設關閉，開啟後也不改動 `island_offset`。
     pub oled_shift: bool,
     /// 停靠邊緣；左右停靠時 `island_offset` 表示上下位置。
     pub dock: Dock,
@@ -301,11 +301,11 @@ pub struct Settings {
     pub system_hud: bool,
     pub bluetooth_notifications: bool,
     pub show_bluetooth: bool,
-    /// 自定義常駐的設備；常駐條放不下時先顯示其中電量低的。
+    /// 自定義常駐的裝置；常駐條放不下時先顯示其中電量低的。
     pub bluetooth_pinned: Vec<String>,
     /// 常駐樣式：0 環 + 數字，1 只顯示環（偏低或充電時才顯示數字）。
     pub bluetooth_resident_style: u8,
-    /// false 自動挑電量最低的設備常駐；true 只在 bluetooth_pinned 裡挑。
+    /// false 自動挑電量最低的裝置常駐；true 只在 bluetooth_pinned 裡挑。
     pub bluetooth_resident_custom: bool,
     /// 接上電源、充滿、電量偏低時在島上提示。
     pub bluetooth_battery_notifications: bool,
@@ -314,12 +314,12 @@ pub struct Settings {
     pub wecom_notifications:bool,
     pub feishu_notifications:bool,
     pub dingtalk_notifications:bool,
-    /// 微信縮在託盤時，點提醒通過系統託盤按鈕喚起微信（默認關閉）。
+    /// 微信縮在託盤時，點提醒通過系統託盤按鈕喚起微信（預設關閉）。
     pub wechat_tray_open:bool,
     pub qq_only:bool,
     pub notification_preview:bool,
     pub notifications: bool,
-    /// 島上提醒的同時發一條 Windows 系統通知（默認開啟）；關閉後只在島上提醒。
+    /// 島上提醒的同時發一條 Windows 系統通知（預設開啟）；關閉後只在島上提醒。
     pub system_notify: bool,
     /// 系統通知的提示音；島上提醒本身不發聲。
     pub sound: bool,
@@ -376,17 +376,17 @@ pub struct Settings {
     pub mail_interval: u32,
     pub mail_ics: u32,
     pub ignored_mail_events: Vec<String>,
-    /// v0.5.6 日程：還沒配置時在島上給一次「接入飛書日曆」的提示；
-    /// 用戶點開設置或關掉後置 false，不再彈。
+    /// v0.5.6 行程：還沒配置時在島上給一次「接入飛書行事曆」的提示；
+    /// 用戶點開設定或關掉後置 false，不再彈。
     pub calendar_prompt: bool,
     pub calendar_auto_sync: bool,
-    /// 記錄最近複製的文字（最近記錄與固定條目均在本機保存）。
+    /// 記錄最近複製的文字（最近記錄與固定條目均在本機儲存）。
     pub clipboard_history: bool,
-    /// 天氣頁要看的城市；留空表示按網絡出口自動定位。
+    /// 天氣頁要看的城市；留空表示按網路出口自動定位。
     pub weather_city: String,
-    /// 用戶確認的具體地點；刷新時直接使用座標，避免同名城市重新匹配。
+    /// 用戶確認的具體地點；重新整理時直接使用座標，避免同名城市重新匹配。
     pub weather_position: Option<crate::weather::Position>,
-    /// 已保存、可在島上下拉切換的城市（不含自動定位），最多 `weather::MAX_CITIES` 個。
+    /// 已儲存、可在島上下拉切換的城市（不含自動定位），最多 `weather::MAX_CITIES` 個。
     pub weather_saved: Vec<crate::weather::Position>,
     /// 兼容渲染：用 Direct3D 12 代替 OpenGL（部分顯卡的 OpenGL 驅動會崩潰或畫面錯亂）。重啟後生效。
     pub render_compat: bool,
@@ -430,12 +430,14 @@ impl Settings {
     pub fn load() -> Self {
         let mut s = Self::default();
         let mut resident_custom_seen=false;
+        let mut hide_fullscreen_seen=false;
+        let mut exclude_from_capture_seen=false;
         for (k, v) in read_kv(&config_dir().join("settings.txt")) {
             match k.as_str() {
                 "settings_theme" => s.settings_theme=crate::settings_theme::SettingsTheme::parse(&v),
                 "display_id" => s.display_id = v,
                 "skin" => {
-                    // 早期測試版把膠囊當作皮膚保存。
+                    // 早期測試版把膠囊當作皮膚儲存。
                     if v == "pill" { s.island_shape = IslandShape::Pill; }
                     s.skin = Skin::parse(&v);
                 }
@@ -494,7 +496,7 @@ impl Settings {
                 "show_bluetooth" => s.show_bluetooth=v!="0",
                 "bluetooth_pinned" => {
                     s.bluetooth_pinned=serde_json::from_str::<Vec<String>>(&v).unwrap_or_default();
-                    // 舊版只有“固定”這一種方式：固定過設備的沿用為自定義。
+                    // 舊版只有“固定”這一種方式：固定過裝置的沿用為自定義。
                     if !resident_custom_seen {s.bluetooth_resident_custom=!s.bluetooth_pinned.is_empty();}
                 }
                 "bluetooth_resident_style" => s.bluetooth_resident_style=v.parse::<u8>().unwrap_or(0).min(1),
@@ -517,8 +519,8 @@ impl Settings {
                 "lyric_gradient_hint" => s.lyric_gradient_hint=v!="0",
                 "lyric_karaoke" => s.lyric_karaoke=v=="1",
                 "lyric_karaoke_style" => s.lyric_karaoke_style=v,
-                "hide_fullscreen" => s.hide_fullscreen = v != "0",
-                "exclude_from_capture" => s.exclude_from_capture = v == "1",
+                "hide_fullscreen" => {hide_fullscreen_seen=true;s.hide_fullscreen = v != "0";}
+                "exclude_from_capture" => {exclude_from_capture_seen=true;s.exclude_from_capture = v == "1";}
                 "avoid_top_bar" => s.avoid_top_bar = v != "0",
                 "top_bar_on_top" => s.top_bar_on_top = v == "1",
                 "focus_minutes" => s.focus_minutes = v.parse::<u32>().unwrap_or(25).clamp(1, 180),
@@ -552,8 +554,13 @@ impl Settings {
                 _ => {}
             }
         }
+        // 舊版只有「全螢幕時隱藏」；沒有新欄位時沿用舊設定，避免升級後畫面突然被擷取。
+        if hide_fullscreen_seen && !exclude_from_capture_seen {
+            s.exclude_from_capture = !s.hide_fullscreen;
+            s.hide_fullscreen = false;
+        }
         if !s.visible_pages.contains(&true) { s.visible_pages[0]=true; }
-        // 舊版只有一個指定城市：遷移進已保存列表，升級後下拉框裡能直接看到它。
+        // 舊版只有一個指定城市：遷移進已儲存列表，升級後下拉框裡能直接看到它。
         if let Some(position)=s.weather_position.clone().filter(|p|p.label==s.weather_city) {
             if !s.weather_saved.contains(&position) {s.weather_saved.insert(0,position);}
         }
@@ -887,7 +894,7 @@ impl Default for Water {
 
 impl Water {
     /// `water.txt` 只寫原工具已知的三個鍵；復刻版新增的進度鍵寫到 `water-extra.txt`，
-    /// 避免給原工具的文件引入未知鍵。
+    /// 避免給原工具的檔案引入未知鍵。
     pub fn load(today: &str) -> Self {
         let mut w = Self::default();
         for (k, v) in read_kv(&config_dir().join("water.txt")) {
@@ -914,7 +921,7 @@ impl Water {
         w.goal_ml=w.goal_ml.clamp(500,6000);
         w.bottle_ml=w.bottle_ml.clamp(50,6000);
         if w.start_day != today {
-            // 跨天重置，與原工具 start= 字段語義一致
+            // 跨天重設，與原工具 start= 字段語義一致
             w.start_day = today.to_string();
             w.drunk_ml = 0;
             w.refills = 0;
@@ -997,7 +1004,7 @@ impl Shelf {
         let _ = atomic_write(&path, body.as_bytes());
     }
 
-    /// 原工具的做法：記錄文件所在位置，不復制文件本體（官網說明
+    /// 原工具的做法：記錄檔案所在位置，不復制檔案本體（官網說明
     /// "the shelf remembers where your files live"）。
     pub fn add(&mut self, src: &Path) -> std::io::Result<()> {
         if !src.exists() { return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "檔案不存在")); }
@@ -1178,7 +1185,7 @@ mod tests {
     }
 }
 
-/// 僅保存應用標識與開關，不保存通知內容。
+/// 僅儲存應用標識與開關，不儲存通知內容。
 #[derive(Clone,Debug,Default)]
 pub struct NotificationApps {pub items:Vec<(String,String,bool)>}
 impl NotificationApps {

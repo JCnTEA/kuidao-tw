@@ -2,7 +2,7 @@
 //! 只在狀態變化時寫一行，用來分清「播放器版本不認識」和「我們的邏輯有問題」。
 use std::{collections::HashMap,sync::Mutex};
 
-/// 系統媒體會話的來源 → 播放器可執行文件名。
+/// 系統媒體會話的來源 → 播放器可執行檔案名。
 pub(crate) fn player_exe(source:&str)->Option<&'static str> {
     Some(match source.to_ascii_lowercase().as_str() {
         "kugou"|"kugou.exe"=>"KuGou.exe",
@@ -38,7 +38,7 @@ pub(crate) fn state(topic:&str,state:&str) {
     if changed(topic,state) {write(&format!("{topic} → {state}"));}
 }
 
-/// 文件版本號（如 20.1.61.28014）；讀不到時返回「未知」。
+/// 檔案版本號（如 20.1.61.28014）；讀不到時返回「未知」。
 pub(crate) fn file_version(path:&str)->String {
     use windows::{core::{HSTRING,w},Win32::Storage::FileSystem::{GetFileVersionInfoSizeW,GetFileVersionInfoW,VerQueryValueW,VS_FIXEDFILEINFO}};
     let path=HSTRING::from(path);

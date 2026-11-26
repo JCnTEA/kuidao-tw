@@ -186,7 +186,7 @@ impl Connect {
 impl Config {
     pub fn connect_api(&mut self,connected:&Connected,target:Option<&str>)->Result<String,String>{
         if let Some(id)=target {
-            let a=self.accounts.iter_mut().find(|a|a.id==id&&(a.provider==connected.provider||(a.provider.relay()&&connected.provider.relay())||(a.provider==Provider::ZCode&&connected.provider==Provider::Glm))).ok_or("原帳號已移除，請重新添加")?;
+            let a=self.accounts.iter_mut().find(|a|a.id==id&&(a.provider==connected.provider||(a.provider.relay()&&connected.provider.relay())||(a.provider==Provider::ZCode&&connected.provider==Provider::Glm))).ok_or("原帳號已移除，請重新新增")?;
             let legacy_zcode=a.provider==Provider::ZCode;
             if a.provider.api_key(){
                 if let Some(slot)=&a.slot{queue_cleanup(slot)?;}

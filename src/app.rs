@@ -60,7 +60,7 @@ pub const RAD: f32 = 33.0; // 底部圓角
 pub const WIN_W: f32 = 640.0; // 窗口（透明畫布）
 pub const CANVAS_W: f32 = WIN_W + 320.0; // 保留右側通知及陰影的完整空間，原島仍按 WIN_W 定位。
 pub const WIN_H: f32 = 378.0 + PAGE_SHORTCUT_ROW_H; // 性能頁展開 360 高，再留出投影
-/// 膠囊皮膚與屏幕頂邊的間隙。
+/// 膠囊皮膚與螢幕頂邊的間隙。
 pub const PILL_GAP: f32 = 6.0;
 
 /// 膠囊的柔和投影：四周都有，多層疊加近似高斯。
@@ -88,7 +88,7 @@ fn pill_shadow(painter:&egui::Painter,rect:Rect,radius:f32,strength:f32){
         painter.rect_filled(r,radius+grow*0.8,Color32::from_black_alpha((255.0*a*strength) as u8));
     }
 }
-pub(crate) const PAGE_NAMES: [&str; 13] = ["音樂", "專注", "健康", "置物架", "待辦", "信箱與行程", "AI 額度", "行程", "天氣", "系統性能", "無線設備", "遊戲", "電量"];
+pub(crate) const PAGE_NAMES: [&str; 13] = ["音樂", "專注", "健康", "置物架", "待辦", "信箱與行程", "AI 額度", "行程", "天氣", "系統性能", "無線裝置", "遊戲", "電量"];
 pub(crate) const PAGE_SHORTCUT_KEYS: [&str; PAGE_NAMES.len()] = [
     "music", "focus", "health", "shelf", "tasks", "mail", "quota", "calendar", "weather",
     "performance", "wireless", "games", "power",
@@ -145,7 +145,7 @@ pub struct Env {
     /// 藍牙 PnP 節點仍在場但鏈路閒置時的最後電量。
     pub bt_present: Option<(u8, crate::bt::DeviceKind)>,
     pub charging: bool,
-    /// 互聯網連接狀態；未知時不觸發表情提醒。
+    /// 互聯網連線狀態；未知時不觸發表情提醒。
     pub network: Option<bool>,
     /// 光標位置（與 `frame` 傳入的 `win` 同一座標系）；不在窗口附近時為 None。
     pub cursor: Option<Pos2>,
@@ -159,26 +159,26 @@ pub struct Env {
     pub screen_locked: bool,
     /// 正在生成島仔演示錄屏。
     pub recording: bool,
-    /// 因「全屏時隱藏」而隱藏島體，沿用外殼對設置和所在屏幕的判斷。
+    /// 因「全屏時隱藏」而隱藏島體，沿用外殼對設定和所在螢幕的判斷。
     pub fullscreen_hidden: bool,
     /// 前台瀏覽器的頂部是否與島重疊；鬼島自身窗口或暫不可讀時為 None。
     pub browser_at_top: Option<bool>,
     pub media: NowPlaying,
     /// 系統主音量（0..100, 是否靜音）；v0.5.4 音量條與系統雙向同步。
     pub volume: Option<(u32, bool)>,
-    /// 藍牙設備快照：連接狀態、電量來源及本次會話的斷開記錄。
+    /// 藍牙裝置快照：連線狀態、電量來源及本次會話的斷開記錄。
     pub bt: Vec<crate::bt::Device>,
     /// 藍牙服務是否已經完成首次掃描。
     pub bt_ready: bool,
     /// Windows 當前識別到的 2.4G USB 接收器。
     pub receivers: Vec<crate::bt::Device>,
-    /// 島所在屏幕（與 `win` 同一座標系，邏輯點）；用於讓通知詳情留在屏幕內。
+    /// 島所在螢幕（與 `win` 同一座標系，邏輯點）；用於讓通知詳情留在螢幕內。
     pub screen: Option<Rect>,
     /// 毛玻璃皮膚：島體四周採樣得到的背景色（sRGB 0..1）。
     pub backdrop: Option<[f32; 3]>,
     /// 毛玻璃皮膚：系統背景模糊當前是否生效。
     pub glass_blur: bool,
-    /// 不支持逐像素透明的兼容後端需要按內容輪廓裁剪窗口。
+    /// 不支援逐像素透明的兼容後端需要按內容輪廓裁剪窗口。
     pub opaque_surface: bool,
     #[cfg(all(windows, feature = "sdk-material"))]
     pub material_active: bool,
@@ -306,17 +306,17 @@ pub enum Cmd {
     MusicVolume(Transport,String),
     /// v0.5.5：帳號清單變了，讓外殼重新同步收信線程。
     MailSync,
-    /// 測試某個郵箱的連接（授權碼只在內存裡傳給工作線程）。
+    /// 測試某個信箱的連線（授權碼只在內存裡傳給工作線程）。
     MailTest(mail::Account, String),
     MailManage(crate::mail_manage::Request),
-    /// v0.5.6：用臨時密碼試連日曆，成功後才允許落盤。
+    /// v0.5.6：用臨時密碼試連行事曆，成功後才允許落盤。
     CalendarTest(calendar::Config, String),
-    /// 讓外殼立即同步一次日曆。
+    /// 讓外殼立即同步一次行事曆。
     CalendarSync,
     CalendarMonth(chrono::NaiveDate),
-    /// 斷開並刪除日曆配置（憑據由界面刪除）。
+    /// 斷開並刪除行事曆配置（憑據由界面刪除）。
     CalendarForget,
-    /// 選擇 .ics 文件導入本機日程。
+    /// 選擇 .ics 檔案匯入本機行程。
     CalendarImport,
     /// 重啟鬼島（切換渲染方式後生效）。
     RestartApp,
@@ -330,7 +330,7 @@ pub enum GlassShape {
     Outline(Vec<Pos2>),
     /// 島體 / 通知膠囊：頂部外翻肩部 + 豎直側邊 + 底部圓角（參數同 `shape::fill`）。
     Notch { rect: Rect, flare: f32, flare_h: f32, radius: f32 },
-    /// 停靠在左右邊緣的島體：肩部沿屏幕邊緣展開（參數同 `shape::fill_docked`）。
+    /// 停靠在左右邊緣的島體：肩部沿螢幕邊緣展開（參數同 `shape::fill_docked`）。
     Docked { rect: Rect, dock: model::Dock, flare: f32, flare_h: f32, radius: f32 },
     /// 圓角矩形（通知詳情、提示、浮動確認）。
     Round(Rect, f32),
@@ -551,7 +551,7 @@ pub struct FrameOut {
     pub notice_hit: Option<Rect>,
     /// 當前可點擊的通知範圍（相對 `win` 左上角），供頂部任務欄遮擋判斷。
     pub top_bar_notice: Option<Rect>,
-    /// 文件拖入感應區；獨立於普通鼠標命中區。
+    /// 檔案拖入感應區；獨立於普通鼠標命中區。
     pub file_drop_zone: Option<Rect>,
     /// 展開狀態立即生效，不等待展開動畫結束。
     pub expanded: bool,
@@ -600,7 +600,7 @@ impl Pomo {
     }
 }
 
-/// 本地歌詞（酷狗、汽水）每 5 秒複查，最多約 1 分鐘；網絡失敗每 30 秒重試，最多約 5 分鐘。手動點重試會重新計數。
+/// 本地歌詞（酷狗、汽水）每 5 秒複查，最多約 1 分鐘；網路失敗每 30 秒重試，最多約 5 分鐘。手動點重試會重新計數。
 const NATIVE_RETRIES:u32=12;
 const NETWORK_RETRIES:u32=10;
 
@@ -628,7 +628,7 @@ fn lyric_key_matches_the_formatted_key_without_allocating(){
     }
 }
 
-/// 發起歌詞查詢時的歌曲信息，用來判斷之後的變化是換歌還是信息補全。
+/// 發起歌詞查詢時的歌曲資訊，用來判斷之後的變化是換歌還是資訊補全。
 #[derive(Clone,Debug,Default)]
 pub(crate) struct LyricSong {pub source:String,pub title:String,pub artist:String,pub duration:f64,pub song_id:Option<u64>}
 impl LyricSong {
@@ -669,7 +669,7 @@ fn song_change(previous:&LyricSong,media:&NowPlaying)->SongChange {
     }
 }
 
-/// 等待舊請求結束後再發起的在線查詢（同一時間只保留一個網絡線程）。
+/// 等待舊請求結束後再發起的在線查詢（同一時間只保留一個網路線程）。
 pub(crate) struct LyricsJob {
     source:String,title:String,artist:String,duration:f64,song_id:Option<u64>,
     cached:Option<lyrics::Lyrics>,native_only:bool,manual:bool,translate:bool,
@@ -702,19 +702,19 @@ pub(crate) struct LyricsState {
     pub native_rx: Option<std::sync::mpsc::Receiver<Option<lyrics::Lyrics>>>,
 }
 
-/// v0.5.5：郵件面板與設置表單的界面狀態。正文只在內存裡過一次，不落盤。
+/// v0.5.5：郵件面板與設定表單的界面狀態。正文只在內存裡過一次，不落盤。
 #[derive(Default)]
 pub(crate) struct MailState {
     pub privacy:crate::mail_privacy::Privacy,
     pub manage:crate::mail_manage_ui::State,
     pub accounts: Vec<mail::Account>,
-    /// 每個帳號的連接狀態，鍵是郵箱小寫。
+    /// 每個帳號的連線狀態，鍵是信箱小寫。
     pub status: HashMap<String, mail::Status>,
     /// 最近郵件，新的在前，最多 60 封。
     pub recent: Vec<mail::Item>,
     /// 等當前幀確認避讓狀態後再決定通知樣式。
     code_alerts: Vec<(String, u32, String)>,
-    /// 設置頁裡「測試連接」的結果。
+    /// 設定頁裡「測試連線」的結果。
     pub note: String,
     pub testing: Option<String>,
     pub form: MailForm,
@@ -723,7 +723,7 @@ pub(crate) struct MailState {
     pub reading: Option<mail::Item>,
     pub reader_focus: bool,
     pub bell_at: Option<f64>,
-    /// 已經提醒過的會議，鍵是 `UID + DTSTART`（郵件和日曆兩條來源共用）。
+    /// 已經提醒過的會議，鍵是 `UID + DTSTART`（郵件和行事曆兩條來源共用）。
     pub fired: std::collections::HashSet<String>,
 }
 
@@ -735,7 +735,7 @@ pub(crate) struct MailForm {
     pub email: String,
     pub password: String,
     pub show: bool,
-    /// 設置頁的「添加郵箱」彈窗是否打開。
+    /// 設定頁的「新增信箱」彈窗是否打開。
     pub open: bool,
 }
 
@@ -756,7 +756,7 @@ impl MailState {
     }
 }
 
-/// v0.5.6：日程（CalDAV）的界面狀態。密碼只在表單裡暫存，保存後立刻清掉。
+/// v0.5.6：行程（CalDAV）的界面狀態。密碼只在表單裡暫存，儲存後立刻清掉。
 #[derive(Default)]
 pub(crate) struct CalendarState {
     pub local: Vec<crate::local_calendar::Entry>,
@@ -764,25 +764,25 @@ pub(crate) struct CalendarState {
     pub draft: Option<crate::local_calendar::Draft>,
     pub feeds: Vec<CalendarFeed>,
     pub config: Option<calendar::Config>,
-    /// 未來 24 小時的日程（提醒也讀這裡）。
+    /// 未來 24 小時的行程（提醒也讀這裡）。
     pub events: Vec<mail::Meeting>,
     pub view: crate::calendar_ui::State,
     pub agenda: bool,
     pub agenda_first: usize,
     pub connected: bool,
     pub last_sync: String,
-    /// 連續失敗次數；>= 2 才在設置頁顯示紅字。
+    /// 連續失敗次數；>= 2 才在設定頁顯示紅字。
     pub failures: u32,
     pub error: String,
     pub testing: bool,
-    /// 設置表單裡的提示（成功/失敗/粘貼拆分的說明）。
+    /// 設定表單裡的提示（成功/失敗/粘貼拆分的說明）。
     pub note: String,
     /// `note` 是不是錯誤提示（界面顯示成紅字）。
     pub note_error: bool,
     pub form: CalendarForm,
-    /// 「測試並保存」用的臨時密碼，測試成功才落盤。
+    /// 「測試並儲存」用的臨時密碼，測試成功才落盤。
     pub test_password: String,
-    /// 導入 .ics 文件的結果說明。
+    /// 匯入 .ics 檔案的結果說明。
     pub import_note: String,
     pub warning:String,
 }
@@ -808,13 +808,13 @@ impl CalendarFeed {
 #[derive(Default)]
 pub(crate) struct CalendarForm {
     pub provider: calendar::Provider,
-    /// 自定義 CalDAV 的服務器地址。
+    /// 自定義 CalDAV 的伺服器地址。
     pub server: String,
     pub username: String,
     pub password: String,
     pub show: bool,
     pub guide_open: bool,
-    /// 設置頁的「添加日曆」彈窗是否打開。
+    /// 設定頁的「新增行事曆」彈窗是否打開。
     pub open: bool,
 }
 
@@ -835,7 +835,7 @@ struct PositionDrag {
     original_display:String,
     original_monitor:Option<String>,
     start: Vec2,
-    /// 本段拖動的起始偏移（未取整，換邊後重置），單位與 `island_offset` 相同。
+    /// 本段拖動的起始偏移（未取整，換邊後重設），單位與 `island_offset` 相同。
     offset: f32,
     original: (model::Dock, i32),
 }
@@ -875,9 +875,9 @@ pub struct App {
     pinned_horizontal_width: f32,
     pub opts: Options,
     pub settings: model::Settings,
-    /// 由主程序應用原生截圖保護後再保存。
+    /// 由主程序應用原生截圖保護後再儲存。
     pub capture_exclusion_request: Option<bool>,
-    /// 截圖和錄屏隱藏未能生效時，在設置中顯示原因。
+    /// 截圖和錄屏隱藏未能生效時，在設定中顯示原因。
     pub capture_exclusion_error: Option<String>,
     #[cfg(all(windows, feature = "sdk-material"))]
     pub material_capture_forced: bool,
@@ -885,7 +885,7 @@ pub struct App {
     pub material_active_id: Option<String>,
     #[cfg(all(windows, feature = "sdk-material"))]
     material_appearance: crate::material::Appearance,
-    /// 本次運行實際使用兼容渲染（Direct3D 12）；設置裡的開關與它不同時提示重啟。
+    /// 本次運行實際使用兼容渲染（Direct3D 12）；設定裡的開關與它不同時提示重啟。
     pub render_compat_running: bool,
     pub(crate) todos: model::TodoList,
     pub(crate) water: model::Water,
@@ -956,7 +956,7 @@ pub struct App {
     pub(crate) icons: crate::icons::Cache,
     pub(crate) avoidance: crate::avoidance::Picker,
     pub(crate) confirm_clear: Option<f64>,
-    /// 置物架頁的兩個分欄：0 = 文件，1 = 剪貼板。
+    /// 置物架頁的兩個分欄：0 = 檔案，1 = 剪貼板。
     pub(crate) shelf_tab: usize,
     pub clipboard: crate::clipboard::Shared,
     pub(crate) clip_first: usize,
@@ -970,13 +970,13 @@ pub struct App {
     pub(crate) sit_view_t: Spring,
     /// 飲水頁當前是否顯示「站立提醒」。
     pub(crate) sit_mode: bool,
-    /// 健康提醒設置裡是否打開了「提醒時段」二級頁（時段 + 午休）。
+    /// 健康提醒設定裡是否打開了「提醒時段」二級頁（時段 + 午休）。
     pub(crate) health_time: bool,
     pub(crate) remind_t: Spring,
     pub(crate) last_reminder: f64,
     pub(crate) health_pending: [bool;2],
     pub(crate) fullscreen_hidden: bool,
-    /// 久坐計時起點，確認提醒或點「起身了」後重置。
+    /// 久坐計時起點，確認提醒或點「起身了」後重設。
     pub(crate) sit_start: f64,
     pub(crate) sit_t: Spring,
 
@@ -1091,7 +1091,7 @@ pub struct App {
     pub(crate) music_seek_quiet_until: f64,
     /// 點了上一首 / 下一首的時刻：先本地把進度歸零，等播放器報回新歌位置再交還。
     pub(crate) music_restart_at: Option<f64>,
-    /// 上一次看到的藍牙設備，用來只在連接/斷開時提示一次。
+    /// 上一次看到的藍牙裝置，用來只在連線/斷開時提示一次。
     pub(crate) bt_shown: Vec<crate::bt::Device>,
     pub(crate) wireless_devices: Vec<crate::bt::Device>,
     pub(crate) wireless_offset: usize,
@@ -1100,16 +1100,16 @@ pub struct App {
     pub(crate) wireless_enter_at: Option<f64>,
     pub(crate) wireless_fx: std::collections::HashMap<String,crate::bluetooth_ui::WirelessFx>,
     pub(crate) wireless_alerted: std::collections::HashMap<(String,&'static str),f64>,
-    /// 每台已連接設備第一次出現的時刻；用來區分“正在讀取電量”和“設備不提供電量”。
+    /// 每台已連線裝置第一次出現的時刻；用來區分“正在讀取電量”和“裝置不提供電量”。
     pub(crate) wireless_seen_at: std::collections::HashMap<String,f64>,
     bt_initialized: bool,
-    /// v0.5.5：郵件帳號、最近郵件與設置表單。
+    /// v0.5.5：郵件帳號、最近郵件與設定表單。
     pub(crate) mail: MailState,
     /// 信箱與行程合併頁目前顯示哪一個：0 信箱、1 行程。
     pub(crate) mail_view: u8,
     /// 島內詳情與獨立閱讀窗口各保留一份排版緩存。
     mail_lines_cache: Vec<(std::sync::Arc<str>, std::sync::Arc<str>, u32, std::sync::Arc<Vec<crate::mail_format::Line>>)>,
-    /// v0.5.6：日曆（CalDAV）配置、未來 24 小時事件與設置表單。
+    /// v0.5.6：行事曆（CalDAV）配置、未來 24 小時事件與設定表單。
     pub(crate) calendar: CalendarState,
     pub(crate) quota: crate::quota_ui::State,
     /// 天氣頁的當前數據與後台拉取狀態。
@@ -1257,7 +1257,7 @@ impl App {
             #[cfg(feature="sdk-js")]
             settings_plugin:None,
             forced_open_until:0.0, settings_open:false, settings_window:std::sync::Arc::new(std::sync::Mutex::new(crate::settings_window::State::load())), displays:Vec::new(), browser_at_top:false, browser_minimal_active:false, glass_tint:0.0, fluid:Default::default(), fluid_origin:Pos2::ZERO, fluid_art:None, fluid_title:String::new(), screen:None, horizontal_width:WIN_W, settings_focus_requested:false, settings_tab:0, settings_category:0, messenger_statuses:Default::default(), notification_apps:model::NotificationApps::load(), subpage:None, task_dialog:None,
-            listener_status: "尚未連接".into(),
+            listener_status: "尚未連線".into(),
             notification_bell_until: 0.0, notification_bell_at: -10.0, notice: None, hud_notice: None, hud_alpha: 0.0, notice_width:Spring::new(0.0,CLOSE.0,CLOSE.1), notice_details:false, pending_messengers:Vec::new(), messenger_scroll:0.0, alerts: Default::default(), history: Default::default(), pending: vec![],
             #[cfg(windows)]
             plugin_notice_ui: Default::default(),
@@ -1470,15 +1470,15 @@ impl App {
         }
     }
 
-    /// 設置窗口第 8 個標籤頁：郵件。
+    /// 設定窗口第 8 個標籤頁：郵件。
     pub fn open_mail_settings(&mut self) {
         self.settings_tab = 7;
-        // 從島上「去添加」進來時直接打開添加郵箱彈窗。
+        // 從島上「去新增」進來時直接打開新增信箱彈窗。
         self.mail.form.open = true;
         self.open_settings();
     }
 
-    /// v0.5.6：日曆服務推來的事件。失敗不彈窗，只累計次數（連續兩次才顯示紅字）。
+    /// v0.5.6：行事曆服務推來的事件。失敗不彈窗，只累計次數（連續兩次才顯示紅字）。
     pub fn calendar_event(&mut self, ev: calendar::Event) {
         if !self.module_on(CALENDAR_PAGE) {return;}
         match ev {
@@ -1499,7 +1499,7 @@ impl App {
                     self.calendar.note_error = true;
                     return;
                 }
-                self.calendar.note = if message.is_empty(){format!("已連接 · 未來 24 小時 {count} 個日程")}else{format!("已連接 · {message}")};
+                self.calendar.note = if message.is_empty(){format!("已連線 · 未來 24 小時 {count} 個行程")}else{format!("已連線 · {message}")};
                 self.calendar.note_error = false;
                 self.calendar.warning = message.clone();
                 if self.calendar.config.as_ref()!=Some(&cfg) {
@@ -1600,7 +1600,7 @@ impl App {
         }
     }
 
-    /// 所有已連接的平台都參與同步，設置標籤只決定正在編輯的帳號。
+    /// 所有已連線的平台都參與同步，設定標籤只決定正在編輯的帳號。
     pub fn calendar_configs(&self) -> Vec<calendar::Config> {
         if self.calendar.feeds.is_empty() {self.calendar.config.clone().into_iter().collect()}
         else {self.calendar.feeds.iter().map(|feed|feed.config.clone()).collect()}
@@ -1642,7 +1642,7 @@ impl App {
         self.calendar.note.clear();self.calendar.note_error=false;
     }
 
-    /// 只移除正在管理的平台，保留其他平台的日程與提醒。
+    /// 只移除正在管理的平台，保留其他平台的行程與提醒。
     pub fn forget_calendar(&mut self) -> Option<calendar::Config> {
         let old = self.calendar.config.take();
         if let Some(config)=&old {
@@ -1697,7 +1697,7 @@ impl App {
     /// 錄製/截圖用的郵件樣例（只在 `record` feature 下編譯）。
     ///
     /// `KUIDAO_MAIL_DEMO=1|code` 面板帶驗證碼，`=list` 只列郵件，`=fail` 用假授權碼走一次
-    /// 「測試連接失敗」，方便在沒有真實郵箱時驗收失敗路徑。
+    /// 「測試連線失敗」，方便在沒有真實信箱時驗收失敗路徑。
     #[cfg(feature = "record")]
     pub fn mail_demo(&mut self) {
         use mail::{Account, Item, Provider, Status};
@@ -1721,7 +1721,7 @@ impl App {
         for a in &self.mail.accounts {
             self.mail.status.insert(a.email.clone(), Status::Ready);
         }
-        // 會議演示：開始時間設成 10 分鐘後，正好落在默認 15 分鐘提前量裡，
+        // 會議演示：開始時間設成 10 分鐘後，正好落在預設 15 分鐘提前量裡，
         // 啟動即觸發一次「會議提醒」。
         let mstart = chrono::Local::now().timestamp() + 600;
         let mat = chrono::DateTime::from_timestamp(mstart, 0)
@@ -1783,7 +1783,7 @@ impl App {
         self.dots_target();
     }
 
-    /// 錄製/截圖用的日程樣例（只在 `record` feature 下編譯）。
+    /// 錄製/截圖用的行程樣例（只在 `record` feature 下編譯）。
     ///
     /// `KUIDAO_CAL_DEMO=paste|fail|connected|alert`。
     #[cfg(feature = "record")]
@@ -1849,7 +1849,7 @@ impl App {
         }
     }
 
-    /// v0.5.4：把系統音量與藍牙設備狀態同步進界面；只在連接/斷開時提示一次。
+    /// v0.5.4：把系統音量與藍牙裝置狀態同步進界面；只在連線/斷開時提示一次。
     fn sync_device(&mut self, env: &Env) {
         if !(self.open&&self.page==BLUETOOTH_PAGE) {self.wireless_enter_at=None;}
         self.track_wireless_changes(&env.bt);
@@ -1869,7 +1869,7 @@ impl App {
         let connection_enabled=self.settings.bluetooth_notifications;
         if !battery_enabled||!connection_enabled {
             let enabled=|a:&crate::extras::Alert| {
-                a.source!=crate::extras::AlertSource::Internal||a.title!="藍牙設備"||
+                a.source!=crate::extras::AlertSource::Internal||a.title!="藍牙裝置"||
                     if a.page==BLUETOOTH_PAGE {battery_enabled} else {connection_enabled}
             };
             self.alerts.retain(&enabled);
@@ -1881,7 +1881,7 @@ impl App {
             return;
         }
         if !env.bt_ready { return; }
-        // 只把首次完整掃描作為基線，之後的連接變化都應提示。
+        // 只把首次完整掃描作為基線，之後的連線變化都應提示。
         if !self.bt_initialized {
             self.bt_initialized = true;
             self.bt_shown = env.bt.iter().filter(|d|d.connected).cloned().collect();
@@ -1925,7 +1925,7 @@ impl App {
     #[cfg(windows)]
     pub fn start_tray(&self,state:crate::tray::State)->Option<crate::tray::Tray>{
         let layout=self.settings_window.clone();
-        // 原生文件選擇框會佔用界面線程，託盤退出時直接保存最近一次觀察到的佈局。
+        // 原生檔案選擇框會佔用界面線程，託盤退出時直接儲存最近一次觀察到的佈局。
         crate::tray::Tray::start_with_exit(state,move||{layout.lock().unwrap_or_else(|e|e.into_inner()).close();})
     }
 
@@ -1949,7 +1949,7 @@ impl App {
     pub fn is_plugin_status_page(&self) -> bool {
         self.page >= PAGE_NAMES.len()
     }
-    /// 打開健康提醒設置裡的「提醒時段」二級頁（演示錄製用）。
+    /// 打開健康提醒設定裡的「提醒時段」二級頁（演示錄製用）。
     pub fn show_health_time(&mut self) { self.health_time = true; }
     /// 切到飲水頁的久坐屏，並假定已連續久坐 minutes 分鐘（演示錄製用）。
     pub fn show_sit_view(&mut self, minutes: f64) {
@@ -1964,7 +1964,7 @@ impl App {
     pub fn module_on(&self,page:usize)->bool {
         self.settings.visible_pages.get(page).copied().unwrap_or_else(||page-PAGE_NAMES.len()<self.status_page_count())
     }
-    /// 收信線程是否應運行：郵箱模塊開啟且打開了「新郵件提醒」。
+    /// 收信線程是否應運行：信箱模塊開啟且打開了「新郵件提醒」。
     pub fn mail_active(&self)->bool {self.module_on(MAIL_PAGE) && self.settings.mail_enabled}
     /// 島上信箱通知使用的服務圖示：優先看最近觸發鈴鐺的帳號，其次看最近一封信。
     fn mail_provider(&self)->mail::Provider {
@@ -1983,7 +1983,7 @@ impl App {
     pub fn clipboard_active(&self)->bool {self.module_on(SHELF_PAGE) && self.settings.clipboard_history}
     /// 額度查詢是否應運行：AI 額度模塊開啟且打開了「開啟 AI 額度」。
     pub fn quota_active(&self)->bool {self.module_on(QUOTA_PAGE) && self.quota.config.enabled}
-    /// 舊版設置頁裡「新郵件提醒」「開啟 AI 額度」與頁面管理的模塊開關是兩層開關。
+    /// 舊版設定頁裡「新郵件提醒」「開啟 AI 額度」與頁面管理的模塊開關是兩層開關。
     /// 合併後只保留模塊開關：舊的內部開關關著時，遷移為模塊關閉，內部開關恢復為開。
     /// 只剩這一個頁面、模塊關不掉時保持原樣，不改變已有行為。
     pub fn migrate_merged_switches(&mut self){
@@ -2328,7 +2328,7 @@ impl App {
     fn lyric_bar_width(&self)->f32 {LYRIC_BAR_W+if self.pet_enabled(){48.0}else{0.0}+self.lyric_focus_space()}
     fn notice_size(&self,a:&Alert)->(f32,f32) {
         if matches!(a.source, crate::extras::AlertSource::MailCode(..)) { return (270.0,60.0); }
-        let (width,height)=if a.meeting.is_some(){(360.0,136.0)}else if a.source==crate::extras::AlertSource::Internal && a.title=="藍牙設備"{(HUD_W,48.0)}else if a.is_hud(){(HUD_W,38.0)}else{(334.0,44.0)};
+        let (width,height)=if a.meeting.is_some(){(360.0,136.0)}else if a.source==crate::extras::AlertSource::Internal && a.title=="藍牙裝置"{(HUD_W,48.0)}else if a.is_hud(){(HUD_W,38.0)}else{(334.0,44.0)};
         (width,height)
     }
     pub fn set_pet(&mut self,enabled:bool) {
@@ -2519,7 +2519,7 @@ impl App {
             (if self.open {self.page==PERFORMANCE_PAGE} else {performance_bar && self.notice.is_none() && !self.island_lyrics_active()});
         let performance_detail=performance_visible && self.open && self.page==PERFORMANCE_PAGE;
         self.performance.tick(self.module_on(PERFORMANCE_PAGE),performance_visible,performance_detail,&ctx);
-        // 鼠標移開收起再移回來，接著看剛才的詳情；切到別的頁面才回到設置裡的起始頁。
+        // 鼠標移開收起再移回來，接著看剛才的詳情；切到別的頁面才回到設定裡的起始頁。
         if self.page!=PERFORMANCE_PAGE {self.performance.view=None;}
         if performance_bar {layout.add_performance(self.settings.performance_bar.width(self.settings.performance_metrics));}
         layout.reorder(&self.settings.resident_order);
@@ -2583,7 +2583,7 @@ impl App {
         }
         self.update_island_lyric_layout(&ctx);
 
-        // 膠囊皮膚懸浮在屏幕頂邊下方。
+        // 膠囊皮膚懸浮在螢幕頂邊下方。
         let pill = self.settings.island_shape==model::IslandShape::Pill;
         let top = win.top() + if pill { PILL_GAP } else { 0.0 };
         let bottom=self.dock()==model::Dock::Bottom;
@@ -2785,7 +2785,7 @@ impl App {
         let skin_shadow = self.material_appearance.shadow.unwrap_or(skin_shadow);
         let shadow_k = glass::shadow_alpha(0.0, thick) / 0.12 * skin_shadow;
         let island_shadow=|r:Rect,flare:f32,flare_h:f32,radius:f32,strength:f32| if pill {pill_shadow(&painter,r,radius,strength)} else if dock!=model::Dock::Top {shape::shadow_docked(&painter,r,dock,flare,flare_h,radius,strength)} else {shape::shadow(&painter,r,flare,flare_h,radius,strength)};
-        // 拿起時投影加深，像被從屏幕邊緣提起來。
+        // 拿起時投影加深，像被從螢幕邊緣提起來。
         let lifted = self.drag_lift.pos.clamp(0.0, 1.2);
         island_shadow(body, flare, flare_h, radius, (smoothstep(0.1, 0.9, pc) + lifted * 0.9) * shadow_k);
         if let Some(r)=outside_badge{
@@ -2967,7 +2967,7 @@ impl App {
         // ---------- 輸出 ----------
         let rel = |r: Rect| r.translate(-win.min.to_vec2());
         let mut region = if side {
-            // 側邊：面板從邊緣滑出，區域包含肩部（沿邊緣上下）與外側陰影，並一直延伸到屏幕邊緣。
+            // 側邊：面板從邊緣滑出，區域包含肩部（沿邊緣上下）與外側陰影，並一直延伸到螢幕邊緣。
             let r=if p > 0.02 || self.open {
                 let height=self.expanded_height().max(self.h.pos)*1.08+FLARE*2.0+24.0;
                 self.island_rect(win,PW+20.0,height).union(panel.expand(20.0))
@@ -3131,7 +3131,7 @@ impl App {
 
     fn hit_rect(&self, cx: f32, top: f32, p: f32) -> Rect {
         let r=self.hit_rect_base(cx,top,p);
-        // 膠囊離屏幕頂邊有一段空隙：把光標推到屏幕最頂端也要能喚出島。
+        // 膠囊離螢幕頂邊有一段空隙：把光標推到螢幕最頂端也要能喚出島。
         if self.settings.island_shape==model::IslandShape::Pill {Rect::from_min_max(Pos2::new(r.left(),r.top()-PILL_GAP),r.max)} else {r}
     }
 
@@ -3240,7 +3240,7 @@ impl App {
         if appear>0.02 {
             // 展開：貼在面板外側、頂端對齊的豎向膠囊；頂部停靠和左停靠在右邊，右停靠在左邊。
             let full=self.island_rect(win,PW,self.page_height.pos);
-            // 頂部停靠時面板貼著屏幕上沿，膠囊往下讓一點，圓頂不會被屏幕邊切掉。
+            // 頂部停靠時面板貼著螢幕上沿，膠囊往下讓一點，圓頂不會被螢幕邊切掉。
             let inset=self.unread_top_inset();
             let height=self.unread_capsule_height(full.height()-inset);
             let left=self.dock()==model::Dock::Right || !self.side() && full.right()+UNREAD_GAP+UNREAD_W>bounds.right();
@@ -3436,7 +3436,7 @@ impl App {
         let a=self.hud_notice.as_ref().filter(|_|self.notice_details&&self.notice.is_some())?;
         let badge=badge?;let (width,height)=self.notice_size(a);
         let mut x=badge.left();
-        // 島體靠近屏幕右緣時，詳情卡片向左展開，始終完整留在屏幕內。
+        // 島體靠近螢幕右緣時，詳情卡片向左展開，始終完整留在螢幕內。
         if let Some(screen)=self.screen {x=x.min(screen.right()-width-8.0).max(screen.left()+8.0);}
         Some(Rect::from_min_size(Pos2::new(x,if self.dock()==model::Dock::Bottom {badge.top()-height-6.0}else{badge.bottom()+6.0}),Vec2::new(width,height)))
     }
@@ -3493,14 +3493,14 @@ impl App {
         self.settings.skin
     }
 
-    /// 基礎皮膚的換色調色板，也用於獨立設置窗口的預覽。
+    /// 基礎皮膚的換色調色板，也用於獨立設定窗口的預覽。
     pub(crate) fn skin_palette(&self)->Option<crate::skin_paint::Palette> {
         #[cfg(feature="sdk-js")]
         if let Some(skin)=self.plugins.active_skin() {return Some(skin.palette);}
         match self.settings.skin {model::Skin::Cream=>Some(crate::skin_paint::CREAM),model::Skin::GlassLight=>Some(crate::skin_paint::GLASS_LIGHT),model::Skin::GlassDark=>Some(crate::skin_paint::GLASS_DARK),model::Skin::Classic|model::Skin::Fluid|model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>None}
     }
 
-    /// 設置頁預覽用的島體底色：沒有真實模糊，毛玻璃按較實的玻璃表現。
+    /// 設定頁預覽用的島體底色：沒有真實模糊，毛玻璃按較實的玻璃表現。
     pub(crate) fn preview_fill(&self)->Color32 {
         match self.effective_skin() {
             model::Skin::GlassDark=>{let (r,g,b)=glass::GROUND_DARK;Color32::from_rgba_unmultiplied(r,g,b,215)}
@@ -3683,7 +3683,7 @@ impl App {
                 let current=edges.iter().find(|(dock,_)|*dock==self.dock()).unwrap().1;
                 // 靠近新邊緣才換邊；角落保留緩衝，防止橫豎形態來回跳變。
                 let mut target=Some(nearest).filter(|dock|*dock!=self.dock() && distance<=64.0 && distance+24.0<current);
-                // 左右對側：過了中線、明顯更靠近另一側就換過去，不必甩到屏幕盡頭；中線附近留緩衝不來回跳。
+                // 左右對側：過了中線、明顯更靠近另一側就換過去，不必甩到螢幕盡頭；中線附近留緩衝不來回跳。
                 if target.is_none() && self.side() {
                     let (opposite,far)=if self.dock()==model::Dock::Left {(model::Dock::Right,edges[2].1)}else{(model::Dock::Left,edges[1].1)};
                     if far+size.x*0.07<current {target=Some(opposite);}
@@ -3756,7 +3756,7 @@ impl App {
     }
 
     /// 拖動接近居中時由島體輪廓和一根中軸細線提示，不用文字：
-    /// 越靠近居中，輪廓浮出越清晰的淡白描邊，屏幕中軸細線與島體中心刻度逐漸重合；
+    /// 越靠近居中，輪廓浮出越清晰的淡白描邊，螢幕中軸細線與島體中心刻度逐漸重合；
     /// 吸住瞬間描邊和細線一起轉為綠色、一道亮光從中心沿輪廓向兩端掃開，停在中間期間綠邊緩慢呼吸。
     /// 返回需要留在窗口區域內的範圍。
     fn paint_center_rim(&self,painter:&egui::Painter,body:Rect,panel:Rect,flare:f32,flare_h:f32,radius:f32,screen:Option<Rect>)->Option<Rect> {
@@ -3786,11 +3786,11 @@ impl App {
             painter.add(egui::Shape::line(points.clone(),egui::Stroke::new(lerp(1.0,1.6,lock),tint(lock,0.95*strength))));
         }
         let mut bounds=body.expand(8.0);
-        // 中軸細線：屏幕中軸一條向外漸隱的細線，島體中心一截短刻度，兩者重合即居中；吸住後細線同樣轉綠。
+        // 中軸細線：螢幕中軸一條向外漸隱的細線，島體中心一截短刻度，兩者重合即居中；吸住後細線同樣轉綠。
         // 細線畫在桌面上，底色未知：彩芯加淡黑描邊，深淺壁紙都看得清。
         if let Some(screen)=screen.filter(|_|vis>0.004) {
             let travel=if side {screen.height()/2.0-crate::side_dock::SIDE_HALF_EXTENT}else{screen.width()/2.0-crate::display_layout::horizontal_half_extent(self.horizontal_width)}.max(0.0);
-            // 屏幕中軸相對島體中心的位置（與窗口跟隨同源，不會差一幀）。
+            // 螢幕中軸相對島體中心的位置（與窗口跟隨同源，不會差一幀）。
             let off=self.placement_offset()*travel;
             let (out,edge)=match dock {
                 model::Dock::Bottom=>(-Vec2::Y,panel.center_top()),
@@ -3838,7 +3838,7 @@ impl App {
 
     pub fn dragging_position(&self)->bool {self.position_drag.is_some()}
 
-    /// 拖動中和落位期間窗口使用的位置（-1 … 1，不取整）；其餘時候就是保存的位置。
+    /// 拖動中和落位期間窗口使用的位置（-1 … 1，不取整）；其餘時候就是儲存的位置。
     pub fn placement_offset(&self)->f32 {
         let limit=model::ISLAND_OFFSET_MAX as f32;
         self.drag_glide.map_or(self.settings.island_offset_ratio(),|g|(g.pos/limit).clamp(-1.0,1.0))
@@ -4038,7 +4038,7 @@ impl App {
         let clock_w = paint::clock_width(base,&clock,clock_size);
         let battery_space=if show_battery {if bt_power.is_some(){34.0}else{24.0}}else{0.0};
         let group = battery_space + date_w + 8.0 + clock_w;
-        // 頂欄共用日程「新增」和天氣「刷新」之間的空間，切頁時日期和時鐘保持原位。
+        // 頂欄共用行程「新增」和天氣「重新整理」之間的空間，切頁時日期和時鐘保持原位。
         let (left,right)=(155.0,300.0-self.header_music_shift());
         // 直接過渡時鐘實際需要移動的距離，避免先等邊界追上，再在最後幾幀擠動文字。
         let ctx=base.ui.ctx();
@@ -4104,7 +4104,7 @@ impl App {
         }
         if self.open && reveal>0.95 && p>0.98 && !self.is_editing() && !self.drag_hot {
             if let Some(screen)=env.screen {
-                // 中間的日期時間區不佔用兩側的新增、刷新和設置按鈕。
+                // 中間的日期時間區不佔用兩側的新增、重新整理和設定按鈕。
                 let left=(hd-12.0).max(140.0).max(left);let right=(hc+clock_w*fit+12.0).min(303.0).min(right);
                 if right>left {
                     // Windows 沒有「抓手」光標，Grab 會變成四向箭頭；保持普通箭頭，改用島體內的把手提示。
@@ -4269,7 +4269,7 @@ impl App {
     fn panel_body(&mut self, c: &Card, env: &Env, cmds: &mut Vec<Cmd>) -> bool {
         let settings_card=if self.side() {c.edge_control(380.0,4.0,28.0,28.0)} else {Some(c.clone())};
         if let Some(c)=settings_card {
-            let settings=c.hit(380.0,4.0,28.0,28.0,"page-settings").on_hover_text(format!("打開{}設置窗口",self.navigation_page_name(self.page)));
+            let settings=c.hit(380.0,4.0,28.0,28.0,"page-settings").on_hover_text(format!("打開{}設定窗口",self.navigation_page_name(self.page)));
             let (hover,press)=c.hover_t(&settings);
             #[cfg(all(windows, feature = "sdk-material"))]
             if !self.glassy() || self.glass_controls_ready() {
@@ -4289,11 +4289,11 @@ impl App {
         }
         if self.subpage==Some(self.page) {
             c.text(15.0,25.0,"‹",19.0,W::Bold,theme::WHITE,H::Left);
-            // 健康提醒設置沿用主頁的標題 + 喝水/久坐切換，切到哪邊就設置哪邊。
+            // 健康提醒設定沿用主頁的標題 + 喝水/久坐切換，切到哪邊就設定哪邊。
             if self.page==2 && self.health_time {c.text(31.0,25.0,"提醒時段",size::TITLE,W::Bold,theme::WHITE,H::Left);}
             else if self.page==2 {let sv=self.sit_view_t.pos.clamp(0.0,1.0);self.health_tabs(c,31.0,sv);}
             else {c.text(37.0,25.0,"專注設定",size::TITLE,W::Bold,theme::WHITE,H::Left);}
-            // 「提醒時段」二級頁的返回先回到健康提醒設置，再退出設置。
+            // 「提醒時段」二級頁的返回先回到健康提醒設定，再退出設定。
             if c.hit(9.0,7.0,28.0,23.0,"subpage-back").clicked(){
                 if self.page==2 && self.health_time {self.health_time=false;} else {self.subpage=None;self.settings_editing=false;}
             }
@@ -4354,10 +4354,10 @@ impl App {
             8 => ("當地", "天氣", theme::CYAN),
             // 詳情頁的標題帶返回箭頭，由頁面自己畫。
             BLUETOOTH_PAGE if self.wireless_focus.is_some() && self.wireless_devices.len()>1 => return,
-            BLUETOOTH_PAGE => ("無線", "設備", theme::CYAN),
+            BLUETOOTH_PAGE => ("無線", "裝置", theme::CYAN),
             GAME_PAGE => ("遊戲", "庫", theme::SOFT_GREEN),
             POWER_PAGE => ("電量", "裝置", theme::GREEN),
-            _ => ("島仔", "設置", theme::WHITE),
+            _ => ("島仔", "設定", theme::WHITE),
         };
         let wa = c.text(15.0, base, a, size::TITLE, W::Bold, theme::WHITE, H::Left);
         if !b.is_empty() {
@@ -4552,7 +4552,7 @@ impl App {
     /// 信箱與行程合併頁右上角的切換：兩個小膠囊，信箱頁顯示「行程」，行程頁顯示「信箱」。
     fn mail_view_switch(&mut self, c:&Card) {
         let (label,next)=if self.mail_view==1 {("信箱",0u8)} else {("行程",1u8)};
-        // 兩邊頁面在 y33..52 的中段都留白（信箱是「全部/未讀」，行程是「日曆/列表」），小膠囊放這裡不會壓到時鐘。
+        // 兩邊頁面在 y33..52 的中段都留白（信箱是「全部/未讀」，行程是「行事曆/列表」），小膠囊放這裡不會壓到時鐘。
         let (x,y,w,h)=(150.0,33.0,36.0,19.0);
         c.fill(x,y,w,h,9.0,theme::BTN);
         let hit=c.hit(x,y,w,h,"mail-view-switch");
@@ -4658,14 +4658,14 @@ impl App {
         }
         let due: Vec<_> = self.todos.items.iter().enumerate().filter(|(_, item)| todo_on && item.reminder_due(&now)).map(|(i,item)| (i,item.text.clone())).collect();
         for (i,text) in due { self.todos.items[i].mark_reminded(&now); self.todos.save(); self.alert("待辦到時間了", text, 4, true); }
-        // v0.5.5 會議提醒：.ics 裡的開始時間，默認提前 15 分鐘（可設 5/15/30）。
-        // v0.5.6 起日曆（CalDAV）事件走同一套：同一場會（UID + DTSTART）只提醒一次，
-        // 郵件和日曆兩條來源撞上了也只彈一次。
+        // v0.5.5 會議提醒：.ics 裡的開始時間，預設提前 15 分鐘（可設 5/15/30）。
+        // v0.5.6 起行事曆（CalDAV）事件走同一套：同一場會（UID + DTSTART）只提醒一次，
+        // 郵件和行事曆兩條來源撞上了也只彈一次。
         let lead = self.settings.mail_ics as i64 * 60;
         let now_ts = chrono::Local::now().timestamp();
         let mut picks = Vec::new();
         let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-        // 會議提醒點開後進入日程頁；日程模塊關閉時不再提醒（含郵件邀請）。
+        // 會議提醒點開後進入行程頁；行程模塊關閉時不再提醒（含郵件邀請）。
         let calendar_on=self.module_on(CALENDAR_PAGE);
         for entry in self.calendar.local.iter().filter(|_|calendar_on) {
             let Some(at)=entry.reminder_at() else{continue;};
@@ -4720,7 +4720,7 @@ impl App {
         }
     }
 
-    /// 媒體進度在兩次 SMTC 刷新之間按時間外推，進度條才會連續走動。
+    /// 媒體進度在兩次 SMTC 重新整理之間按時間外推，進度條才會連續走動。
     fn update_media(&mut self, env: &Env, ctx: &egui::Context) {
         let m = &env.media;
         if !self.module_on(MUSIC_PAGE) || !m.is_music() {
@@ -4755,7 +4755,7 @@ impl App {
         if self.media.source != np.source || other_song { self.ly=LyricsState::default(); }
         crate::lyric_sync::tick(&np.title,&np.artist,np.position,np.playing);
         self.media = np;
-        // 播放器版本比已適配的舊、歌詞無法同步：島下浮出一句提示（與網易雲不支持跳轉的提示同一樣式），同一播放器版本只提醒一次。
+        // 播放器版本比已適配的舊、歌詞無法同步：島下浮出一句提示（與網易雲不支援跳轉的提示同一樣式），同一播放器版本只提醒一次。
         #[cfg(windows)]
         if let Some(message)=crate::smtc::music_compat::take_update_notice() {self.say(message);self.toast_below=true;}
         if let Some(image)=&self.media.artwork {
@@ -4822,7 +4822,7 @@ impl App {
     }
 
     /// 為當前歌曲建立新的歌詞狀態：本機歌詞輪詢立即開始，在線查詢交給 `spawn_lyrics_job`。
-    /// `keep`：同一首歌信息補全時繼續顯示的歌詞；`retry`：同一首歌的定時重試或補到歌曲 ID。
+    /// `keep`：同一首歌資訊補全時繼續顯示的歌詞；`retry`：同一首歌的定時重試或補到歌曲 ID。
     fn start_lyrics(&mut self,key:String,keep:Option<lyrics::Lyrics>,retry:bool) {
         let np=&self.media;
         let kugou=np.source.to_ascii_lowercase().contains("kugou");
@@ -4842,7 +4842,7 @@ impl App {
             let (source,title,artist)=(source.clone(),title.clone(),artist.clone());
             let native=crate::resources::NATIVE_LYRICS.spawn(move ||{
                 // 客戶端通常在開播幾秒內寫好歌詞：先密後疏（0.5s 起，最長 5s 一次），最多等 90 秒。
-                // 汽水的緩存文件可達 32MB，修改時間和大小都沒變時不重複整份讀取，但每 15 秒仍完整核對一次。
+                // 汽水的緩存檔案可達 32MB，修改時間和大小都沒變時不重複整份讀取，但每 15 秒仍完整核對一次。
                 let started=std::time::Instant::now();
                 let mut wait=std::time::Duration::from_millis(500);
                 let mut last:Option<((std::time::SystemTime,u64),std::time::Instant)>=None;
@@ -4902,7 +4902,7 @@ impl App {
             .unwrap_or_default();
     }
 
-    /// 舊請求結束後再發起排隊的在線查詢：歌曲信息抖動或快速切歌時不會疊加網絡線程，
+    /// 舊請求結束後再發起排隊的在線查詢：歌曲資訊抖動或快速切歌時不會疊加網路線程，
     /// 也只會查詢最新的那首；舊請求的結果因通道已更換而直接丟棄。
     fn spawn_lyrics_job(&mut self) {
         if self.ly.pending.is_none() || self.ly_worker.as_ref().is_some_and(|worker|!worker.is_finished()) {return;}

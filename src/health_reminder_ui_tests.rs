@@ -78,7 +78,7 @@ fn health_actions_clear_pending_and_keep_messenger_unread(){
     click_badge(&mut h,"sit");
     assert_eq!(h.app.pending_messengers.len(),1,"處理健康提醒不影響微信未讀");
     h.app=App::new(&h.ctx,Options{fetch_lyrics:false,pet_idle:1e9});h.frame(vec![]);
-    assert_eq!(h.app.health_pending,[false,false],"處理結果已保存");
+    assert_eq!(h.app.health_pending,[false,false],"處理結果已儲存");
 }
 
 #[test]
@@ -166,7 +166,7 @@ fn health_settings_support_direct_input_and_preserve_pending_reminders(){
     let timers=(h.app.last_reminder,h.app.sit_start);
     for (label,input,expected) in [("45 分鐘","37",37),("37 分鐘","999",180),("180 分鐘","0",5),("5 分鐘","abc",5)]{
         h.cmds.clear();h.click_text(label);h.frame(vec![]);
-        assert!(h.app.is_editing(),"健康時長應支持單擊輸入");
+        assert!(h.app.is_editing(),"健康時長應支援單擊輸入");
         assert!(h.cmds.contains(&crate::app::Cmd::Focus),"輸入時應取得原生鍵盤焦點");
         h.frame(vec![egui::Event::Text(input.into())]);
         h.frame(vec![egui::Event::Key{key:egui::Key::Enter,physical_key:None,pressed:true,repeat:false,modifiers:Default::default()}]);h.frame(vec![]);
@@ -175,16 +175,16 @@ fn health_settings_support_direct_input_and_preserve_pending_reminders(){
     }
     h.click_text("5 分鐘");h.frame(vec![]);h.frame(vec![egui::Event::Text("50".into())]);
     h.click(H::local(357.0,89.0));h.frame(vec![]);
-    assert_eq!(crate::model::Settings::load().water_minutes,55,"加號應先保存手輸值，再增加五分鐘");
+    assert_eq!(crate::model::Settings::load().water_minutes,55,"加號應先儲存手輸值，再增加五分鐘");
     h.click_text("55 分鐘");h.frame(vec![]);h.frame(vec![egui::Event::Text("40".into())]);
     h.frame(vec![egui::Event::Key{key:egui::Key::Escape,physical_key:None,pressed:true,repeat:false,modifiers:Default::default()}]);h.frame(vec![]);
     assert_eq!(h.app.settings.water_minutes,55,"Esc 取消輸入");
     h.app.sit_mode=true;h.hover(H::local(300.0,60.0),0.8);
     h.click_text("60 分鐘");h.frame(vec![]);h.frame(vec![egui::Event::Text("42".into())]);
     h.click(H::local(50.0,50.0));h.frame(vec![]);
-    assert_eq!(crate::model::Settings::load().sit_minutes,42,"點擊別處保存久坐時長");
-    assert_eq!((h.app.last_reminder,h.app.sit_start),timers,"調整設置不能重啟計時");
-    assert_eq!(h.app.health_pending,[true,true],"調整設置不能清除待處理提醒");
+    assert_eq!(crate::model::Settings::load().sit_minutes,42,"點擊別處儲存久坐時長");
+    assert_eq!((h.app.last_reminder,h.app.sit_start),timers,"調整設定不能重啟計時");
+    assert_eq!(h.app.health_pending,[true,true],"調整設定不能清除待處理提醒");
 }
 
 #[test]
@@ -209,7 +209,7 @@ fn health_amounts_and_time_window_support_direct_input(){
 }
 
 #[test]
-#[ignore="按需導出健康提醒常駐的實際界面"]
+#[ignore="按需匯出健康提醒常駐的實際界面"]
 fn health_reminder_gallery(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let dest=std::path::PathBuf::from(std::env::var_os("DAOZAI_FEATURE_PREVIEW_DIR").expect("需指定預覽目錄"));std::fs::create_dir_all(&dest).unwrap();
@@ -278,9 +278,9 @@ fn health_sound_follows_delivery_mode_and_only_rings_when_first_due() {
 #[test]
 fn system_notify_defaults_on_and_persists(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
-    assert!(crate::model::Settings::default().system_notify,"默認開啟，老用戶升級後行為不變");
+    assert!(crate::model::Settings::default().system_notify,"預設開啟，老用戶升級後行為不變");
     h.cmds.clear();h.app.alert("待辦到時間了","檢查週報",4,true);h.frame(vec![]);
-    assert!(h.cmds.iter().any(|cmd|matches!(cmd,crate::app::Cmd::Notify(t,..)if t=="待辦到時間了")),"默認仍發送系統通知");
+    assert!(h.cmds.iter().any(|cmd|matches!(cmd,crate::app::Cmd::Notify(t,..)if t=="待辦到時間了")),"預設仍發送系統通知");
     h.app.settings.system_notify=false;h.app.settings.save();
     assert!(!crate::model::Settings::load().system_notify,"關閉後重啟仍保持關閉");
     h.app.settings.system_notify=true;h.app.settings.save();

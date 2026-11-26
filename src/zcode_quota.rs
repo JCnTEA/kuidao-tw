@@ -11,7 +11,7 @@ const CREDENTIAL_ERROR:&str="無法讀取當前 Windows 使用者的 ZCode 登�
 fn hash(bytes:&[u8])->String{digest::digest(&digest::SHA256,bytes).as_ref().iter().map(|b|format!("{b:02x}")).collect()}
 #[cfg(windows)]
 fn system_key(path:&Path)->Result<Vec<u8>,String>{
-    // ZCode 按絕對路徑的 SHA-256 定位系統密鑰，不解析符號鏈接或改變路徑大小寫。
+    // ZCode 按絕對路徑的 SHA-256 定位系統金鑰，不解析符號鏈接或改變路徑大小寫。
     let path=std::path::absolute(path).map_err(|_|CREDENTIAL_ERROR)?;
     let path=path.to_str().ok_or(CREDENTIAL_ERROR)?.replace('/',"\\");
     let path=if let Some(unc)=path.strip_prefix("\\\\?\\UNC\\"){format!("\\\\{unc}")}else{path.strip_prefix("\\\\?\\").unwrap_or(&path).to_owned()};
@@ -243,7 +243,7 @@ mod tests{
         assert_eq!(&config.accounts[..2],before.accounts.as_slice());assert_eq!(config.selected,before.selected);assert_eq!(config.accounts.len(),3);
         assert_eq!(std::fs::read_to_string(&path).unwrap(),raw);assert_eq!(cleanup.1.get_password().unwrap(),encoded);
         assert_eq!(system_key(Path::new(&path.to_string_lossy().replace('\\',"/"))).unwrap(),key);
-        // 只添加 Windows 擴展路徑前綴，保留 ZCode 計算憑據標識時使用的短目錄名。
+        // 只新增 Windows 擴展路徑前綴，保留 ZCode 計算憑據標識時使用的短目錄名。
         let spelling=path.to_str().unwrap();
         let extended=if let Some(unc)=spelling.strip_prefix(r"\\"){format!(r"\\?\UNC\{unc}")}else{format!(r"\\?\{spelling}")};
         assert_eq!(system_key(Path::new(&extended)).unwrap(),key);

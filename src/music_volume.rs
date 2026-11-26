@@ -3,8 +3,8 @@ use std::{sync::{mpsc,Arc,Mutex},time::{Duration, Instant}};
 
 type Job=Box<dyn FnOnce()+Send>;
 
-/// 音量混合器的讀寫都放到這一個獨立線程裡。枚舉音頻設備在個別聲卡、藍牙或虛擬聲卡驅動上
-/// 可能長時間不返回，不能拖住歌曲信息採樣（否則島上一直「暫無音樂」）或播放控制。
+/// 音量混合器的讀寫都放到這一個獨立線程裡。枚舉音頻裝置在個別聲卡、藍牙或虛擬聲卡驅動上
+/// 可能長時間不返回，不能拖住歌曲資訊採樣（否則島上一直「暫無音樂」）或播放控制。
 /// 線程卡住時隊列很快填滿，之後的音量操作直接放棄，不再新開線程。
 fn submit(job:Job)->bool {
     static WORKER:Mutex<Option<mpsc::SyncSender<Job>>>=Mutex::new(None);
@@ -93,7 +93,7 @@ mod platform {
             ENUMERATOR.with(|enumerator|{
                 let mut volumes=Vec::new();
                 let Some(enumerator)=enumerator else{return volumes;};
-                // 應用可能被路由到非默認輸出，遍歷當前可用的播放設備。
+                // 應用可能被路由到非預設輸出，遍歷當前可用的播放裝置。
                 let Ok(devices)=enumerator.EnumAudioEndpoints(eRender,DEVICE_STATE_ACTIVE) else{return volumes;};
                 for d in 0..devices.GetCount().unwrap_or(0) {
                     let Ok(device)=devices.Item(d) else{continue;};

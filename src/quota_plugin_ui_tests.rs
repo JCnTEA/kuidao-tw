@@ -81,7 +81,7 @@ fn plugin_quota_uses_the_existing_panel_without_changing_builtin_accounts() {
         h.app
             .plugins
             .tick_features(false, false, true, "2026-10-28");
-        assert!(Instant::now() < deadline, "模擬額度未加載");
+        assert!(Instant::now() < deadline, "模擬額度未載入");
         std::thread::sleep(Duration::from_millis(2));
     }
     h.hover(H::local(230.0, 65.0), 0.8);

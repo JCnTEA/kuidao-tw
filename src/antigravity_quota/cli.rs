@@ -43,7 +43,7 @@ const MAX_DIAGNOSTICS: u64 = 64 * 1024;
 const UPDATE_KEY: &str = "AGY_CLI_DISABLE_AUTO_UPDATE";
 const START_ERROR: &str = "無法在後台啟動 Antigravity CLI，請檢查安裝或系統策略";
 const TIMEOUT: &str = "Antigravity 額度查詢超時";
-const SETTINGS_ERROR: &str = "無法核對 Antigravity CLI 的斜槓命令設置，請檢查 CLI 設置";
+const SETTINGS_ERROR: &str = "無法核對 Antigravity CLI 的斜槓命令設定，請檢查 CLI 設定";
 
 pub(super) fn discover() -> Option<PathBuf> {
     let local = env::var_os("LOCALAPPDATA").map(PathBuf::from);

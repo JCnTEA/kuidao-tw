@@ -1,5 +1,5 @@
-//! 天氣：按城市（留空時按網絡出口定位）讀取 Open-Meteo 的實況與七日預報。
-//! 只保留最近一次結果用於離線展示，不讀取、也不上傳任何帳號信息。
+//! 天氣：按城市（留空時按網路出口定位）讀取 Open-Meteo 的實況與七日預報。
+//! 只保留最近一次結果用於離線展示，不讀取、也不上傳任何帳號資訊。
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::io::Read;
@@ -7,13 +7,13 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::Duration;
 
-/// 自動刷新的間隔（秒）：Open-Meteo 的實況本身每 15 分鐘更新一次。
+/// 自動重新整理的間隔（秒）：Open-Meteo 的實況本身每 15 分鐘更新一次。
 pub const INTERVAL: i64 = 900;
 /// 自動定位結果的複用時長（秒）。
 const LOCATE_TTL: i64 = 3 * 3600;
-/// 最多保存的城市數（不含自動定位）。
+/// 最多儲存的城市數（不含自動定位）。
 pub const MAX_CITIES: usize = 5;
-/// 多城市緩存的條數上限：自動定位 + 已保存城市，再留一條餘量給剛刪除的城市。
+/// 多城市緩存的條數上限：自動定位 + 已儲存城市，再留一條餘量給剛刪除的城市。
 const CACHE_LIMIT: usize = MAX_CITIES + 2;
 pub const FORECAST_DAYS: usize = 7;
 
@@ -262,7 +262,7 @@ fn http_agent_for(proxy: Option<&str>) -> ureq::Agent {
 
 fn http_agent() -> ureq::Agent {http_agent_for(None)}
 
-/// 按網絡出口定位；國內常見出口能拿到中文城市名。
+/// 按網路出口定位；國內常見出口能拿到中文城市名。
 pub fn locate(agent: &ureq::Agent) -> Result<Position, String> {
     locate_with_sources(agent,&[("https://ipwho.is/?lang=zh-CN",false),("https://free.freeipapi.com/api/v1/json",true)],network_proxy().as_deref())
 }
@@ -559,14 +559,14 @@ impl CitySearch {
     }
 }
 
-/// 頁面與設置頁共享的天氣狀態；拉取在後台線程，UI 只輪詢結果。
+/// 頁面與設定頁共享的天氣狀態；拉取在後台線程，UI 只輪詢結果。
 #[derive(Default)]
 pub struct State {
     pub snapshot: Option<Snapshot>,
     pub error: Option<String>,
     pub loading: bool,
     pub last_start: f64,
-    /// 城市輸入草稿，確認後才寫入設置併發起查詢。
+    /// 城市輸入草稿，確認後才寫入設定併發起查詢。
     pub city_input: String,
     pub manual_city: bool,
     pub selected_city: Option<Position>,
@@ -577,18 +577,18 @@ pub struct State {
     pub solar_at: f64,
     /// 點擊漣漪：頁面局部座標與觸發時間。
     pub tap: Option<(f32, f32, f64)>,
-    /// 連續失敗次數：自動刷新按 2、4、8、16、30 分鐘退避，成功後清零。
+    /// 連續失敗次數：自動重新整理按 2、4、8、16、30 分鐘退避，成功後清零。
     pub failures: u32,
-    /// 自動定位結果與取得時間；3 小時內複用，不必每次刷新都查網絡出口。
+    /// 自動定位結果與取得時間；3 小時內複用，不必每次重新整理都查網路出口。
     located: Option<(Position, i64)>,
-    /// 定位時使用的代理；下次請求發現代理變化就重新定位，不增加常駐網絡監聽。
+    /// 定位時使用的代理；下次請求發現代理變化就重新定位，不增加常駐網路監聽。
     location_proxy: Option<String>,
     /// 上一次請求使用的城市。
     last_city: Option<String>,
     last_position: Option<Position>,
     rx: Option<(Receiver<Result<Snapshot, String>>, bool)>,
     cache: Option<PathBuf>,
-    /// 各城市最近一次的天氣；切換城市時先顯示這裡的數據，不等網絡。
+    /// 各城市最近一次的天氣；切換城市時先顯示這裡的數據，不等網路。
     cached: Vec<Snapshot>,
     /// 島上城市下拉框是否展開。
     pub picker_open: bool,
@@ -608,7 +608,7 @@ impl State {
         });
         state.cached.truncate(CACHE_LIMIT);
         state.snapshot=state.cached_for(city,state.active_position.as_ref()).cloned();
-        // 快照保留用於展示；其中沒有定位時刻和代理信息，啟動後重新確認網絡出口。
+        // 快照保留用於展示；其中沒有定位時刻和代理資訊，啟動後重新確認網路出口。
         state.cache=Some(path);
         state
     }
@@ -624,13 +624,13 @@ impl State {
         let city=city.trim().to_string();
         self.rx=None;self.loading=false;self.error=None;self.failures=0;
         self.picker_open=false;self.solar_open=false;
-        // 設置頁的搜索框是「添加城市」用的草稿，切換城市不改動它。
+        // 設定頁的搜索框是「新增城市」用的草稿，切換城市不改動它。
         self.manual_city=position.is_some();self.active_position=position.clone();
         self.snapshot=self.cached_for(&city,position.as_ref()).cloned();
         if self.snapshot.as_ref().is_some_and(|s|(0..INTERVAL).contains(&(now-s.at))) {
             self.last_city=Some(city);self.last_position=position;
         } else if self.last_city.as_deref()==Some(city.as_str()) && self.last_position==position {
-            // 切回剛才請求過的城市：清掉記錄，讓城市變化重新觸發刷新。
+            // 切回剛才請求過的城市：清掉記錄，讓城市變化重新觸發重新整理。
             self.last_city=None;
         }
     }
@@ -647,20 +647,20 @@ impl State {
         }
     }
 
-    /// 設置頁搜索框裡已確認的地區（輸入框文字與所選地區一致）。
+    /// 設定頁搜索框裡已確認的地區（輸入框文字與所選地區一致）。
     pub fn picked_city(&self) -> Option<&Position> {
         self.selected_city.as_ref().filter(|p|p.valid() && p.label==self.city_input.trim())
     }
 
-    /// 自動刷新的退避間隔（秒）：斷網時不再每兩分鐘起一次請求。
+    /// 自動重新整理的退避間隔（秒）：斷網時不再每兩分鐘起一次請求。
     pub fn backoff(&self) -> f64 {
         if self.failures==0 {0.0} else {(120.0*2f64.powi(self.failures.min(5) as i32-1)).min(1800.0)}
     }
 
-    /// 改為自動定位時調用：下次刷新重新識別網絡出口。
+    /// 改為自動定位時調用：下次重新整理重新識別網路出口。
     pub fn forget_location(&mut self) {self.located=None;}
 
-    /// 設置裡的城市是否和上次請求不一致（首次啟動也算）。
+    /// 設定裡的城市是否和上次請求不一致（首次啟動也算）。
     pub fn city_changed(&self, city: &str) -> bool {
         self.last_city.as_deref()!=Some(city.trim()) || self.last_position.as_ref()!=self.position_for(city)
     }
@@ -696,7 +696,7 @@ impl State {
         self.refresh_inner(city,t,false)
     }
 
-    /// 用戶主動刷新：自動定位模式下同時更新位置，仍遵守加載狀態與冷卻間隔。
+    /// 用戶主動重新整理：自動定位模式下同時更新位置，仍遵守載入狀態與冷卻間隔。
     pub fn refresh_manual(&mut self, city: &str, t: f64) -> bool {
         self.refresh_inner(city,t,true)
     }
@@ -767,7 +767,7 @@ impl State {
         }
     }
 
-    /// 數據是否該刷新了（首次打開也算）。
+    /// 數據是否該重新整理了（首次打開也算）。
     pub fn stale(&self, now: i64) -> bool { self.snapshot.as_ref().map_or(true, |s| now - s.at >= INTERVAL) }
 }
 
@@ -792,7 +792,7 @@ mod tests {
             loop {
                 if !matches!(cancel.try_recv(),Err(TryRecvError::Empty)){return false;}
                 if let Ok((mut stream,_))=listener.accept() {
-                    // Windows 接受的連接繼承監聽器的非阻塞狀態，先等客戶端發出請求。
+                    // Windows 接受的連線繼承監聽器的非阻塞狀態，先等客戶端發出請求。
                     stream.set_nonblocking(false).unwrap();
                     stream.set_read_timeout(Some(Duration::from_secs(12))).unwrap();
                     if !matches!(stream.read(&mut [0;4096]),Ok(n) if n>0){return false;}

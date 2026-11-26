@@ -258,7 +258,7 @@ fn score_at(hay: &str, start: usize, end: usize, text: &str, subject_end: usize,
     let b60 = before(hay, start, 60);
     let a40 = after(hay, end, 40);
 
-    // ---- 硬丟棄：URL / 郵箱 / 日期時間 / 電話 / 訂單金額卡號 ----
+    // ---- 硬丟棄：URL / 信箱 / 日期時間 / 電話 / 訂單金額卡號 ----
     let token = {
         let left = hay[..start].char_indices().rev()
             .find(|(_, c)| c.is_whitespace())

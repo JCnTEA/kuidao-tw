@@ -14,7 +14,7 @@ pub(crate) const ICONS: &[SettingIcon] = &[
     SettingIcon { name: "star", label: "星星", path: "M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8Z" },
     SettingIcon { name: "gift", label: "禮物", path: "M4 12H20V21H4Z M2 8H22V12H2Z M12 8V21 M12 8H7C2 8 3 2 7 3C9 3 11 6 12 8C13 6 15 3 17 3C21 2 22 8 17 8Z" },
     SettingIcon { name: "flag", label: "旗子", path: "M5 22V3Q8 1 12 3Q16 5 20 3V14Q16 16 12 14Q8 12 5 14" },
-    SettingIcon { name: "calendar", label: "日曆", path: "M3 5H21V21H3Z M3 10H21 M8 3V7 M16 3V7 M8 15H10 M14 15H16" },
+    SettingIcon { name: "calendar", label: "行事曆", path: "M3 5H21V21H3Z M3 10H21 M8 3V7 M16 3V7 M8 15H10 M14 15H16" },
     SettingIcon { name: "coffee", label: "咖啡", path: "M3 9H17V14Q17 19 12 19H8Q3 19 3 14Z M17 10H19C24 10 22 16 17 16 M2 22H20 M7 3V6 M12 2V6" },
     SettingIcon { name: "coin", label: "硬幣", path: "M22 12C22 17.5 17.5 22 12 22C6.5 22 2 17.5 2 12C2 6.5 6.5 2 12 2C17.5 2 22 6.5 22 12Z M8 7L12 12L16 7 M8 12H16 M8 15H16 M12 12V18" },
     SettingIcon { name: "sun", label: "太陽", path: "M17 12C17 15 15 17 12 17C9 17 7 15 7 12C7 9 9 7 12 7C15 7 17 9 17 12Z M12 2V4 M12 20V22 M2 12H4 M20 12H22 M5 5L6 6 M18 18L19 19 M5 19L6 18 M18 6L19 5" },

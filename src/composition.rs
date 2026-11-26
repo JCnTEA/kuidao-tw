@@ -121,7 +121,7 @@ impl Backdrop {
 
     pub fn new() -> windows::core::Result<Self> {
         let hwnd = create_backdrop_window()?;
-        // Win10 不支持這個 Win32 宿主背景屬性。失敗時不能繼續繪製純色畫刷，
+        // Win10 不支援這個 Win32 宿主背景屬性。失敗時不能繼續繪製純色畫刷，
         // 交給上層使用半透明底色，並釋放尚未顯示的底板窗口。
         if let Err(error) = enable_host_backdrop(hwnd) {
             unsafe { let _ = DestroyWindow(hwnd); }

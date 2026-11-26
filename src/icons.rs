@@ -1,7 +1,7 @@
-//! 系統文件縮略圖 / 圖標。
+//! 系統檔案縮略圖 / 圖標。
 //!
-//! 文件夾用系統圖標，其餘文件優先用 `IShellItemImageFactory` 取 96 px 內容縮略圖，
-//! 失敗再用 `SHGetFileInfoW` 取 32 px 大圖標；都失敗返回 `None`，界面改畫矢量文件圖標。
+//! 資料夾用系統圖標，其餘檔案優先用 `IShellItemImageFactory` 取 96 px 內容縮略圖，
+//! 失敗再用 `SHGetFileInfoW` 取 32 px 大圖標；都失敗返回 `None`，界面改畫矢量檔案圖標。
 
 use eframe::egui::{self,ColorImage};
 use std::path::{Path,PathBuf};

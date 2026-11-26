@@ -1,5 +1,5 @@
 //! Grok Bot 周額度。憑據與接口映射參考 ai-usagebar，瀏覽器授權參考 gbu。
-//! 原客戶端登錄文件只讀；獨立授權保存在 Windows 憑據管理器。
+//! 原客戶端登錄檔案只讀；獨立授權儲存在 Windows 憑據管理器。
 use super::{Account,Snapshot,Window};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD,Engine};
 use ring::{digest,rand::{SecureRandom,SystemRandom}};
@@ -288,7 +288,7 @@ mod tests {
         let listener=TcpListener::bind("127.0.0.1:0").unwrap();let url=format!("http://{}/aiserver.v1.DashboardService/GetSandUsageStatus",listener.local_addr().unwrap());
         let server=std::thread::spawn(move||{
             let(mut stream,_)=listener.accept().unwrap();stream.set_read_timeout(Some(std::time::Duration::from_secs(3))).unwrap();
-            // 讀完請求再關閉連接，避免分包時未讀完的正文觸發 TCP 重置。
+            // 讀完請求再關閉連線，避免分包時未讀完的正文觸發 TCP 重設。
             let mut reader=BufReader::new(&mut stream);let mut request=String::new();
             loop{let mut line=String::new();assert!(reader.read_line(&mut line).unwrap()>0);if line=="\r\n"{break;}request.push_str(&line);}
             let request=request.to_ascii_lowercase();

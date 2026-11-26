@@ -51,7 +51,7 @@ pub fn has_real_alpha(size: [usize; 2], rgba: &[u8]) -> bool {
     [corner(0, 0), corner(w - 1, 0), corner(0, h - 1), corner(w - 1, h - 1)].iter().any(|&a| a < 255)
 }
 
-/// 讀回畫面沒有 alpha 時（部分 AMD 顯卡的 OpenGL 默認幀緩衝不帶透明通道），按島體輪廓
+/// 讀回畫面沒有 alpha 時（部分 AMD 顯卡的 OpenGL 預設幀緩衝不帶透明通道），按島體輪廓
 /// 算出每個像素被覆蓋的比例當作 alpha：輪廓是物理像素座標的閉合多邊形，多塊之間取並集。
 /// 每行取 4 條子掃描線、橫向按精確的線段長度累計，邊緣過渡與 egui 自身的抗鋸齒相當。
 pub fn coverage_mask(size: [usize; 2], polygons: &[Vec<(f32, f32)>]) -> Vec<u8> {

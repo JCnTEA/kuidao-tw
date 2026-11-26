@@ -8,10 +8,10 @@ fn transport_failures_distinguish_certificate_and_network_errors() {
         (0x800b010au32, "證書不受信任"),
         (0x80090325u32, "證書不受信任"),
         (0x800b0101u32, "證書不在有效期內"),
-        (0x800b010fu32, "證書與服務器地址不匹配"),
+        (0x800b010fu32, "證書與伺服器地址不匹配"),
         (0x800b010cu32, "證書已被吊銷"),
-        (10060, "連接超時"),
-        (10061, "服務器拒絕連接"),
+        (10060, "連線超時"),
+        (10061, "伺服器拒絕連線"),
     ] {
         let error = std::io::Error::from_raw_os_error(code as i32);
         let failure = Failure::transport(&error);
@@ -25,7 +25,7 @@ fn transport_failures_keep_typed_certificate_errors_and_hide_details() {
     for (certificate, expected) in [
         (CertificateError::UnknownIssuer, "證書不受信任"),
         (CertificateError::Expired, "證書不在有效期內"),
-        (CertificateError::NotValidForName, "證書與服務器地址不匹配"),
+        (CertificateError::NotValidForName, "證書與伺服器地址不匹配"),
     ] {
         let error = std::io::Error::new(std::io::ErrorKind::InvalidData, Error::InvalidCertificate(certificate));
         let failure = Failure::transport(&error);

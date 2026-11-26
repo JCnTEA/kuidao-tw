@@ -1,8 +1,8 @@
-//! 演示錄製器：不開窗口，腳本驅動鼠標/鍵盤/拖放，egui 輸出用軟件光柵化，
+//! 演示錄製器：不開窗口，腳本驅動鼠標/鍵盤/拖放，egui 輸出用軟體光柵化，
 //! 逐幀把 RGBA 寫到 stdout（或直接拉起 ffmpeg）。
 //!
 //! 用法：`cargo run --release --features record --bin daozai-record -- out.mp4`
-//! 需要 PATH 裡有 ffmpeg。畫面裡的歌曲、文件、待辦都是演示用的假數據。
+//! 需要 PATH 裡有 ffmpeg。畫面裡的歌曲、檔案、待辦都是演示用的假數據。
 
 mod raster;
 
@@ -33,7 +33,7 @@ enum Act {
     Click,
     Type(&'static str),
     Enter,
-    /// 開始/結束拖文件
+    /// 開始/結束拖檔案
     DragStart(PathBuf),
     DragDrop,
 }
@@ -50,7 +50,7 @@ impl Media {
         if self.np.playing { (self.anchor_pos + t - self.anchor_t).min(self.np.duration) } else { self.anchor_pos }
     }
     fn tick(&mut self, t: f64) {
-        // 模擬 SMTC 輪詢：每秒刷新一次位置，中間由應用自己外推
+        // 模擬 SMTC 輪詢：每秒重新整理一次位置，中間由應用自己外推
         if t - self.polled_at >= 1.0 {
             self.polled_at = t;
             self.np.position = self.truth(t);
@@ -193,7 +193,7 @@ fn script(drag: PathBuf) -> Vec<Act> {
         // 7 離開 → 收起
         Move(rest, 0.6),
         Wait(1.3),
-        // 8 從桌面拖文件進來
+        // 8 從桌面拖檔案進來
         Move(Pos2::new(640.0, 200.0), 0.3),
         DragStart(drag),
         Wait(0.3),
@@ -252,7 +252,7 @@ fn cursor_shapes(at: Pos2, press: f32, dragging: Option<f32>) -> Vec<Shape> {
         .collect();
     let mut out = Vec::new();
     if let Some(a) = dragging {
-        // 被拖著的文件：半透明小卡片跟在指針右下
+        // 被拖著的檔案：半透明小卡片跟在指針右下
         let r = Rect::from_min_size(at + Vec2::new(10.0, 14.0), Vec2::new(30.0, 36.0));
         out.push(Shape::rect_filled(r.translate(Vec2::new(1.5, 2.5)), 5.0, Color32::from_black_alpha((60.0 * a) as u8)));
         out.push(Shape::rect_filled(r, 5.0, Color32::from_rgba_unmultiplied(245, 246, 250, (235.0 * a) as u8)));
@@ -541,7 +541,7 @@ fn main() {
     eprintln!("{frame_no} 幀 → {out_path}");
 }
 
-/// 將實際渲染的六個頁面、休息狀態與提醒導出，供迴歸檢查。
+/// 將實際渲染的六個頁面、休息狀態與提醒匯出，供迴歸檢查。
 fn gallery() {
     let (root,_)=setup_data();
     let dest=std::env::args().nth(2).unwrap_or_else(||"preview".into());

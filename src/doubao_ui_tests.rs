@@ -34,7 +34,7 @@ fn doubao_activity_is_visible_on_the_island_and_in_account_details() {
     for label in ["5 小時","本週","活動額度","75%"] { assert!(has_text(&h,label),"額度面板缺少 {label}"); }
     super::open_quota_details(&h);
     for _ in 0..5 { settings_frame(&mut h,vec![]); }
-    assert!(has_text(&h,"活動額度：剩餘 75.0%"),"賬號明細應保留活動額度");
+    assert!(has_text(&h,"活動額度：剩餘 75.0%"),"帳號明細應保留活動額度");
     assert!(has_text(&h,"5 小時：剩餘 72.0%") && has_text(&h,"本週：剩餘 44.0%"));
 }
 
@@ -48,7 +48,7 @@ fn doubao_closing_either_window_cancels_validation_and_clears_the_cookie() {
         if close_settings { h.app.settings_open=false;h.app.quota_tick(); } else { h.app.quota_close_connection(); }
         assert!(cancel.load(std::sync::atomic::Ordering::Acquire));
         assert!(h.app.quota.doubao_connecting.is_none() && h.app.quota.doubao_cookie.is_empty());
-        assert!(h.app.quota.config.accounts.is_empty(),"關閉窗口不能新增賬號");
+        assert!(h.app.quota.config.accounts.is_empty(),"關閉窗口不能新增帳號");
     }
 }
 
@@ -57,9 +57,9 @@ fn doubao_connection_offers_official_login_without_an_extension() {
     let _guard=ENV_LOCK.lock().unwrap_or_else(|error|error.into_inner());let mut h=H::new();
     h.app.open_settings();h.app.quota.provider=crate::quota::Provider::Doubao;h.app.quota.connect_open=true;
     for _ in 0..5 { settings_frame(&mut h,vec![]); }
-    for label in ["添加賬號","瀏覽器登錄","從本機導入","使用 Cookie 連接"] { assert!(has_text(&h,label),"連接窗口缺少 {label}"); }
+    for label in ["新增帳號","瀏覽器登錄","從本機匯入","使用 Cookie 連線"] { assert!(has_text(&h,label),"連線窗口缺少 {label}"); }
     assert!(!has_text(&h,"Kimi"),"豆包登錄不能依賴瀏覽器擴展");
-    assert!(!has_text(&h,"登錄 JSON"),"豆包不應走登錄文件導入");
+    assert!(!has_text(&h,"登錄 JSON"),"豆包不應走登錄檔案匯入");
 }
 
 #[test]

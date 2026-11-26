@@ -4,7 +4,7 @@
 //! - `uID=1`，`uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP`，回調 `WM_APP+9`，提示 `鬼島`；
 //! - 圖標取 exe 內 `RT_GROUP_ICON #1`，按 `SM_CXSMICON` 走 `LoadImageW`；
 //! - 左鍵、右鍵都彈同一個菜單，沒有雙擊分支；
-//! - 菜單固定中文，含設置入口，前三項每次打開現算勾選態；
+//! - 菜單固定中文，含設定入口，前三項每次打開現算勾選態；
 //! - 彈菜單前 `SetForegroundWindow`，期間 `SetTimer(12, 16ms)`，收尾 `KillTimer` +
 //!   `PostMessage(WM_NULL)` + `DestroyMenu`；
 //! - `Exit` 先摘圖標再 `ExitProcess`；`TaskbarCreated` 廣播時重建圖標。
@@ -31,11 +31,11 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::*;
 
-/// 原版的託盤回調消息。
+/// 原版的託盤回調訊息。
 pub const WM_TRAY: u32 = WM_APP + 9;
-/// 僅構建並導出當前菜單狀態，不彈出菜單（自動化取證用）。
+/// 僅構建並匯出當前菜單狀態，不彈出菜單（自動化取證用）。
 pub const WM_TRAY_DUMP: u32 = WM_APP + 2;
-/// 在屏幕座標 (wparam, lparam) 彈出菜單（隱藏桌面取證用）。
+/// 在螢幕座標 (wparam, lparam) 彈出菜單（隱藏桌面取證用）。
 pub const WM_TRAY_MENU: u32 = WM_APP + 3;
 
 const TRAY_UID: u32 = 1;
@@ -58,7 +58,7 @@ pub struct State {
     pub autostart: bool,
 }
 
-/// 菜單固定中文：啟動 / 吉祥物 / 極簡 / —— / 設置 / 關於 / 退出。
+/// 菜單固定中文：啟動 / 吉祥物 / 極簡 / —— / 設定 / 關於 / 退出。
 fn labels() -> [&'static str; 6] {
     ["開機啟動", "吉祥物", "極簡劉海", "關於鬼島", "退出", "設定…"]
 }
@@ -476,7 +476,7 @@ impl Tray {
     pub fn notify(&self,title:&str,body:&str,sound:bool) {
         let mut nid=NOTIFYICONDATAW {cbSize:std::mem::size_of::<NOTIFYICONDATAW>() as u32,hWnd:self.hwnd,uID:TRAY_UID,uFlags:NIF_INFO,dwInfoFlags:NIIF_INFO,..Default::default()};
         fill_tip(&mut nid.szInfoTitle,title);fill_tip(&mut nid.szInfo,body);
-        // NIIF_NOSOUND，默認安靜提醒。
+        // NIIF_NOSOUND，預設安靜提醒。
         if !sound {nid.dwInfoFlags.0|=0x10;}
         unsafe{let _=Shell_NotifyIconW(NIM_MODIFY,&nid);}
     }
@@ -662,7 +662,7 @@ pub fn activate_existing(calendar:bool)->bool {unsafe{
     GetWindowThreadProcessId(tray,Some(&mut tray_pid));
     GetWindowThreadProcessId(window,Some(&mut window_pid));
     if tray_pid==0 || tray_pid!=window_pid{return false;}
-    // 託盤有獨立線程，能接收消息不代表界面線程仍可響應。
+    // 託盤有獨立線程，能接收訊息不代表界面線程仍可響應。
     if SendMessageTimeoutW(window,WM_NULL,WPARAM(0),LPARAM(0),
         SMTO_ABORTIFHUNG|SMTO_ERRORONEXIT,1500,None).0==0{return false;}
     // 用戶再次啟動時，把新進程的前台激活權限交給現有實例，無需模擬按鍵。

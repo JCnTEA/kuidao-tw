@@ -1,4 +1,4 @@
-//! 啟動錯誤與 Rust 異常保存在本機，不自動上傳帳號或應用數據。
+//! 啟動錯誤與 Rust 異常儲存在本機，不自動上傳帳號或應用數據。
 
 use std::path::{Path, PathBuf};
 
@@ -43,7 +43,7 @@ pub fn startup(stage:&str) {
     }
 }
 
-/// 記錄實際使用的圖形設備，避免把電腦裡的顯卡列表誤當作當前渲染設備。
+/// 記錄實際使用的圖形裝置，避免把電腦裡的顯卡列表誤當作當前渲染裝置。
 pub fn graphics(cc:&eframe::CreationContext<'_>) {
     use eframe::glow::HasContext;
     let details=if let Some(gl)=&cc.gl {unsafe{format!("廠商：{}\n渲染器：{}\nOpenGL：{}\n",
@@ -128,7 +128,7 @@ mod native_crash {
     const EXCEPTION_CONTINUE_SEARCH: i32 = 0;
     static HANDLING: AtomicBool = AtomicBool::new(false);
 
-    /// 異常地址所在的模塊文件名與模塊內偏移。
+    /// 異常地址所在的模塊檔案名與模塊內偏移。
     unsafe fn module_at(address: usize) -> (String, usize) {
         let mut module = HMODULE::default();
         let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
@@ -178,7 +178,7 @@ pub fn install() {
     #[cfg(windows)]
     { native_crash::install(); native_crash::test_crash_hook(); }
     std::panic::set_hook(Box::new(|info| {
-        // 不寫入 panic 的數據載荷，避免把郵件、憑據或登錄信息帶進日誌。
+        // 不寫入 panic 的數據載荷，避免把郵件、憑據或登錄資訊帶進日誌。
         let location = info.location().map(|p| format!("{}:{}:{}", p.file(), p.line(), p.column()))
             .unwrap_or_else(|| "未知".into());
         let details = format!("程式碼位置：{location}\n呼叫棧：\n{}", std::backtrace::Backtrace::force_capture());

@@ -70,13 +70,13 @@ fn caldav_connection_test_accepts_parse_errors_but_requires_read_access() {
             let data = if ics.is_empty() { String::new() } else { format!("<d:response><d:href>/calendar/1.ics</d:href><c:calendar-data>{ics}</c:calendar-data></d:response>") };
             let xml = format!(r#"<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">{data}</d:multistatus>"#);
             let result = mock_caldav_connection(provider, "mock", status, "application/xml", &xml);
-            let Event::Test { ok, message, count: actual, config } = result else { panic!("應返回連接測試結果"); };
+            let Event::Test { ok, message, count: actual, config } = result else { panic!("應返回連線測試結果"); };
             assert_eq!(ok, status == 207, "{provider:?} {status} {message}");
             assert_eq!(actual, count);
             assert_eq!(config.is_some(), ok);
             if let Some(cfg) = config { assert_eq!(cfg.href, Some(format!("{}calendar/", cfg.base()))); }
             if status != 207 { assert!(message.contains(&status.to_string())); }
-            else { assert_eq!(message.contains("1 條日程無法解析"), !ics.is_empty()); }
+            else { assert_eq!(message.contains("1 條行程無法解析"), !ics.is_empty()); }
         }
     }
 }
@@ -85,7 +85,7 @@ fn caldav_connection_test_accepts_parse_errors_but_requires_read_access() {
 fn discovery_keeps_root_events_and_follows_calendar_home_for_every_caldav_provider(){
     for provider in [Provider::Custom,Provider::Google,Provider::ICloud,Provider::Custom]{
         let result=mock_fetch(provider,true,false).unwrap();
-        assert_eq!(result.events.len(),2,"{provider:?} 不能因找到節氣日曆而漏掉主目錄中的應用日曆");
+        assert_eq!(result.events.len(),2,"{provider:?} 不能因找到節氣行事曆而漏掉主目錄中的應用行事曆");
     }
 }
 
@@ -114,7 +114,7 @@ fn partial_collection_failure_is_visible_for_every_caldav_provider(){
 
 #[test]
 fn import_report_explains_invalid_outside_cancelled_and_non_event_records(){
-    let ics="BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:bad\nDTSTART;TZID=Unsupported/Zone:20261112T100000\nEND:VEVENT\nBEGIN:VEVENT\nUID:past\nDTSTART:20000101T000000Z\nEND:VEVENT\nBEGIN:VEVENT\nUID:cancelled\nDTSTART:20261112T000000Z\nSTATUS:CANCELLED\nEND:VEVENT\nBEGIN:VTODO\nUID:task\nSUMMARY:不是日程\nEND:VTODO\nBEGIN:VEVENT\nUID:good\nDTSTART:20261112T020000Z\nEND:VEVENT\nEND:VCALENDAR";
+    let ics="BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:bad\nDTSTART;TZID=Unsupported/Zone:20261112T100000\nEND:VEVENT\nBEGIN:VEVENT\nUID:past\nDTSTART:20000101T000000Z\nEND:VEVENT\nBEGIN:VEVENT\nUID:cancelled\nDTSTART:20261112T000000Z\nSTATUS:CANCELLED\nEND:VEVENT\nBEGIN:VTODO\nUID:task\nSUMMARY:不是行程\nEND:VTODO\nBEGIN:VEVENT\nUID:good\nDTSTART:20261112T020000Z\nEND:VEVENT\nEND:VCALENDAR";
     let parsed=inspect_ics(ics,"2026-11-01T00:00:00Z".parse().unwrap(),"2026-12-01T00:00:00Z".parse().unwrap()).unwrap();
     assert_eq!(parsed.events.len(),1);assert_eq!(parsed.report.received,4);
     assert_eq!((parsed.report.invalid,parsed.report.outside,parsed.report.cancelled,parsed.report.unsupported),(1,1,1,1));

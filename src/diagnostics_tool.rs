@@ -84,7 +84,7 @@ mod archive {
             Some(PathBuf::from(
                 args.next()
                     .filter(|arg| !arg.is_empty())
-                    .ok_or("請指定診斷包保存目錄")?,
+                    .ok_or("請指定診斷包儲存目錄")?,
             ))
         } else {
             None
@@ -98,7 +98,7 @@ mod archive {
             .filter_map(|key| std::env::var(key).ok().map(|value| (key, value)))
             .collect();
         let archive = save(data_dir, &target, environment::collect(), &private_paths)
-            .map_err(|error| format!("無法保存診斷包：{error}"))?;
+            .map_err(|error| format!("無法儲存診斷包：{error}"))?;
         if output.is_none() {
             reveal(&archive);
         }
@@ -110,17 +110,17 @@ mod archive {
     }
 
     fn read_text(path: &Path) -> io::Result<String> {
-        // 只收集實際日誌文件，避免從重解析點讀取白名單以外的數據。
+        // 只收集實際日誌檔案，避免從重解析點讀取白名單以外的數據。
         let metadata = fs::symlink_metadata(path)?;
         if !metadata.is_file() || is_reparse_point(&metadata) {
-            return Err(io::Error::other("不是普通文件"));
+            return Err(io::Error::other("不是普通檔案"));
         }
         let file = fs::OpenOptions::new()
             .read(true)
             .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT.0)
             .open(path)?;
         if is_reparse_point(&file.metadata()?) {
-            return Err(io::Error::other("不是普通文件"));
+            return Err(io::Error::other("不是普通檔案"));
         }
         let mut bytes = Vec::new();
         file.take(MAX_LOG_SIZE + 1).read_to_end(&mut bytes)?;
@@ -294,7 +294,7 @@ mod archive {
 
     fn reveal(path: &Path) {
         let message = format!(
-            "診斷包已保存到：\n{}\n\n診斷包包含島仔日誌和系統狀態。音樂日誌可能包含歌名和歌手，請自行決定是否分享。\n\n點擊確定後查看診斷包。",
+            "診斷包已儲存到：\n{}\n\n診斷包包含島仔日誌和系統狀態。音樂日誌可能包含歌名和歌手，請自行決定是否分享。\n\n點擊確定後查看診斷包。",
             path.display()
         );
         let message_wide = wide(OsStr::new(&message));

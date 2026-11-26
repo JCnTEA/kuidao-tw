@@ -1,4 +1,4 @@
-//! 無線設備電量環：展開頁、詳情、常駐條和側邊島。
+//! 無線裝置電量環：展開頁、詳情、常駐條和側邊島。
 //! 動效只在展開時出現（充電流光、低電量呼吸、一次性事件）；常駐條保持靜止，不搶注意力。
 use crate::{anim,app::{App,Env,BLUETOOTH_PAGE},bt::{BatterySource,Device,DeviceKind},paint::{self,Card,H},theme::{self,W},bar_layout};
 use eframe::egui::Color32;
@@ -25,10 +25,10 @@ struct ChargeReport { charging:bool, level:u8, at:Instant }
 const FLOW:f64=1.8;
 const ENTER:f32=0.9;
 const STAGGER:f32=0.07;
-const LINKED:&str="已連接";
+const LINKED:&str="已連線";
 const RECEIVER_NOTE:&str="2.4G 接收器 · 這類接收器不提供電量";
-const NO_BATTERY_NOTE:&str="設備沒有提供電量";
-/// 連上後這麼久還沒有電量讀數，就當作設備不提供電量。新連接會立即讀一次，讀數通常幾秒內到。
+const NO_BATTERY_NOTE:&str="裝置沒有提供電量";
+/// 連上後這麼久還沒有電量讀數，就當作裝置不提供電量。新連線會立即讀一次，讀數通常幾秒內到。
 const READ_GRACE:f64=15.0;
 
 fn charge_state(device:&Device,fx:Option<&WirelessFx>)->Option<bool> {
@@ -60,7 +60,7 @@ fn low(device:&Device,fx:Option<&WirelessFx>)->bool {
     !stale(device)&&!charging(device,fx)&&display_band(device,fx).is_some_and(|b|b<2)
 }
 
-/// 閃電由兩個三角拼成（填充多邊形只支持凸形）。設計稿座標系 12×16。
+/// 閃電由兩個三角拼成（填充多邊形只支援凸形）。設計稿座標系 12×16。
 fn bolt(c:&Card,cx:f32,cy:f32,h:f32,col:Color32) {
     if h<=0.2 {return;}
     let s=h/16.0;let p=|x:f32,y:f32|(cx+(x-6.0)*s,cy+(y-8.0)*s);
@@ -83,7 +83,7 @@ fn bolt_scale(device:&Device,fx:Option<&WirelessFx>,t:f64,live:bool)->f32 {
     if u<0.82 {1.0} else if u<0.91 {1.0+0.22*(u-0.82)/0.09} else {1.22-0.22*(u-0.91)/0.09}
 }
 
-/// linked：已連接但沒有電量可看（2.4G 接收器，或確認不報電量的設備），畫藍色連接環。
+/// linked：已連線但沒有電量可看（2.4G 接收器，或確認不報電量的裝置），畫藍色連線環。
 struct RingSpec {r:f32,w:f32,icon:f32,live:bool,enter:f32,hover:bool,linked:bool}
 
 /// 弧線從 12 點鐘順時針。展開時疊加：低電量呼吸、充電流光與弧端閃點、接電/充滿波紋、充滿掃光、跌檔晃動。
@@ -96,7 +96,7 @@ fn ring(c:&Card,cx:f32,cy:f32,spec:&RingSpec,device:&Device,fx:Option<&WirelessF
     let fx=fx.filter(|_|spec.live);
     if spec.live&&critical&&!stale(device)&&!chg {track=paint::mix(track,theme::RED,0.22);}
     match device.battery {
-        // 已連接無電量：軌道中線壓一條細藍環，表示“連著”，不表示電量。
+        // 已連線無電量：軌道中線壓一條細藍環，表示“連著”，不表示電量。
         None if spec.linked=>{c.ring_centered(cx,cy,rr,spec.w,track);c.ring_centered(cx,cy,rr,spec.w*0.5,paint::alpha(theme::LINK,0.9));}
         // 虛線只留給“正在讀取”。
         None=>for i in 0..24 {let a=i as f32/24.0*TAU;c.arc(cx,cy,rr,a,a+TAU/24.0*0.42,spec.w*0.8,track);},
@@ -216,7 +216,7 @@ fn reading_age(device:&Device)->Option<String> {
 }
 
 impl App {
-    /// 展開頁入場進度：每台設備錯開 70ms，0.9s 畫完。
+    /// 展開頁入場進度：每台裝置錯開 70ms，0.9s 畫完。
     fn wireless_enter(&self,index:usize)->f32 {
         self.wireless_enter_at.map_or(1.0,|at|anim::clamp01(((self.t-at) as f32-index as f32*STAGGER)/ENTER))
     }
@@ -227,7 +227,7 @@ impl App {
             || self.wireless_devices.iter().any(|d|{let fx=self.wireless_fx.get(&d.id);d.connected&&(charging(d,fx)||low(d,fx))})
             || self.wireless_fx.values().any(|fx|[fx.morph.map(|m|m.1),fx.plug,fx.unplug,fx.full,fx.nudge].into_iter().flatten().any(|at|self.t-at<2.0))
     }
-    /// 已連接但沒有電量可看：接收器一插上就是；其他設備連上超過 READ_GRACE 仍沒讀數才算。
+    /// 已連線但沒有電量可看：接收器一插上就是；其他裝置連上超過 READ_GRACE 仍沒讀數才算。
     fn wireless_linked(&self,device:&Device)->bool {
         device.connected&&device.battery.is_none()&&(device.kind==DeviceKind::Receiver24G
             ||self.wireless_seen_at.get(&device.id).is_none_or(|at|self.t-at>=READ_GRACE))
@@ -274,7 +274,7 @@ impl App {
             for event in events {self.battery_alert(device,event);}
         }
     }
-    /// 電量事件提示：同一台設備的同一件事 10 分鐘內只提示一次。
+    /// 電量事件提示：同一台裝置的同一件事 10 分鐘內只提示一次。
     fn battery_alert(&mut self,device:&Device,event:&'static str) {
         if !self.settings.bluetooth_battery_notifications||!self.module_on(BLUETOOTH_PAGE) {return;}
         let key=(device.id.clone(),event);
@@ -282,13 +282,13 @@ impl App {
         self.wireless_alerted.insert(key,self.t);
         let Some(level)=device.battery else {return};
         self.enqueue_alert(crate::extras::Alert{
-            source:crate::extras::AlertSource::Internal,title:"藍牙設備".into(),
+            source:crate::extras::AlertSource::Internal,title:"藍牙裝置".into(),
             body:format!("{} · {event} · {level}%",device.name),page:BLUETOOTH_PAGE,at:self.t,duration:2.6,
             bluetooth:Some((device.kind,true)),meeting:None,unread:None,
         },false);
     }
 
-    /// 常駐候選：自動模式取有電量讀數的設備，自定義只取勾選的；按電量從低到高，最多兩台。
+    /// 常駐候選：自動模式取有電量讀數的裝置，自定義只取勾選的；按電量從低到高，最多兩台。
     pub(crate) fn wireless_resident(&self)->Vec<Device> {
         if !self.settings.show_bluetooth||!self.module_on(BLUETOOTH_PAGE){return vec![];}
         let custom=self.settings.bluetooth_resident_custom;
@@ -306,7 +306,7 @@ impl App {
         let digits=device.battery.map_or(1,|b|b.to_string().len()) as f32;
         18.0+3.0+if charging(device,self.wireless_fx.get(&device.id)){8.0}else{0.0}+digits*5.8+8.0
     }
-    /// 常駐條上無線設備一組的寬度（含設備之間 8 的間距）。
+    /// 常駐條上無線裝置一組的寬度（含裝置之間 8 的間距）。
     pub(crate) fn wireless_bar_width(&self)->f32 {
         let devices=self.wireless_resident();
         devices.iter().map(|d|self.resident_slot(d)).sum::<f32>()+8.0*devices.len().saturating_sub(1) as f32
@@ -354,8 +354,8 @@ impl App {
         }
         if devices.is_empty(){
             crate::extras::device_icon(c,DeviceKind::Other,191.5,51.0,36.0);
-            c.text(209.5,112.0,if env.bt_ready{"還沒有連接的設備"}else{"正在讀取無線設備"},13.0,W::Semibold,theme::WHITE,H::Center);
-            c.text(209.5,135.0,"連接藍牙設備或插入支持的 2.4G 接收器",10.5,W::Regular,theme::DIM,H::Center);return;
+            c.text(209.5,112.0,if env.bt_ready{"還沒有連線的裝置"}else{"正在讀取無線裝置"},13.0,W::Semibold,theme::WHITE,H::Center);
+            c.text(209.5,135.0,"連線藍牙裝置或插入支援的 2.4G 接收器",10.5,W::Regular,theme::DIM,H::Center);return;
         }
         let per_page=if devices.len()<=6 {devices.len()} else {4};
         let pages=devices.len().div_ceil(per_page);self.wireless_offset=self.wireless_offset.min(pages-1);
@@ -363,7 +363,7 @@ impl App {
         let compact=per_page>4;
         let (col_w,gap,r,w,icon,pct,name,ring_y,pct_y,name_y)=if compact {(64.0,4.0,23.0,3.5,19.0,13.0,9.5,78.0,118.0,136.0)} else {(82.0,12.0,29.0,4.0,24.0,15.0,10.0,80.0,127.0,146.0)};
         let count=shown.len() as f32;
-        // 展開頁兩側留給翻頁箭頭，兩端的設備也能完整點擊。
+        // 展開頁兩側留給翻頁箭頭，兩端的裝置也能完整點擊。
         let col_w=f32::min(col_w,(crate::app::PW-72.0-(count-1.0)*gap)/count);
         let start=(crate::app::PW-(count*col_w+(count-1.0)*gap))/2.0;
         for (index,device) in shown.iter().enumerate() {
@@ -399,7 +399,7 @@ impl App {
     pub(crate) fn wireless_detail(&mut self,c:&Card,device:&Device,back:bool) {
         if back {
             let wa=c.text(15.0,25.0,"‹ 無線",crate::theme::size::TITLE,W::Bold,theme::WHITE,H::Left);
-            c.text(15.0+wa+1.5,25.0,"設備",crate::theme::size::TITLE,W::Bold,theme::CYAN,H::Left);
+            c.text(15.0+wa+1.5,25.0,"裝置",crate::theme::size::TITLE,W::Bold,theme::CYAN,H::Left);
             let title_back=c.hit(6.0,4.0,wa+46.0,30.0,"wireless-back");
             let detail_back=c.hit(36.0,46.0,346.0,100.0,"wireless-detail-back")
                 .on_hover_cursor(eframe::egui::CursorIcon::PointingHand);
@@ -438,9 +438,9 @@ impl App {
         c.circle(if on{tx+17.0}else{tx+7.0},ty,5.0,if on{Color32::BLACK}else{theme::DIM});
         c.centered_text(tx+31.0,ty,"常駐顯示",10.5,W::Regular,if on{theme::WHITE}else{theme::DIM},H::Left);
         let hint=match (on,automatic.is_some()) {
-            (true,true)=>"取消這台設備的常駐，保留其他常駐設備",
-            (true,false)=>"取消這台設備的常駐",
-            (false,_)=>"在收起的島上常駐顯示這台設備",
+            (true,true)=>"取消這台裝置的常駐，保留其他常駐裝置",
+            (true,false)=>"取消這台裝置的常駐",
+            (false,_)=>"在收起的島上常駐顯示這台裝置",
         };
         if c.hit(tx-4.0,ty-11.0,92.0,22.0,("wireless-pin",&device.id)).on_hover_text(hint).clicked() {
             if let Some(devices)=automatic {
@@ -464,7 +464,7 @@ impl App {
 }
 
 impl App {
-    /// 無線設備設置中的常駐樣式與設備選擇。
+    /// 無線裝置設定中的常駐樣式與裝置選擇。
     pub(crate) fn wireless_resident_settings(&mut self,ui:&mut eframe::egui::Ui) {
         use crate::extras::{settings_control_row_right,settings_segmented,settings_hint};
         let mut style=self.settings.bluetooth_resident_style;
@@ -473,12 +473,12 @@ impl App {
         settings_hint(ui,if style==0 {"顯示電量環和百分比"} else {"電量偏低或充電時顯示百分比"});
         ui.separator();
         let mut custom=self.settings.bluetooth_resident_custom;
-        settings_control_row_right(ui,"常駐設備",|ui|{settings_segmented(ui,&mut custom,&[(false,"自動"),(true,"自定義")],62.0);});
+        settings_control_row_right(ui,"常駐裝置",|ui|{settings_segmented(ui,&mut custom,&[(false,"自動"),(true,"自定義")],62.0);});
         self.settings.bluetooth_resident_custom=custom;
-        settings_hint(ui,if custom {"優先顯示所選設備中電量較低的設備"} else {"自動挑電量最低的設備常駐"});
+        settings_hint(ui,if custom {"優先顯示所選裝置中電量較低的裝置"} else {"自動挑電量最低的裝置常駐"});
         if custom {
             let mut devices=self.wireless_devices.iter().filter(|d|d.kind!=DeviceKind::Receiver24G).peekable();
-            if devices.peek().is_none() {settings_hint(ui,"連接藍牙設備後可以在這裡勾選");}
+            if devices.peek().is_none() {settings_hint(ui,"連線藍牙裝置後可以在這裡勾選");}
             for device in devices {
                 let mut on=self.settings.bluetooth_pinned.contains(&device.id);
                 let label=match device.battery {Some(level)=>format!("{} · {level}%",device.name),None=>format!("{} · 未上報電量",device.name)};

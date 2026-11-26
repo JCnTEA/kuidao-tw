@@ -1,4 +1,4 @@
-//! Windows PnP 與 BLE 分開讀取；慢 GATT 請求不能阻塞連接狀態和系統電量。
+//! Windows PnP 與 BLE 分開讀取；慢 GATT 請求不能阻塞連線狀態和系統電量。
 use super::{device_kind,state::*};
 use std::{sync::{Arc,atomic::{AtomicBool,Ordering},mpsc::{self,SyncSender}},time::{Duration,Instant}};
 use windows::{core::{GUID,HSTRING,PCWSTR,RuntimeType},Foundation::{AsyncStatus,IAsyncOperation},Devices::{Bluetooth::{BluetoothCacheMode,BluetoothConnectionStatus,BluetoothDevice,BluetoothLEDevice,GenericAttributeProfile::{GattCommunicationStatus,GattDeviceService}},Enumeration::DeviceInformation},Storage::Streams::DataReader};
@@ -59,7 +59,7 @@ fn discover(previous:&[Target],nodes:&[PnpNode],stop:&AtomicBool)->Option<Vec<En
     let mut found=vec![];
     for (ble,selector) in selectors {
         let selector=HSTRING::from(format!("({selector}) AND System.Devices.Aep.IsConnected:=System.StructuredQueryType.Boolean#True"));
-        // 任何一個傳輸枚舉失敗，都不把不完整快照當作設備斷開。
+        // 任何一個傳輸枚舉失敗，都不把不完整快照當作裝置斷開。
         let infos=wait(DeviceInformation::FindAllAsyncAqsFilter(&selector),stop)?;
         for index in 0..infos.Size().ok()? {
             let Ok(info)=infos.GetAt(index) else {continue};
@@ -183,7 +183,7 @@ pub(super) fn run(tx:SyncSender<Vec<super::Device>>,stop:Arc<AtomicBool>) {
             state.discover(found,now);let targets=state.targets();
             let ids:Vec<_>=targets.iter().map(|t|(t.endpoint.id.clone(),t.session)).collect();
             if schedule.begin_read(now,ids) {
-                // 新連接需要重新查詢，不能把上輪緩存重新打上當前時間。
+                // 新連線需要重新查詢，不能把上輪緩存重新打上當前時間。
                 if !due {fresh_nodes=pnp_nodes();}
                 if let Some(fresh)=fresh_nodes{
                     for sample in windows_samples(&targets,&fresh,Instant::now()) {state.ingest(sample);}
@@ -253,7 +253,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore="按需讀取本機已連接設備，等待兩個來源返回"]
+    #[ignore="按需讀取本機已連線裝置，等待兩個來源返回"]
     fn bluetooth_live_sources(){
         let service=crate::bt::spawn();let start=std::time::Instant::now();let mut snapshots=0;
         while start.elapsed()<std::time::Duration::from_secs(20){
@@ -265,6 +265,6 @@ mod tests {
                 }
             }
         }
-        assert!(snapshots>0,"Windows 設備枚舉應返回完整快照");
+        assert!(snapshots>0,"Windows 裝置枚舉應返回完整快照");
     }
 }

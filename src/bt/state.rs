@@ -1,4 +1,4 @@
-//! 多來源快照：只按明確身份合併，保留讀數來源、時間和連接代次。
+//! 多來源快照：只按明確身份合併，保留讀數來源、時間和連線代次。
 use std::collections::BTreeSet;
 use std::time::{Duration,Instant};
 
@@ -11,14 +11,14 @@ pub enum DeviceKind {
     #[default] Other,
 }
 impl DeviceKind {
-    /// 連接後會接管系統聲音的設備；用於收起音量提示。
+    /// 連線後會接管系統聲音的裝置；用於收起音量提示。
     pub fn is_audio(self)->bool {matches!(self,Self::Headphones|Self::Earbuds|Self::EarbudsStem|Self::EarbudsStemTips|Self::OpenEar|Self::Bone|Self::HearingAid|Self::Speaker)}
 }
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum BatterySource {Windows,Gatt}
 impl BatterySource {
-    pub fn label(self)->&'static str {match self {Self::Windows=>"Windows 設備電量",Self::Gatt=>"藍牙電池服務"}}
+    pub fn label(self)->&'static str {match self {Self::Windows=>"Windows 裝置電量",Self::Gatt=>"藍牙電池服務"}}
 }
 
 #[derive(Clone,Debug,PartialEq,Eq)]

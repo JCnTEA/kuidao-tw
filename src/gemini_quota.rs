@@ -1,5 +1,5 @@
 //! Gemini 網頁訂閱額度，接口與字段映射參考 CodexBar 的 gemini-web 插件。
-//! 瀏覽器連接只在用戶點擊時讀取會話；會話由 Windows DPAPI 加密保存。
+//! 瀏覽器連線只在用戶點擊時讀取會話；會話由 Windows DPAPI 加密儲存。
 use super::{Account,Snapshot,Window};
 use serde_json::{json,Value};
 use std::{fs,io::Read,path::PathBuf,sync::{mpsc,Arc,atomic::{AtomicBool,Ordering}}};
@@ -51,7 +51,7 @@ fn request_url(email:&str)->String{
 }
 fn redirect_target(current:&str,location:&str)->Option<String>{
     let target=url::Url::parse(current).ok()?.join(location).ok()?;
-    // Google 會把郵箱形式的 authuser 規範化為帳號編號；只跟隨同站的用量查詢。
+    // Google 會把信箱形式的 authuser 規範化為帳號編號；只跟隨同站的用量查詢。
     (target.scheme()=="https" && target.host_str()==Some("gemini.google.com") && target.port_or_known_default()==Some(443) && target.username().is_empty() && target.password().is_none() && target.path().ends_with("/_/BardChatUi/graphql/schemas/GEMINI_WEB_GRAPHQL/executeQuery")).then(||target.into())
 }
 fn request(agent:&ureq::Agent,url:&str,session:&Session)->Result<Snapshot,(String,u64)>{

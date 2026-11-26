@@ -56,7 +56,7 @@ fn contains(outer: RECT, inner: RECT) -> bool {
         && inner.right <= outer.right && inner.bottom <= outer.bottom
 }
 
-/// 新舊客戶區取屏幕座標交集，同一矩形作為保留像素的源和目的區域。
+/// 新舊客戶區取螢幕座標交集，同一矩形作為保留像素的源和目的區域。
 pub(crate) fn preserve_overlap(old: RECT, new: RECT) -> Option<RECT> {
     let overlap = RECT {
         left: old.left.max(new.left),

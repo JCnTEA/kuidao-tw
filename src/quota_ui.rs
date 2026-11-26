@@ -1,4 +1,4 @@
-//! 同心額度環、帳號選擇及帳號設置。
+//! 同心額度環、帳號選擇及帳號設定。
 use crate::{app::{App,Cmd},extras::{settings_control_row},paint::{Card,H},quota::{self,Accent,Account,Amount,Config,Provider,RelayIcon,Snapshot},theme::{self,W}};
 #[cfg(all(windows, feature = "sdk-material"))]
 use crate::material::ControlRole;
@@ -557,12 +557,12 @@ impl App {
         }
     }
     pub(crate) fn page_quota(&mut self,c:&Card,header:&Card){
-        if header.hit(303.0,8.0,32.0,21.0,"quota-refresh").on_hover_text("刷新額度").clicked(){
+        if header.hit(303.0,8.0,32.0,21.0,"quota-refresh").on_hover_text("重新整理額度").clicked(){
             #[cfg(feature = "sdk-js")]
             self.plugins.refresh_quota();
             self.pending.push(Cmd::QuotaRefresh);
         }
-        header.text(319.0,23.0,if self.quota.busy.is_empty(){"刷新"}else{"更新中"},10.5,W::Regular,theme::GRAY,H::Center);
+        header.text(319.0,23.0,if self.quota.busy.is_empty(){"重新整理"}else{"更新中"},10.5,W::Regular,theme::GRAY,H::Center);
         #[derive(Clone,Copy)]
         enum Source {
             Account(usize),
@@ -591,12 +591,12 @@ impl App {
         #[cfg(not(feature = "sdk-js"))]
         let position=builtin_position;
         let Some(pos)=position.or_else(||(!sources.is_empty()).then_some(0)) else{
-            c.text(43.0,61.0,"還沒有添加 AI 帳號",13.0,W::Bold,theme::WHITE,H::Left);
-            c.text(43.0,80.0,"連接 AI 帳號，查看剩餘額度",10.5,W::Regular,theme::GRAY,H::Left);
+            c.text(43.0,61.0,"還沒有新增 AI 帳號",13.0,W::Bold,theme::WHITE,H::Left);
+            c.text(43.0,80.0,"連線 AI 帳號，查看剩餘額度",10.5,W::Regular,theme::GRAY,H::Left);
             let(r,b)=crate::paint::material_capsule(c,43.0,92.0,94.0,24.0,"add-quota-account",theme::BTN,theme::BTN_HOVER,
                 self.glassy().then_some((self.glass_controls_ready(),0.16,0.42)),
                 #[cfg(all(windows, feature = "sdk-material"))] ControlRole::QuotaAdd);
-            b.text(90.0,108.0,"添加帳號",10.0,W::Semibold,theme::WHITE,H::Center);if r.clicked(){self.settings_tab=11;self.open_settings();}return;
+            b.text(90.0,108.0,"新增帳號",10.0,W::Semibold,theme::WHITE,H::Center);if r.clicked(){self.settings_tab=11;self.open_settings();}return;
         };
         let start=pos/3*3;
         let mut picked=None;
@@ -763,8 +763,8 @@ impl App {
                     else{result.and_then(|r|r.as_ref().err()).map(String::as_str).unwrap_or("等待更新額度")};
                 for(i,line)in c.wrap(text,11.0,W::Regular,197.0,3).iter().enumerate(){c.text(157.0,96.0+i as f32*17.0,line,11.0,W::Regular,theme::GRAY,H::Left);}
                 if antigravity{
-                    let details=c.hit(309.0,51.0,48.0,20.0,("antigravity-details",&a.id)).on_hover_text("打開 Antigravity 額度設置").clicked();
-                    c.text(355.0,64.0,"設置 ›",10.0,W::Regular,theme::GRAY,H::Right);
+                    let details=c.hit(309.0,51.0,48.0,20.0,("antigravity-details",&a.id)).on_hover_text("打開 Antigravity 額度設定").clicked();
+                    c.text(355.0,64.0,"設定 ›",10.0,W::Regular,theme::GRAY,H::Right);
                     if details{self.quota.detail_account=Some(a.id.clone());self.settings_tab=11;self.open_settings();}
                 }
             }
@@ -825,9 +825,9 @@ impl App {
         let before=self.quota.config.clone();
         // 「開啟 AI 額度」併入頁面管理的模塊開關；「收起時顯示常駐帳號」在頁面管理的島上顯示裡。
         ui.horizontal_wrapped(|ui|{
-            if ui.button("＋ 添加帳號").clicked(){self.quota_open_connection(None);}
+            if ui.button("＋ 新增帳號").clicked(){self.quota_open_connection(None);}
             if ui.button("識別本機帳號").clicked(){self.quota.note=self.quota.config.discover().message();}
-            if ui.add_enabled(self.quota.busy.is_empty(),egui::Button::new("刷新額度")).clicked(){
+            if ui.add_enabled(self.quota.busy.is_empty(),egui::Button::new("重新整理額度")).clicked(){
                 #[cfg(feature = "sdk-js")]
                 self.plugins.refresh_quota();
                 self.pending.push(Cmd::QuotaRefresh);
@@ -840,7 +840,7 @@ impl App {
                 ui.set_width((ui.available_width()-1.0).max(0.0));ui.spacing_mut().item_spacing.y=6.0;
                 ui.push_id(a.id.clone(),|ui|{
                     let result=self.quota.rows.get(&a.id);let snapshot=result.and_then(|r|r.as_ref().ok());let error=self.quota.stale.get(&a.id).or_else(||result.and_then(|r|r.as_ref().err()));
-                    // 收起時一行：圖標、名稱、額度摘要和狀態；點開才顯示改名、監控、顏色等設置。
+                    // 收起時一行：圖標、名稱、額度摘要和狀態；點開才顯示改名、監控、顏色等設定。
                     let open_id=egui::Id::new(("quota-account-open",a.id.clone()));
                     let mut open=ui.ctx().data(|d|d.get_temp::<bool>(open_id)).unwrap_or(false)||self.quota.detail_account.as_deref()==Some(a.id.as_str());
                     ui.horizontal(|ui|{
@@ -857,7 +857,7 @@ impl App {
                             if ui.button(if open{"收起"}else{"詳情"}).clicked(){open=!open;}
                             if a.pinned{ui.label(egui::RichText::new("常駐").size(11.0).color(ui.visuals().weak_text_color()));}
                             let warn=crate::settings_theme::color(ui.ctx(),Color32::from_rgb(231,175,108),Color32::from_rgb(151,94,28));
-                            if a.provider==Provider::ZCode{ui.label(egui::RichText::new("需要重新連接").size(11.5).color(warn));}
+                            if a.provider==Provider::ZCode{ui.label(egui::RichText::new("需要重新連線").size(11.5).color(warn));}
                             else if !a.enabled{ui.label(egui::RichText::new("已暫停").size(11.5).color(ui.visuals().weak_text_color()));}
                             else if error.is_some(){ui.label(egui::RichText::new("需要處理").size(11.5).color(warn));}
                             else if let Some(s)=snapshot{ui.label(egui::RichText::new(quota_summary(s)).size(11.5));}
@@ -909,8 +909,8 @@ impl App {
                     else if snapshot.is_none(){ui.label(egui::RichText::new(if self.quota.busy.contains(&a.id){"正在查詢額度…"}else{"等待更新"}).size(11.0).color(ui.visuals().weak_text_color()));}
                     ui.horizontal_wrapped(|ui|{
                         ui.checkbox(&mut a.enabled,"監控");ui.checkbox(&mut a.pinned,"常駐島上");
-                        if a.provider!=Provider::ZCode&&ui.add_enabled(!self.quota.busy.contains(&a.id),egui::Button::new(if error.is_some(){"重試"}else{"刷新"})).clicked(){self.pending.push(Cmd::QuotaRefresh);}
-                        if ui.button("重新連接").clicked(){connect=Some(a.id.clone());}
+                        if a.provider!=Provider::ZCode&&ui.add_enabled(!self.quota.busy.contains(&a.id),egui::Button::new(if error.is_some(){"重試"}else{"重新整理"})).clicked(){self.pending.push(Cmd::QuotaRefresh);}
+                        if ui.button("重新連線").clicked(){connect=Some(a.id.clone());}
                         if a.provider==Provider::Antigravity{
                             if let Some(url)=snapshot.and_then(|s|s.antigravity.as_ref()).and_then(|d|d.mode).and_then(|m|m.url()){
                                 if ui.button("查看官方用量").clicked(){self.pending.push(Cmd::OpenUrl(url.into()));}
@@ -950,9 +950,9 @@ impl App {
     fn quota_connect_window(&mut self,ctx:&egui::Context){
         if !self.quota.connect_open{return;}let mut open=true;
         let title=if self.quota.connect_target.is_some(){"重新連線帳號"}else{"新增帳號"};
-        // 與設置頁其他彈窗同一套外觀：卡片底色、大圓角、標題欄右側關閉。
+        // 與設定頁其他彈窗同一套外觀：卡片底色、大圓角、標題欄右側關閉。
         egui::Window::new(title).id(egui::Id::new("quota-connect-window")).title_bar(false).collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER,egui::Vec2::ZERO).default_width(440.0).frame(crate::extras::settings_modal_frame(ctx)).show(ctx,|ui|{
-            // 套用設置頁的按鈕、輸入框和分隔線樣式，和其他彈窗一致。
+            // 套用設定頁的按鈕、輸入框和分隔線樣式，和其他彈窗一致。
             crate::extras::settings_apply_style(ui);
             if crate::extras::settings_modal_title(ui,title){open=false;}
             ui.set_max_width(440.0);ui.style_mut().wrap_mode=Some(egui::TextWrapMode::Wrap);ui.spacing_mut().item_spacing.y=9.0;ui.visuals_mut().override_text_color=Some(crate::settings_theme::color(ctx,Color32::from_gray(225),Color32::from_gray(35)));
@@ -968,7 +968,7 @@ impl App {
             if group!=connection_group(previous_provider){self.quota.provider=group;}
             ui.add_enabled_ui((self.quota.connect_target.is_none()||group==Provider::NewApi)&&self.quota.api_connecting.is_none()&&self.quota.kiro_connecting.is_none(),|ui|{
                 if group==Provider::NewApi&&!self.quota.relay_user_token{
-                    ui.collapsing("高級設置",|ui|{
+                    ui.collapsing("高級設定",|ui|{
                         settings_control_row(ui,"站點類型",76.0,|ui|{egui::ComboBox::from_id_salt("relay-protocol").selected_text(if self.quota.relay_manual{self.quota.provider.name()}else{"自動識別（推薦）"}).show_ui(ui,|ui|{
                             ui.selectable_value(&mut self.quota.relay_manual,false,"自動識別（推薦）");
                             for p in [Provider::RelayGeneral,Provider::NewApi,Provider::Sub2Api,Provider::RelayCustom,Provider::OneApi]{if ui.selectable_label(self.quota.relay_manual&&self.quota.provider==p,p.name()).clicked(){self.quota.relay_manual=true;self.quota.provider=p;}}
@@ -998,16 +998,16 @@ impl App {
                 ui.label(if custom{"查詢指令碼和憑據由 Windows 加密儲存在本機。"}else{"僅查詢額度；憑據儲存在 Windows 憑據管理器，不寫入配置或快取。"});
                 ui.add_enabled_ui(self.quota.api_connecting.is_none(),|ui|{
                     if provider.relay(){
-                        if self.quota.connect_target.is_some(){ui.label(format!("使用已保存的 {} 接口",provider.name()));}
+                        if self.quota.connect_target.is_some(){ui.label(format!("使用已儲存的 {} 接口",provider.name()));}
                         else if !self.quota.relay_manual&&!user_token{ui.label("自動識別站點類型");}
-                        ui.label(if custom{"支持粘貼 CC Switch 的 request / extractor 查詢腳本。"}else if user_token{"填寫 New API 站點個人設置中的 Access Token 和用戶 ID，查詢帳戶餘額。"}else{"填寫站點網站地址和 API Key，讀取站點提供的額度。"});
+                        ui.label(if custom{"支援粘貼 CC Switch 的 request / extractor 查詢腳本。"}else if user_token{"填寫 New API 站點個人設定中的 Access Token 和用戶 ID，查詢帳戶餘額。"}else{"填寫站點網站地址和 API Key，讀取站點提供的額度。"});
                         ui.add_sized([ui.available_width(),27.0],egui::TextEdit::singleline(&mut self.quota.source).hint_text(if custom{"HTTPS 站點或本機 HTTP 地址（可含子目錄）"}else{"https://你的站點地址（可含子目錄）"}));
                         if user_token{settings_control_row(ui,"用戶 ID",64.0,|ui|{ui.add_sized([ui.available_width(),27.0],egui::TextEdit::singleline(&mut self.quota.relay_user_id).hint_text("站點個人資料中的數字 ID"))});}
                     }else if matches!(provider,Provider::MiniMax|Provider::Glm){
                         if !matches!(self.quota.source.as_str(),"cn"|"global"){self.quota.source="cn".into();}
                         ui.horizontal(|ui|{
                             ui.label("帳號地區");ui.selectable_value(&mut self.quota.source,"cn".into(),"中國區");ui.selectable_value(&mut self.quota.source,"global".into(),"國際區");
-                            if provider==Provider::Glm&&ui.small_button("獲取金鑰").on_hover_text(if self.quota.source=="global"{"開啟國際區控制檯，選擇 Personal Coding Plan"}else{"開啟中國區個人程式設計套餐頁，獲取套餐 Key"}).clicked(){
+                            if provider==Provider::Glm&&ui.small_button("取得金鑰").on_hover_text(if self.quota.source=="global"{"開啟國際區控制檯，選擇 Personal Coding Plan"}else{"開啟中國區個人程式設計套餐頁，取得套餐 Key"}).clicked(){
                                 let url=if self.quota.source=="global"{"https://z.ai/manage-apikey/apikey-list"}else{"https://bigmodel.cn/coding-plan/personal/overview"};
                                 self.pending.push(Cmd::OpenUrl(url.into()));
                             }
@@ -1089,12 +1089,12 @@ impl App {
                     if ui.add_enabled(self.quota.login.is_none(),egui::Button::new("瀏覽器登入")).clicked(){self.quota_login(self.quota.alias.clone());}
                     if ui.button("從本機匯入").clicked(){self.quota.note=match quota::grok::native_path(){Some(path)=>match self.quota.config.import_grok(&path,&self.quota.alias){Ok(n)=>format!("新增 {n} 個 Grok Bot 帳號"),Err(e)=>e},None=>"請先安裝 Grok Bot 並登入，或使用瀏覽器連線".into()};}
                 });
-                ui.collapsing("導入其他登錄文件",|ui|{self.quota_file_form(ui);});
-                ui.label(egui::RichText::new("使用 Grok Bot 對應的 Cursor 帳號登錄，瀏覽器授權支持自動續期。").size(12.0).color(crate::settings_theme::color(ui.ctx(),Color32::from_gray(180),Color32::from_gray(75))));
+                ui.collapsing("匯入其他登錄檔案",|ui|{self.quota_file_form(ui);});
+                ui.label(egui::RichText::new("使用 Grok Bot 對應的 Cursor 帳號登錄，瀏覽器授權支援自動續期。").size(12.0).color(crate::settings_theme::color(ui.ctx(),Color32::from_gray(180),Color32::from_gray(75))));
             }else if self.quota.provider==Provider::Antigravity{
                 ui.add(egui::Label::new("讀取當前 Antigravity CLI 登錄帳號的額度。請先在官方 CLI 中登錄。").wrap());
                 ui.horizontal_wrapped(|ui|{
-                    if ui.button("連接本機 CLI").clicked(){
+                    if ui.button("連線本機 CLI").clicked(){
                         let reconnect=self.quota.connect_target.is_some();
                         let previous=self.quota.config.clone();
                         let result=self.quota.config.connect_antigravity(&self.quota.alias)
@@ -1103,7 +1103,7 @@ impl App {
                             Ok(id)=>{
                                 self.quota.rows.remove(&id);self.quota.stale.remove(&id);self.quota.busy.remove(&id);
                                 self.quota.save_snapshots();
-                                self.quota.note=if reconnect{"已重新連接 Antigravity"}else{"已添加 Antigravity 額度來源"}.into();
+                                self.quota.note=if reconnect{"已重新連線 Antigravity"}else{"已新增 Antigravity 額度來源"}.into();
                                 self.pending.push(Cmd::QuotaConnected);open=false;
                             }
                             Err(error)=>{self.quota.config=previous;self.quota.note=error;}
@@ -1338,7 +1338,7 @@ mod tests {
         assert_eq!(snapshot.rings().iter().map(|row|row.label.as_str()).collect::<Vec<_>>(),["Argon · 每週","Gemini · 每週"]);
         let details=snapshot_details(&snapshot);
         for row in ["Gemini · 5 小時：剩餘 76%","Gemini · 每週：剩餘 <1%","Argon · 每週：剩餘 0%",
-            "Claude / GPT · 5 小時：已停用","Claude / GPT · 每週：不可用","AI 積分：12.5","重置時間未知"]{
+            "Claude / GPT · 5 小時：已停用","Claude / GPT · 每週：不可用","AI 積分：12.5","重設時間未知"]{
             assert!(details.contains(row),"缺少額度明細：{row}");
         }
         let status=Snapshot{antigravity:Some(quota::antigravity::Details{
@@ -1439,7 +1439,7 @@ impl App {
         }
     }
 }
-/// 設置頁帳號摺疊行上的一句額度摘要。
+/// 設定頁帳號摺疊行上的一句額度摘要。
 fn quota_summary(s:&crate::quota::Snapshot)->String{
     if s.antigravity.is_some(){
         return s.antigravity_windows().first().map(|w|w.summary()).unwrap_or_else(||antigravity_status(s).into());
@@ -1447,6 +1447,6 @@ fn quota_summary(s:&crate::quota::Snapshot)->String{
     if let Some(credits)=&s.credits{return format!("積分 {}",credits.full());}
     if let Some(wallet)=&s.wallet{return if wallet.available{format!("餘額 {}",wallet.primary().full(wallet.primary().total))}else{"餘額不可用".into()};}
     if let Some(window)=s.rings().first(){return format!("{} 剩餘 {}",window.label,window.value_text());}
-    "已連接".into()
+    "已連線".into()
 }
 

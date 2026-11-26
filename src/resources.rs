@@ -230,7 +230,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn sampling_does_not_leak_snapshot_handles(){
-        // 句柄數是整個測試進程的，並行的其他測試也會開關線程和連接；取三輪中增長最小的一輪判斷。
+        // 句柄數是整個測試進程的，並行的其他測試也會開關線程和連線；取三輪中增長最小的一輪判斷。
         // 真正的洩漏每次採樣至少多一個句柄，100 次採樣會多出上百個，三輪都會超標。
         let growth=(0..3).map(|_|{
             let before=snapshot().unwrap();for _ in 0..100{let sample=snapshot().unwrap();assert!(sample.threads>0 && sample.private_bytes>0);}

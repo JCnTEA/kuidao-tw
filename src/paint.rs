@@ -1,6 +1,6 @@
 //! 面板內繪製：局部座標畫布 `Card` + 全部矢量圖標。
 //!
-//! `Card` 把「面板局部邏輯點」映射到屏幕，並自帶裁剪、整體透明度與可交互開關：
+//! `Card` 把「面板局部邏輯點」映射到螢幕，並自帶裁剪、整體透明度與可交互開關：
 //! 切頁時舊頁用 `live = false` 的畫布繪製，只畫不響應點擊，也不會和新頁搶 id。
 
 use crate::theme::{self, font, W};
@@ -760,7 +760,7 @@ pub fn stopwatch(c: &Card, cx: f32, cy: f32, r: f32, hand: f32, color: Color32) 
     c.circle(cx, cy + 2.0, 2.0, color);
 }
 
-/// 重置圖標：開口圓弧 + 箭頭，`spin` 為整體旋轉（弧度）。
+/// 重設圖標：開口圓弧 + 箭頭，`spin` 為整體旋轉（弧度）。
 pub fn reset(c: &Card, cx: f32, cy: f32, spin: f32, color: Color32) {
     let r = 5.6;
     let a0 = -1.1 + spin;
@@ -937,7 +937,7 @@ pub fn tray(c: &Card, cx: f32, cy: f32, size: f32, drop: f32, color: Color32, sh
     c.poly(&notch, shade);
 }
 
-// ---------- 文件圖標（取不到系統圖標時的矢量版） ----------
+// ---------- 檔案圖標（取不到系統圖標時的矢量版） ----------
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum FileKind {
     Folder,
@@ -1126,7 +1126,7 @@ pub fn chase(c: &Card, x0: f32, head: f32, y: f32, thick: f32, tint: Color32, ho
     let ramp = 6.0; // 軌道左端收邊（夠寬才不會在起點切出一條垂直硬邊）
     let lead = 6.0f32; // 頭部前方收邊（越寬過渡越軟）
 
-    // 按屏幕像素寬度過濾細光帶，移動時亮度不會集中到單行像素。
+    // 按螢幕像素寬度過濾細光帶，移動時亮度不會集中到單行像素。
     let pixel = 1.0 / (c.s * c.ui.ctx().pixels_per_point()).max(0.1);
     let filter_variance = pixel * pixel / 6.0;
     let filtered = |offset: f32, width: f32| {

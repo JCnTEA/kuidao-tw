@@ -1,4 +1,4 @@
-//! 按 MIME 結構獲取正文和日程，避免把圖片、壓縮包等附件下載到常駐進程。
+//! 按 MIME 結構取得正文和行程，避免把圖片、壓縮包等附件下載到常駐進程。
 use super::{Account,Item,Parsed,parse_message,body_of,code_of,links_of,meeting_of};
 use imap_proto::{BodyStructure,MessageSection,SectionPath};
 use std::io::{Read,Write};
@@ -27,12 +27,12 @@ fn make_item(parsed:Parsed,fetch:&imap::types::Fetch,account:&Account)->Item{
         code:code_of(&parsed),summary:body_of(&parsed).into(),html:parsed.html.clone().into(),links:links_of(&parsed),meeting:meeting_of(&parsed.calendar),uid:fetch.uid.unwrap_or(0)}
 }
 
-/// 服務器明確拒絕了這條命令（NO / BAD）：連接仍然同步，可以換一種方式讀這封信。
-/// 其他錯誤（超時、解析失敗、連接中斷）說明響應沒讀完，這條連接已經不能再用，
+/// 伺服器明確拒絕了這條命令（NO / BAD）：連線仍然同步，可以換一種方式讀這封信。
+/// 其他錯誤（超時、解析失敗、連線中斷）說明響應沒讀完，這條連線已經不能再用，
 /// 必須交給上層斷開重連；繼續發命令會讀到上一條命令殘留的響應。
 fn rejected(error:&imap::Error)->bool{matches!(error,imap::Error::No(_)|imap::Error::Bad(_))}
 
-// 部分舊服務器沒有 BODYSTRUCTURE 或 MIME 分段支持，繼續使用原有完整讀取路徑。
+// 部分舊伺服器沒有 BODYSTRUCTURE 或 MIME 分段支援，繼續使用原有完整讀取路徑。
 fn legacy<S:Read+Write>(session:&mut imap::Session<S>,uid:u32,account:&Account)->Result<Option<Item>,()>{
     let fetched=match session.uid_fetch(uid.to_string(),"(UID INTERNALDATE BODY.PEEK[HEADER] BODY.PEEK[TEXT])"){
         Ok(fetched)=>fetched,Err(error) if rejected(&error)=>return Ok(None),Err(_)=>return Err(()),

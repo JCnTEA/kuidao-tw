@@ -1,4 +1,4 @@
-//! 未採樣的時鐘可立即刷新，無需向前回撥 Instant。
+//! 未採樣的時鐘可立即重新整理，無需向前回撥 Instant。
 //! 避免 Windows 剛開機時單調時鐘回撥下溢（#11）。
 use std::time::{Duration, Instant};
 

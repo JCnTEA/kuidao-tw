@@ -1,4 +1,4 @@
-//! 郵件整理：操作服務器已讀標記、回收站和恢復，逐帳號串行執行。
+//! 郵件整理：操作伺服器已讀標記、回收站和恢復，逐帳號串行執行。
 use crate::mail::{Account,Item};
 #[derive(Clone,Copy,Debug,Default,PartialEq,Eq,Hash)]
 pub enum Folder{#[default] Inbox,Trash}
@@ -26,7 +26,7 @@ mod protocol{
         let selectable=|n:&&imap::types::Name|!n.attributes().contains(&NameAttribute::NoSelect);
         let special=names.iter().filter(selectable).find(|n|n.attributes().iter().any(|a|matches!(a,NameAttribute::Custom(s) if s.eq_ignore_ascii_case("\\Trash"))));
         if let Some(n)=special{return Ok(n.name().into());}
-        // 僅採用服務器實際列出的常見回收站名稱，不猜測或新建文件夾。
+        // 僅採用伺服器實際列出的常見回收站名稱，不猜測或新建資料夾。
         let mut aliases=vec!["Trash".to_string(),"Deleted Messages".into(),"Deleted Items".into(),"INBOX.Trash".into(),"INBOX/Trash".into(),"[Gmail]/Trash".into()];
         use base64::Engine;
         for name in ["已刪除","已刪除郵件","垃圾箱","廢紙簍","廢件箱"]{

@@ -1,6 +1,6 @@
 //! LINE Login v2.1（web app 流程）：PKCE、本機回呼、換 token、驗 ID token。
 //!
-//! 桌機沒有官方 LINE SDK，因此照 LINE 文件用授權碼流程：系統瀏覽器登入，
+//! 桌機沒有官方 LINE SDK，因此照 LINE 檔案用授權碼流程：系統瀏覽器登入，
 //! 回呼打到本機 `http://localhost:<port>/…`，拿到 code 後在背景執行緒換 token，
 //! 再以 `/oauth2/v2.1/verify` 驗 ID token（`aud` 必須是本 Channel，`nonce` 必須一致）。
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
@@ -105,7 +105,7 @@ pub fn authorize_url(cfg: &Config, state: &str, nonce: &str, challenge: &str) ->
         ],
     );
     let Ok(url) = url else { return String::new() };
-    // LINE 文件用 %20 表示 scope 分隔；url crate 可能輸出 '+'，兩種都先正規化成 %20。
+    // LINE 檔案用 %20 表示 scope 分隔；url crate 可能輸出 '+'，兩種都先正規化成 %20。
     url.to_string().replace("scope=profile+openid", "scope=profile%20openid")
 }
 
@@ -459,7 +459,7 @@ impl Login {
                 }
                 // 先佔住回呼埠再開瀏覽器，埠被佔用時才不會白走一趟登入。
                 let listener = TcpListener::bind(("127.0.0.1", port))
-                    .map_err(|_| format!("連接埠 {port} 被佔用，請改 Callback URL 或關閉佔用程式"))?;
+                    .map_err(|_| format!("連線埠 {port} 被佔用，請改 Callback URL 或關閉佔用程式"))?;
                 open_browser(&url)?;
                 let code = wait_for_code(listener, &path, &state, &worker)?;
                 let token = exchange_code(&cfg, &code, &verifier)?;

@@ -171,7 +171,7 @@ fn plugin_settings_pages_gear_routes_by_id_and_sidebar_fits() {
         assert!(visible(&output, "啟用金價測試", false));
         assert!(visible(&output, "金價測試專用參數", false));
         assert!(visible(&output, "在島上常駐顯示", false));
-        assert!(visible(&output, "保存設置", false));
+        assert!(visible(&output, "儲存設定", false));
         assert!(!visible(&output, "便籤測試專用參數", false));
     }
     h.app.plugins.set_status_page_enabled(standalone[1].0, false).unwrap();

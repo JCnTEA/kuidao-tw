@@ -116,7 +116,7 @@ pub fn gradient_with_brightness(skin: crate::model::Skin, percent: u32) -> Optio
 }
 
 /// 單色圖標紋理（白色圖形 + 透明度，如 AI 廠商標識）：和文字一樣參與換色。
-/// 其餘紋理（專輯封面、應用圖標、文件預覽）保持原樣。
+/// 其餘紋理（專輯封面、應用圖標、檔案預覽）保持原樣。
 fn monochrome() -> &'static std::sync::Mutex<std::collections::HashSet<egui::TextureId>> {
     static SET: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<egui::TextureId>>> = std::sync::OnceLock::new();
     SET.get_or_init(Default::default)
@@ -343,7 +343,7 @@ fn toned_spans(ctx: &egui::Context, layer: egui::LayerId) -> Vec<(usize, usize, 
 /// 給某個圖層中 `ranges` 範圍內的圖形換色。
 ///
 /// 先找出這些範圍裡的實心彩色底塊；之後畫在它們上面的白字、白色圖標保持白色
-/// （「保存」按鈕、播放鍵裡的三角、開關的滑塊），其餘照常換色。
+/// （「儲存」按鈕、播放鍵裡的三角、開關的滑塊），其餘照常換色。
 pub fn recolor_layer(ctx: &egui::Context, layer: egui::LayerId, ranges: &[(usize, usize)], p: &Palette) {
     let toned = toned_spans(ctx, layer);
     ctx.graphics_mut(|g| {

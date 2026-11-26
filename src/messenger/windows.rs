@@ -1,4 +1,4 @@
-//! Windows 消息客戶端的通用生命週期、窗口檢查和後台喚起。
+//! Windows 訊息客戶端的通用生命週期、窗口檢查和後台喚起。
 use super::{AccountHistory,Capture,Messenger,OpenError,Target,Unread};
 use crate::model::Settings;
 use std::{collections::HashMap,sync::mpsc,time::{Duration,Instant}};
@@ -36,7 +36,7 @@ pub fn describe_foreground()->String{unsafe{let window=GetForegroundWindow();for
 pub fn trace(line:impl AsRef<str>){crate::resources::append_log(&crate::model::config_dir().join("diagnostics"),"messenger-events",line.as_ref());}
 
 // 點島上的提醒喚起客戶端：各客戶端把走過的步驟記在當前線程，結束時與結果合成一行寫入
-// messenger-events.log。只記窗口句柄、類名、可見狀態和進程號，不記窗口標題或消息內容。
+// messenger-events.log。只記窗口句柄、類名、可見狀態和進程號，不記窗口標題或訊息內容。
 thread_local!{static WAKE_STEPS:std::cell::RefCell<Vec<String>>=const{std::cell::RefCell::new(Vec::new())};}
 pub(crate) fn wake_step(line:impl Into<String>){WAKE_STEPS.with(|steps|steps.borrow_mut().push(line.into()));}
 /// 窗口當時的狀態：是否還在、類名、隱藏 / 最小化、所屬進程。
@@ -335,7 +335,7 @@ impl Runtime {
         }
         events
     }
-    /// 前台已確認查看該帳號時同步重置監聽端，避免遺漏激活事件後吞掉下一條消息。
+    /// 前台已確認查看該帳號時同步重設監聽端，避免遺漏激活事件後吞掉下一條訊息。
     pub fn viewed_client(&self,client:Messenger,pid:u32){
         if pid==0{return;}
         for entry in &self.taskbar{if entry.client==client{if let Some(source)=&entry.source{source.forget(pid);}}}

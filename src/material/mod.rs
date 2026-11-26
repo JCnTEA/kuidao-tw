@@ -281,7 +281,7 @@ impl Runtime {
 
     pub fn debug(render_state: &eframe::egui_wgpu::RenderState) -> Result<Self, String> {
         let material = Self::load(render_state, pipeline::DEBUG_SHADER, Options::default())?;
-        log("調試材質已加載");
+        log("調試材質已載入");
         Ok(material)
     }
 

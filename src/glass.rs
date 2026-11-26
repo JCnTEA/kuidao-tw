@@ -10,7 +10,7 @@
 //! 這裡只保留「黑色疊加」這一條路徑：`col = mat * (1 - tint)` 與「在背景上疊
 //! 一層黑色、alpha = tint」在數學上等價，正好能用 egui 的半透明填充表達。
 
-/// 看不到屏幕時的煙燻玻璃不透明度（oyenza `glass.rs:21`）。
+/// 看不到螢幕時的煙燻玻璃不透明度（oyenza `glass.rs:21`）。
 pub const SMOKED_OPACITY: f32 = 0.82;
 /// 深色玻璃的著色範圍（`crates/poni/src/glass.rs:673`）。
 pub const TINT_MIN: f32 = 0.34;
@@ -141,7 +141,7 @@ pub fn light_tint(backdrop: Option<[f32; 3]>, blurred: bool) -> f32 {
 /// 淺色玻璃的底色。
 pub const LIGHT_GROUND: [f32; 3] = [248.0 / 255.0, 248.0 / 255.0, 250.0 / 255.0];
 
-/// 把島體四周的若干屏幕採樣合成一個「背景色」：取平均色與最亮樣本的中點，
+/// 把島體四周的若干螢幕採樣合成一個「背景色」：取平均色與最亮樣本的中點，
 /// 偏向亮處，因為白字最怕的是亮背景。
 pub fn backdrop_estimate(samples: &[[f32; 3]]) -> Option<[f32; 3]> {
     if samples.is_empty() {

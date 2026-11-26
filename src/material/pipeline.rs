@@ -503,7 +503,7 @@ mod tests {
         });
 
         let mut encoder = state.device.create_command_encoder(&Default::default());
-        // 讓 egui 的實際 paint 回調負責設置 viewport、綁定和繪製。
+        // 讓 egui 的實際 paint 回調負責設定 viewport、綁定和繪製。
         let paint = [egui::ClippedPrimitive {
             clip_rect: capture,
             primitive: match shape {

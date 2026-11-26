@@ -29,7 +29,7 @@ fn parses_five_hour_week_and_bonus_windows() {
     assert_eq!(snapshot.rings()[1].remaining, 44.0);
     assert_eq!(snapshot.rings()[0].reset, Some(1900008000));
     assert_eq!(snapshot.extra[0].remaining, 75.0);
-    assert_eq!(snapshot.extra[0].reset, None, "活動結束時間不能冒充週期重置");
+    assert_eq!(snapshot.extra[0].reset, None, "活動結束時間不能冒充週期重設");
 }
 
 #[test]

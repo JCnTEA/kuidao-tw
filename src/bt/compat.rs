@@ -36,10 +36,10 @@ impl Package {
     pub(crate) fn parse(raw: &[u8]) -> Result<Self, &'static str> {
         let manifest: Manifest = serde_json::from_slice(raw).map_err(|_| "兼容包格式無效")?;
         if manifest.id != PACKAGE_ID {
-            return Err("此文件不是島仔無線設備兼容包");
+            return Err("此檔案不是島仔無線裝置兼容包");
         }
         if manifest.api_version != API_VERSION {
-            return Err("當前島仔版本不支持此兼容包接口");
+            return Err("當前島仔版本不支援此兼容包接口");
         }
         if !valid_text(&manifest.version, 32) {
             return Err("兼容包版本無效");
@@ -93,7 +93,7 @@ pub(super) fn builtin_receivers() -> &'static ReceiverTable {
     static TABLE: std::sync::OnceLock<ReceiverTable> = std::sync::OnceLock::new();
     TABLE.get_or_init(|| {
         let rows = serde_json::from_slice(BUILTIN).expect("內置接收器識別表應使用有效的 JSON");
-        ReceiverTable::new(rows).expect("內置接收器識別表應包含有效的設備數據")
+        ReceiverTable::new(rows).expect("內置接收器識別表應包含有效的裝置數據")
     })
 }
 
@@ -111,7 +111,7 @@ fn valid_text(text: &str, max: usize) -> bool {
         && !text.chars().any(char::is_control)
 }
 
-/// 供 USB 枚舉線程讀取當前啟用的插件數據。安裝狀態由集市保存。
+/// 供 USB 枚舉線程讀取當前啟用的插件數據。安裝狀態由集市儲存。
 #[derive(Clone, Default)]
 pub struct Store(Arc<Mutex<Option<Arc<Package>>>>);
 

@@ -1,4 +1,4 @@
-//! 設置窗口獨立的位置與大小記錄；僅在關閉或退出程序時落盤。
+//! 設定窗口獨立的位置與大小記錄；僅在關閉或退出程序時落盤。
 use eframe::egui::{self,Pos2,Rect,Vec2};
 use std::{io::Read,path::PathBuf};
 
@@ -47,7 +47,7 @@ impl State {
         let Some(saved)=self.current.or(self.saved) else{return false;};let ppp=ctx.pixels_per_point();
         let frame=ctx.input(|i|i.viewport().outer_rect.zip(i.viewport().inner_rect).map(|(outer,inner)|(outer.size()-inner.size()).max(Vec2::ZERO))).unwrap_or(egui::vec2(16.0,40.0));
         let Some(fitted)=fit(saved,areas,frame)else{return false;};
-        // 命令按當前窗口倍率換算；恢復目標位於另一塊屏幕時仍發送正確的物理尺寸。
+        // 命令按當前窗口倍率換算；恢復目標位於另一塊螢幕時仍發送正確的物理尺寸。
         let ratio=fitted.scale/ppp;
         ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(Pos2::from(fitted.placement.position)/ppp));
         ctx.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(fitted.minimum*ratio));

@@ -16,7 +16,7 @@ fn mail_module_closes_reader_and_clears_pending_requests() {
     h.app.mail_open_reader(&item);
     h.app.mail.open_uid=Some((account.email.clone(),item.uid));
     h.app.mail.testing=Some(account.email.clone());
-    h.app.mail.note="正在測試連接…".into();
+    h.app.mail.note="正在測試連線…".into();
     h.app.mail.form.open=true;
     h.app.mail.form.password="臨時授權碼".into();
     h.app.mail.manage.pending.insert(account.email.clone());
@@ -62,7 +62,7 @@ fn mail_module_hides_its_bell_and_keeps_other_notifications() {
     h.app.set_page_visible(MAIL_PAGE,false);
     assert_eq!(h.app.notification_bell(),Some(99.0),"已有的獨立提醒不受影響");
     h.app.t=102.0;
-    assert!(h.app.notification_bell().is_none(),"關閉郵箱後只收到郵件的鈴鐺應消失");
+    assert!(h.app.notification_bell().is_none(),"關閉信箱後只收到郵件的鈴鐺應消失");
     h.app.set_page_visible(MAIL_PAGE,true);
     assert!(h.app.notification_bell().is_none(),"重新開啟後不恢復關閉前的鈴鐺");
     h.app.mail_event(mail::Event::Mail{item:Item{uid:2,..item},new:true});

@@ -1,5 +1,5 @@
-//! 播放器進程身份核實：只用“查詢有限信息”權限確認進程名，
-//! 確認是目標播放器後，調用方才申請內存讀取權限，避免接觸其他軟件。
+//! 播放器進程身份核實：只用“查詢有限資訊”權限確認進程名，
+//! 確認是目標播放器後，調用方才申請內存讀取權限，避免接觸其他軟體。
 use windows::Win32::{
     Foundation::CloseHandle,
     System::{
@@ -10,7 +10,7 @@ use windows::Win32::{
 
 fn exe_name(path:&str)->&str {path.rsplit(['\\','/']).next().unwrap_or(path)}
 
-/// 從進程快照按可執行文件名篩選進程號；快照不需要打開任何進程。
+/// 從進程快照按可執行檔案名篩選進程號；快照不需要打開任何進程。
 pub fn pids_named(exe:&str)->Vec<u32> {
     let mut pids=Vec::new();
     unsafe {
@@ -32,7 +32,7 @@ pub fn image_is(pid:u32,exe:&str)->bool {
     image_path(pid).is_some_and(|path|exe_name(&path).eq_ignore_ascii_case(exe))
 }
 
-/// 用“查詢有限信息”權限讀取進程的可執行文件路徑；只用於核對身份和讀取版本號。
+/// 用“查詢有限資訊”權限讀取進程的可執行檔案路徑；只用於核對身份和讀取版本號。
 pub fn image_path(pid:u32)->Option<String> {
     if pid==0 {return None;}
     unsafe {

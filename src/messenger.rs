@@ -1,4 +1,4 @@
-//! 消息客戶端的統一身份、通知策略和帳號歸屬記錄。
+//! 訊息客戶端的統一身份、通知策略和帳號歸屬記錄。
 use crate::{model::Settings,paint::Card};
 use eframe::egui;
 use std::collections::HashMap;
@@ -20,7 +20,7 @@ pub enum Messenger {Wechat,Qq,WeCom,Feishu,DingTalk}
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum Capture {Taskbar,SystemToast}
 
-/// 只註冊已經實現的客戶端；新增後端在這裡聲明識別信息和行為邊界。
+/// 只註冊已經實現的客戶端；新增後端在這裡聲明識別資訊和行為邊界。
 pub struct Adapter {
     pub client:Messenger,
     pub name:&'static str,

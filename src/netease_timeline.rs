@@ -15,7 +15,7 @@ extern "system" {
 struct Process(Handle);
 impl Drop for Process {fn drop(&mut self){unsafe{CloseHandle(self.0);}}}
 impl Process {
-    /// 先用有限查詢權限核對進程身份，再申請讀取權限（進程號可能被其他軟件複用）。
+    /// 先用有限查詢權限核對進程身份，再申請讀取權限（進程號可能被其他軟體複用）。
     fn open(pid:u32,exe:&str)->Option<Self> {
         if !super::player_process::image_is(pid,exe){return None;}
         let p=Process(unsafe{OpenProcess(0x410,0,pid)});
@@ -240,7 +240,7 @@ fn discover_in(process:&str,module:&str,layout:impl Fn(u32,u32)->Option<Layout>)
         reason=format!("{process} 未載入 {module}");
         for &base in modules.iter().take(size as usize/std::mem::size_of::<usize>()) {
             if !name(p.0,base).eq_ignore_ascii_case(module){continue;}
-            let Some((stamp,image_size))=pe_identity(p.0,base) else{return Err(format!("無法讀取 {module} 文件頭").into());};
+            let Some((stamp,image_size))=pe_identity(p.0,base) else{return Err(format!("無法讀取 {module} 檔案頭").into());};
             if let Some(layout)=layout(stamp,image_size) {return Ok(Found{pid:id,base,stamp,size:image_size,layout});}
             let version=module_path(p.0,base).map_or_else(||"未知".into(),|path|super::music_log::file_version(&path));
             return Err(Miss{reason:format!("{module} 版本不在適配表裡：{version} 時間戳{stamp:08x} 大小{image_size}"),unknown:Some((id,base,stamp,image_size))});
@@ -385,7 +385,7 @@ mod tests {
         let none=discover_in("不存在的播放器.exe","x.dll",|_,_|None).err().unwrap();
         assert_eq!((none.reason.as_str(),none.unknown.is_none()),("未找到 不存在的播放器.exe",true));
         let missing=discover_in(&exe,"不存在的組件.dll",|_,_|None).err().unwrap();
-        assert_eq!((missing.reason,missing.unknown.is_none()),(format!("{exe} 未加載 不存在的組件.dll"),true),"組件可能稍後才加載，之後要照常重試");
+        assert_eq!((missing.reason,missing.unknown.is_none()),(format!("{exe} 未載入 不存在的組件.dll"),true),"組件可能稍後才載入，之後要照常重試");
         let unknown=discover_in(&exe,"kernel32.dll",|_,_|None).err().unwrap();
         assert!(unknown.reason.starts_with("kernel32.dll 版本不在適配表裡：") && !unknown.reason.contains("未知"),"{}",unknown.reason);
         let (pid,..)=unknown.unknown.expect("不在表裡的版本交給自動適配");

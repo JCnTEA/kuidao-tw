@@ -139,7 +139,7 @@ fn doubao_browser_transport_local() {
 }
 
 #[test]
-#[ignore = "只讀驗證本機豆包當前登錄及額度，不保存憑據"]
+#[ignore = "只讀驗證本機豆包當前登錄及額度，不儲存憑據"]
 fn doubao_local_live_read_only() {
     let header = local().expect("讀取本機豆包當前登錄");
     let snapshot = super::super::request(&super::super::super::http_agent(), ENDPOINT, &header).map_err(|error|error.0).expect("只讀查詢豆包額度");

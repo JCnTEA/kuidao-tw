@@ -1,10 +1,10 @@
-//! 郵件（v0.5.5）：六類郵箱的帳號模型、IMAP 收取、正文解析。
+//! 郵件（v0.5.5）：六類信箱的帳號模型、IMAP 收取、正文解析。
 //!
 //! 輕量化約束：只用 Rust 原生 crate（`imap` + `native-tls` + `mailparse`），
 //! 不引 Node/Go/Electron。憑據一律進 Windows 憑據管理器（`keyring`），
 //! 帳號清單隻存帳號配置，不存密碼。
 //!
-//! 收信優先 `Session::idle()` 長連接；服務器不支持 IDLE 時退回輪詢（60/120/300 秒）。
+//! 收信優先 `Session::idle()` 長連線；伺服器不支援 IDLE 時退回輪詢（60/120/300 秒）。
 //! 正文只在內存裡解析，不落盤、不緩存。
 
 use std::collections::HashMap;
@@ -21,7 +21,7 @@ mod proxy_routing_tests;
 pub const SERVICE: &str = "Kuidao.Mail";
 pub const MICROSOFT_UNSUPPORTED: &str = "Outlook、Hotmail、Live 和 Microsoft 365 雲信箱需要 OAuth 授權，鬼島暫不支援密碼直連。";
 
-// ---------------------------------------------------------------- 郵箱類型
+// ---------------------------------------------------------------- 信箱類型
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Provider {
@@ -103,7 +103,7 @@ impl Provider {
         matches!(self, Provider::Mail163 | Provider::Mail126)
     }
 
-    /// 設置界面的操作指引。
+    /// 設定界面的操作指引。
     pub fn hint(self) -> &'static str {
         match self {
             Provider::Microsoft => MICROSOFT_UNSUPPORTED,
@@ -111,7 +111,7 @@ impl Provider {
             Provider::Custom => "向學校或單位管理員確認 IMAP 主機、TLS 埠及使用者名稱。僅支援連線即加密的 IMAP over TLS（通常 993）與 LOGIN/應用程式專用密碼。嚴格校驗證書；不支援明文、STARTTLS、OAuth2 或網頁登入/SSO。修改伺服器或使用者名稱必須重新輸入該目標的授權碼。",
             Provider::Qq => "1. 登入 QQ 信箱網頁版，點右上角「設定」→ 左側「帳號與安全」。\n2. 在新頁面選「安全設定」，向下找到「POP3/IMAP/SMTP/Exchange/CardDAV 服務」；未開啟時先按提示開啟。\n3. 點「生成授權碼」，完成驗證後複製到下方。這裡填寫授權碼，不是 QQ 密碼或信箱獨立密碼。",
             Provider::Mail163 | Provider::Mail126 => "1. 登入對應的網易信箱網頁版，點頂部「設定」→「POP3/SMTP/IMAP」。\n2. 確認「IMAP/SMTP 服務」已開啟；首次開啟時按提示完成驗證。\n3. 在「授權密碼管理」中點「新增授權密碼」，完成驗證後複製到下方。填寫客戶端授權碼，不是信箱登入密碼。",
-            Provider::Exmail => "1. 登入騰訊企業郵網頁版，在「設定」→「收發信設定」檢查 IMAP/SMTP 服務。\n2. 常見網頁版在「設定」→「信箱繫結」→「客戶端專用密碼」→「生成新密碼」獲取密碼；啟用安全登入後須使用專用密碼。\n3. 企業版本和管理員策略可能不同。找不到入口或服務被禁用時，請讓企業管理員確認客戶端接入方式，不要照搬 QQ 信箱的路徑。",
+            Provider::Exmail => "1. 登入騰訊企業郵網頁版，在「設定」→「收發信設定」檢查 IMAP/SMTP 服務。\n2. 常見網頁版在「設定」→「信箱繫結」→「客戶端專用密碼」→「生成新密碼」取得密碼；啟用安全登入後須使用專用密碼。\n3. 企業版本和管理員策略可能不同。找不到入口或服務被禁用時，請讓企業管理員確認客戶端接入方式，不要照搬 QQ 信箱的路徑。",
             Provider::ICloud => "1. 登入 Apple 帳戶頁面，進入「登入和安全」→「App 專用密碼」。\n2. 選擇「生成 App 專用密碼」，按提示填寫名稱並完成驗證；帳戶需已開啟雙重認證。\n3. 信箱欄填寫完整的 iCloud 信箱地址，下方填寫剛生成的 App 專用密碼，不是 Apple 帳戶密碼。",
             Provider::Gmail => "1. 登入 Google 帳戶，進入「安全性與登入」→「您的 Google 帳號登入選項」→「開啟兩步驗證」，按提示完成設定。\n2. 開啟下方「應用程式專用密碼」頁面，輸入應用程式名稱（例如：鬼島）並建立，複製生成的 16 位應用程式專用密碼。\n3. 信箱欄填完整 Gmail 地址，下方填應用程式專用密碼，不是 Google 登入密碼。若沒有建立入口，請檢查組織帳號限制、高階保護或僅使用安全金鑰的驗證設定。",
         }
@@ -154,7 +154,7 @@ pub struct Account {
     pub provider: Provider,
     pub custom: Option<CustomImap>,
     pub use_windows_proxy: bool,
-    /// 是否監控這個帳號（設置裡可逐個開關）。
+    /// 是否監控這個帳號（設定裡可逐個開關）。
     pub enabled: bool,
 }
 
@@ -294,10 +294,10 @@ pub struct Item {
     pub code: Option<String>,
     /// IMAP INTERNALDATE, used only to bound code display age.
     pub received_unix: Option<i64>,
-    /// 完整純文字正文，保留分段，僅保存在內存中。
+    /// 完整純文字正文，保留分段，僅儲存在內存中。
     pub summary: std::sync::Arc<str>,
     /// HTML 原文（無 HTML 版本時為空）。排版層據此還原標題、列表、引用等結構；
-    /// `summary` 只作為純文本郵件的兜底，兩者都只在內存中保存。
+    /// `summary` 只作為純文本郵件的兜底，兩者都只在內存中儲存。
     pub html: std::sync::Arc<str>,
     pub links: Vec<Link>,
     /// 會議邀請（來自 .ics / text/calendar），沒有就是 `None`。
@@ -311,7 +311,7 @@ pub struct Link {
     pub url: String,
 }
 
-/// 僅把有效網頁鏈接交給默認瀏覽器。
+/// 僅把有效網頁鏈接交給預設瀏覽器。
 pub fn web_url(raw:&str)->Option<String> {
     let parsed=url::Url::parse(raw.trim()).ok()?;
     if !matches!(parsed.scheme(),"https"|"http") || parsed.host_str().is_none(){return None;}
@@ -359,7 +359,7 @@ pub struct Meeting {
     pub end: Option<i64>,
     /// 本地時間 `MM-DD HH:MM`，直接顯示。
     pub at: String,
-    /// iCalendar 的 `UID`；郵件和日曆兩條來源靠它 + 開始時間去重。
+    /// iCalendar 的 `UID`；郵件和行事曆兩條來源靠它 + 開始時間去重。
     pub uid: String,
 }
 
@@ -619,7 +619,7 @@ use crate::otp;
 
 #[cfg(windows)]
 pub mod secrets {
-    /// 憑據只進 Windows 憑據管理器；鍵是郵箱地址，值是授權碼。
+    /// 憑據只進 Windows 憑據管理器；鍵是信箱地址，值是授權碼。
     pub fn save(email: &str, password: &str) -> Result<(), String> {
         let entry = keyring::Entry::new(super::SERVICE, &email.to_ascii_lowercase())
             .map_err(|e| format!("憑據管理器不可用：{e}"))?;
@@ -654,7 +654,7 @@ pub mod secrets {
 
 #[cfg(windows)]
 pub(crate) mod net {
-    //! TLS 連接 + 163/126 的 pre-login `ID` 握手。
+    //! TLS 連線 + 163/126 的 pre-login `ID` 握手。
     //!
     //! `imap` 2.4 只在已登錄的 `Session` 上暴露 `run_command_and_check_ok`，
     //! 而網易要求 greeting → ID → LOGIN 的順序，所以這裡手工讀問候、發 ID，
@@ -742,7 +742,7 @@ pub(crate) mod net {
         let tcp = if account.provider == super::Provider::Gmail {
             super::mail_proxy::connect(&host, port, account.uses_windows_proxy())?
         } else {
-            TcpStream::connect((host.as_str(), port)).map_err(|e| format!("無法連接 {host}：{e}"))?
+            TcpStream::connect((host.as_str(), port)).map_err(|e| format!("無法連線 {host}：{e}"))?
         };
         let timeout = Some(Duration::from_secs(20));
         let _ = tcp.set_read_timeout(timeout);
@@ -805,7 +805,7 @@ pub(crate) mod net {
         }
     }
 
-    /// 測試連接：連上、登錄、選 INBOX，然後退出。
+    /// 測試連線：連上、登錄、選 INBOX，然後退出。
     pub fn probe(account: &Account, password: &str) -> Result<(), String> {
         let mut session = connect(account, password)?;
         session.select("INBOX").map_err(|e| format!("無法開啟收件箱：{e}"))?;
@@ -933,7 +933,7 @@ mod service {
         true
     }
 
-    // 只在輪詢分支保活。各類郵箱都在同一個檢查截止點按 UID 查新郵件。
+    // 只在輪詢分支保活。各類信箱都在同一個檢查截止點按 UID 查新郵件。
     fn wait_for_poll<S:std::io::Read+std::io::Write>(
         session:&mut imap::Session<S>,start:Instant,secs:u64,allow_noop:&mut bool,mut wait_until:impl FnMut(Instant)->bool,
     )->imap::Result<()>{
@@ -946,7 +946,7 @@ mod service {
             // NOOP 可攜帶 EXISTS、EXPUNGE、FETCH 等通知；收信以隨後的 UID 查詢為準。
             match session.run_command_and_check_ok("NOOP"){
                 Ok(())=>{},
-                // 服務器明確拒絕保活時，保留當前連接，按原間隔用 UID 查詢。
+                // 伺服器明確拒絕保活時，保留當前連線，按原間隔用 UID 查詢。
                 Err(imap::Error::No(_)|imap::Error::Bad(_))=>*allow_noop=false,
                 Err(error)=>return Err(error),
             }
@@ -964,7 +964,7 @@ mod service {
     }
 
     fn wait_for_change<T: std::io::Read + std::io::Write + imap::extensions::idle::SetReadTimeout>(session: &mut imap::Session<T>) -> imap::Result<()> {
-        // 優先響應服務器推送；定期補查，避免服務端漏推送時長時間沒有提醒。
+        // 優先響應伺服器推送；定期補查，避免服務端漏推送時長時間沒有提醒。
         session.idle()?.wait_with_timeout(Duration::from_secs(10)).map(|_| ())
     }
 
@@ -1090,7 +1090,7 @@ mod service {
             if idle_supported {
                 match wait_for_change(session) {
                     Ok(())=>{},
-                    // 服務器明確拒絕推送時，本次連接改為輪詢；重連後重新檢查推送能力。
+                    // 伺服器明確拒絕推送時，本次連線改為輪詢；重連後重新檢查推送能力。
                     Err(imap::Error::No(_)|imap::Error::Bad(_))=>idle_supported=false,
                     Err(_)=>return Err("郵件推送連線中斷，正在重連".into()),
                 }
@@ -1382,7 +1382,7 @@ mod service {
         session.uid_search("UNSEEN").ok().map(|uids|uids.len() as u32)
     }
 
-    /// 首次連接：把最近 20 封讀進面板，但不當作新郵件提示。
+    /// 首次連線：把最近 20 封讀進面板，但不當作新郵件提示。
     fn recent<S:std::io::Read+std::io::Write>(
         session: &mut imap::Session<S>,
         account: &Account,
@@ -1442,7 +1442,7 @@ mod service {
         println!("invitation_recognized=true plain_date_rejected=true");
     }
 
-    /// 顯式運行的真實郵箱只讀檢查；不輸出地址、憑據或郵件內容。
+    /// 顯式運行的真實信箱只讀檢查；不輸出地址、憑據或郵件內容。
     #[test]
     fn exmail_capability_trailing_spaces_preserve_following_response() {
         let response=b"* CAPABILITY IMAP4 IMAP4rev1 XLIST MOVE IDLE XAPPLEPUSHSERVICE NAMESPACE CHILDREN ID UIDPLUS \r\na2 OK capabilities\r\n";
@@ -1752,7 +1752,7 @@ END:VCALENDAR\r\n";
 
     #[test]
     fn no_ics_means_no_meeting() {
-        // 普通郵件沒有日曆部分，不從正文猜測日期。
+        // 普通郵件沒有行事曆部分，不從正文猜測日期。
         let all_day = "BEGIN:VEVENT\nSUMMARY:放假\nDTSTART;VALUE=DATE:20261030\nEND:VEVENT\n";
         assert!(meeting_of(all_day).unwrap().all_day);
         assert!(meeting_of("").is_none());
@@ -1776,9 +1776,9 @@ END:VCALENDAR\r\n";
 mod custom_endpoint_tests {
  #[test] fn microsoft_cloud_accounts_report_unsupported_before_connecting(){
   let a=Account{email:"test@hotmail.com".into(),provider:Provider::Microsoft,custom:None,enabled:true,use_windows_proxy:false};
-  let error=a.endpoint().expect_err("尚未支持的微軟郵箱不能發起連接");
-  assert!(error.contains("OAuth")&&error.contains("暫不支持"));
-  assert!(Provider::Microsoft.label().contains("暫不支持"));
+  let error=a.endpoint().expect_err("尚未支援的微軟信箱不能發起連線");
+  assert!(error.contains("OAuth")&&error.contains("暫不支援"));
+  assert!(Provider::Microsoft.label().contains("暫不支援"));
   for host in ["outlook.office365.com"," IMAP-MAIL.OUTLOOK.COM ","outlook.live.com","imap.outlook.com"]{
    let b=Account{email:"student@example.edu".into(),provider:Provider::Custom,custom:Some(CustomImap{host:host.into(),port:993,username:String::new()}),..a.clone()};
    assert_eq!(b.endpoint().unwrap_err(),error,"微軟雲主機應顯示同一提示");

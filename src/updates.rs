@@ -132,7 +132,7 @@ impl State {
                     self.auto_start = manual_auto && has_package;
                     self.focus_requested = self.dialog_open;
                     if self.dialog_open { if let Ok(Some(release)) = &result { self.notified_version = Some(release.version.clone()); } }
-                    // 錯過啟動時段的新版留在設置裡，下次啟動時可以再提醒。
+                    // 錯過啟動時段的新版留在設定裡，下次啟動時可以再提醒。
                     let delay = if result.is_err() { RETRY_INTERVAL }
                         else if new_notice && !self.dialog_open { Duration::ZERO }
                         else { CHECK_INTERVAL };
@@ -338,8 +338,8 @@ impl State {
 
 }
 
-/// 只統計鬼島自己的文件（KB）。共享安裝文件夾裡的其他軟件不算在內。
-/// 診斷腳本已內嵌在程序裡（`--collect-diagnostics`），安裝目錄不再附帶單獨的診斷文件。
+/// 只統計鬼島自己的檔案（KB）。共享安裝資料夾裡的其他軟體不算在內。
+/// 診斷腳本已內嵌在程序裡（`--collect-diagnostics`），安裝目錄不再附帶單獨的診斷檔案。
 fn own_files_kb(dir: &std::path::Path) -> u32 {
     let bytes: u64 = ["kuidao.exe", "Uninstall.exe", "LICENSE", "THIRD_PARTY_NOTICES.txt"].iter()
         .filter_map(|name| std::fs::metadata(dir.join(name)).ok()).filter(|meta| meta.is_file()).map(|meta| meta.len()).sum();
@@ -347,7 +347,7 @@ fn own_files_kb(dir: &std::path::Path) -> u32 {
 }
 
 /// 啟動時為安裝版登記真實大小：舊版安裝器沒有寫 `EstimatedSize`，
-/// 軟件管家會統計整個安裝文件夾；裝進共享文件夾時會顯示幾十 GB。只在登記的安裝位置就是本程序所在目錄時寫入。
+/// 軟體管家會統計整個安裝資料夾；裝進共享資料夾時會顯示幾十 GB。只在登記的安裝位置就是本程序所在目錄時寫入。
 #[cfg(windows)]
 pub fn record_install_size() {
     use windows::{core::w, Win32::System::Registry::{RegGetValueW, RegSetKeyValueW, HKEY_CURRENT_USER, REG_DWORD, RRF_RT_REG_SZ}};
@@ -396,7 +396,7 @@ unsafe fn update_window_region(rect: egui::Rect, scale: f32) -> windows::Win32::
 }
 
 fn update_agent(proxy: Option<&str>, timeout: Duration) -> Result<ureq::Agent, String> {
-    // 整體 timeout 會覆蓋讀取超時，分別限制連接和無數據等待。
+    // 整體 timeout 會覆蓋讀取超時，分別限制連線和無數據等待。
     let mut builder = ureq::AgentBuilder::new().try_proxy_from_env(false)
         .timeout_connect(Duration::from_secs(20)).timeout_read(timeout).timeout_write(timeout);
     if let Some(proxy) = proxy {
@@ -727,7 +727,7 @@ mod tests {
     #[test]
     fn automatic_check_records_cooldown_for_future_launches() {
         let path = std::env::temp_dir().join(format!("daozai-update-retry-{}.json", std::process::id()));
-        for (result, delay) in [(Ok(None), 24 * 3600), (Err("網絡失敗".into()), 3600)] {
+        for (result, delay) in [(Ok(None), 24 * 3600), (Err("網路失敗".into()), 3600)] {
             let mut state = State::default();
             state.history_path = Some(path.clone());
             state.automatic_check_until = Some(Instant::now() + STARTUP_WINDOW);

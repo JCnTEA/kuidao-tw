@@ -1,4 +1,4 @@
-//! 自動避讓設置與正在運行的應用選擇。
+//! 自動避讓設定與正在運行的應用選擇。
 use eframe::egui::{self,Color32,Rect,Vec2};
 use crate::{extras::{settings_card,settings_label,setting_row},model::Settings};
 use std::sync::mpsc::{self,Receiver};
@@ -18,7 +18,7 @@ pub(crate) struct Picker {
     rx:Option<Receiver<Result<Vec<Candidate>,String>>>,
     error:String,
     icons:crate::icons::Cache,
-    /// 「全部添加」先進入確認狀態，再點一次「確定添加」才真正添加。
+    /// 「全部新增」先進入確認狀態，再點一次「確定新增」才真正新增。
     confirm_all:bool,
 }
 impl Picker {
@@ -135,7 +135,7 @@ impl Picker {
                 if ui.add_enabled(self.rx.is_none(),egui::Button::new("重新整理列表")).clicked(){self.refresh(ctx);}
             });
             ui.add_space(12.0);
-            // 二次確認：一次添加很多應用，先說清楚數量。
+            // 二次確認：一次新增很多應用，先說清楚數量。
             if self.confirm_all {
                 let addable=entries.iter().filter(|app|Self::reason(app,settings).is_none()).count();
                 ui.add_space(8.0);

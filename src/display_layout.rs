@@ -8,8 +8,8 @@ pub struct Display { pub id:String, pub label:String, pub bounds:Bounds,
     /// 本屏底邊註冊的自動隱藏欄窗口句柄，0 表示沒有。
     pub auto_bottom:usize, pub primary:bool, pub dpi:u32 }
 
-/// 島體擺放用的屏幕範圍：開啟「避開頂欄」時頂邊換成工作區頂邊。
-/// 只認屏幕上方三分之一以內的佔用，異常的工作區不會把島推到屏幕中間。
+/// 島體擺放用的螢幕範圍：開啟「避開頂欄」時頂邊換成工作區頂邊。
+/// 只認螢幕上方三分之一以內的佔用，異常的工作區不會把島推到螢幕中間。
 pub fn placement_bounds(display:&Display, avoid_top_bar:bool)->Bounds {
     let mut b=display.bounds;
     let reserved=display.work.top-b.top;
@@ -22,7 +22,7 @@ pub fn selected<'a>(displays:&'a [Display],id:&str)->Option<&'a Display>{
         .or_else(||displays.iter().find(|d|d.primary)).or_else(||displays.first())
 }
 
-/// 兩個屏幕在光標所在行或列相接時，返回光標進入本屏的深度和本屏的停靠邊。
+/// 兩個螢幕在光標所在行或列相接時，返回光標進入本屏的深度和本屏的停靠邊。
 pub(crate) fn shared_edge(b:Bounds, other:Bounds, (x,y):(i32,i32))->Option<(i32,crate::model::Dock)> {
     use crate::model::Dock;
     if (b.top.max(other.top)..b.bottom.min(other.bottom)).contains(&y) {
@@ -143,14 +143,14 @@ pub fn island_origin(m:Bounds, island_width:f32, scale:f32)->Option<(i32,i32)> {
 }
 
 /// 島體可見內容（展開面板、肩部與陰影）距中心的最大半寬，邏輯點。
-/// 水平偏移以此為界，保證展開後面板仍完整留在屏幕內。
+/// 水平偏移以此為界，保證展開後面板仍完整留在螢幕內。
 pub const ISLAND_HALF_EXTENT: f32 = 240.0;
 
 pub fn horizontal_half_extent(width: f32) -> f32 {
     if width > crate::app::WIN_W { width / 2.0 } else { ISLAND_HALF_EXTENT }
 }
 
-/// 島體中心能離開屏幕中線的最大距離（物理像素）。屏幕太窄時為 0，只能居中。
+/// 島體中心能離開螢幕中線的最大距離（物理像素）。螢幕太窄時為 0，只能居中。
 pub fn island_travel(m:Bounds, scale:f32)->f64 {
     if m.right<=m.left || !scale.is_finite() || scale<=0.0 {return 0.0;}
     ((m.right as f64-m.left as f64)/2.0-ISLAND_HALF_EXTENT as f64*scale as f64).max(0.0)
@@ -187,8 +187,8 @@ pub fn horizontal_origin_for_width(
     Some((x,y))
 }
 
-/// 左右停靠：畫布貼著屏幕左 / 右邊，豎直方向按 `offset`（-1 最上 … 0 居中 … 1 最下）移動，
-/// 可移動範圍保證展開面板始終完整留在屏幕內。返回畫布左上角（物理像素）。
+/// 左右停靠：畫布貼著螢幕左 / 右邊，豎直方向按 `offset`（-1 最上 … 0 居中 … 1 最下）移動，
+/// 可移動範圍保證展開面板始終完整留在螢幕內。返回畫布左上角（物理像素）。
 pub fn side_origin(m:Bounds, dock:crate::model::Dock, canvas:(f32,f32), half_extent:f32, scale:f32, offset:f32)->Option<(i32,i32)> {
     if m.right<=m.left || m.bottom<=m.top || !scale.is_finite() || scale<=0.0 {return None;}
     let (w,h)=((canvas.0*scale) as f64,(canvas.1*scale) as f64);
@@ -202,7 +202,7 @@ pub fn side_origin(m:Bounds, dock:crate::model::Dock, canvas:(f32,f32), half_ext
 /// 當前站位下，OLED 像素偏移往兩側各還能走多少物理像素。
 ///
 /// `half_extent` 是展開面板相對島體中心的最大半寬（頂部停靠）或半高（左右停靠）。
-/// 留出的餘量保證展開面板仍完整留在屏幕內：位置拉到最邊、或屏幕窄到沒有餘量時，
+/// 留出的餘量保證展開面板仍完整留在螢幕內：位置拉到最邊、或螢幕窄到沒有餘量時，
 /// 返回值會很小甚至為 0，調用方據此少挪或不挪。返回值是 (向小座標, 向大座標)。
 pub fn shift_slack(m:Bounds, scale:f32, half_extent:f32, offset:f32, dock:crate::model::Dock)->(i32,i32) {
     if m.right<=m.left || m.bottom<=m.top || !scale.is_finite() || scale<=0.0 || !half_extent.is_finite() || half_extent<=0.0 {return (0,0);}
@@ -300,7 +300,7 @@ mod bottom_dock_tests {
     use crate::model::Dock;
 
     fn screen(bounds:Bounds, work:Bounds, auto_bottom:usize)->Display {
-        Display{id:"屏幕".into(),label:String::new(),bounds,work,auto_bottom,primary:bounds.left==0,dpi:144}
+        Display{id:"螢幕".into(),label:String::new(),bounds,work,auto_bottom,primary:bounds.left==0,dpi:144}
     }
 
     #[test]
@@ -526,7 +526,7 @@ mod tests {
     }
 }
 
-/// 只有鬼島所在屏幕的前台全屏窗口才觸發隱藏。
+/// 只有鬼島所在螢幕的前台全屏窗口才觸發隱藏。
 pub fn hide_for_fullscreen(enabled:bool,fullscreen:Option<Bounds>,island:Option<Bounds>)->bool {
     enabled && fullscreen.is_some() && fullscreen==island
 }

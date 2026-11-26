@@ -1,5 +1,5 @@
 //! 音樂播放器兼容狀態：每個播放器的版本，以及進度、時長、跳轉等每一項能不能用、為什麼不能用。
-//! 讀取模塊寫入，島上據此決定是否顯示歌詞、是否提醒更新播放器；也負責保存「自動適配」學到的讀取位置。
+//! 讀取模塊寫入，島上據此決定是否顯示歌詞、是否提醒更新播放器；也負責儲存「自動適配」學到的讀取位置。
 use std::{collections::HashMap,sync::Mutex};
 
 /// 播放器的一項能力。
@@ -113,7 +113,7 @@ pub fn lyrics_limited(source:&str)->bool {
     get(exe).is_some_and(|p|[Item::Progress,Item::Reader].iter().any(|item|matches!(p.get(*item),Some(Support::Unavailable(_)))))
 }
 
-// ---- 自動適配學到的讀取位置：按組件文件名、PE 時間戳與映像大小區分版本，保存在配置目錄 ----
+// ---- 自動適配學到的讀取位置：按組件檔案名、PE 時間戳與映像大小區分版本，儲存在配置目錄 ----
 
 fn store_path()->std::path::PathBuf {crate::model::config_dir().join("music-compat.json")}
 fn key(module:&str,stamp:u32,size:u32)->String {format!("{}/{stamp:08x}/{size}",module.to_ascii_lowercase())}

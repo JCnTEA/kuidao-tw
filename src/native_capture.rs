@@ -287,7 +287,7 @@ mod tests {
         state.set_with(
             false,
             targets,
-            || panic!("默認關閉時無需檢查系統"),
+            || panic!("預設關閉時無需檢查系統"),
             &mut apply,
         );
         state.add_with(target(3), targets, &mut apply);

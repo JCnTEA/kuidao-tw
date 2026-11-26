@@ -1,4 +1,4 @@
-//! 天氣頁與天氣設置：實況、七日預報與日照時段，圖標全部用面板矢量繪製。
+//! 天氣頁與天氣設定：實況、七日預報與日照時段，圖標全部用面板矢量繪製。
 use crate::app::{App, Cmd, Env, WEATHER_PAGE, WEATHER_H};
 use crate::paint::{self, Card, H};
 use crate::theme::{self, W};
@@ -136,7 +136,7 @@ const PILL_GAP: f32 = 3.0;
 
 fn ease_out(t: f32) -> f32 { 1.0 - (1.0 - t.clamp(0.0, 1.0)).powi(3) }
 
-/// 天氣類型對應的氛圍色：頁面柔光、點擊漣漪與設置頁卡片共用。
+/// 天氣類型對應的氛圍色：頁面柔光、點擊漣漪與設定頁卡片共用。
 fn tint(kind: Kind) -> Color32 {
     match kind {
         Kind::Sun | Kind::Partly => SUN,
@@ -293,7 +293,7 @@ fn droplets(c: &Card, cx: f32, cy: f32, s: f32, t: Option<f32>) {
     if s >= 11.0 { c.circle(cx - s * 0.34, cy + s * 0.22, s * 0.08, Color32::from_white_alpha(150)); }
 }
 
-/// 靜態圖標：常駐膠囊、側欄、七日預報與設置頁共用。
+/// 靜態圖標：常駐膠囊、側欄、七日預報與設定頁共用。
 pub(crate) fn icon(c: &Card, cx: f32, cy: f32, size: f32, kind: Kind) { icon_at(c, cx, cy, size, kind, None) }
 
 /// 帶動效的圖標：`t` 為秒，雨滴下落、雪花自轉、霧帶漂移、光芒緩轉、星星閃爍。
@@ -626,7 +626,7 @@ fn ambient_clock(ctx: &egui::Context, id: egui::Id, active: bool, now: f64) -> f
     clock as f32
 }
 
-/// 設置頁頂部卡片的背景漸變：按天氣類型與晝夜換色。
+/// 設定頁頂部卡片的背景漸變：按天氣類型與晝夜換色。
 fn hero_colors(kind: Kind) -> (Color32, Color32) {
     match kind {
         Kind::Sun | Kind::Partly => (Color32::from_rgb(70, 146, 236), Color32::from_rgb(38, 94, 186)),
@@ -651,7 +651,7 @@ impl App {
         if self.weather_source.displayed==crate::weather_source_ui::Provider::Qweather {if !cfg!(test){if let Some(client)=&self.weather_source.client {self.weather_source.runtime.refresh(client,chrono::Utc::now().timestamp(),true);}}}
         else{self.weather.refresh_manual(&self.settings.weather_city,self.t);}
     }
-    /// 後台取數的輪詢與自動刷新；數據過期就重新拉一次。
+    /// 後台取數的輪詢與自動重新整理；數據過期就重新拉一次。
     pub(crate) fn weather_tick(&mut self) {
         let enabled=self.module_on(WEATHER_PAGE);
         if self.page!=WEATHER_PAGE {self.weather.picker_open=false;}
@@ -671,19 +671,19 @@ impl App {
         }
         self.weather.poll(&self.settings.weather_city,enabled);
         if self.weather.should_refresh(&self.settings.weather_city,self.t,chrono::Utc::now().timestamp(),enabled) {
-            // 單元測試仍執行模塊開關與刷新判定，僅跳過實際聯網。
+            // 單元測試仍執行模塊開關與重新整理判定，僅跳過實際聯網。
             if !cfg!(test) {self.weather.refresh(&self.settings.weather_city,self.t);}
         }
     }
 
-    /// 加入已保存城市列表（去重，超出上限時不加）。返回是否在列表裡。
+    /// 加入已儲存城市列表（去重，超出上限時不加）。返回是否在列表裡。
     fn remember_weather_city(&mut self, position: weather::Position) -> bool {
         if self.settings.weather_saved.contains(&position) {return true;}
         if self.settings.weather_saved.len()>=weather::MAX_CITIES {return false;}
         self.settings.weather_saved.push(position);true
     }
 
-    /// 切換當前城市；`None` 為自動定位。立即換上緩存並保存設置，是否聯網由刷新調度決定。
+    /// 切換當前城市；`None` 為自動定位。立即換上緩存並儲存設定，是否聯網由重新整理調度決定。
     pub(crate) fn switch_weather_city(&mut self, position: Option<weather::Position>) {
         if !self.module_on(WEATHER_PAGE) {return;}
         if self.weather_source.displayed==crate::weather_source_ui::Provider::Qweather {
@@ -698,7 +698,7 @@ impl App {
         self.weather.switch(&city,position,chrono::Utc::now().timestamp());
     }
 
-    /// 設置頁「添加城市」：把搜索框裡確認的地區加入列表，不改變當前城市。
+    /// 設定頁「新增城市」：把搜索框裡確認的地區加入列表，不改變當前城市。
     pub(crate) fn add_weather_city(&mut self) -> bool {
         if !self.module_on(WEATHER_PAGE) {return false;}
         let Some(position)=self.weather.picked_city().cloned() else {return false;};
@@ -709,7 +709,7 @@ impl App {
         true
     }
 
-    /// 刪除已保存城市；刪掉的正是當前城市時回到自動定位。
+    /// 刪除已儲存城市；刪掉的正是當前城市時回到自動定位。
     pub(crate) fn remove_weather_city(&mut self, position: &weather::Position) {
         self.settings.weather_saved.retain(|p|p!=position);
         self.weather.forget_city(position);
@@ -791,7 +791,7 @@ impl App {
         }
     }
 
-    /// 島內的城市下拉麵板：自動定位 + 已保存城市 + 管理入口。畫在頁面內部，不用系統彈窗，
+    /// 島內的城市下拉麵板：自動定位 + 已儲存城市 + 管理入口。畫在頁面內部，不用系統彈窗，
     /// 不會被島窗口裁掉。每行帶該城市緩存裡的天氣，切換前就能看到大概。
     fn paint_weather_picker(&mut self, c: &Card, open: f32) {
         enum Pick {Close,City(Option<weather::Position>),Manage}
@@ -900,7 +900,7 @@ impl App {
         paint_temp(c,cx,cy+14.0,&pill_temp_text(snapshot),10.5,W::Bold,if stale{theme::GRAY}else{theme::WHITE},H::Center);
     }
 
-    /// 只畫不響應命中，設置頁的常駐預覽複用。
+    /// 只畫不響應命中，設定頁的常駐預覽複用。
     pub(crate) fn paint_pill_weather(&self, c: &Card, x: f32, layout: &crate::bar_layout::Layout, snapshot: &crate::weather::Snapshot) {
         // 吉祥物游到徽標附近時先淡出，避免遮擋。
         let alpha = layout.pet_clearance(crate::bar_layout::WEATHER);
@@ -914,7 +914,7 @@ impl App {
         let base = 21.0;
         let (_, mid) = temp_ink(c, &text, theme::size::PILL_CLOCK, W::Bold);
         icon(c, left + PILL_ICON / 2.0, base + mid, PILL_ICON, weather::kind(snapshot.code, snapshot.day));
-        // 持續刷新失敗且數據超過兩個刷新週期才降為灰色。
+        // 持續重新整理失敗且數據超過兩個重新整理週期才降為灰色。
         let stale = self.weather_is_stale(snapshot);
         paint_temp(c, left + PILL_ICON + PILL_GAP, base, &text, theme::size::PILL_CLOCK, W::Bold, if stale { theme::GRAY } else { theme::WHITE }, H::Left);
     }
@@ -939,8 +939,8 @@ impl App {
     fn page_weather_body(&mut self, c: &Card, header: &Card, env: &Env, cmds: &mut Vec<Cmd>) {
         let loading = self.weather.loading;
         let ready=self.weather_can_refresh();
-        header.text(326.0, 23.0, if loading { "更新中" } else if ready { "刷新" } else { "稍後刷新" }, 10.5, W::Regular, if ready { theme::GRAY } else { theme::DIM }, H::Center);
-        if header.hit(304.0, 8.0, 44.0, 21.0, "weather-refresh").on_hover_text("重新獲取天氣；自動模式會重新定位。請求間隔至少 30 秒，失敗後至少 2 分鐘").clicked() && ready {
+        header.text(326.0, 23.0, if loading { "更新中" } else if ready { "重新整理" } else { "稍後重新整理" }, 10.5, W::Regular, if ready { theme::GRAY } else { theme::DIM }, H::Center);
+        if header.hit(304.0, 8.0, 44.0, 21.0, "weather-refresh").on_hover_text("重新取得天氣；自動模式會重新定位。請求間隔至少 30 秒，失敗後至少 2 分鐘").clicked() && ready {
             self.weather_refresh();
         }
         let footer=WEATHER_H-4.0;
@@ -951,7 +951,7 @@ impl App {
             let forecast_at=self.weather_source.runtime.stamps().1;
             let label=if forecast_at>0{format!("預報 {}",weather::clock(forecast_at))}else{"預報未取得".into()};
             c.text(120.0,footer,&label,8.5,W::Regular,if forecast_at==0||chrono::Utc::now().timestamp()-forecast_at>crate::qweather::DAILY_INTERVAL{WARN}else{theme::DIM},H::Left);
-            c.hit(116.0,footer-11.0,100.0,15.0,"qweather-forecast-stamp").on_hover_text(format!("預報上次獲取：{}",crate::weather_source_ui::updated_at(forecast_at)));
+            c.hit(116.0,footer-11.0,100.0,15.0,"qweather-forecast-stamp").on_hover_text(format!("預報上次取得：{}",crate::weather_source_ui::updated_at(forecast_at)));
             let sources=self.weather.snapshot.as_ref().map(|s|s.attributions.join("\n")).unwrap_or_default();
             c.text(24.0,footer,"資料歸因 ⓘ",9.5,W::Regular,theme::GRAY,H::Left);
             if c.hit(20.0,footer-12.0,86.0,16.0,"qweather-attributions").on_hover_cursor(egui::CursorIcon::PointingHand).on_hover_text(format!("天氣服務由和風天氣驅動\n{sources}\n降水機率：日夜較高值")).clicked(){
@@ -965,7 +965,7 @@ impl App {
 
         let Some(snapshot) = self.weather.snapshot.clone() else {
             let (title, detail) = if loading {
-                ("正在獲取當地天氣…", "首次定位需要幾秒鐘".to_string())
+                ("正在取得當地天氣…", "首次定位需要幾秒鐘".to_string())
             } else if let Some(error) = &self.weather.error {
                 ("天氣暫時取不到", error.clone())
             } else {
@@ -1029,14 +1029,14 @@ impl App {
         }
     }
 
-    /// 設置頁頂部的實況卡：按天氣換漸變底色，右側放動態大圖標，底部一行指標與刷新按鈕。
+    /// 設定頁頂部的實況卡：按天氣換漸變底色，右側放動態大圖標，底部一行指標與重新整理按鈕。
     fn weather_settings_hero(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         let width = ui.available_width();
         let height = 150.0;
         let (rect, hero) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
         let c = Card::new(ui, rect.min, rect);
-        // 設置頁常開時不持續重繪：只在指針停在卡片上時讓圖標動起來。
+        // 設定頁常開時不持續重繪：只在指針停在卡片上時讓圖標動起來。
         let t = ambient_clock(&ctx, hero.id.with("ambient"), hero.hovered(), ctx.input(|i| i.time));
         let snapshot = self.weather.snapshot.clone();
         let kind = snapshot.as_ref().map(|s| weather::kind(s.code, s.day));
@@ -1049,7 +1049,7 @@ impl App {
         let Some(snapshot) = snapshot else {
             icon_at(&c, width - 74.0, 68.0, 70.0, Kind::Cloud, Some(t));
             c.text(22.0, 40.0, "天氣", 15.0, W::Semibold, theme::WHITE, H::Left);
-            c.text(22.0, 84.0, if self.weather.loading { "正在獲取天氣…" } else { "尚無天氣資料" }, 22.0, W::Bold, theme::WHITE, H::Left);
+            c.text(22.0, 84.0, if self.weather.loading { "正在取得天氣…" } else { "尚無天氣資料" }, 22.0, W::Bold, theme::WHITE, H::Left);
             c.text(22.0, 108.0, "選擇定位方式並應用程式位置後，這裡會顯示當前天氣。", 11.5, W::Regular, soft, H::Left);
             return;
         };
@@ -1085,7 +1085,7 @@ impl App {
             c.text(x, 128.5, &text, 11.5, W::Regular, soft, H::Left);
             x += w + 18.0;
         }
-        // 右下：更新時間 + 圓形刷新按鈕（加載中轉圈）。
+        // 右下：更新時間 + 圓形重新整理按鈕（載入中轉圈）。
         let ready = self.weather_can_refresh();
         let (bx, by) = (width - 32.0, 124.0);
         let button = ui.interact(c.rect(bx - 13.0, by - 13.0, 26.0, 26.0), ui.id().with("weather-hero-refresh"), if ready { egui::Sense::click() } else { egui::Sense::hover() })
@@ -1106,7 +1106,7 @@ impl App {
         let ctx=ui.ctx().clone();
         let accent=color(&ctx,Color32::from_rgb(96,164,255),Color32::from_rgb(34,108,220));
         ui.add_space(4.0);
-        // 當前天氣放在最上面；所選來源還沒應用時不顯示，避免把默認源的數據混進和風草稿。
+        // 當前天氣放在最上面；所選來源還沒應用時不顯示，避免把預設源的數據混進和風草稿。
         let applied=self.weather_source.displayed==self.weather_source.selected;
         if applied {
             self.weather_settings_hero(ui);
@@ -1120,7 +1120,7 @@ impl App {
         }
         let selected_before=self.weather_source.selected;
         self.weather_source_settings(ui);
-        // 本幀剛切換來源：上面已畫的天氣屬於舊來源，丟棄這一幀重畫，避免草稿裡閃現默認源數據。
+        // 本幀剛切換來源：上面已畫的天氣屬於舊來源，丟棄這一幀重畫，避免草稿裡閃現預設源數據。
         if self.weather_source.selected!=selected_before && applied {ui.ctx().request_discard("天氣來源已切換");}
         ui.add_space(12.0);
         if self.weather_source.selected==crate::weather_source_ui::Provider::Qweather {
@@ -1201,7 +1201,7 @@ impl App {
     }
 }
 
-/// 設置行：左標題，右側內容靠右。
+/// 設定行：左標題，右側內容靠右。
 fn info_row(ui: &mut egui::Ui, title: &str, right: impl FnOnce(&mut egui::Ui)) {
     ui.horizontal(|ui| {
         ui.set_min_height(26.0);
@@ -1233,7 +1233,7 @@ pub(crate) fn city_row(ui: &mut egui::Ui, selected: bool, removable: bool, title
     let dot = egui::pos2(rect.left() + 18.0, rect.center().y);
     ui.painter().circle_stroke(dot, 7.0, egui::Stroke::new(1.4, paint::mix(weak, accent, pick)));
     if pick > 0.0 { ui.painter().circle_filled(dot, 3.8 * pick, accent); }
-    // 緩存天氣圖標：淺色主題下沿用設置頁的淺色配色。
+    // 緩存天氣圖標：淺色主題下沿用設定頁的淺色配色。
     let canvas = Card::new(ui, rect.min, rect);
     let first = canvas.painter.add(egui::Shape::Noop).0;
     match cached {
@@ -1270,7 +1270,7 @@ pub(crate) fn city_row(ui: &mut egui::Ui, selected: bool, removable: bool, title
 }
 
 /// 城市搜索下拉的一項：定位標記 + 名稱（粗）+ 行政區（灰），左對齊；
-/// 已選中的右側打勾，已在列表裡的標「已添加」。
+/// 已選中的右側打勾，已在列表裡的標「已新增」。
 pub(crate) fn city_option(ui: &mut egui::Ui, position: &weather::Position, chosen: bool, saved: bool) -> egui::Response {
     use crate::settings_theme::color;
     let ctx = ui.ctx().clone();

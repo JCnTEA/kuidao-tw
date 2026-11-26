@@ -104,7 +104,7 @@ unsafe fn trusted_file(path: PCWSTR, file: HANDLE, expected: impl FnOnce(&str) -
 pub(crate) fn lock_signed_executable(path: &Path, expected: impl FnOnce(&str) -> bool) -> Option<File> {
     let wide_path = wide(path.as_os_str());
     let file = OpenOptions::new().read(true).share_mode(FILE_SHARE_READ.0).open(path).ok()?;
-    // 啟動結束前持有這個句柄，簽名通過的文件不能被替換。
+    // 啟動結束前持有這個句柄，簽名通過的檔案不能被替換。
     unsafe { trusted_file(PCWSTR(wide_path.as_ptr()), HANDLE(file.as_raw_handle()), expected) }.then_some(file)
 }
 
@@ -127,7 +127,7 @@ pub(super) fn launch_feishu(path: &Path, pid: u32) -> Result<(), &'static str> {
     let dirname = path.parent().ok_or("無法確認客戶端安裝目錄")?;
     let filename = path.file_name().and_then(OsStr::to_str).ok_or("無法確認客戶端程序名")?;
     let wide_path = wide(path.as_os_str());
-    // 在創建子進程前持有文件，避免文件在簽名檢查和啟動之間被替換。
+    // 在創建子進程前持有檔案，避免檔案在簽名檢查和啟動之間被替換。
     let file = OpenOptions::new().read(true).share_mode(FILE_SHARE_READ.0)
         .open(&path).map_err(|_| "無法讀取客戶端程序進行簽名驗證")?;
     unsafe {
@@ -142,15 +142,15 @@ pub(super) fn launch_feishu(path: &Path, pid: u32) -> Result<(), &'static str> {
         }
         // 使用已匹配的客戶端令牌，管理員運行的島仔也不以自身權限啟動飛書。
         let process = Owned::new(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
-            .map_err(|_| "無法獲取客戶端運行權限")?);
+            .map_err(|_| "無法取得客戶端運行權限")?);
         let token = process_token(*process, TOKEN_QUERY | TOKEN_DUPLICATE)
-            .map_err(|_| "無法獲取客戶端運行權限")?;
+            .map_err(|_| "無法取得客戶端運行權限")?;
         if elevated(*token).map_err(|_| "無法確認客戶端運行權限")? {
             return Err("客戶端以管理員身份運行，請從託盤手動打開");
         }
         let mut primary = HANDLE::default();
         DuplicateTokenEx(*token, TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY, None,
-            SecurityImpersonation, TokenPrimary, &mut primary).map_err(|_| "無法獲取客戶端普通權限令牌")?;
+            SecurityImpersonation, TokenPrimary, &mut primary).map_err(|_| "無法取得客戶端普通權限令牌")?;
         let primary = Owned::new(primary);
         let wide_dir = wide(dirname.as_os_str());
         let startup = STARTUPINFOW { cb: size_of::<STARTUPINFOW>() as u32, ..Default::default() };

@@ -88,7 +88,7 @@ fn query(agent:&ureq::Agent,path:&Path)->Result<Snapshot,(String,u64)>{
 fn query_with(path:&Path,request:impl FnOnce(&Login)->Result<Snapshot,(String,u64)>)->Result<Snapshot,(String,u64)>{
     let root=super::login_json(path).map_err(|e|(e,0))?;let l=login(&root).map_err(|e|(e,0))?;
     // expiresAt 只是 Kiro 客戶端的續期計劃時間，客戶端懶續期，過了這個點令牌在服務端通常仍然有效；
-    // 直接帶令牌請求，由服務端 401/403 判定失效。Kiro 續期後改寫緩存文件，每次查詢都重新讀取，能自動恢復。
+    // 直接帶令牌請求，由服務端 401/403 判定失效。Kiro 續期後改寫緩存檔案，每次查詢都重新讀取，能自動恢復。
     let snapshot=request(&l)?;
     let current=super::login_json(path).and_then(|root|login(&root)).map_err(|e|(e,0))?;
     if current.access_token!=l.access_token||current.profile_arn!=l.profile_arn||current.region!=l.region{return Err(("Kiro 登入資訊已變化，請重新重新整理額度".into(),0));}

@@ -1,6 +1,6 @@
-//! 渲染方式：默認 OpenGL；部分顯卡的 OpenGL 驅動在長時間運行後會崩潰或畫面錯亂，
-//! 這時改用 Direct3D 12（兼容渲染）。崩潰處理只留一個標記文件，下次啟動時再寫入設置，
-//! 避免在崩潰現場改寫設置文件。
+//! 渲染方式：預設 OpenGL；部分顯卡的 OpenGL 驅動在長時間運行後會崩潰或畫面錯亂，
+//! 這時改用 Direct3D 12（兼容渲染）。崩潰處理只留一個標記檔案，下次啟動時再寫入設定，
+//! 避免在崩潰現場改寫設定檔案。
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static COMPAT_ACTIVE: AtomicBool = AtomicBool::new(false);
@@ -8,7 +8,7 @@ static COMPAT_ACTIVE: AtomicBool = AtomicBool::new(false);
 fn marker() -> std::path::PathBuf { crate::model::config_dir().join("diagnostics").join("renderer-fallback.txt") }
 
 /// 崩潰模塊是不是顯卡的 OpenGL 驅動（Intel igxelpicd64 / ig9icd64、NVIDIA nvoglv64、AMD atioglxx 等，
-/// 以及系統的 opengl32）。只看文件名，不含路徑。
+/// 以及系統的 opengl32）。只看檔案名，不含路徑。
 pub fn is_gl_driver(module: &str) -> bool {
     let name = module.rsplit(['\\', '/']).next().unwrap_or(module).to_ascii_lowercase();
     let stem = name.strip_suffix(".dll").unwrap_or(&name);
@@ -19,7 +19,7 @@ pub fn is_gl_driver(module: &str) -> bool {
 pub fn compat_active() -> bool { COMPAT_ACTIVE.load(Ordering::Relaxed) }
 pub fn set_compat_active(active: bool) { COMPAT_ACTIVE.store(active, Ordering::Relaxed) }
 
-/// 崩潰現場調用：只寫一個小標記文件，記下崩潰的驅動模塊。
+/// 崩潰現場調用：只寫一個小標記檔案，記下崩潰的驅動模塊。
 pub fn request_fallback(module: &str) {
     let path = marker();
     if let Some(dir) = path.parent() { let _ = std::fs::create_dir_all(dir); }

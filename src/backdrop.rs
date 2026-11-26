@@ -1,6 +1,6 @@
 //! 毛玻璃皮膚的背景亮度採樣。
 //!
-//! 在島體四周（窗口區域之外）取少量屏幕像素，估計島背後的明暗，讓著色深淺剛好
+//! 在島體四周（窗口區域之外）取少量螢幕像素，估計島背後的明暗，讓著色深淺剛好
 //! 保證白字可讀。`GetPixel` 讀屏較慢，所以放在後台線程裡每 1.5 秒採一次，
 //! 渲染線程只讀結果；切回經典皮膚時線程隨 `Sampler` 一起退出。
 
@@ -45,7 +45,7 @@ impl Sampler {
         Self { shared, stop }
     }
 
-    /// 採樣點（屏幕物理座標）。
+    /// 採樣點（螢幕物理座標）。
     pub fn set_points(&self, points: Vec<(i32, i32)>) {
         if let Ok(mut s) = self.shared.lock() {
             if s.points != points {
@@ -75,7 +75,7 @@ fn sample(points: &[(i32, i32)]) -> Vec<[f32; 3]> {
             .iter()
             .filter_map(|&(x, y)| {
                 let c = GetPixel(dc, x, y).0;
-                // CLR_INVALID：點在屏幕外或被裁掉。
+                // CLR_INVALID：點在螢幕外或被裁掉。
                 (c != 0xFFFF_FFFF).then(|| [(c & 0xFF) as f32 / 255.0, ((c >> 8) & 0xFF) as f32 / 255.0, ((c >> 16) & 0xFF) as f32 / 255.0])
             })
             .collect();

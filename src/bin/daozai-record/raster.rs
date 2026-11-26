@@ -1,4 +1,4 @@
-//! 極簡 egui 軟件光柵器：把 `ClippedPrimitive` 三角形網格畫進 RGBA 幀緩衝。
+//! 極簡 egui 軟體光柵器：把 `ClippedPrimitive` 三角形網格畫進 RGBA 幀緩衝。
 //!
 //! 與 egui_glow 的混合方式一致：頂點色與紋理都是 gamma 空間預乘 alpha，
 //! `dst = src + dst·(1 - src.a)`。抗鋸齒由 egui 的羽化網格本身提供。

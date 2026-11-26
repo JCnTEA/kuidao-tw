@@ -21,7 +21,7 @@ fn closing_modules_clears_visible_and_queued_reminders() {
         let mut h=H::new();
         let emit=|app:&mut App,title:&str,body:&str| {
             if title=="會議提醒" {
-                let source=if page==MAIL_PAGE {"郵件邀請"}else{"本機日程"};
+                let source=if page==MAIL_PAGE {"郵件邀請"}else{"本機行程"};
                 app.meeting_alert(meeting(body),source.into(),CALENDAR_PAGE);
             }else{app.alert(title,body,page,true);}
         };
@@ -30,7 +30,7 @@ fn closing_modules_clears_visible_and_queued_reminders() {
         assert_eq!(h.app.notice.as_ref().unwrap().title,title);
         h.app.hud_notice=h.app.notice.clone();
         emit(&mut h.app,second,"排隊提醒");
-        if page==MAIL_PAGE {h.app.meeting_alert(meeting("另一個來源"),"本機日程".into(),CALENDAR_PAGE);}
+        if page==MAIL_PAGE {h.app.meeting_alert(meeting("另一個來源"),"本機行程".into(),CALENDAR_PAGE);}
         h.app.alert("系統音量","模擬系統提示",page,true);
 
         h.app.set_page_visible(page,false);

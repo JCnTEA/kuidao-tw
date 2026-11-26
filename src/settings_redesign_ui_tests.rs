@@ -1,16 +1,16 @@
 use super::*;
 
-/// 舊版「新郵件提醒」關著的用戶：升級後郵箱模塊關閉，內部開關恢復為開，不會突然開始收信。
+/// 舊版「新郵件提醒」關著的用戶：升級後信箱模塊關閉，內部開關恢復為開，不會突然開始收信。
 #[test]
 fn merged_mail_switch_migrates_old_off_to_module_off(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
     h.app.settings.visible_pages[crate::app::MAIL_PAGE]=true;h.app.settings.mail_enabled=false;
     assert!(!h.app.mail_active());
     h.app.migrate_merged_switches();
-    assert!(!h.app.settings.visible_pages[crate::app::MAIL_PAGE],"舊的新郵件提醒關閉，遷移為郵箱模塊關閉");
+    assert!(!h.app.settings.visible_pages[crate::app::MAIL_PAGE],"舊的新郵件提醒關閉，遷移為信箱模塊關閉");
     assert!(h.app.settings.mail_enabled,"內部開關恢復為開，以後只由模塊開關控制");
     assert!(!h.app.mail_active(),"遷移前後都不收信");
-    assert!(crate::model::Settings::load().mail_enabled,"遷移結果要保存");
+    assert!(crate::model::Settings::load().mail_enabled,"遷移結果要儲存");
     h.app.set_page_visible(crate::app::MAIL_PAGE,true);
     assert!(h.app.mail_active(),"重新打開模塊即恢復收信，不再需要第二個開關");
 }
@@ -36,7 +36,7 @@ fn merged_switches_keep_enabled_users_unchanged(){
     assert!(h.app.settings.mail_enabled && h.app.quota.config.enabled);
 }
 
-/// 只剩郵箱一個頁面時模塊關不掉：保持原來的“頁面在、不收信”，不改變行為。
+/// 只剩信箱一個頁面時模塊關不掉：保持原來的“頁面在、不收信”，不改變行為。
 #[test]
 fn merged_mail_switch_keeps_last_page_behavior(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
@@ -54,7 +54,7 @@ fn settings_old_tab_numbers_open_merged_pages(){
     use crate::extras::settings_tab_group_for_tests as group;
     assert_eq!(group(2),"專注與健康");assert_eq!(group(3),"專注與健康");
     assert_eq!(group(4),"待辦與置物");assert_eq!(group(5),"待辦與置物");
-    assert_eq!(group(6),"消息提醒");assert_eq!(group(7),"郵箱");assert_eq!(group(8),"日程");
+    assert_eq!(group(6),"訊息提醒");assert_eq!(group(7),"信箱");assert_eq!(group(8),"行程");
     assert_eq!(group(0),"通用");assert_eq!(group(13),"外觀");assert_eq!(group(14),"位置");
     assert_eq!(group(10),"頁面管理");assert_eq!(group(9),"關於");
 }
@@ -75,7 +75,7 @@ fn settings_every_tab_renders_with_modules_on_and_off(){
     }
 }
 
-/// 設置窗口拉到最小（600×450）時，側欄 13 項都在可見區內，「關於」不會被擠出去。
+/// 設定窗口拉到最小（600×450）時，側欄 13 項都在可見區內，「關於」不會被擠出去。
 #[test]
 fn settings_sidebar_keeps_about_visible_at_minimum_height(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());

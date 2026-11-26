@@ -18,7 +18,7 @@ fn wireless_custom_resident_persists_from_detail_toggle(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.bt=fixture();h.app.settings.bluetooth_notifications=false;
     h.app.settings.bluetooth_battery_notifications=false;open_page(&mut h);
     assert_eq!(h.app.wireless_devices.len(),4);assert!(h.app.notice.is_none());
-    // 自動模式：只挑有電量讀數的設備，電量低的在前，最多兩台。
+    // 自動模式：只挑有電量讀數的裝置，電量低的在前，最多兩台。
     assert_eq!(h.app.wireless_resident().iter().map(|d|d.id.as_str()).collect::<Vec<_>>(),["device-1","device-2"]);
     let tile=h.ctx.read_response(egui::Id::new(("card",true,("wireless-device","device-0")))).unwrap();
     h.click(tile.rect.center());h.frame(vec![]);
@@ -89,7 +89,7 @@ fn wireless_rings_show_unknown_compact_and_paging(){
     assert!(boxes.windows(2).all(|p|(p[0].top()-p[1].top()).abs()<0.1&&p[0].right()<=p[1].left()+0.1),"緊湊排法仍在同一行且不重疊");
     for id in ["nav-l","nav-r"] {
         let arrow=h.ctx.read_response(egui::Id::new(("card",true,id))).unwrap().interact_rect;
-        assert!(boxes.iter().all(|tile|!tile.intersect(arrow).is_positive()),"無線設備的點擊區域不能蓋住翻頁箭頭");
+        assert!(boxes.iter().all(|tile|!tile.intersect(arrow).is_positive()),"無線裝置的點擊區域不能蓋住翻頁箭頭");
     }
     let mut d=h.bt[1].clone();d.id="device-6".into();h.bt.push(d);h.frame(vec![]);h.frame(vec![]);
     assert!(texts(&h).iter().any(|s|s=="1 / 2"),"7 台以上每頁 4 台");
@@ -116,12 +116,12 @@ fn wireless_detail_explains_which_battery_data_is_missing() {
     h.frame(vec![]);
     assert!(texts(&h).iter().any(|s|s=="正在讀取電量"),"剛連上、還沒讀到電量時顯示正在讀取");
     assert!(!texts(&h).iter().any(|s|s=="充電狀態未知"));
-    // 超過讀取寬限期仍沒有電量：按已連接顯示，不再是灰色的“正在讀取”。
+    // 超過讀取寬限期仍沒有電量：按已連線顯示，不再是灰色的“正在讀取”。
     h.t+=10.0;h.frame(vec![]);
     assert!(texts(&h).iter().any(|s|s=="正在讀取電量"),"15 秒內仍按正在讀取顯示");
     h.t+=6.0;h.frame(vec![]);
     let t=texts(&h);
-    assert!(t.iter().any(|s|s=="已連接")&&t.iter().any(|s|s=="設備沒有提供電量"));
+    assert!(t.iter().any(|s|s=="已連線")&&t.iter().any(|s|s=="裝置沒有提供電量"));
     assert!(!t.iter().any(|s|s=="正在讀取電量"));
 }
 
@@ -135,7 +135,7 @@ fn wireless_receiver_shows_presence_and_stays_out_of_resident_controls() {
     h.receivers=vec![receiver_fixture()];
     open_page(&mut h);
     let t=texts(&h);
-    assert!(t.iter().any(|s|s=="已連接")&&t.iter().any(|s|s=="2.4G"),"接收器一插上就是已連接，並帶 2.4G 角標");
+    assert!(t.iter().any(|s|s=="已連線")&&t.iter().any(|s|s=="2.4G"),"接收器一插上就是已連線，並帶 2.4G 角標");
     assert!(!t.iter().any(|s|s=="···"));
     assert_eq!(h.app.wireless_resident().iter().map(|d|d.id.as_str()).collect::<Vec<_>>(),["device-0"]);
 
@@ -144,7 +144,7 @@ fn wireless_receiver_shows_presence_and_stays_out_of_resident_controls() {
     h.frame(vec![]);
     assert_eq!(h.app.wireless_focus.as_deref(),Some("usb:test"));
     let labels=texts(&h);
-    for label in ["羅技 Bolt 接收器","已連接","2.4G","2.4G 接收器 · 這類接收器不提供電量"] {
+    for label in ["羅技 Bolt 接收器","已連線","2.4G","2.4G 接收器 · 這類接收器不提供電量"] {
         assert!(labels.iter().any(|s|s==label),"缺少 {label}");
     }
     assert!(!labels.iter().any(|s|matches!(s.as_str(),"常駐顯示"|"充電狀態未知"|"正在讀取電量")));
@@ -220,7 +220,7 @@ fn wireless_rings_stay_centered_with_two_to_four_devices(){
         open_page(&mut h);
         let boxes:Vec<_>=(0..count).map(|i|h.ctx.read_response(egui::Id::new(("card",true,("wireless-device",format!("device-{i}"))))).unwrap().rect).collect();
         let center=(boxes.first().unwrap().left()+boxes.last().unwrap().right())/2.0;
-        assert!((center-H::local(PW/2.0,0.0).x).abs()<0.5,"{count} 台設備應整組居中");
+        assert!((center-H::local(PW/2.0,0.0).x).abs()<0.5,"{count} 台裝置應整組居中");
     }
     let mut h=H::new();h.bt=fixture();h.bt.truncate(1);h.app.settings.bluetooth_notifications=false;open_page(&mut h);
     assert!(h.ctx.read_response(egui::Id::new(("card",true,("wireless-pin","device-0")))).is_some(),"只有一台時直接顯示詳情");
@@ -256,7 +256,7 @@ fn ring_only_resident_shows_numbers_for_low_or_charging(){
     h.app.settings.bluetooth_resident_custom=true;h.app.settings.bluetooth_pinned=vec!["device-0".into(),"device-1".into()];
     h.app.settings.bluetooth_resident_style=1;set_level(&mut h.bt[1],15);
     h.frame(vec![]);
-    let t=texts(&h);assert!(t.iter().any(|s|s=="15%"),"偏低的設備顯示數字");assert!(!t.iter().any(|s|s=="82%"),"電量充足的只顯示環");
+    let t=texts(&h);assert!(t.iter().any(|s|s=="15%"),"偏低的裝置顯示數字");assert!(!t.iter().any(|s|s=="82%"),"電量充足的只顯示環");
     let narrow=h.app.wireless_bar_width();
     h.app.settings.bluetooth_resident_style=0;h.frame(vec![]);
     assert!(texts(&h).iter().any(|s|s=="82%"));assert!(h.app.wireless_bar_width()>narrow);
@@ -409,9 +409,9 @@ fn wireless_settings_controls_are_in_their_own_page() {
     let output=wireless_settings_capture(&mut h,560.0);
     let mut raster=crate::preview_raster::Raster::new(690,560);
     for (tab,name,visible,hidden) in [
-        (10,"wireless-page-management",vec!["無線設備電量"],vec!["常駐樣式","常駐設備","電量提醒","安裝兼容包…"]),
-        (crate::extras::SETTINGS_TAB_WIRELESS,"wireless-settings",vec!["島上常駐","常駐樣式","常駐設備","電量提醒"],vec!["藍牙設備連接","設備兼容","反饋設備適配","本地插件"]),
-        (6,"wireless-notifications",vec!["藍牙設備連接"],vec!["無線設備電量","電量提醒"]),
+        (10,"wireless-page-management",vec!["無線裝置電量"],vec!["常駐樣式","常駐裝置","電量提醒","安裝兼容包…"]),
+        (crate::extras::SETTINGS_TAB_WIRELESS,"wireless-settings",vec!["島上常駐","常駐樣式","常駐裝置","電量提醒"],vec!["藍牙裝置連線","裝置兼容","反饋裝置適配","本地插件"]),
+        (6,"wireless-notifications",vec!["藍牙裝置連線"],vec!["無線裝置電量","電量提醒"]),
     ] {
         h.app.settings_tab=tab;
         for _ in 0..3 {
@@ -474,8 +474,8 @@ fn wireless_compat_settings_follow_install_and_switch() {
     let check=|h:&mut H,tab,expected|{
         for _ in 0..3 {frame(h,tab);}
         let labels=texts(h);
-        for label in ["設備兼容","啟用兼容包","無線設備兼容包 v1.0.0","反饋設備適配"] {
-            assert_eq!(labels.iter().any(|s|s==label),expected,"設置頁 {tab} 的 {label}");
+        for label in ["裝置兼容","啟用兼容包","無線裝置兼容包 v1.0.0","反饋裝置適配"] {
+            assert_eq!(labels.iter().any(|s|s==label),expected,"設定頁 {tab} 的 {label}");
         }
         assert!(!labels.iter().any(|s|matches!(s.as_str(),"本地插件"|"安裝兼容包…"|"卸載")));
         let title=h.shapes.iter().find_map(|shape|match &shape.shape {
@@ -487,7 +487,7 @@ fn wireless_compat_settings_follow_install_and_switch() {
                 && text.visual_bounding_rect().left()>=title.right()
                 && (text.visual_bounding_rect().center().y-title.center().y).abs()<8.0)
         }));
-        assert_eq!(has_plugin_tag,expected,"設置頁 {tab} 的兼容包標題旁應有插件小標");
+        assert_eq!(has_plugin_tag,expected,"設定頁 {tab} 的兼容包標題旁應有插件小標");
     };
     let click=|h:&mut H|{
         let pos=frame(h,wireless).expect("已安裝兼容包應顯示啟停開關");
@@ -502,7 +502,7 @@ fn wireless_compat_settings_follow_install_and_switch() {
     check(&mut h,wireless,false);
     h.app.plugins.test_market_install_wireless_compat().unwrap();
     let store=h.app.wireless_compat_store();
-    assert!(store.package().is_none(),"安裝後的插件默認停用");
+    assert!(store.package().is_none(),"安裝後的插件預設停用");
     check(&mut h,wireless,true);
     check(&mut h,0,false);
     frame(&mut h,wireless);

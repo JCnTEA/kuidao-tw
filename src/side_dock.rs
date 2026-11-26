@@ -1,4 +1,4 @@
-//! 左右停靠：島體貼在屏幕左 / 右邊緣，收起時是豎向膠囊，展開後面板從邊緣滑出。
+//! 左右停靠：島體貼在螢幕左 / 右邊緣，收起時是豎向膠囊，展開後面板從邊緣滑出。
 //!
 //! 展開後的頁面內容與頂部停靠完全相同（419 × 140 的橫向面板），只是錨點換到側邊；
 //! 收起態換成豎排：時間（時 / 分兩行）、電池、播放狀態、專注倒計時、通知鈴鐺。
@@ -19,7 +19,7 @@ pub const SIDE_H: f32 = 600.0;
 pub const SIDE_BAR_W: f32 = 36.0;
 #[cfg(feature="sdk-js")]
 const PINNED_HEIGHT: f32 = 42.0;
-/// 島體中心能離開屏幕豎直中線的預留：展開面板（最高約 236）與肩部、陰影留在屏幕內。
+/// 島體中心能離開螢幕豎直中線的預留：展開面板（最高約 236）與肩部、陰影留在螢幕內。
 pub const SIDE_HALF_EXTENT: f32 = 150.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -71,7 +71,7 @@ impl App {
         14.0 + self.side_items().iter().map(|i| i.height(self.settings.clock_seconds)).sum::<f32>()
     }
 
-    /// 收起態尺寸（屏幕寬 × 高）。極簡模式是貼邊的一小段豎線。
+    /// 收起態尺寸（螢幕寬 × 高）。極簡模式是貼邊的一小段豎線。
     pub(crate) fn side_base_size(&self, minimal: bool) -> (f32, f32) {
         if minimal { (BAR_H_MIN, BAR_W_MIN) } else { (SIDE_BAR_W, self.side_bar_len().min(self.resident_limit())) }
     }
@@ -98,7 +98,7 @@ impl App {
         self.island_rect(win, PW, height).min
     }
 
-    /// 側邊停靠的命中區域：收起時是膠囊外擴幾點並一直延伸到屏幕邊緣，展開時是整個面板。
+    /// 側邊停靠的命中區域：收起時是膠囊外擴幾點並一直延伸到螢幕邊緣，展開時是整個面板。
     pub(crate) fn side_hit_rect(&self, win: Rect, p: f32, page_height: f32) -> Rect {
         let rect = if p > 0.04 || self.open {
             self.island_rect(win, PW, page_height).expand2(Vec2::new(4.0, 2.0))
@@ -106,7 +106,7 @@ impl App {
             let (w, h) = (self.w.pos, self.h.pos);
             self.island_rect(win, w, h).expand2(Vec2::new(4.0, 6.0))
         };
-        // 光標推到屏幕最邊上也要能喚出島（膠囊離邊緣有一小段空隙）。
+        // 光標推到螢幕最邊上也要能喚出島（膠囊離邊緣有一小段空隙）。
         match self.dock() {
             Dock::Left => Rect::from_min_max(Pos2::new(win.left(), rect.top()), rect.max),
             Dock::Right => Rect::from_min_max(rect.min, Pos2::new(win.right(), rect.bottom())),

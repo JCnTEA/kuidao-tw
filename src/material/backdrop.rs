@@ -94,7 +94,7 @@ impl Geometry {
             .map_err(|err| format!("讀取島體客戶區：{err}"))?;
         let mut at = POINT::default();
         if !unsafe { ClientToScreen(hwnd, &mut at) }.as_bool() {
-            return Err(format!("讀取島體屏幕原點：{}", Error::from_win32()));
+            return Err(format!("讀取島體螢幕原點：{}", Error::from_win32()));
         }
         let origin = (at.x, at.y);
         let Some(body_geometry) = Self::from_rects(body, body, origin, ppp) else {
@@ -118,7 +118,7 @@ impl Geometry {
         Ok(Self::from_rects(body, clipped, origin, ppp).map(|geometry| (geometry, clipped)))
     }
 
-    /// `capture` 是已裁剪到窗口和當前顯示器交集的外擴矩形，`origin` 是客戶區的屏幕物理座標。
+    /// `capture` 是已裁剪到窗口和當前顯示器交集的外擴矩形，`origin` 是客戶區的螢幕物理座標。
     pub fn from_rects(body: Rect, capture: Rect, origin: (i32, i32), ppp: f32) -> Option<Self> {
         if !capture.is_finite() || !body.is_finite() || !ppp.is_finite() || ppp <= 0.0 {
             return None;

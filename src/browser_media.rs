@@ -272,7 +272,7 @@ mod platform {
             return BOOL(1);
         }
         // 同一套瀏覽器可能同時開很多視窗；先挑真的在播音樂的頁面，
-        // 免得把信箱、文件這類標題當成歌名。分數只影響挑選，不改標題內容。
+        // 免得把信箱、檔案這類標題當成歌名。分數只影響挑選，不改標題內容。
         let lower = title.to_lowercase();
         let music_page = ["youtube", "kkbox", "spotify", "streetvoice", "bilibili", "嗶哩嗶哩", "music"]
             .iter().any(|hint| lower.contains(hint));

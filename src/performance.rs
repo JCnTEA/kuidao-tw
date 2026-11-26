@@ -118,7 +118,7 @@ impl BarStyle {
             Self::Cores => "核心點陣",
         }
     }
-    /// 設置裡樣式卡片上的一句話概括。
+    /// 設定裡樣式卡片上的一句話概括。
     pub(crate) fn summary(self) -> &'static str {
         match self {
             Self::Gauges => "CPU、顯卡、內存",
@@ -165,7 +165,7 @@ impl View {
             Self::Gpu => "顯卡",
             Self::Memory => "內存",
             Self::Disk => "磁盤",
-            Self::Network => "網絡",
+            Self::Network => "網路",
         }
     }
     /// 舊版的「趨勢 / 明細」等未知取值都回到總覽。
@@ -180,9 +180,9 @@ pub(crate) struct Process {
     pub name: String,
     pub cpu: f32,
     pub memory: u64,
-    /// 最近一秒的讀寫字節數（文件、管道等全部讀寫，不只磁盤）。
+    /// 最近一秒的讀寫字節數（檔案、管道等全部讀寫，不只磁盤）。
     pub io: f32,
-    /// 同名進程裡內存最多的那個進程號，用來找程序文件取圖標。
+    /// 同名進程裡內存最多的那個進程號，用來找程序檔案取圖標。
     pub pid: usize,
     /// 程序圖標（32 px），取不到時為空，界面畫首字母。
     pub icon: Option<std::sync::Arc<eframe::egui::ColorImage>>,
@@ -205,7 +205,7 @@ pub(crate) struct Reading {
     pub video_memory: Option<(u64, u64)>,
     /// 共享顯存（顯卡借用的系統內存）的已用和上限；核顯主要用它。
     pub shared_memory: Option<(u64, u64)>,
-    /// 各類顯卡引擎（3D、視頻解碼……）的佔用率，同類取最忙的那個。
+    /// 各類顯卡引擎（3D、影片解碼……）的佔用率，同類取最忙的那個。
     pub gpu_engines: Vec<(&'static str, f32)>,
     pub network: [Option<f32>; 2],
     pub disk: [Option<f32>; 2],
@@ -235,7 +235,7 @@ pub(crate) const LIST_LEN: usize = 10;
 
 impl Reading {
     /// 程序排行、內存構成和分區只在展開頁顯示時才統計。島收起後、或剛展開還沒算出新一輪時，
-    /// 沿用上一次的結果，展開時列表直接就在，下一秒再換成新的，不會每次從空白加載。
+    /// 沿用上一次的結果，展開時列表直接就在，下一秒再換成新的，不會每次從空白載入。
     pub fn keep_lists(&mut self, previous: Reading) {
         if self.by_memory.is_empty() {
             self.by_memory = previous.by_memory;
@@ -264,7 +264,7 @@ impl Reading {
 pub(crate) struct Monitor {
     pub latest: Reading,
     pub history: VecDeque<(Instant, Reading)>,
-    /// 島內正在看的頁面；切到別的頁面或點常駐指標時清空，下次展開回到設置裡選的頁面。
+    /// 島內正在看的頁面；切到別的頁面或點常駐指標時清空，下次展開回到設定裡選的頁面。
     pub view: Option<View>,
     /// 最近看過的詳情頁，退回總覽的過渡裡繼續畫它。
     pub last_detail: View,

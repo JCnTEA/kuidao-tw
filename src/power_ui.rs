@@ -155,7 +155,7 @@ impl App {
         let all = rings(env.battery.map(|level| (level, env.charging)), &env.bt, env.bt_present);
         let total = all.len();
         let list = &all[..total.min(MAX_RINGS)];
-        // 只有一台時沿用「無線設備」的詳情版式：左邊大環、右邊名稱與讀數，不再一個小環擺中間。
+        // 只有一台時沿用「無線裝置」的詳情版式：左邊大環、右邊名稱與讀數，不再一個小環擺中間。
         if list.len() == 1 {
             if let Some(device) = env.bt.iter().find(|device| {
                 device.name.trim() == list[0].name && device.battery == Some(list[0].level)
@@ -219,7 +219,7 @@ impl App {
         c.text(
             cx,
             cy + r + 36.0,
-            "連接手機、藍牙耳機、滑鼠或鍵盤後自動顯示",
+            "連線手機、藍牙耳機、滑鼠或鍵盤後自動顯示",
             9.0,
             W::Regular,
             theme::DIM,

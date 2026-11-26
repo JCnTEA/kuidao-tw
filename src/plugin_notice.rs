@@ -679,7 +679,7 @@ impl Drop for Bridge {
 fn write_json(path: &Path, value: &impl Serialize) -> Result<(), String> {
     let bytes = serde_json::to_vec(value).map_err(|error| error.to_string())?;
     crate::model::atomic_write(path, &bytes)
-        .map_err(|error| format!("無法保存插件通知授權：{error}"))
+        .map_err(|error| format!("無法儲存插件通知授權：{error}"))
 }
 
 fn valid_text(value: &str, max_bytes: usize) -> bool {
@@ -729,7 +729,7 @@ fn random_token() -> Result<String, String> {
         )
     };
     if status.0 < 0 {
-        return Err("無法生成插件通知連接憑據".into());
+        return Err("無法生成插件通知連線憑據".into());
     }
     Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
 }
@@ -755,7 +755,7 @@ struct Listener {
 impl Listener {
     fn start(state: Arc<Mutex<State>>, ctx: egui::Context) -> Result<Self, String> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
-            .map_err(|error| format!("無法啟動本機插件通知連接：{error}"))?;
+            .map_err(|error| format!("無法啟動本機插件通知連線：{error}"))?;
         let addr = SocketAddrV4::new(
             Ipv4Addr::LOCALHOST,
             listener

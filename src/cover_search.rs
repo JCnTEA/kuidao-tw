@@ -38,7 +38,7 @@ impl CoverSearch {
         if self.image.is_none() && self.pending.is_none() && waited && due && self.worker.as_ref().is_none_or(|w|w.is_finished()) {
             let (sender,receiver)=mpsc::channel();
             let (title,artist,duration)=(media.title.clone(),media.artist.clone(),media.duration);
-            // 與其他封面下載共用併發上限，網絡卡住時不會越積越多。
+            // 與其他封面下載共用併發上限，網路卡住時不會越積越多。
             self.worker=crate::resources::COVER.spawn(move||{let _=sender.send(load(title,artist,duration));});
             if self.worker.is_some(){
                 self.attempts+=1;self.retry_at=None;self.pending=Some(receiver);

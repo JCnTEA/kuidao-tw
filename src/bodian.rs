@@ -57,7 +57,7 @@ impl Process {
                 let keys=self.pointer(pointer+16)?;let mut map=serde_json::Map::new();
                 for i in 0..count {
                     let key=self.string(self.pointer(keys+i*8)?)?;
-                    // 不讀取或保存帶簽名的音頻地址，只取當前歌曲的標識。
+                    // 不讀取或儲存帶簽名的音頻地址，只取當前歌曲的標識。
                     if matches!(key.as_str(),"title"|"current"|"playing"|"id") {map.insert(key,self.node(values+i*16,depth+1)?);}
                 }
                 Some(map.into())
@@ -187,8 +187,8 @@ fn metadata(value:&serde_json::Value,title:&str,duration:f64)->Option<(NowPlayin
     Some((NowPlaying{source:"bodian_pc.exe".into(),title:title.into(),artist:artist.into(),album:album.into(),song_id:Some(song_id),
         playback_type:MediaKind::Music,..Default::default()},cover))
 }
-/// 波點要等歌曲播完或被切走才寫入本機歌曲庫；開始播放時它會在運行日誌裡記一行完整歌曲信息。
-/// 只讀日誌末尾，只取歌曲 ID、歌名、專輯、歌手和封面，不讀取或保存日誌裡的其他內容（播放地址、設備號等）。
+/// 波點要等歌曲播完或被切走才寫入本機歌曲庫；開始播放時它會在運行日誌裡記一行完整歌曲資訊。
+/// 只讀日誌末尾，只取歌曲 ID、歌名、專輯、歌手和封面，不讀取或儲存日誌裡的其他內容（播放地址、裝置號等）。
 fn log_metadata(title:Option<&str>,duration:f64)->Option<(NowPlaying,String)>{
     use std::io::{Seek,SeekFrom};
     const TAIL:u64=1024*1024;
@@ -201,7 +201,7 @@ fn log_metadata(title:Option<&str>,duration:f64)->Option<(NowPlaying,String)>{
 /// `title` 為空時（播放列表沒有標題）只取日誌裡最近開播的那一首，且時長要一致。
 fn parse_log_metadata(log:&str,title:Option<&str>,duration:f64)->Option<(NowPlaying,String)>{
     static LINE:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
-    let line=LINE.get_or_init(||regex::Regex::new(r"歌曲的完整參數信息:\{id: (\d+), name: (.*?), albumId: -?\d+, album: (.*?), albumPic: [^,]*, albumPic120: ([^,]*), artist: (.*?), artistId: .*?duration: (\d+)").unwrap());
+    let line=LINE.get_or_init(||regex::Regex::new(r"歌曲的完整參數資訊:\{id: (\d+), name: (.*?), albumId: -?\d+, album: (.*?), albumPic: [^,]*, albumPic120: ([^,]*), artist: (.*?), artistId: .*?duration: (\d+)").unwrap());
     // 最近的一條在最後；同名歌按時長區分。
     let entries=line.captures_iter(log).filter(|c|title.is_none_or(|title|&c[2]==title));
     let entries:Vec<_>=if title.is_some(){entries.collect()}else{entries.last().into_iter().collect()};
@@ -212,17 +212,17 @@ fn parse_log_metadata(log:&str,title:Option<&str>,duration:f64)->Option<(NowPlay
             playback_type:MediaKind::Music,..Default::default()},cover_url(cover).unwrap_or_default()))
     }).last()
 }
-/// 播放引擎給的「歌名」像音頻文件裡的曲目編號（字母前綴 + 下劃線分段 + 數字），而不是真正的歌名。
+/// 播放引擎給的「歌名」像音頻檔案裡的曲目編號（字母前綴 + 下劃線分段 + 數字），而不是真正的歌名。
 fn track_code(title:&str)->bool {
     static CODE:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
     CODE.get_or_init(||regex::Regex::new(r"^[A-Za-z]{1,8}_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*$").unwrap()).is_match(title)
         && title.chars().any(|c|c.is_ascii_digit())
 }
-/// 播放引擎的時長與歌曲信息的時長是否對得上：相差 2 秒內；或是 VIP 試聽片段（引擎只放約 30 秒，最長 60 秒，短於整首）。
+/// 播放引擎的時長與歌曲資訊的時長是否對得上：相差 2 秒內；或是 VIP 試聽片段（引擎只放約 30 秒，最長 60 秒，短於整首）。
 fn same_length(engine:f64,full:f64)->bool {
     (engine-full).abs()<=2.0 || engine>0.0 && engine<=60.0 && engine+1.0<full
 }
-/// 本機歌曲庫還沒有這首歌時的臨時信息：只有歌名，沒有歌手、封面和歌曲 ID。
+/// 本機歌曲庫還沒有這首歌時的臨時資訊：只有歌名，沒有歌手、封面和歌曲 ID。
 fn pending(title:&str)->(NowPlaying,String){
     (NowPlaying{source:"bodian_pc.exe".into(),title:title.into(),playback_type:MediaKind::Music,..Default::default()},String::new())
 }
@@ -287,7 +287,7 @@ impl Reader {
         if self.metadata.is_none() && self.lookup.is_none_or(|at|at.elapsed()>=Duration::from_secs(1)) {
             self.lookup=Some(Instant::now());
             self.metadata=read_metadata(&title,duration).or_else(||log_metadata(Some(&title),duration))
-                // 有些歌的「歌名」是音頻文件裡的曲目編號（實測 trk_KM0019393_1_6）：按時長取最近開播的那首。
+                // 有些歌的「歌名」是音頻檔案裡的曲目編號（實測 trk_KM0019393_1_6）：按時長取最近開播的那首。
                 .or_else(||track_code(&title).then(||log_metadata(None,duration)).flatten());
         }
         // 波點要播放一會兒才把新歌寫進本機歌曲庫：查到之前先只顯示歌名，查到後補上歌手、封面和歌曲 ID（換歌後不再整段空白）。
@@ -432,7 +432,7 @@ fn discovery_due(last:Option<Instant>,hint:impl FnOnce()->bool)->bool{
     since.is_none_or(|since|since>=DISCOVER_FALLBACK) || since.is_some_and(|since|since>=DISCOVER_HINTED) && hint()
 }
 
-/// 便宜的線索：波點主窗口（實測類名 BODIAN_FLUTTER_WIN32_WINDOW，也兼容 Flutter 默認類名）屬於 bodian_pc.exe。
+/// 便宜的線索：波點主窗口（實測類名 BODIAN_FLUTTER_WIN32_WINDOW，也兼容 Flutter 預設類名）屬於 bodian_pc.exe。
 /// 窗口類名若再被改，仍有 30 秒一次的兜底查找。
 fn window_hint()->bool{
     use windows::{core::{w,PCWSTR},Win32::{Foundation::HWND,UI::WindowsAndMessaging::{FindWindowExW,GetWindowThreadProcessId}}};
@@ -492,9 +492,9 @@ fn a_song_not_yet_in_the_local_library_still_shows_its_title(){
 
 #[test]
 fn song_info_is_taken_from_the_play_log_before_the_library_is_written(){
-    let log="2026-11-21 17:12:16.939 [I] 歌曲的完整參數信息:{id: 1, name: 虞美人聽雨, albumId: 2, album: 舊專輯, albumPic: https://img4.kuwo.cn/a.webp, albumPic120: https://img4.kuwo.cn/old.webp, artist: 別人, artistId: 3, artistPic: x, artists: [{id: 3, name: 別人}], duration: 180, releaseDate: 2025-08-09
+    let log="2026-11-21 17:12:16.939 [I] 歌曲的完整參數資訊:{id: 1, name: 虞美人聽雨, albumId: 2, album: 舊專輯, albumPic: https://img4.kuwo.cn/a.webp, albumPic120: https://img4.kuwo.cn/old.webp, artist: 別人, artistId: 3, artistPic: x, artists: [{id: 3, name: 別人}], duration: 180, releaseDate: 2025-08-09
         2026-11-21 17:12:17.146 [I] play/getPlayInfo [Song.getPlayInfo:1011] 490335784:虞美人聽雨 quality=2 format=ogg bitrate=300 uri: https://bd-api.kuwo.cn/api?devId=secret&sign=secret
-        2026-11-21 17:13:16.939 [I] 歌曲的完整參數信息:{id: 490335784, name: 虞美人聽雨, albumId: 67585850, album: 春滿未夏, albumPic: https://img4.kuwo.cn/a.webp, albumPic120: http://img4.kuwo.cn/star/albumcover/240/x.webp, artist: 李奕灼, artistId: 16889471, artistPic: x, artists: [{id: 16889471, name: 李奕灼, pic: x}], duration: 229, releaseDate: 2025-08-09
+        2026-11-21 17:13:16.939 [I] 歌曲的完整參數資訊:{id: 490335784, name: 虞美人聽雨, albumId: 67585850, album: 春滿未夏, albumPic: https://img4.kuwo.cn/a.webp, albumPic120: http://img4.kuwo.cn/star/albumcover/240/x.webp, artist: 李奕灼, artistId: 16889471, artistPic: x, artists: [{id: 16889471, name: 李奕灼, pic: x}], duration: 229, releaseDate: 2025-08-09
 ";
     let (media,cover)=parse_log_metadata(log,Some("虞美人聽雨"),229.4).expect("應從日誌裡找到");
     assert_eq!((media.artist.as_str(),media.album.as_str(),media.song_id),("李奕灼","春滿未夏",Some(490335784)),"同名歌按時長取對的那條");
@@ -544,7 +544,7 @@ fn vip_preview_clips_still_match_the_full_song_info(){
     assert!(same_length(229.4,229.0));
     assert!(same_length(29.05,211.0),"試聽片段約 30 秒");
     assert!(!same_length(120.0,211.0),"正常播放時長差很多是別的版本");
-    let log="2026-11-21 18:01:55.021 [I] 歌曲的完整參數信息:{id: 1245780, name: 幻聽, albumId: 114741, album: 夢遊計, albumPic: x, albumPic120: x, artist: 許嵩, artistId: 1887, artistPic: x, artists: [{id: 1887, name: 許嵩}], duration: 211, releaseDate: 2009-01-01
+    let log="2026-11-21 18:01:55.021 [I] 歌曲的完整參數資訊:{id: 1245780, name: 幻聽, albumId: 114741, album: 夢遊計, albumPic: x, albumPic120: x, artist: 許嵩, artistId: 1887, artistPic: x, artists: [{id: 1887, name: 許嵩}], duration: 211, releaseDate: 2009-01-01
 ";
     assert_eq!(parse_log_metadata(log,Some("幻聽"),29.05).map(|(m,_)|m.artist),Some("許嵩".into()));
 }
@@ -554,7 +554,7 @@ fn track_codes_are_not_taken_as_song_titles(){
     assert!(track_code("trk_KM0019393_1_6"));
     for title in ["TRUE","Letting Go","幻聽","Track_One","so_what","10%"] {assert!(!track_code(title),"{title}");}
     // 實測：歌名是曲目編號時，按時長取運行日誌最近開播的《TRUE》，專輯名裡帶逗號和括號也能完整取出。
-    let log="2026-11-21 22:49:55.627 [I] 歌曲的完整參數信息:{id: 336017166, name: TRUE, albumId: 46573218, album: 마이데몬 OST Special All Track (MY DEMON (Original Sound Track) Special), albumPic: x, albumPic120: x, artist: 요아리, artistId: 8686, artistPic: x, artists: [{id: 8686, name: 요아리}], duration: 211, releaseDate: 2024-01-01
+    let log="2026-11-21 22:49:55.627 [I] 歌曲的完整參數資訊:{id: 336017166, name: TRUE, albumId: 46573218, album: 마이데몬 OST Special All Track (MY DEMON (Original Sound Track) Special), albumPic: x, albumPic120: x, artist: 요아리, artistId: 8686, artistPic: x, artists: [{id: 8686, name: 요아리}], duration: 211, releaseDate: 2024-01-01
 ";
     assert!(parse_log_metadata(log,Some("trk_KM0019393_1_6"),211.3).is_none());
     let (media,_)=parse_log_metadata(log,None,211.3).unwrap();

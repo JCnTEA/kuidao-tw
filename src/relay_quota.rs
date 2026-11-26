@@ -341,7 +341,7 @@ pub fn detect_cancellable(agent:impl Fn(Duration)->ureq::Agent,base_url:&str,key
     if key.is_empty()||key.len()>8192||key.chars().any(|c|c.is_whitespace()||c.is_control()){return Err(("請輸入有效的 API Key".into(),0));}
     detect_with(|path,timeout|query(&agent(timeout),&endpoint(&base,path),key,Some(timeout)),cancelled,AUTO_TIMEOUT)
 }
-/// 已保存的協議直接查詢；刷新和手動指定類型均不自動切換協議。
+/// 已儲存的協議直接查詢；重新整理和手動指定類型均不自動切換協議。
 pub fn request_cancellable(agent:&ureq::Agent,kind:Kind,base_url:&str,key:&str,cancelled:impl Fn()->bool)->Result<Snapshot,(String,u64)> {
     if cancelled(){return Err(("已取消連線".into(),0));}
     let base=validate_base_url(base_url).map_err(|e|(e,0))?;

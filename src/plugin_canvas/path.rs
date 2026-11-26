@@ -65,7 +65,7 @@ pub(crate) fn parse(path: &str, budget: usize) -> Result<Vec<PathCommand>, Strin
                 current = origin;
                 PathCommand::Close
             }
-            _ => return Err("畫布路徑只支持 M、L、H、V、Q、C、Z 命令".into()),
+            _ => return Err("畫布路徑只支援 M、L、H、V、Q、C、Z 命令".into()),
         };
         commands.push(command);
     }

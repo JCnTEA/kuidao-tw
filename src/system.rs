@@ -206,7 +206,7 @@ unsafe fn audio_device() -> Result<IMMDevice> {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
     });
-    // 每個採樣線程複用枚舉器，但每次仍查詢當前默認設備，保留熱插拔響應。
+    // 每個採樣線程複用枚舉器，但每次仍查詢當前預設裝置，保留熱插拔響應。
     thread_local! {static ENUMERATOR:std::cell::RefCell<Option<IMMDeviceEnumerator>>=const{std::cell::RefCell::new(None)};}
     ENUMERATOR.with(|slot| {
         let mut slot = slot.borrow_mut();
@@ -226,7 +226,7 @@ unsafe fn audio_device() -> Result<IMMDevice> {
 unsafe fn audio() -> Result<IAudioEndpointVolume> {
     audio_device()?.Activate(CLSCTX_ALL, None)
 }
-/// 設置主音量（0..100）；同時解除靜音，拖動音量條時立刻能聽到。
+/// 設定主音量（0..100）；同時解除靜音，拖動音量條時立刻能聽到。
 #[cfg(windows)]
 pub fn set_volume(percent: u32) {
     unsafe {
@@ -238,7 +238,7 @@ pub fn set_volume(percent: u32) {
     }
 }
 
-/// 切換靜音，返回切換後的靜音狀態（拿不到設備時返回 None）。
+/// 切換靜音，返回切換後的靜音狀態（拿不到裝置時返回 None）。
 #[cfg(windows)]
 pub fn toggle_mute() -> Option<bool> {
     unsafe {
@@ -305,7 +305,7 @@ pub fn idle_seconds() -> f64 {
         }
     }
 }
-/// 前台窗口在全屏判定裡需要的信息。
+/// 前台窗口在全屏判定裡需要的資訊。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Foreground {
     hwnd: isize,
@@ -318,9 +318,9 @@ struct Foreground {
 
 /// 前台從全屏窗口切到別的窗口時，是否仍按原來的全屏處理（鬼島保持隱藏）。
 ///
-/// 3ds Max、Photoshop 這類軟件全屏時，插件面板、浮動工具條、
+/// 3ds Max、Photoshop 這類軟體全屏時，插件面板、浮動工具條、
 /// 屬性對話框都是同一個程序的附屬窗口；每點一下前台就在它們和主窗口之間來回切，
-/// 過去鬼島會跟著「出現 → 消失」閃一次。只要原來的全屏窗口還蓋著屏幕，
+/// 過去鬼島會跟著「出現 → 消失」閃一次。只要原來的全屏窗口還蓋著螢幕，
 /// 而新的前台是它的附屬窗口（被它擁有，或同一程序裡不單獨佔任務欄的窗口），就繼續隱藏。
 /// 切到另一個程序、或同一程序裡另開的普通窗口（如瀏覽器的新窗口）時照常顯示。
 fn keeps_fullscreen(last: Foreground, still_covers: bool, now: Option<Foreground>) -> bool {
@@ -359,7 +359,7 @@ unsafe fn foreground_info(hwnd: HWND) -> Foreground {
     }
 }
 
-/// 窗口蓋滿它所在的整塊屏幕時返回該屏幕範圍。
+/// 窗口蓋滿它所在的整塊螢幕時返回該螢幕範圍。
 unsafe fn covering_monitor(hwnd: HWND) -> Option<crate::display_layout::Bounds> {
     if !IsWindow(hwnd).as_bool() || !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() {
         return None;
@@ -395,7 +395,7 @@ unsafe fn covering_monitor(hwnd: HWND) -> Option<crate::display_layout::Bounds> 
     })
 }
 
-/// 客戶區（不含標題欄和邊框）是否蓋滿整塊屏幕。
+/// 客戶區（不含標題欄和邊框）是否蓋滿整塊螢幕。
 unsafe fn client_covers(hwnd: HWND, monitor: &RECT) -> bool {
     use windows::Win32::Foundation::POINT;
     use windows::Win32::Graphics::Gdi::ClientToScreen;
@@ -419,7 +419,7 @@ unsafe fn client_covers(hwnd: HWND, monitor: &RECT) -> bool {
     tl.x <= monitor.left && tl.y <= monitor.top && br.x >= monitor.right && br.y >= monitor.bottom
 }
 
-/// 診斷：蓋滿屏幕卻按普通最大化處理（不隱藏鬼島）的窗口，每個窗口只記一次，便於核對用戶反饋。
+/// 診斷：蓋滿螢幕卻按普通最大化處理（不隱藏鬼島）的窗口，每個窗口只記一次，便於核對用戶反饋。
 #[cfg(not(test))]
 unsafe fn log_maximized_exclusion(hwnd: HWND, window: RECT, monitor: RECT) {
     use std::sync::Mutex;
@@ -454,7 +454,7 @@ pub fn fullscreen() -> Option<crate::display_layout::Bounds> {
         let hwnd = GetForegroundWindow();
         let now = (!hwnd.0.is_null()).then(|| foreground_info(hwnd));
         if let Some(info) = now {
-            // 鬼島自己的窗口（設置窗口等）不算全屏，也不沿用。
+            // 鬼島自己的窗口（設定窗口等）不算全屏，也不沿用。
             if info.pid == windows::Win32::System::Threading::GetCurrentProcessId() {
                 *last = None;
                 return None;
@@ -715,7 +715,7 @@ fn browser_overlaps_island(browser: RECT, island: RECT, dock: crate::model::Dock
 }
 
 /// 左右停靠：畫布是 SIDE_W × SIDE_H，島體貼在畫布的左 / 右邊、豎直居中。
-/// 前台窗口蓋住島所在的那一段屏幕邊緣（例如最大化、全屏或貼邊擺放）即視為遮擋。
+/// 前台窗口蓋住島所在的那一段螢幕邊緣（例如最大化、全屏或貼邊擺放）即視為遮擋。
 fn window_covers_side(window: RECT, island: RECT, dock: crate::model::Dock) -> bool {
     let scale = (island.right - island.left) as f32 / crate::side_dock::SIDE_W;
     let cy = island.top as f32 + crate::side_dock::SIDE_H * scale / 2.0;
@@ -738,7 +738,7 @@ pub fn browser_at_top(bounds:RECT,settings:&crate::model::Settings)->Option<bool
         }
         let mut pid = 0;
         GetWindowThreadProcessId(foreground, Some(&mut pid));
-        // 設置、託盤和島內輸入沿用此前的避讓狀態，避免自身窗口引起反覆切換。
+        // 設定、託盤和島內輸入沿用此前的避讓狀態，避免自身窗口引起反覆切換。
         if pid == GetCurrentProcessId() {
             return None;
         }
@@ -954,7 +954,7 @@ fn notification_body(n: &UserNotification) -> Result<String> {
     }
     Ok(parts.join(" · "))
 }
-/// 停止信號獨立於消息隊列，斷開後結束等待，不再讀取通知。
+/// 停止信號獨立於訊息隊列，斷開後結束等待，不再讀取通知。
 pub struct Notifications {
     incoming: Receiver<Incoming>,
     stop: mpsc::Sender<()>,
@@ -1490,7 +1490,7 @@ fn pick_items_for(title:&str,options:windows::Win32::UI::Shell::FILEOPENDIALOGOP
         Ok(out)
     }
 }
-/// 構建資源管理器可識別的文件數據對象。
+/// 構建資源管理器可識別的檔案數據對象。
 fn file_data_object(path: &std::path::Path) -> Result<windows::Win32::System::Com::IDataObject> {
     unsafe {
         use windows::Win32::UI::Shell::*;
@@ -1513,7 +1513,7 @@ fn file_data_object(path: &std::path::Path) -> Result<windows::Win32::System::Co
         result
     }
 }
-/// 原生拖出只允許複製，取消拖放不會改變置物架與原文件。
+/// 原生拖出只允許複製，取消拖放不會改變置物架與原檔案。
 pub fn drag_file(path: &std::path::Path) -> Result<()> {
     unsafe {
         use windows::Win32::System::Ole::{OleInitialize, OleUninitialize, DROPEFFECT_COPY};
@@ -1792,7 +1792,7 @@ mod tests {
     #[test]
     fn side_dock_avoidance_checks_the_covered_screen_edge() {
         use crate::model::Dock;
-        // 1920×1080 屏幕，100% 縮放：左側畫布 0..500，豎直居中（240..840），島體中心 y=540。
+        // 1920×1080 螢幕，100% 縮放：左側畫布 0..500，豎直居中（240..840），島體中心 y=540。
         let left = RECT {
             left: 0,
             top: 240,

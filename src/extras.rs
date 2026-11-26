@@ -1,4 +1,4 @@
-//! 設置、通知隊列與鬼島表情。
+//! 設定、通知隊列與鬼島表情。
 use crate::settings_theme::color as settings_color;
 
 /// 贊助頁：原本放在「關於」最底下的支援作者（收款碼）區塊，獨立成一頁，排在「關於」上面。
@@ -163,10 +163,10 @@ fn mail_invitation(title:&str,body:&str)->bool {
 
 fn bluetooth_notice_content(body:&str)->(&str,&str,Option<u8>){
     if let Some(name)=body.strip_suffix(" · 已斷開") {return (name,"已斷開",None);}
-    if body=="已斷開連接" {return ("藍牙設備","已斷開",None);}
+    if body=="已斷開連線" {return ("藍牙裝置","已斷開",None);}
     if let Some((name,level))=body.rsplit_once(" · 電量 ") {
         if let Some(level)=level.strip_suffix('%').and_then(|s|s.parse::<u8>().ok()).filter(|v|*v<=100){
-            return (name,"已連接",Some(level));
+            return (name,"已連線",Some(level));
         }
     }
     // 電量事件：「名稱 · 開始充電 · 64%」。
@@ -175,10 +175,10 @@ fn bluetooth_notice_content(body:&str)->(&str,&str,Option<u8>){
             return (name,status,Some(level));
         }
     }
-    (body,"已連接",None)
+    (body,"已連線",None)
 }
 
-/// 每種設備一個圖標；入耳、骨傳導、耳夾等各有外形，AirPods 系列按帶杆樣式單獨畫。
+/// 每種裝置一個圖標；入耳、骨傳導、耳夾等各有外形，AirPods 系列按帶杆樣式單獨畫。
 pub(crate) fn device_icon_source(kind: crate::bt::DeviceKind) -> egui::ImageSource<'static> {
     use crate::bt::DeviceKind::*;
     match kind {
@@ -480,7 +480,7 @@ impl App {
         self.pet.react(PetState::Happy);
         self.say("久坐計時已重新開始");
     }
-    /// 現在是否在午休免打擾時段內（支持跨午夜；起止相同視為未設置）。
+    /// 現在是否在午休免打擾時段內（支援跨午夜；起止相同視為未設定）。
     pub(crate) fn lunch_now(&self, env: &Env) -> bool {
         let (a, b) = (self.settings.lunch_start, self.settings.lunch_end);
         let m = env.hour() as u32 * 60 + env.minute();
@@ -626,7 +626,7 @@ impl App {
             self.health_pending[kind as usize]=true;
             crate::model::save_health_pending(self.health_pending);
         }
-        // 通知僅保存在本次運行的內存中。
+        // 通知僅儲存在本次運行的內存中。
         if matches!(a.source, AlertSource::Internal | AlertSource::MailCode(..)) {
             self.history.push_front(Alert { source: AlertSource::Internal, ..a.clone() });
         }
@@ -1230,9 +1230,9 @@ impl App {
             return;
         }
         if a.is_hud(){
-            if a.title=="藍牙設備" {
+            if a.title=="藍牙裝置" {
                 let (name,status,battery)=bluetooth_notice_content(&a.body);
-                let badge=if status=="已連接"{Color32::from_rgb(10,132,255)}else if let Some(level)=battery.filter(|_|status!="已斷開"){crate::bluetooth_ui::level_color(level)}else{Color32::from_gray(95)};
+                let badge=if status=="已連線"{Color32::from_rgb(10,132,255)}else if let Some(level)=battery.filter(|_|status!="已斷開"){crate::bluetooth_ui::level_color(level)}else{Color32::from_gray(95)};
                 nc.circle(26.0,24.0,14.0,badge);
                 let kind=a.bluetooth.map(|(kind,_)|kind).unwrap_or(crate::bt::DeviceKind::Other);
                 device_icon(&nc,kind,17.0,15.0,18.0);
@@ -1687,7 +1687,7 @@ mod tests {
 
     #[test]
     fn settings_groups_keep_every_page_reachable() {
-        let groups = ["通用", "音樂", "專注與健康", "專注與健康", "待辦與置物", "待辦與置物", "消息提醒", "郵箱", "日程", "關於", "頁面管理", "AI 額度", "天氣", "外觀", "位置", "系統性能", "無線設備"];
+        let groups = ["通用", "音樂", "專注與健康", "專注與健康", "待辦與置物", "待辦與置物", "訊息提醒", "信箱", "行程", "關於", "頁面管理", "AI 額度", "天氣", "外觀", "位置", "系統性能", "無線裝置"];
         for (tab, expected) in groups.iter().enumerate() {
             let matches: Vec<_> = SETTINGS_GROUPS
                 .iter()
@@ -2876,7 +2876,7 @@ fn switch(ui: &mut egui::Ui, value: &mut bool) -> bool {
         .circle_filled(egui::pos2(x, rect.center().y), 7.0, Color32::WHITE);
     response.clicked()
 }
-/// 設置頁版式：標籤列寬、開關尺寸、控件與卡片右邊緣之間的固定留白。
+/// 設定頁版式：標籤列寬、開關尺寸、控件與卡片右邊緣之間的固定留白。
 pub(crate) const SETTINGS_LABEL_W: f32 = 80.0;
 const SETTINGS_SWITCH_W: f32 = 34.0;
 const SETTINGS_ROW_GAP: f32 = 16.0;
@@ -2916,14 +2916,14 @@ pub(crate) fn setting_row(ui: &mut egui::Ui, title: &str, description: &str, val
     ui.add_space(2.0);
 }
 
-/// 模塊關閉時禁用常駐開關，圓點仍反映保存的偏好。
+/// 模塊關閉時禁用常駐開關，圓點仍反映儲存的偏好。
 fn resident_setting_row(ui:&mut egui::Ui,title:&str,description:&str,module_on:bool,value:&mut bool){
     ui.add_enabled_ui(module_on,|ui|{
         setting_row(ui,title,if module_on {description}else{"功能頁已關閉"},value);
     });
 }
 
-/// 設置頁統一的分段選擇器（灰色底框 + 選中塊）。返回值為是否發生了切換。
+/// 設定頁統一的分段選擇器（灰色底框 + 選中塊）。返回值為是否發生了切換。
 pub(crate) fn settings_segmented<T: PartialEq + Copy>(
     ui: &mut egui::Ui,
     value: &mut T,
@@ -3010,7 +3010,7 @@ pub(crate) fn settings_control_row_right(
     })
 }
 
-/// 設置項下方的說明文字。
+/// 設定項下方的說明文字。
 fn island_size_slider(ui: &mut egui::Ui, value: &mut u32) -> egui::Response {
     let id = ui.make_persistent_id("island-size-draft");
     let mut draft = ui.data(|d| d.get_temp::<u32>(id)).unwrap_or(*value);
@@ -3069,7 +3069,7 @@ pub(crate) fn settings_card(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) 
         });
 }
 
-/// 卡片底部的「高級」摺疊區：只放內容多的頁面裡不常改的項，默認收起。整條都可以點，右側箭頭表示展開狀態。
+/// 卡片底部的「高級」摺疊區：只放內容多的頁面裡不常改的項，預設收起。整條都可以點，右側箭頭表示展開狀態。
 pub(crate) fn settings_advanced(ui: &mut egui::Ui, id: &str, add: impl FnOnce(&mut egui::Ui)) {
     let ctx = &ui.ctx().clone();
     let state = egui::Id::new(("settings-advanced", id));
@@ -3164,10 +3164,10 @@ fn settings_state_chip(ui: &mut egui::Ui, on: bool) {
     ui.painter()
         .galley(rect.center() - galley.size() / 2.0, galley, fg);
 }
-/// 設置頁統一的控件樣式（按鈕、輸入框、選中色）；設置頁正文和彈窗共用。
+/// 設定頁統一的控件樣式（按鈕、輸入框、選中色）；設定頁正文和彈窗共用。
 pub(crate) fn settings_apply_style(ui: &mut egui::Ui) {
     let ctx = &ui.ctx().clone();
-    // 分割線：淺色模式用很淡的灰，深色模式略亮於卡片，不再是系統默認的粗灰線。
+    // 分割線：淺色模式用很淡的灰，深色模式略亮於卡片，不再是系統預設的粗灰線。
     ui.visuals_mut().widgets.noninteractive.bg_stroke = egui::Stroke::new(
         1.0,
         settings_color(
@@ -3202,7 +3202,7 @@ pub(crate) fn settings_apply_style(ui: &mut egui::Ui) {
         Color32::from_rgb(65, 65, 71),
         Color32::from_rgb(216, 222, 231),
     );
-    // 統一按鈕：高度 28、圓角 7、內邊距 12×5，無描邊；默認按鈕也套用這套樣式。
+    // 統一按鈕：高度 28、圓角 7、內邊距 12×5，無描邊；預設按鈕也套用這套樣式。
     ui.spacing_mut().button_padding = egui::vec2(12.0, 5.0);
     ui.spacing_mut().interact_size.y = 28.0;
     {
@@ -3233,7 +3233,7 @@ pub(crate) fn settings_apply_style(ui: &mut egui::Ui) {
         Color32::from_rgb(209, 226, 248),
     );
 }
-/// 設置頁彈窗的外框：卡片底色、大圓角、細描邊和陰影。
+/// 設定頁彈窗的外框：卡片底色、大圓角、細描邊和陰影。
 pub(crate) fn settings_modal_frame(ctx: &egui::Context) -> egui::Frame {
     egui::Frame::new()
         .fill(settings_color(
@@ -3285,17 +3285,17 @@ pub(crate) fn settings_modal_title(ui: &mut egui::Ui, title: &str) -> bool {
     ui.add_space(6.0);
     close
 }
-/// 設置頁分割線（樣式由 settings_apply_style 統一設定）。
+/// 設定頁分割線（樣式由 settings_apply_style 統一設定）。
 fn settings_separator(ui: &mut egui::Ui) {
     ui.separator();
 }
-/// 設置頁的小型動作按鈕圖標；用矢量繪製，避免額外位圖在深淺主題下發灰。
+/// 設定頁的小型動作按鈕圖標；用矢量繪製，避免額外位圖在深淺主題下發灰。
 #[derive(Clone, Copy)]
 enum SettingsActionGlyph {
     Refresh,
     Trash,
 }
-/// 設置頁動作按鈕：34px 高膠囊、左側圖標、平滑 hover；主要動作用綠色，清除類用安靜的描邊紅。
+/// 設定頁動作按鈕：34px 高膠囊、左側圖標、平滑 hover；主要動作用綠色，清除類用安靜的描邊紅。
 fn settings_action_button(
     ui: &mut egui::Ui,
     text: &str,
@@ -3542,7 +3542,7 @@ fn settings_toggle_chip(ui: &mut egui::Ui, text: &str, on: bool) -> egui::Respon
     )
 }
 /// 功能頁面對應的圖標，與側欄同一套。
-/// 紋理緩存只按地址區分、不分尺寸：側欄 23px 先加載後，36px 的卡片圖標會被放大發糊，所以這裡用獨立地址。
+/// 紋理緩存只按地址區分、不分尺寸：側欄 23px 先載入後，36px 的卡片圖標會被放大發糊，所以這裡用獨立地址。
 fn settings_page_icon(page: usize) -> egui::ImageSource<'static> {
     use crate::app::*;
     let (name,bytes):(&str,&'static [u8])=match page {
@@ -3569,7 +3569,7 @@ fn paint_wireless_settings_icon(ui:&egui::Ui,rect:egui::Rect,icon:egui::ImageSou
     egui::Image::new(icon).paint_at(ui,rect.shrink(rect.width()*0.15));
 }
 
-/// 設置分頁對應的功能模塊（頁面序號）；通用、外觀、位置、消息提醒、關於、頁面管理不屬於任何模塊。
+/// 設定分頁對應的功能模塊（頁面序號）；通用、外觀、位置、訊息提醒、關於、頁面管理不屬於任何模塊。
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn settings_tab_module(tab: usize) -> Option<usize> {
     use crate::app::*;
@@ -3601,7 +3601,7 @@ fn support_author(ui:&mut egui::Ui){
                 ui.allocate_ui_with_layout(egui::vec2(text_width,64.0),egui::Layout::top_down(egui::Align::Min).with_main_align(egui::Align::Center),|ui|{
                     ui.set_max_width(text_width);
                     ui.label(egui::RichText::new("請作者喝杯咖啡").size(19.0).strong());
-                    ui.add(egui::Label::new("鬼島陪你認真生活，你的支持，讓它慢慢做好。").wrap());
+                    ui.add(egui::Label::new("鬼島陪你認真生活，你的支援，讓它慢慢做好。").wrap());
                 });
                 ui.add(egui::Image::new(egui::include_image!("../assets/support/kuidao-coffee.png")).fit_to_exact_size(egui::vec2(image_width,62.5)));
             });
@@ -3639,7 +3639,7 @@ fn support_author(ui:&mut egui::Ui){
         ui.ctx().data_mut(|data|data.insert_temp(id,!open));
     }
     ui.add_space(if open{4.0}else{7.0});
-    ui.label(egui::RichText::new("完全自願 · 感謝每一份支持 · 不影響功能使用").size(11.0).color(ui.visuals().weak_text_color()));
+    ui.label(egui::RichText::new("完全自願 · 感謝每一份支援 · 不影響功能使用").size(11.0).color(ui.visuals().weak_text_color()));
 }
 
 
@@ -3669,9 +3669,9 @@ pub(crate) fn settings_control_row(
 }
 fn mail_connection_choice(ui: &mut egui::Ui, id_salt: impl std::hash::Hash, use_windows_proxy: &mut bool) -> bool {
     let before = *use_windows_proxy;
-    let direct = "直連（默認）";
+    let direct = "直連（預設）";
     let proxy = "使用 Windows 手動代理";
-    settings_control_row(ui, "連接方式", 56.0, |ui| {
+    settings_control_row(ui, "連線方式", 56.0, |ui| {
         egui::ComboBox::from_id_salt(id_salt).width(170.0)
             .selected_text(if before { proxy } else { direct })
             .show_ui(ui, |ui| {
@@ -3780,7 +3780,7 @@ fn setting_choices(ui: &mut egui::Ui, title: &str, value: &mut u32, values: [u32
         settings_segmented(ui, value, &options, 62.0);
     });
 }
-/// 設置頁分頁序號。島上入口和測試按序號跳轉。
+/// 設定頁分頁序號。島上入口和測試按序號跳轉。
 pub(crate) const SETTINGS_TAB_APPEARANCE: usize = 13;
 pub(crate) const SETTINGS_TAB_POSITION: usize = 14;
 pub(crate) const SETTINGS_TAB_PAGES: usize = 10;
@@ -3794,7 +3794,7 @@ pub(crate) const SETTINGS_TAB_PLUGIN_DETAIL: usize = 20;
 /// 第四列是這一項之前的分組標題。
 const SETTINGS_GROUPS: [(&str,usize,usize,&str);16 + cfg!(feature="sdk-js") as usize] = [
     ("通用",0,0,"島仔"), ("外觀",SETTINGS_TAB_APPEARANCE,SETTINGS_TAB_APPEARANCE,""), ("位置",SETTINGS_TAB_POSITION,SETTINGS_TAB_POSITION,""), ("頁面管理",SETTINGS_TAB_PAGES,SETTINGS_TAB_PAGES,""),
-    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("郵箱",7,7,""), ("日程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("系統性能",15,15,""), ("無線設備",SETTINGS_TAB_WIRELESS,SETTINGS_TAB_WIRELESS,""),
+    ("音樂",1,1,"功能"), ("專注與健康",2,3,""), ("待辦與置物",4,5,""), ("訊息提醒",6,6,""), ("信箱",7,7,""), ("行程",8,8,""), ("AI 額度",11,11,""), ("天氣",12,12,""), ("系統性能",15,15,""), ("無線裝置",SETTINGS_TAB_WIRELESS,SETTINGS_TAB_WIRELESS,""),
     ("贊助",SETTINGS_TAB_SUPPORT,SETTINGS_TAB_SUPPORT,""),
     ("關於",9,9,""),
     #[cfg(feature="sdk-js")] ("插件",SETTINGS_TAB_PLUGINS,SETTINGS_TAB_PLUGINS,""),
@@ -3917,7 +3917,7 @@ impl App {
     }
 
     /// 功能頁頂部卡片：名稱、說明和開啟狀態。開關統一在「頁面管理」；關閉時這裡給出「開啟」入口。
-    /// 返回功能是否開啟，調用方據此把下面的設置置灰。
+    /// 返回功能是否開啟，調用方據此把下面的設定置灰。
     fn settings_feature_header(&mut self,ui:&mut egui::Ui,page:usize,description:&str,extra:impl FnOnce(&mut Self,&mut egui::Ui))->bool{
         let ctx=&ui.ctx().clone();
         let on=self.module_on(page);
@@ -4002,7 +4002,7 @@ impl App {
         self.module_on(page)
     }
     pub fn settings_ui(&mut self,ctx:&egui::Context,autostart:bool){
-        // 設置彈窗獨立於頁面的灰顯區域。模塊關掉後撤下彈窗，避免繼續操作。
+        // 設定彈窗獨立於頁面的灰顯區域。模塊關掉後撤下彈窗，避免繼續操作。
         if !self.module_on(crate::app::MAIL_PAGE) {self.mail.form.open=false;}
         if !self.module_on(crate::app::CALENDAR_PAGE) {self.calendar.form.open=false;}
         if !self.module_on(crate::app::QUOTA_PAGE)&&self.quota.connect_open {self.quota_close_connection();}
@@ -4175,7 +4175,7 @@ impl App {
                         ui.add_enabled_ui(on,|ui|{
                             settings_label(ui,"島上常駐");
                             settings_card(ui,|ui|{
-                                resident_setting_row(ui,"無線設備電量","收起時顯示，最多兩台",on,&mut self.settings.show_bluetooth);
+                                resident_setting_row(ui,"無線裝置電量","收起時顯示，最多兩台",on,&mut self.settings.show_bluetooth);
                                 if self.settings.show_bluetooth {
                                     settings_separator(ui);
                                     self.wireless_resident_settings(ui);
@@ -4212,7 +4212,7 @@ impl App {
                     }
                     SETTINGS_TAB_PAGES=>{
                         ui.label(egui::RichText::new("選擇需要的頁面和狀態組件。").size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
-                        // 島上顯示：收起時的常駐內容在這裡統一排序和開關；島上歌詞屬於音樂的顯示方式，在音樂頁設置。
+                        // 島上顯示：收起時的常駐內容在這裡統一排序和開關；島上歌詞屬於音樂的顯示方式，在音樂頁設定。
                         settings_label(ui,"島上顯示");
                         settings_card(ui,|ui|{
                             self.resident_order_settings(ui);
@@ -4224,7 +4224,7 @@ impl App {
                             resident_setting_row(ui,"天氣","天氣圖標和溫度，點擊打開天氣頁",
                                 self.module_on(crate::app::WEATHER_PAGE),&mut self.settings.show_weather);
                             ui.separator();
-                            resident_setting_row(ui,"無線設備電量","收起時顯示，最多兩台",
+                            resident_setting_row(ui,"無線裝置電量","收起時顯示，最多兩台",
                                 self.module_on(crate::app::BLUETOOTH_PAGE),&mut self.settings.show_bluetooth);
                             ui.separator();
                             ui.add_enabled_ui(self.module_on(crate::app::PERFORMANCE_PAGE),|ui|setting_row(ui,"系統性能","點擊常駐指標打開性能頁",&mut self.settings.show_performance));
@@ -4240,7 +4240,7 @@ impl App {
                             if self.plugins.page_shortcut_settings(ui,&mut self.settings.show_page_shortcuts) {
                                 ui.separator();
                             }
-                            let descriptions=["播放控制與同步歌詞","番茄鐘與休息計時","喝水與久坐提醒","臨時收納文件位置","任務清單與到期提醒","信箱摘要、驗證碼與同一組 Google 帳號的行程","Agent 剩餘額度和帳號切換","行事曆、郵件邀請與工作日程","當地天氣與七日預報","處理器、顯卡、記憶體、網路與磁碟","藍牙裝置連線狀態與多來源電量","小遊戲與休閒入口","電池與無線裝置電量總覽"];
+                            let descriptions=["播放控制與同步歌詞","番茄鐘與休息計時","喝水與久坐提醒","臨時收納檔案位置","任務清單與到期提醒","信箱摘要、驗證碼與同一組 Google 帳號的行程","Agent 剩餘額度和帳號切換","行事曆、郵件邀請與工作行程","當地天氣與七日預報","處理器、顯卡、記憶體、網路與磁碟","藍牙裝置連線狀態與多來源電量","小遊戲與休閒入口","電池與無線裝置電量總覽"];
                             ui.label(egui::RichText::new("拖動左側手柄調整順序；關閉的功能不在後台運行，不同步也不提醒，已有數據保留。").size(11.5).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75))));
                             #[derive(Clone)]
                             struct PageDrag(usize);
@@ -4260,7 +4260,7 @@ impl App {
                                         ui.painter().circle_filled(rect.center()+egui::vec2(x,y),1.4,settings_color(ctx,Color32::from_gray(155),Color32::from_gray(100)));
                                     }}
                                     handle.on_hover_cursor(egui::CursorIcon::Grab).dnd_set_drag_payload(PageDrag(page));
-                                    // 每行右側「設置 ›」直接跳到這個功能的設置頁，開關仍在最右。
+                                    // 每行右側「設定 ›」直接跳到這個功能的設定頁，開關仍在最右。
                                     let jump_w=58.0;
                                     ui.allocate_ui(egui::vec2((ui.available_width()-jump_w-ui.spacing().item_spacing.x).max(160.0),40.0),|ui|{
                                         ui.add_enabled_ui(can_change,|ui|{setting_row(ui,PAGE_NAMES[page],descriptions[page],&mut visible);});
@@ -4356,16 +4356,16 @@ impl App {
                             let material_forced = false;
                             let mut enabled = self.settings.exclude_from_capture || material_forced;
                             ui.add_enabled_ui(supported && !material_forced, |ui| {
-                                setting_row(ui, "在截圖和錄屏中隱藏島仔", "桌面上照常顯示，支持的截圖和錄屏工具會略過島仔。", &mut enabled);
+                                setting_row(ui, "在截圖和錄屏中隱藏島仔", "桌面上照常顯示，支援的截圖和錄屏工具會略過島仔。", &mut enabled);
                             });
                             if material_forced {
-                                settings_hint(ui,"材質生效時需隱藏島仔自身，才能讀取它背後的畫面。停用材質後恢復原設置。");
+                                settings_hint(ui,"材質生效時需隱藏島仔自身，才能讀取它背後的畫面。停用材質後恢復原設定。");
                             } else if enabled != self.settings.exclude_from_capture {
                                 self.capture_exclusion_request = Some(enabled);
                                 self.capture_exclusion_error = None;
                             }
                             let error = self.capture_exclusion_error.as_deref()
-                                .or((!supported).then_some("當前系統不支持在截圖和錄屏中隱藏島仔。"));
+                                .or((!supported).then_some("當前系統不支援在截圖和錄屏中隱藏島仔。"));
                             if let Some(error) = error {
                                 ui.add(egui::Label::new(egui::RichText::new(error).size(11.5)
                                     .color(settings_color(ctx, Color32::from_rgb(238,181,91), Color32::from_rgb(139,88,12)))).wrap());
@@ -4499,7 +4499,7 @@ impl App {
                                     for display in &self.displays {ui.selectable_value(&mut self.settings.display_id,display.id.clone(),&display.label);}
                                 }).response
                             });
-                            // 只在所選屏幕斷開時說明，平時不佔位置。
+                            // 只在所選螢幕斷開時說明，平時不佔位置。
                             if !self.settings.display_id.is_empty()&&selected.is_none(){settings_hint(ui,"暫時顯示在主屏，重新連線所選螢幕後自動恢復。");}
                             ui.separator();
                             // 停靠邊緣：上下為橫向；左右為豎向排列，展開面板從邊緣滑出。
@@ -4692,7 +4692,7 @@ impl App {
                         settings_label(ui,"提醒");
                         settings_card(ui,|ui|{
                             setting_row(ui,"提醒總開關","關閉後飲水、專注、待辦及聊天軟體提醒都不顯示",&mut self.settings.notifications);
-                            // 提醒方式由系統通知和提示音兩個設置共同決定。
+                            // 提醒方式由系統通知和提示音兩個設定共同決定。
                             ui.separator();
                             ui.add_enabled_ui(self.settings.notifications,|ui|{
                                 let mut mode:u8=if !self.settings.system_notify{0}else if self.settings.sound{2}else{1};
@@ -4706,9 +4706,9 @@ impl App {
                         settings_card(ui,|ui|{
                             setting_row(ui,"系統狀態","音量、充電、網路和鍵盤狀態",&mut self.settings.system_hud);
                             ui.separator();
-                            setting_row(ui,"藍牙設備連接","連接與斷開時提醒",&mut self.settings.bluetooth_notifications);
+                            setting_row(ui,"藍牙裝置連線","連線與斷開時提醒",&mut self.settings.bluetooth_notifications);
                         });
-                        // 聊天軟件：一個軟件一行、一個開關；附屬選項縮進跟在所屬軟件下面。
+                        // 聊天軟體：一個軟體一行、一個開關；附屬選項縮進跟在所屬軟體下面。
                         let master=self.settings.notifications;
                         settings_label(ui,"社群與聊天軟體");
                         if !master {
@@ -4733,8 +4733,8 @@ impl App {
                                         } else if ui.button("連線…").clicked(){open_connect=true;}
                                     });
                                 });
-                                sub(ui,"顯示通知正文","適用於 QQ、Windows 通知和本機接入；屏幕共享時建議關閉",&mut self.settings.notification_preview);
-                                // 收到過通知的應用可能有幾十個：默認收起，展開後用可點選的標籤排成幾行，不再一應用一行。
+                                sub(ui,"顯示通知正文","適用於 QQ、Windows 通知和本機接入；螢幕共享時建議關閉",&mut self.settings.notification_preview);
+                                // 收到過通知的應用可能有幾十個：預設收起，展開後用可點選的標籤排成幾行，不再一應用一行。
                                 let before_apps=self.notification_apps.items.clone();
                                 let total=self.notification_apps.items.len();
                                 if total>0 {
@@ -4775,7 +4775,7 @@ impl App {
                         ui.add_enabled_ui(on,|ui|{
                         settings_label(ui,"設定");
                         settings_card(ui,|ui|{
-                            setting_row(ui,"僅提醒驗證碼郵件","所有郵箱共用。其他郵件靜默收進列表，可隨時查看。",&mut self.settings.mail_code_only_notifications);
+                            setting_row(ui,"僅提醒驗證碼郵件","所有信箱共用。其他郵件靜默收進列表，可隨時查看。",&mut self.settings.mail_code_only_notifications);
                             ui.separator();
                             setting_row(ui,"驗證碼高亮","識別到驗證碼時在島上放大顯示，點擊即複製",&mut self.settings.mail_code);
                             ui.separator();
@@ -4823,7 +4823,7 @@ impl App {
                                     && mail_connection_choice(ui, ("mail-account-connection", email.as_str()), &mut self.mail.accounts[i].use_windows_proxy)
                                 {
                                     changed = true;
-                                    self.mail.note = format!("{email}：連接方式已更新");
+                                    self.mail.note = format!("{email}：連線方式已更新");
                                 }
                                 ui.horizontal(|ui|{
                                     ui.add(crate::mail_icon::image(provider).fit_to_exact_size(egui::vec2(22.0,22.0)));
@@ -4865,7 +4865,7 @@ impl App {
                                                     if !self.mail.note.is_empty(){ui.add_space(3.0);ui.add(egui::Label::new(egui::RichText::new(&self.mail.note).size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75)))).wrap());}
                         });
                         });
-                        // 添加郵箱：一次性的長表單放進彈窗，頁面上只保留帳號列表。
+                        // 新增信箱：一次性的長表單放進彈窗，頁面上只保留帳號列表。
                         let form_id=egui::Id::new("settings-mail-add");
                         if add_mail {self.mail.form.open=true;}
                         if self.mail.form.open {
@@ -4888,7 +4888,7 @@ impl App {
                             });
                             ui.add_space(5.0);
                             let microsoft=self.mail.form.provider==crate::mail::Provider::Microsoft;
-                            ui.label(egui::RichText::new(if microsoft{"連線微軟信箱"}else{"獲取授權碼或專用密碼"}).size(12.5).strong());
+                            ui.label(egui::RichText::new(if microsoft{"連線微軟信箱"}else{"取得授權碼或專用密碼"}).size(12.5).strong());
                             ui.add(egui::Label::new(egui::RichText::new(self.mail.form.provider.hint()).size(12.0).color(settings_color(ctx,Color32::from_gray(200),Color32::from_gray(55)))).wrap());
                             let (label,url)=self.mail.form.provider.setup_link();
                             if !url.is_empty() && ui.link(label).clicked(){self.pending.push(Cmd::OpenUrl(url.into()));}
@@ -4923,16 +4923,16 @@ impl App {
                                 field
                             });
                             ui.horizontal(|ui|{
-                                let test = ui.button("測試連接").clicked();
-                                let save = ui.button("保存並開始監控").clicked();
+                                let test = ui.button("測試連線").clicked();
+                                let save = ui.button("儲存並開始監控").clicked();
                                 if test || save {
                                     let email = target.email.clone();
-                                    if !email.contains('@'){self.mail.note="請先填郵箱地址".into();}
+                                    if !email.contains('@'){self.mail.note="請先填信箱地址".into();}
                                     else if let Err(error)=target.endpoint(){self.mail.note=error;}
-                                    else if self.mail.form.password.is_empty(){self.mail.note="請先填授權碼（不是郵箱登錄密碼）".into();}
+                                    else if self.mail.form.password.is_empty(){self.mail.note="請先填授權碼（不是信箱登錄密碼）".into();}
                                     else if test {
                                         self.mail.testing=Some(email.clone());
-                                        self.mail.note=format!("{email}：正在測試連接…");
+                                        self.mail.note=format!("{email}：正在測試連線…");
                                         self.pending.push(Cmd::MailTest(target, self.mail.form.password.clone()));
                                     } else {
                                         match crate::mail::secrets::save(&target.credential_key(),&self.mail.form.password){
@@ -4952,7 +4952,7 @@ impl App {
                             }
                                                     if !self.mail.note.is_empty(){ui.add_space(3.0);ui.add(egui::Label::new(egui::RichText::new(&self.mail.note).size(12.0).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(75)))).wrap());}
                             });
-                            // 保存後彈窗保持打開，結果和「測試連接」都在這裡；用戶自己關閉。
+                            // 儲存後彈窗保持打開，結果和「測試連線」都在這裡；用戶自己關閉。
                             if close || modal.should_close() {
                                 self.mail.form.open = false;
                                 self.mail.form.use_windows_proxy = false;
@@ -4972,7 +4972,7 @@ impl App {
                             settings_hint(ui,"與郵件中的會議邀請共用提醒，同一場會議只提醒一次。");
                         });
                         #[cfg(feature="sdk-js")] self.plugins.settings(ui,"calendar",on);
-                        settings_label(ui,"日曆帳號");
+                        settings_label(ui,"行事曆帳號");
                         let mut import=false;
                         settings_card(ui,|ui|{
                         if let Some(cfg)=self.calendar.config.clone(){
@@ -4986,10 +4986,10 @@ impl App {
                                         ui.spacing_mut().item_spacing.y=2.0;
                                         ui.label(egui::RichText::new(format!("{} · 最後同步 {}",cfg.provider.label(),if self.calendar.last_sync.is_empty(){"—".to_string()}else{self.calendar.last_sync.clone()})).size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
                                         let status = if self.calendar.connected {
-                                            if n == 0 && !self.calendar.warning.is_empty() { "● 已連接 · 日程同步不完整".into() }
-                                            else { format!("● 已連接 · 未來 24 小時 {n} 個日程") }
-                                        } else if self.calendar.failures == 0 { "● 正在連接…".into() }
-                                        else { format!("● 上次連接失敗 · 已知 {n} 個日程") };
+                                            if n == 0 && !self.calendar.warning.is_empty() { "● 已連線 · 行程同步不完整".into() }
+                                            else { format!("● 已連線 · 未來 24 小時 {n} 個行程") }
+                                        } else if self.calendar.failures == 0 { "● 正在連線…".into() }
+                                        else { format!("● 上次連線失敗 · 已知 {n} 個行程") };
                                         ui.label(egui::RichText::new(status).size(11.5).color(if self.calendar.connected{settings_color(ctx,Color32::from_rgb(120,220,160),Color32::from_rgb(24,121,64))}else{settings_color(ctx,Color32::from_rgb(240,180,110),Color32::from_rgb(145,89,12))}));
                                     });
                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
@@ -5021,7 +5021,7 @@ impl App {
                         });
                         if import {self.pending.push(Cmd::CalendarImport);}
                         });
-                        // 添加日曆：選平台、填帳號、獲取方法、導入 .ics 都在彈窗裡。
+                        // 新增行事曆：選平台、填帳號、取得方法、匯入 .ics 都在彈窗裡。
                         let add_id=egui::Id::new("settings-calendar-add");
                         if open_add {self.calendar.form.open=true;self.calendar.form.guide_open=true;}
                         if self.calendar.form.open {
@@ -5100,7 +5100,7 @@ impl App {
                             ui.add_space(7.0);
                             let guide=if self.calendar.form.provider==crate::calendar::Provider::Ical {
                                 if self.calendar.form.guide_open{"如何取得 iCal 網址？（點選收起）"}else{"如何取得 iCal 網址？"}
-                            }else if self.calendar.form.guide_open{"如何獲取使用者名稱和密碼？（點選收起）"}else{"如何獲取使用者名稱和密碼？"};
+                            }else if self.calendar.form.guide_open{"如何取得使用者名稱和密碼？（點選收起）"}else{"如何取得使用者名稱和密碼？"};
                             if ui.link(egui::RichText::new(guide).color(settings_color(ctx,Color32::from_rgb(120,185,245),Color32::from_rgb(26,100,177)))).clicked(){self.calendar.form.guide_open=!self.calendar.form.guide_open;}
                             if self.calendar.form.guide_open{
                                 ui.add_space(4.0);
@@ -5130,7 +5130,7 @@ impl App {
                                         self.pending.push(Cmd::CalendarTest(cfg,String::new()));
                                     }else{self.calendar.note="請貼上以 https:// 開頭、結尾為 .ics 的 iCal 網址".into();self.calendar.note_error=true;}
                                 }else if self.calendar.form.provider==crate::calendar::Provider::Google {
-                                    self.calendar.note="Google CalDAV 已改為只接受 OAuth，應用程式密碼必定回 401。請改選 iCal，貼上 Google 日曆的「秘密 iCal 網址」".into();
+                                    self.calendar.note="Google CalDAV 已改為只接受 OAuth，應用程式密碼必定回 401。請改選 iCal，貼上 Google 行事曆的「秘密 iCal 網址」".into();
                                     self.calendar.note_error=true;
                                 }else if custom && server.is_none(){self.calendar.note="請填寫以 https:// 開頭的 CalDAV 伺服器地址".into();self.calendar.note_error=true;}
                                 else if user.is_empty(){self.calendar.note="請先填使用者名稱".into();self.calendar.note_error=true;}
@@ -5160,7 +5160,7 @@ impl App {
                                 ui.add(egui::Label::new(egui::RichText::new(&self.calendar.note).size(12.0).color(color)).wrap());
                             }
                             });
-                            // 連接成功（日曆配置變化）後自動關閉彈窗。
+                            // 連線成功（行事曆配置變化）後自動關閉彈窗。
                             if self.calendar.config.is_some() && self.calendar.config!=connected_before && !self.calendar.testing {close=true;}
                             if close || modal.should_close() {self.calendar.form.open=false;}
                         }
@@ -5188,7 +5188,7 @@ impl App {
                             ui.horizontal_wrapped(|ui|{
                                 if ui.button("開啟本機資料目錄").clicked(){self.pending.push(Cmd::Open(crate::model::config_dir()));}
                                 if ui.button("收集診斷").clicked(){
-                                    // 另起 `daozai.exe --collect-diagnostics`：在新窗口裡收集，診斷包保存到桌面並自動選中。
+                                    // 另起 `daozai.exe --collect-diagnostics`：在新窗口裡收集，診斷包儲存到桌面並自動選中。
                                     if crate::diagnostics_tool::launch().is_err(){self.say("無法啟動診斷收集，請從開始選單開啟「收集鬼島診斷」");}
                                 }
                                 ui.label(egui::RichText::new("裝置圖示：Solar Icons · 480 Design").size(11.0).color(settings_color(ctx,Color32::from_gray(150),Color32::from_gray(105))));
@@ -5262,7 +5262,7 @@ impl App {
     }
 }
 
-/// 收款碼只在「支持作者」卡片展開時佔用貼圖；收起卡片或關閉設置窗口即釋放。
+/// 收款碼只在「支援作者」卡片展開時佔用貼圖；收起卡片或關閉設定窗口即釋放。
 fn release_support_codes(ctx: &egui::Context) {
     ctx.data_mut(|data| {
         for i in 0..2usize {

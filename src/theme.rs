@@ -13,7 +13,7 @@ use std::sync::Arc;
 pub const RED: Color32 = Color32::from_rgb(242, 48, 70);
 pub const RED_TOP: Color32 = Color32::from_rgb(253, 104, 92);
 pub const BLUE: Color32 = Color32::from_rgb(62, 172, 248);
-/// “已連接”藍：藍牙連接提醒和無電量設備的連接環共用，不在電量的綠黃橙紅裡。
+/// “已連線”藍：藍牙連線提醒和無電量裝置的連線環共用，不在電量的綠黃橙紅裡。
 pub const LINK: Color32 = Color32::from_rgb(10, 132, 255);
 pub const LINK_SOFT: Color32 = Color32::from_rgb(90, 169, 255);
 pub const BLUE_DEEP: Color32 = Color32::from_rgb(13, 69, 128);
@@ -33,7 +33,7 @@ pub const TRACK: Color32 = Color32::from_rgb(36, 36, 39);
 pub const ARROW_BG: Color32 = Color32::from_rgb(48, 48, 51);
 pub const WATER_TRACK: Color32 = Color32::from_rgb(15, 38, 64);
 pub const YELLOW: Color32 = Color32::from_rgb(255, 196, 61);
-/// 無線設備電量 10–19%：介於黃色“一般”和紅色“即將耗盡”之間。
+/// 無線裝置電量 10–19%：介於黃色“一般”和紅色“即將耗盡”之間。
 pub const ORANGE: Color32 = Color32::from_rgb(255, 138, 61);
 
 pub fn alpha_blue(a: f32) -> Color32 {
@@ -172,7 +172,7 @@ pub(crate) fn canvas_font(
     font(size, weight)
 }
 
-/// 測試導出「修復前」對照圖：去掉藏文字體後的字體表。
+/// 測試匯出「修復前」對照圖：去掉藏文字體後的字體表。
 #[cfg(test)]
 pub(crate) fn fonts_without_tibetan()->FontDefinitions {
     let mut fonts=shared_fonts().clone();
@@ -195,7 +195,7 @@ struct MappedFont {
 impl MappedFont {
     fn open(path:&Path)->std::io::Result<Self>{
         use std::os::windows::fs::OpenOptionsExt;
-        // 保留文件句柄並禁止原地寫入；允許系統以替換文件的方式更新字體。
+        // 保留檔案句柄並禁止原地寫入；允許系統以替換檔案的方式更新字體。
         let source=std::fs::OpenOptions::new().read(true).share_mode(0x1|0x4).open(path)?;
         let bytes=unsafe{memmap2::Mmap::map(&source)?};
         Ok(Self{_source:source,bytes})
@@ -279,7 +279,7 @@ fn build_fonts()->FontDefinitions {
     fonts
 }
 
-/// 各個原生窗口統一使用鬼島品牌圖標，避免回落到框架默認圖標。
+/// 各個原生窗口統一使用鬼島品牌圖標，避免回落到框架預設圖標。
 /// 開發版沿用同一套視窗圖示管線，只在編譯帶 `KUIDAO_CHANNEL=dev` 時換成緞帶版本。
 fn app_icon_bytes()->&'static [u8]{
     if option_env!("KUIDAO_CHANNEL")==Some("dev"){ return include_bytes!("../assets/kuidao-dev-logo.png"); }

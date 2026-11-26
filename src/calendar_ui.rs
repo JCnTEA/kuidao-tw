@@ -1,4 +1,4 @@
-//! 島內日程的月曆和按日期排列的列表。
+//! 島內行程的月曆和按日期排列的列表。
 use crate::{app::{App, Cmd, Env, CALENDAR_PAGE}, calendar, mail, paint::{self,Card,H}, theme::{self,W}};
 #[cfg(all(windows, feature = "sdk-material"))]
 use crate::material::ControlRole;
@@ -376,7 +376,7 @@ impl App {
         let now=calendar_now(env);
         header.fill(37.0,9.0,54.0,18.0,8.0,Color32::from_rgb(30,30,33));
         source_icon(header,Source::Calendar(None),43.0,13.0,10.0);
-        header.centered_text(69.0,18.0,"日程",10.0,W::Semibold,theme::WHITE,H::Center);
+        header.centered_text(69.0,18.0,"行程",10.0,W::Semibold,theme::WHITE,H::Center);
         if header.hit(37.0,9.0,54.0,18.0,"calendar-today").on_hover_text("回到今天").clicked() {
             if self.calendar.agenda {self.show_calendar_agenda(current_month);}
             else {self.select_calendar_day(today);}
@@ -388,7 +388,7 @@ impl App {
         if add.clicked(){self.open_calendar_editor(None);return;}
 
         c.fill(34.0,33.0,92.0,18.0,9.0,theme::CARD);
-        for (agenda,label,x) in [(false,"日曆",36.0),(true,"列表",80.0)] {
+        for (agenda,label,x) in [(false,"行事曆",36.0),(true,"列表",80.0)] {
             let active=self.calendar.agenda==agenda;
             let tab=c.hit(x,33.0,44.0,18.0,("calendar-view",agenda));
             if active || tab.hovered() {
@@ -483,7 +483,7 @@ impl App {
         }
         first=first.min(max);
         if featured_index.is_none() {
-            let message=if self.calendar.view.loading && events.is_empty(){"正在獲取行程…"}else if !self.calendar.view.error.is_empty() && events.is_empty(){"暫時無法獲取行程"}else if !self.calendar.view.warning.is_empty() && events.is_empty(){"部分行程未同步"}else if ended_count>0 && events.is_empty(){"當天行程已結束"}else if events.is_empty(){"當天暫無行程"}else{"暫無待開始的定時行程"};
+            let message=if self.calendar.view.loading && events.is_empty(){"正在取得行程…"}else if !self.calendar.view.error.is_empty() && events.is_empty(){"暫時無法取得行程"}else if !self.calendar.view.warning.is_empty() && events.is_empty(){"部分行程未同步"}else if ended_count>0 && events.is_empty(){"當天行程已結束"}else if events.is_empty(){"當天暫無行程"}else{"暫無待開始的定時行程"};
             c.centered_text(271.0,76.0,message,11.0,W::Regular,theme::GRAY,H::Center);
             if events.is_empty(){
                 let (button,b)=paint::capsule(c,214.0,93.0,70.0,20.0,"calendar-empty-add",theme::BTN,theme::BTN_HOVER);
@@ -553,7 +553,7 @@ impl App {
         if let Some(uid)=edit_local{self.open_calendar_editor(Some(&uid));}
         if add_local{self.open_calendar_editor(None);}
         if let Some(event)=ignored{self.toggle_mail_event(&event);}
-        // 從日程窗口「連接日曆」進來：直接打開設置頁的添加日曆彈窗。
+        // 從行程窗口「連線行事曆」進來：直接打開設定頁的新增行事曆彈窗。
         if connect {self.settings_tab=8;self.calendar.form.open=true;self.calendar.form.guide_open=true;self.open_settings();}
     }
 
@@ -579,10 +579,10 @@ impl App {
         let max=entries.len().saturating_sub(AGENDA_ROWS);
         let first=self.calendar.agenda_first.min(max);
         if entries.is_empty() {
-            let message=if self.calendar.view.loading {"正在獲取日程…"}
-                else if !self.calendar.view.error.is_empty() {"暫時無法獲取日程"}
-                else if !self.calendar.view.warning.is_empty() {"部分日程未同步"}
-                else {"這個月暫無日程"};
+            let message=if self.calendar.view.loading {"正在取得行程…"}
+                else if !self.calendar.view.error.is_empty() {"暫時無法取得行程"}
+                else if !self.calendar.view.warning.is_empty() {"部分行程未同步"}
+                else {"這個月暫無行程"};
             c.centered_text(210.0,118.0,message,11.0,W::Regular,theme::GRAY,H::Center);
         }
         let mut previous_day=None;

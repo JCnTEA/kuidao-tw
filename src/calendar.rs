@@ -5,7 +5,7 @@
 //! 沒有 OAuth、沒有回呼，使用者在客戶端自己生成帳號密碼即可。
 //!
 //! 硬約束：只讀；憑據只進 Windows 憑據管理器（`keyring`，和郵件同一套庫），
-//! 配置文件裡只有平台、用戶名、日曆地址；不落盤正文、不進日誌。
+//! 配置檔案裡只有平台、用戶名、行事曆地址；不落盤正文、不進日誌。
 
 mod exchange;
 #[cfg(test)]
@@ -28,10 +28,10 @@ const WINDOW_SECS: i64 = 24 * 3600;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Provider {
-    /// Google 日曆：Gmail 地址 + 應用程式密碼。
+    /// Google 行事曆：Gmail 地址 + 應用程式密碼。
     #[default]
     Google,
-    /// 蘋果 iCloud 日曆：Apple ID + App 專用密碼。
+    /// 蘋果 iCloud 行事曆：Apple ID + App 專用密碼。
     ICloud,
     /// 任意 CalDAV 服務（Nextcloud、群暉、Fastmail、Radicale 等），地址由使用者填寫。
     Custom,
@@ -96,7 +96,7 @@ impl Provider {
         match self {
             Provider::Google => [
                 "Google 已停止 CalDAV 的密碼登入，只接受 OAuth 2.0；應用程式密碼必定回 401",
-                "請改選「iCal」，到 https://calendar.google.com/calendar/r/settings 選擇日曆 → 整合行事曆，複製「秘密 iCal 網址」",
+                "請改選「iCal」，到 https://calendar.google.com/calendar/r/settings 選擇行事曆 → 整合行事曆，複製「秘密 iCal 網址」",
                 "把網址貼到 iCal 欄位即可只讀同步，不需要帳號密碼",
             ],
             Provider::ICloud => [
@@ -110,12 +110,12 @@ impl Provider {
                 "只讀同步；鬼島會自動發現帳號下所有行事曆",
             ],
             Provider::Exchange => [
-                "伺服器填 Exchange 郵件伺服器位址，例如 mail.example.com，可向公司 IT 獲取",
+                "伺服器填 Exchange 郵件伺服器位址，例如 mail.example.com，可向公司 IT 取得",
                 "使用者名稱一般是信箱，也可能是「域\\使用者名稱」；密碼用信箱密碼",
                 "只讀同步行事曆；Microsoft 365 / Outlook.com 已不支援密碼登入，暫不能連線",
             ],
             Provider::Ical => [
-                "開啟 https://calendar.google.com/calendar/r/settings → 選擇日曆 → 整合行事曆，複製「秘密 iCal 網址」",
+                "開啟 https://calendar.google.com/calendar/r/settings → 選擇行事曆 → 整合行事曆，複製「秘密 iCal 網址」",
                 "iCloud、Outlook 等服務也有類似的 .ics 訂閱網址，複製後直接貼上",
                 "只讀同步，不需要帳號密碼；Google CalDAV 已改為只接受 OAuth，密碼登入必定 401",
             ],
@@ -144,9 +144,9 @@ impl Provider {
 pub struct Config {
     pub provider: Provider,
     pub username: String,
-    /// 發現到的日曆集合地址；`None` 表示還沒發現。
+    /// 發現到的行事曆集合地址；`None` 表示還沒發現。
     pub href: Option<String>,
-    /// 服務器地址覆蓋（只在錄製/測試裡用）。
+    /// 伺服器地址覆蓋（只在錄製/測試裡用）。
     pub server: Option<String>,
 }
 
@@ -230,7 +230,7 @@ pub fn selected_provider() -> Provider {
         .unwrap_or_default()
 }
 
-/// 純解析：只有平台、用戶名、日曆地址，沒有任何密碼字段。
+/// 純解析：只有平台、用戶名、行事曆地址，沒有任何密碼字段。
 pub fn decode_config(raw: &[u8]) -> Option<Config> {
     let json: serde_json::Value = serde_json::from_slice(raw).ok()?;
     if let Some(accounts) = json.get("accounts").and_then(|v| v.as_array()) {
@@ -286,7 +286,7 @@ pub fn select_provider(provider: Provider) -> Result<(), String> {
     save_configs(&load_configs(), provider)
 }
 
-/// 新連接完整保存後才移除舊憑據；配置保存失敗時恢復原憑據。
+/// 新連線完整儲存後才移除舊憑據；配置儲存失敗時恢復原憑據。
 pub fn save_connection(cfg: &Config, password: &str, old: Option<&Config>) -> Result<(), String> {
     // iCal 訂閱只有網址，沒有密碼，不必碰 Windows 憑據管理器。
     if cfg.provider == Provider::Ical { return save_config(cfg); }
@@ -369,7 +369,7 @@ pub mod secrets {
 
 // ---------------------------------------------------------------- 粘貼拆分
 
-/// 從整段粘貼裡拆出用戶名和密碼。只認帶標籤的文本（用戶名/帳號/郵箱、
+/// 從整段粘貼裡拆出用戶名和密碼。只認帶標籤的文本（用戶名/帳號/信箱、
 /// 密碼/口令），標籤之間用冒號、等號或空格分隔都行；拆不出就返回 `None`，
 /// 不靠位置猜。
 pub fn parse_paste(text: &str) -> Option<(String, String)> {
@@ -586,7 +586,7 @@ fn agent() -> Result<ureq::Agent, Failure> {
         .timeout(Duration::from_secs(30))
         .redirects(0)
         .user_agent(concat!("Kuidao/",env!("CARGO_PKG_VERSION")));
-    // 僅日曆使用系統證書驗證，繼承用戶已信任的自簽證書和私有 CA。
+    // 僅行事曆使用系統證書驗證，繼承用戶已信任的自簽證書和私有 CA。
     #[cfg(windows)]
     let builder = builder.tls_connector(std::sync::Arc::new(native_tls::TlsConnector::new()
         .map_err(|_| Failure::text("無法初始化行事曆安全連線，請重啟鬼島後重試"))?));
@@ -610,7 +610,7 @@ fn dav(
 ) -> Result<String, Failure> {
     let (xml, _) = dav_response(agent, method, url, depth, body, cfg, password)?;
     if !roxmltree::Document::parse(&xml).is_ok_and(|doc| doc.root_element().has_tag_name(("DAV:", "multistatus"))) {
-        return Err(Failure::text("服務器未返回有效的 CalDAV 響應，請核對日曆同步地址和登錄方式"));
+        return Err(Failure::text("伺服器未返回有效的 CalDAV 響應，請核對行事曆同步地址和登錄方式"));
     }
     Ok(xml)
 }
@@ -648,7 +648,7 @@ fn dav_response(
     Err(Failure::text("行事曆重定向次數過多"))
 }
 
-/// iCloud 的日曆實際放在 `pNN-caldav.icloud.com` 上，發現過程會從入口跳過去；
+/// iCloud 的行事曆實際放在 `pNN-caldav.icloud.com` 上，發現過程會從入口跳過去；
 /// 其他平台只信任同源地址。
 fn same_service(provider:Provider,target:&url::Url,base:&url::Url)->bool {
     if target.origin()==base.origin() {return true;}
@@ -732,7 +732,7 @@ fn record_fetch(provider:Provider,scope:&str,result:&Result<Fetched,Failure>){
     crate::resources::append_log(&crate::model::config_dir().join("diagnostics"),"calendar.log",&format!("{} {line}",chrono::Utc::now().timestamp()));
 }
 
-/// 發現日曆 → 查詢滾動的 24 小時時間窗口 → 解析。
+/// 發現行事曆 → 查詢滾動的 24 小時時間窗口 → 解析。
 pub fn fetch(cfg: &Config, password: &str) -> Result<Fetched, Failure> {
     let now = chrono::Utc::now();
     let result=fetch_range(cfg, password, now - chrono::Duration::minutes(1), now + chrono::Duration::seconds(WINDOW_SECS));
@@ -767,8 +767,8 @@ fn fetch_range(cfg: &Config, password: &str, lo: chrono::DateTime<chrono::Utc>, 
     if cfg.provider == Provider::Ical { return fetch_ical_url(cfg, lo, hi); }
     if cfg.provider.exchange() { return exchange::fetch(cfg, password, lo, hi); }
     let agent = agent()?;
-    // 每次都發現全部日曆：已保存的地址可能指向空日曆，會遮蔽同一帳號下的其他日曆。
-    // 逐個查詢，單個日曆失敗不影響其他日曆，全部失敗才報錯。
+    // 每次都發現全部行事曆：已儲存的地址可能指向空行事曆，會遮蔽同一帳號下的其他行事曆。
+    // 逐個查詢，單個行事曆失敗不影響其他行事曆，全部失敗才報錯。
     let (calendars,mut report)=discover_calendars(&agent,cfg,password).map_err(|e|e.at_stage("查詢行事曆"))?;
     let href=calendars.first().cloned().ok_or_else(||Failure::text("沒有找到可讀取的行事曆"))?;
     let mut events=Vec::new();
@@ -780,7 +780,7 @@ fn fetch_range(cfg: &Config, password: &str, lo: chrono::DateTime<chrono::Utc>, 
             Err(error)=>{report.failed+=1;report.status=report.status.or(error.status);let error=error.at_stage("讀取行程");report.problem(error.message.clone());first_error.get_or_insert(error);}
         }
     }
-    if !ok {return Err(first_error.unwrap_or_else(||Failure::text("沒有找到日曆")).with_report(report));}
+    if !ok {return Err(first_error.unwrap_or_else(||Failure::text("沒有找到行事曆")).with_report(report));}
     events.sort_by_key(|m|m.start);
     let mut seen=std::collections::HashSet::new();events.retain(|m|seen.insert(dedupe_key(m)));
     Ok(Fetched{href,events,report})
@@ -807,7 +807,7 @@ fn fetch_collection(agent:&ureq::Agent,cfg:&Config,password:&str,href:&str,lo:ch
     let mut xml = dav(&agent, "REPORT", &href, "1", &report_body(cfg.provider, &start, &end), cfg, password)?;
     let mut has_data=calendar_data(&xml).iter().any(|data|!data.trim().is_empty());
     if !has_data && (report_status_error(&xml).is_some() || !responses(&xml).is_empty()) {
-        // 有的服務只列資源，或在查詢結果中附帶集合本身；集合不能當成日程讀取。
+        // 有的服務只列資源，或在查詢結果中附帶集合本身；集合不能當成行程讀取。
         if let Some(code @ (401|403))=report_status_error(&xml){return Err(Failure::status(cfg.provider,code));}
         let mut refs=report_resource_refs(&xml,&href)?;
         if refs.is_empty() {
@@ -913,7 +913,7 @@ fn discover_at(agent:&ureq::Agent,cfg:&Config,password:&str,start:&str,depth:&st
 
 // ---------------------------------------------------------------- XML
 
-/// 把 PROPFIND/REPORT 的 207 拆成 `(href, 是否日曆集合, 是否目錄)`。
+/// 把 PROPFIND/REPORT 的 207 拆成 `(href, 是否行事曆集合, 是否目錄)`。
 fn responses(xml: &str) -> Vec<(String, bool, bool)> {
     let Ok(block) = regex::Regex::new(r"(?is)<(?:[a-z0-9]+:)?response\b[^>]*>(.*?)</(?:[a-z0-9]+:)?response>") else {
         return Vec::new();
@@ -958,7 +958,7 @@ fn property_hrefs(xml:&str,property:&str,base:&str)->Vec<String>{
 }
 
 fn calendar_collections(xml:&str,base:&str)->Vec<String>{
-    // 只取能放日程（VEVENT）的日曆集合，跳過只放提醒事項的列表，最多 12 個。
+    // 只取能放行程（VEVENT）的行事曆集合，跳過只放提醒事項的列表，最多 12 個。
     let mut calendars=event_calendars(xml,base);
     if calendars.is_empty() && !responses(xml).iter().any(|(_,calendar,_)|*calendar){if let Some(url)=pick_calendar(xml,base){calendars.push(url);}}
     calendars
@@ -969,7 +969,7 @@ fn discover(agent:&ureq::Agent,cfg:&Config,password:&str)->Result<String,Failure
     discover_calendars(agent,cfg,password)?.0.into_iter().next().ok_or_else(||Failure::text("沒有找到行事曆"))
 }
 
-/// 只選擇日曆集合或已有的 UUID 兼容路徑，不能把主目錄/收件箱當成日曆。
+/// 只選擇行事曆集合或已有的 UUID 兼容路徑，不能把主目錄/收件箱當成行事曆。
 fn pick_calendar(xml: &str, base: &str) -> Option<String> {
     let want = path_of(base).trim_end_matches('/').to_string();
     let mut best: Option<(u8, String)> = None;
@@ -990,7 +990,7 @@ fn pick_calendar(xml: &str, base: &str) -> Option<String> {
     best.map(|(_, url)| url)
 }
 
-/// 帳號下所有能放日程（VEVENT）的日曆集合；只放提醒事項（VTODO）的跳過。最多 12 個。
+/// 帳號下所有能放行程（VEVENT）的行事曆集合；只放提醒事項（VTODO）的跳過。最多 12 個。
 fn event_calendars(xml: &str, base: &str) -> Vec<String> {
     let Ok(block) = regex::Regex::new(r"(?is)<(?:[a-z0-9]+:)?response\b[^>]*>(.*?)</(?:[a-z0-9]+:)?response>") else { return Vec::new(); };
     let set = regex::Regex::new(r"(?is)<(?:[a-z0-9]+:)?supported-calendar-component-set\b[^>]*>(.*?)</(?:[a-z0-9]+:)?supported-calendar-component-set>").unwrap();
@@ -1013,7 +1013,7 @@ fn event_calendars(xml: &str, base: &str) -> Vec<String> {
     out
 }
 
-/// 從 .ics 文件（蘋果「日曆」導出、訂閱鏈接下載等）讀出時間範圍內的日程，重複日程會展開。
+/// 從 .ics 檔案（蘋果「行事曆」匯出、訂閱鏈接下載等）讀出時間範圍內的行程，重複行程會展開。
 pub fn events_from_ics(ics: &str, lo: chrono::DateTime<chrono::Utc>, hi: chrono::DateTime<chrono::Utc>) -> Result<Vec<crate::mail::Meeting>, String> {
     let parsed=inspect_ics(ics,lo,hi)?;
     if parsed.events.is_empty() && parsed.report.invalid>0{return Err(parsed.report.warning());}
@@ -1059,7 +1059,7 @@ fn calendar_data(xml: &str) -> Vec<String> {
 }
 
 /// 把 REPORT 裡的所有 `calendar-data` 餵給現有 .ics 解析器，按 `UID + DTSTART`
-/// 去重（同一個約會從多個日曆返回也只留一條）。
+/// 去重（同一個約會從多個行事曆返回也只留一條）。
 pub fn events_from_report(xml: &str) -> Vec<crate::mail::Meeting> {
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::new();
@@ -1118,7 +1118,7 @@ fn parse_events_in_range(xml:&str,lo:chrono::DateTime<chrono::Utc>,hi:chrono::Da
             "END:VEVENT"=>if let Some(body)=body.take(){blocks.push(body);},
             _=>if let Some(body)=&mut body{body.push_str(&line);body.push('\n');},
         }}
-        if body.is_some(){report.invalid+=1;report.problem("日程內容不完整");}
+        if body.is_some(){report.invalid+=1;report.problem("行程內容不完整");}
     }
     let field=|body:&str,name:&str|{
         let mut nested=0;
@@ -1136,7 +1136,7 @@ fn parse_events_in_range(xml:&str,lo:chrono::DateTime<chrono::Utc>,hi:chrono::Da
         let valid_start=cancelled(body)||!crate::mail::meetings_of(&format!("BEGIN:VEVENT\n{body}END:VEVENT")).is_empty();
         if id.contains("RANGE=")||at.is_none()||!valid_start{
             if let Some(uid)=field(body,"UID"){invalid_series.insert(uid);}
-            report.problem("部分重複日程的修改規則或時間暫無法解析");
+            report.problem("部分重複行程的修改規則或時間暫無法解析");
         }else{overrides.insert((field(body,"UID").unwrap_or_default(),at.unwrap()));}
     }}
     let mut events=Vec::new();
@@ -1154,7 +1154,7 @@ fn parse_events_in_range(xml:&str,lo:chrono::DateTime<chrono::Utc>,hi:chrono::Da
         if field(&body,"UID").is_some_and(|uid|invalid_series.contains(&uid)){report.invalid+=1;continue;}
         if cancelled(&body){report.cancelled+=1;continue;}
         let Some(base)=crate::mail::meetings_of(&format!("BEGIN:VEVENT\n{body}END:VEVENT")).into_iter().next()else{
-            report.invalid+=1;report.problem("部分日程的時間或時區無法解析");continue;
+            report.invalid+=1;report.problem("部分行程的時間或時區無法解析");continue;
         };
         if field(&body,"RECURRENCE-ID").is_some()||field(&body,"RRULE").is_none(){
             if (field(&body,"RECURRENCE-ID").is_some()||!overrides.contains(&(field(&body,"UID").unwrap_or_default(),base.start))) && !add_event(base,&mut report){break;}
@@ -1165,7 +1165,7 @@ fn parse_events_in_range(xml:&str,lo:chrono::DateTime<chrono::Utc>,hi:chrono::Da
             if line.starts_with("BEGIN:"){nested+=1;continue;}if line.starts_with("END:"){nested-=1;continue;}
             if nested==0 && matches!(line.split([';',':']).next(),Some("DTSTART"|"RRULE"|"RDATE"|"EXDATE")){rules.push(line);}
         }
-        let Ok(set)=rules.join("\n").parse::<rrule::RRuleSet>()else{report.invalid+=1;report.problem("部分日程的重複規則無法解析");continue;};
+        let Ok(set)=rules.join("\n").parse::<rrule::RRuleSet>()else{report.invalid+=1;report.problem("部分行程的重複規則無法解析");continue;};
         let duration=base.end.map_or(0,|end|end-base.start);
         let result=set.after((lo-chrono::Duration::seconds(duration.max(1))).with_timezone(&rrule::Tz::UTC)).before(hi.with_timezone(&rrule::Tz::UTC)).all(2000);
         report.limited|=result.limited;if result.dates.is_empty(){report.outside+=1;}
@@ -1224,12 +1224,12 @@ pub enum Cmd {
 }
 
 pub enum Event {
-    /// `message` 是讀取警告或失敗原因，`count` 是未來 24 小時的可用日程數。
+    /// `message` 是讀取警告或失敗原因，`count` 是未來 24 小時的可用行程數。
     Test { ok: bool, message: String, count: usize, config: Option<Config> },
     /// 一次成功同步。
     Synced { config: Config, events: Vec<crate::mail::Meeting>, at: String },
     MonthLoaded { config: Config, month: NaiveDate, result: Result<Vec<crate::mail::Meeting>, String> },
-    /// 更新同步提示。近期日程讀取成功時發送，即使沒有可用數據更新緩存。
+    /// 更新同步提示。近期行程讀取成功時發送，即使沒有可用數據更新緩存。
     Warning {config:Config,month:Option<NaiveDate>,message:String},
     /// 一次失敗（界面只在連續失敗時顯示紅字）。
     Failed { config: Config, message: String },
@@ -1366,7 +1366,7 @@ pub fn now_label() -> String {
     chrono::Local::now().format("%m-%d %H:%M").to_string()
 }
 
-/// 把 HTTP 狀態碼翻成人話（設置頁和錄製演示共用）。
+/// 把 HTTP 狀態碼翻成人話（設定頁和錄製演示共用）。
 pub fn human_error(provider: Provider, status: Option<u16>) -> String {
     match status {
         Some(code) => Failure::status(provider, code).message,
@@ -1429,7 +1429,7 @@ mod tests {
                 let body=if request.starts_with("PROPFIND ") {
                     "<d:multistatus><d:response><d:href>/empty/</d:href><d:propstat><d:prop><d:resourcetype><c:calendar/></d:resourcetype></d:prop></d:propstat></d:response><d:response><d:href>/work/</d:href><d:propstat><d:prop><d:resourcetype><c:calendar/></d:resourcetype></d:prop></d:propstat></d:response></d:multistatus>"
                 }else if request.starts_with("REPORT /work/ ") {
-                    "<d:multistatus xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\"><d:response><d:href>/work/a.ics</d:href><c:calendar-data>BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:work-event\nDTSTART:20261104T020000Z\nSUMMARY:工作日程\nEND:VEVENT\nEND:VCALENDAR</c:calendar-data></d:response></d:multistatus>"
+                    "<d:multistatus xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\"><d:response><d:href>/work/a.ics</d:href><c:calendar-data>BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:work-event\nDTSTART:20261104T020000Z\nSUMMARY:工作行程\nEND:VEVENT\nEND:VCALENDAR</c:calendar-data></d:response></d:multistatus>"
                 }else{r#"<d:multistatus xmlns:d="DAV:"/>"#};
                 write!(socket,"HTTP/1.1 207 Multi-Status\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
             }
@@ -1461,7 +1461,7 @@ mod tests {
     }
     fn read_discovery_request(stream:&mut std::net::TcpStream)->String {
         use std::io::Read;
-        // Windows 上從非阻塞監聽接受的連接會繼承非阻塞模式，請求未到時讀取會直接報 WouldBlock。
+        // Windows 上從非阻塞監聽接受的連線會繼承非阻塞模式，請求未到時讀取會直接報 WouldBlock。
         stream.set_nonblocking(false).unwrap();
         stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
         let mut bytes=Vec::new();
@@ -1852,7 +1852,7 @@ mod tests {
             let cfg=Config{provider:Provider::Google,username:"demo".into(),href:Some(format!("{base}calendar/")),server:Some(base)};
             let result=fetch_month(&cfg,"test",NaiveDate::from_ymd_opt(2026,11,3).unwrap());
             if succeeds {assert_eq!(result.unwrap().events.len(),2);}
-            else if login_at.is_some() {assert!(result.err().unwrap().message.contains("服務器未返回有效的 CalDAV"));}
+            else if login_at.is_some() {assert!(result.err().unwrap().message.contains("伺服器未返回有效的 CalDAV"));}
             else {assert!(result.is_err());}
             server.join().unwrap();
         }
@@ -2061,7 +2061,7 @@ END:VCALENDAR</c:calendar-data></d:prop></d:propstat></d:response>
         assert_eq!(ev[0].start, 1793340000); // 2026-10-30T06:00:00Z
     }
 
-    /// 假 CalDAV：PROPFIND 回一個 uuid 日曆，REPORT 回一條事件，Basic Auth 必須對。
+    /// 假 CalDAV：PROPFIND 回一個 uuid 行事曆，REPORT 回一條事件，Basic Auth 必須對。
     #[test]
     fn full_chain_against_local_server() {
         use std::io::Write;
@@ -2130,7 +2130,7 @@ END:VCALENDAR</c:calendar-data></d:prop></d:propstat></d:response></d:multistatu
         assert_eq!(got.events.len(), 1);
         assert_eq!(got.events[0].uid, "local-1");
 
-        // 即使日曆內容未變，也要刷新不斷向前移動的時間窗口。
+        // 即使行事曆內容未變，也要重新整理不斷向前移動的時間窗口。
         let again = fetch(&Config { href: Some(got.href.clone()), ..cfg.clone() }, "p1").unwrap();
         assert_eq!(again.events.len(), 1);
         let hits = server.join().unwrap();

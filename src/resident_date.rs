@@ -1,4 +1,4 @@
-//! 收起時與時鐘並排的日期，按宿主日期計算，不依賴插件或網絡。
+//! 收起時與時鐘並排的日期，按宿主日期計算，不依賴插件或網路。
 
 use chrono::{Datelike, NaiveDate};
 use eframe::egui::{self, Color32};
@@ -109,7 +109,7 @@ impl ResidentDay {
         clock_space + date_width
     }
 
-    /// 和設置中的常駐排序預覽使用同一套位置和色彩。
+    /// 和設定中的常駐排序預覽使用同一套位置和色彩。
     pub(crate) fn draw_group(&self, c: &Card, center_x: f32, clock: Option<&str>) {
         let left = center_x - self.group_width(c.ui.ctx(), clock) / 2.0;
         if let Some(clock) = clock {

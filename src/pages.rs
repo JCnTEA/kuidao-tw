@@ -423,8 +423,8 @@ impl App {
 
     // ================= 專注（番茄鍾） =================
     pub(crate) fn page_focus(&mut self, c: &Card, header: &Card, _env: &Env) {
-        if header.hit(90.0,8.0,42.0,21.0,"focus-settings").on_hover_text("專注設置").clicked(){self.open_settings_category(2);}
-        header.text(111.0,23.0,"設置",10.5,W::Regular,theme::GRAY,H::Center);
+        if header.hit(90.0,8.0,42.0,21.0,"focus-settings").on_hover_text("專注設定").clicked(){self.open_settings_category(2);}
+        header.text(111.0,23.0,"設定",10.5,W::Regular,theme::GRAY,H::Center);
         let (rx, ry, rr) = (79.0, 74.0, 32.0);
         let frac = self.ring_shown.pos.clamp(0.0, 1.0);
         let run = c.ui.ctx().animate_bool_with_time(egui::Id::new("pomo-run"), self.pomo.running, 0.3);
@@ -461,7 +461,7 @@ impl App {
         c.text(264.0, 61.0, &format!("{:02}:{:02}", secs / 60, secs % 60), size::HERO + 1.0, W::Bold, if resting{theme::SOFT_GREEN}else{theme::WHITE}, H::Center);
         c.text(264.0, 79.0, self.pomo.phase.label(), size::SMALL, W::Regular, theme::GRAY, H::Center);
 
-        // 重置：點一下圖標轉一圈
+        // 重設：點一下圖標轉一圈
         let r = c.hit(317.0, 38.0, 24.0, 24.0, "f-reset");
         let (h, p) = c.hover_t(&r);
         let rc = c.scaled(329.0, 50.0, 1.0 - 0.1 * p);
@@ -520,8 +520,8 @@ impl App {
     }
 
     /// 健康頁：標題「健康」後接「喝水 | 久坐」分段切換。兩種模式是同一套版式——
-    /// 大數字、右上開關、狀態行、進度條、主按鈕 + 設置、右側進度環都在同一位置，
-    /// 只換內容和主色（藍 / 綠）。設置按鈕、分隔線和開關本體不隨切換閃動。
+    /// 大數字、右上開關、狀態行、進度條、主按鈕 + 設定、右側進度環都在同一位置，
+    /// 只換內容和主色（藍 / 綠）。設定按鈕、分隔線和開關本體不隨切換閃動。
     pub(crate) fn page_water(&mut self, c: &Card, header: &Card, env: &Env) {
         let sv = self.sit_view_t.pos.clamp(0.0, 1.0);
         self.health_tabs(header, 15.0, sv);
@@ -578,7 +578,7 @@ impl App {
     }
 
     /// 標題「健康提醒」（「提醒」隨模式變藍 / 綠）與緊跟其後的分段切換：水滴 = 喝水，椅子 = 久坐。
-    /// 膠囊外框與標題字等高（11..27），讀起來像標題的一部分。設置子頁的標題也用它。
+    /// 膠囊外框與標題字等高（11..27），讀起來像標題的一部分。設定子頁的標題也用它。
     pub(crate) fn health_tabs(&mut self, c: &Card, x: f32, sv: f32) {
         let accent_now = mix(theme::BLUE, theme::SIT_GREEN, sv);
         let wa = c.text(x, 25.0, "健康", size::TITLE, W::Bold, theme::WHITE, H::Left);
@@ -795,7 +795,7 @@ impl App {
     }
 
     // ================= 置物架 =================
-    /// 標題旁的「文件 | 剪貼板」分欄，返回分欄右邊緣。
+    /// 標題旁的「檔案 | 剪貼板」分欄，返回分欄右邊緣。
     /// 頁面標題處的「置物架 | 剪貼板」分欄，返回分欄右邊緣。
     fn shelf_tabs(&mut self, c: &Card, x: f32) -> f32 {
         let labels = ["置物架", "剪貼簿"];
@@ -828,7 +828,7 @@ impl App {
     pub(crate) fn page_shelf(&mut self, c: &Card, header: &Card, env: &Env, cmds: &mut Vec<Cmd>) {
         let n = self.shelf.items.len();
         let drag = self.drag_a;
-        // 拖文件進來時回到「文件」分欄。
+        // 拖檔案進來時回到「檔案」分欄。
         if drag > 0.002 { self.shelf_tab = 0; }
         self.shelf_tabs(header, 13.0);
         let header=header.shifted(-self.header_music_shift(),0.0);
@@ -836,19 +836,19 @@ impl App {
             self.page_clipboard(c, &header, env, cmds);
             return;
         }
-        header.text(344.0,23.0,"添加",size::SMALL,W::Regular,theme::GRAY,H::Right);
-        if header.hit(311.0,8.0,38.0,22.0,"shelf-add").on_hover_text("從電腦選擇文件").clicked(){cmds.push(Cmd::AddFiles);}
+        header.text(344.0,23.0,"新增",size::SMALL,W::Regular,theme::GRAY,H::Right);
+        if header.hit(311.0,8.0,38.0,22.0,"shelf-add").on_hover_text("從電腦選擇檔案").clicked(){cmds.push(Cmd::AddFiles);}
         if n>5 {c.text(209.5,121.0,&format!("{}–{} / {n} · 滾輪查看",self.shelf_first+1,(self.shelf_first+5).min(n)),10.5,W::Regular,theme::DIM,H::Center);}
 
         if n > 0 {
-            // 「添加」左邊的「清空」：第一次點變紅，3 秒內再點才真正清空。
+            // 「新增」左邊的「清空」：第一次點變紅，3 秒內再點才真正清空。
             // 「確認」與「清空」同寬，不會擠到頂欄時間。
             let confirming = self.confirm_clear.is_some();
             let label = if confirming { "確認" } else { "清空" };
             let lw = c.text_w("清空", size::SMALL, W::Regular) + 16.0;
             let base = if confirming { Color32::from_rgb(120, 28, 36) } else { theme::BTN };
             let hover = if confirming { Color32::from_rgb(150, 34, 44) } else { theme::BTN_HOVER };
-            // 放在右下角：頂欄中間是日期時間，寬度隨 12 小時制等設置變化。
+            // 放在右下角：頂欄中間是日期時間，寬度隨 12 小時制等設定變化。
             let (x, y) = (377.0 - lw, 109.0);
             let card=c.faded(1.0-drag);
             let (r, bc) = if self.glassy() && !confirming {
@@ -856,7 +856,7 @@ impl App {
             } else {
                 capsule(&card, x, y, lw, 17.0, "shelf-clear", base, hover)
             };
-            let r = if confirming { r.on_hover_text("再點一次清空置物架（文件本身不動）") } else { r.on_hover_text("清空置物架") };
+            let r = if confirming { r.on_hover_text("再點一次清空置物架（檔案本身不動）") } else { r.on_hover_text("清空置物架") };
             bc.text(x + lw / 2.0, y + 12.0, label, size::SMALL, W::Regular, theme::WHITE, H::Center);
             if r.clicked() {
                 if confirming {
@@ -1263,7 +1263,7 @@ impl App {
                 glassy.then_some((self.glass_controls_ready(),0.16,0.42)),
                 #[cfg(all(windows, feature = "sdk-material"))] ControlRole::MailSetup);
             let (x,align)=if glassy {(84.0,H::Center)}else{(58.0,H::Left)};
-            gc.text(x,105.0,"去添加",size::BODY,W::Regular,theme::WHITE,align);
+            gc.text(x,105.0,"去新增",size::BODY,W::Regular,theme::WHITE,align);
             if go.clicked() {
                 self.open_mail_settings();
             }

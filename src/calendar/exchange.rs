@@ -1,5 +1,5 @@
-//! Exchange ActiveSync 14.0（企業微信、自建或第三方 Exchange）：只讀取日曆，不發送日程修改命令。
-//! 服務器要求設備策略時只如實回報「部分執行」：鬼島不執行鎖屏密碼、遠程擦除等管控。
+//! Exchange ActiveSync 14.0（企業微信、自建或第三方 Exchange）：只讀取行事曆，不發送行程修改命令。
+//! 伺服器要求裝置策略時只如實回報「部分執行」：鬼島不執行鎖屏密碼、遠程擦除等管控。
 use super::{Config, Failure, Fetched, Provider};
 use chrono::{DateTime, Utc};
 use std::io::Read;
@@ -9,7 +9,7 @@ const AIR: u8 = 0;
 const CAL: u8 = 4;
 const FOLDER: u8 = 7;
 const PROVISION: u8 = 14;
-/// 設備未登記策略（142）、策略已更新（143）、策略標識無效（144）：需要重新握手。
+/// 裝置未登記策略（142）、策略已更新（143）、策略標識無效（144）：需要重新握手。
 const NEEDS_PROVISION: [&str; 3] = ["142", "143", "144"];
 
 #[derive(Clone, Debug, Default)]
@@ -94,7 +94,7 @@ fn endpoint(cfg: &Config) -> Result<url::Url, Failure> {
     base.join("/Microsoft-Server-ActiveSync").map_err(|_| invalid())
 }
 
-/// 一次同步內的連接狀態：服務器要求時完成設備策略握手，之後的請求帶上策略標識。
+/// 一次同步內的連線狀態：伺服器要求時完成裝置策略握手，之後的請求帶上策略標識。
 struct Session<'a> { agent: ureq::Agent, cfg: &'a Config, password: &'a str, policy: Option<String>, provisioned: bool }
 impl<'a> Session<'a> {
     fn new(cfg: &'a Config, password: &'a str) -> Result<Self, Failure> { Ok(Self { agent: super::agent()?, cfg, password, policy: None, provisioned: false }) }
@@ -114,7 +114,7 @@ impl<'a> Session<'a> {
         let label = self.cfg.provider.label();
         let refused = || Failure::text(format!("{label}要求裝置滿足安全策略（如鎖屏密碼、遠端擦除），鬼島不執行這些管控；請聯絡管理員允許不受管控的裝置"));
         let first = command(&self.agent, self.cfg, self.password, "Provision", &provision_request(None), None)?;
-        // 服務器下發遠程擦除時絕不執行，直接停止同步。
+        // 伺服器下發遠程擦除時絕不執行，直接停止同步。
         if first.child(PROVISION, 0x0c).is_some() { return Err(refused()); }
         let policy = first.child(PROVISION, 6).and_then(|n| n.child(PROVISION, 7)).ok_or_else(invalid)?;
         if first.text(PROVISION, 0x0b) != "1" || policy.text(PROVISION, 0x0b) != "1" { return Err(refused()); }
@@ -127,7 +127,7 @@ impl<'a> Session<'a> {
     }
 }
 
-/// 設備策略請求。確認時如實回報「部分執行」（2）：鬼島只讀日曆，不執行任何設備管控。
+/// 裝置策略請求。確認時如實回報「部分執行」（2）：鬼島只讀行事曆，不執行任何裝置管控。
 fn provision_request(acknowledge: Option<&str>) -> Node {
     let mut policy = vec![node(PROVISION, 8, "MS-EAS-Provisioning-WBXML", vec![])];
     if let Some(key) = acknowledge { policy.extend([node(PROVISION, 9, key, vec![]), node(PROVISION, 0x0b, "2", vec![])]); }
@@ -141,7 +141,7 @@ fn top_status(n: &Node) -> &str {
 
 fn command(agent: &ureq::Agent, cfg: &Config, password: &str, name: &str, root: &Node, policy: Option<&str>) -> Result<Node, Failure> {
     let mut target = endpoint(cfg)?;
-    // 固定匿名設備標識，完整快照按順序讀取，不保存同步鍵或日程正文。
+    // 固定匿名裝置標識，完整快照按順序讀取，不儲存同步鍵或行程正文。
     target.query_pairs_mut().extend_pairs([("Cmd", name), ("User", cfg.username.as_str()), ("DeviceId", "KuidaoCalendar01"), ("DeviceType", "Kuidao")]);
     let mut request = agent.post(target.as_str())
         .set("Authorization", &super::basic_auth(&cfg.username, password))
@@ -174,11 +174,11 @@ fn sync_request(id: &str, key: &str) -> Node {
     node(AIR, 5, "", vec![node(AIR, 0x1c, "", vec![node(AIR, 0x0f, "", fields)])])
 }
 
-/// FolderSync 返回的一個文件夾。
+/// FolderSync 返回的一個資料夾。
 struct Folder { id: String, parent: String, kind: String }
 
-/// 默認日曆（8）、新建日曆（13）一定同步；掛在日曆下面的通用（1）或未知類型（18）子文件夾也是日曆
-/// （共享、訂閱日曆常這樣組織）。郵件、聯繫人、任務等文件夾一律不碰，不下載郵件內容。
+/// 預設行事曆（8）、新建行事曆（13）一定同步；掛在行事曆下面的通用（1）或未知類型（18）子資料夾也是行事曆
+/// （共享、訂閱行事曆常這樣組織）。郵件、聯繫人、任務等資料夾一律不碰，不下載郵件內容。
 fn is_calendar(folder: &Folder, all: &[Folder]) -> bool {
     if matches!(folder.kind.as_str(), "8" | "13") { return true; }
     if !matches!(folder.kind.as_str(), "1" | "18") { return false; }
@@ -191,7 +191,7 @@ fn is_calendar(folder: &Folder, all: &[Folder]) -> bool {
     false
 }
 
-/// 完整讀取一個日曆文件夾的全部日程（按頁跟隨，直到沒有更多）。
+/// 完整讀取一個行事曆資料夾的全部行程（按頁跟隨，直到沒有更多）。
 fn sync_folder(session: &mut Session, id: &str, label: &str) -> Result<std::collections::BTreeMap<String, Node>, Failure> {
     let mut key = "0".to_string();
     let mut items = std::collections::BTreeMap::new();
@@ -238,14 +238,14 @@ pub(super) fn fetch(cfg: &Config, password: &str, lo: DateTime<Utc>, hi: DateTim
     for folder in &all {
         if folder.id.is_empty() || !is_calendar(folder, &all) {continue;}
         report.calendars+=1;
-        // 單個日曆讀取失敗（權限、只讀共享等）不影響其他日曆；全部失敗才報錯。
+        // 單個行事曆讀取失敗（權限、只讀共享等）不影響其他行事曆；全部失敗才報錯。
         let items = match sync_folder(&mut session, &folder.id, label) {
             Ok(items) => items,
             Err(error) => {report.failed+=1;report.status=report.status.or(error.status);report.problem(error.message.clone());first_error.get_or_insert(error);continue;}
         };
         let mut ics = String::from("BEGIN:VCALENDAR\nVERSION:2.0\n");
         for (server_id, item) in &items {
-            // 個別日程的重複規則暫不支持時只跳過這一條，不拖垮整個日曆。
+            // 個別行程的重複規則暫不支援時只跳過這一條，不拖垮整個行事曆。
             match event_ics(item, &format!("{}:{}:{server_id}", cfg.provider.key(), folder.id)) {
                 Ok(event)=>ics.push_str(&event),Err(_)=>{report.received+=1;report.invalid+=1;report.problem("部分 Exchange 行程格式暫無法解析");}
             }
@@ -311,7 +311,7 @@ fn event_ics(item: &Node, fallback_uid: &str) -> Result<String, Failure> {
             return Err(Failure::text("暫不支援含夏令時切換的重複行程"));
         }
     }
-    // 按日曆時區展開重複規則，避免 UTC 日期跨日後把周幾或月日算錯。
+    // 按行事曆時區展開重複規則，避免 UTC 日期跨日後把周幾或月日算錯。
     let recurring = item.child(CAL, 0x1b).is_some();
     let recurrence_zone = if recurring && offset != 0 && !all_day {
         if offset % 3600 != 0 || !(-12*3600..=14*3600).contains(&offset) { return Err(Failure::text("暫不支援此時區的重複行程")); }
@@ -519,10 +519,10 @@ mod tests {
             service.test(cfg, "pw".into());
             let result = service.ev.recv_timeout(std::time::Duration::from_secs(3)).unwrap();
             worker.join().unwrap();
-            let super::super::Event::Test { ok, message, count, config } = result else { panic!("應返回連接測試結果"); };
+            let super::super::Event::Test { ok, message, count, config } = result else { panic!("應返回連線測試結果"); };
             assert!(ok, "{provider:?} {message}");
             assert_eq!(count, 0);
-            assert!(message.contains("1 條日程無法解析"));
+            assert!(message.contains("1 條行程無法解析"));
             assert_eq!(config.and_then(|cfg| cfg.href), Some(format!("{base}/Microsoft-Server-ActiveSync")));
         }
     }
@@ -556,7 +556,7 @@ mod tests {
         let error = super::super::fetch_month(&custom(&base), "pw", chrono::NaiveDate::from_ymd_opt(2026, 11, 1).unwrap()).err().unwrap();
         assert!(error.message.contains("不執行"), "{}", error.message);
         assert_eq!(worker.join().unwrap().len(), 2, "收到遠端擦除後不再繼續請求");
-        // 服務器用狀態 142 表示設備未登記策略：同樣先握手再同步。
+        // 伺服器用狀態 142 表示裝置未登記策略：同樣先握手再同步。
         let (base, worker) = mock(vec![
             Box::new(|_| (200, Some(node(FOLDER, 0x16, "", vec![node(FOLDER, 0x0c, "142", vec![])])))),
             Box::new(|_| (200, Some(policy_reply("1", "temp", false)))),
@@ -567,7 +567,7 @@ mod tests {
         ]);
         assert!(super::super::fetch_month(&custom(&base), "pw", chrono::NaiveDate::from_ymd_opt(2026, 11, 1).unwrap()).is_ok());
         assert_eq!(worker.join().unwrap()[3].1.as_deref(), Some("final"));
-        // 管理員不允許不受管控的設備：如實提示，不偽裝成已執行策略。
+        // 管理員不允許不受管控的裝置：如實提示，不偽裝成已執行策略。
         let (base, worker) = mock(vec![Box::new(|_| (449, None)), Box::new(|_| (200, Some(policy_reply("1", "temp", false)))), Box::new(|_| (200, Some(policy_reply("2", "", false))))]);
         let error = super::super::fetch_month(&custom(&base), "pw", chrono::NaiveDate::from_ymd_opt(2026, 11, 1).unwrap()).err().unwrap();
         assert!(error.message.contains("管理員"), "{}", error.message);
@@ -591,12 +591,12 @@ mod tests {
         fn event(server: &str, uid: &str, unsupported: bool) -> Node {
             let mut item = sample();
             item.children.retain(|n| n.tag != 0x28);item.children.push(node(CAL, 0x28, uid, vec![]));
-            // 非公曆（農曆）重複規則目前不支持，用來驗證單條解析失敗只跳過這一條。
+            // 非公曆（農曆）重複規則目前不支援，用來驗證單條解析失敗只跳過這一條。
             if unsupported { item.children.push(node(CAL, 0x1b, "", vec![node(CAL, 0x1c, "1", vec![]), node(CAL, 0x37, "15", vec![])])); }
             node(AIR, 7, "", vec![node(AIR, 0x0d, server, vec![]), item])
         }
         let mut replies: Vec<Box<dyn Fn(&Node) -> (u16, Option<Node>) + Send>> = vec![Box::new(move |_| (200, Some(hierarchy.clone())))];
-        // 每個被選中的日曆兩頁（初始 + 讀取）；無權限日曆直接返回失敗狀態。
+        // 每個被選中的行事曆兩頁（初始 + 讀取）；無權限行事曆直接返回失敗狀態。
         for _ in 0..2 { replies.push(Box::new(move |r| { assert_eq!(id(r), "personal"); (200, Some(page(r, vec![event("a", "uid-personal", false), event("b", "uid-lunar", true)]))) })); }
         for _ in 0..2 { replies.push(Box::new(move |r| { assert_eq!(id(r), "shared"); (200, Some(page(r, vec![event("c", "uid-shared", false)]))) })); }
         replies.push(Box::new(move |r| { assert_eq!(id(r), "deny"); (200, Some(node(AIR, 5, "", vec![node(AIR, 0x1c, "", vec![node(AIR, 0x0f, "", vec![node(AIR, 0x0e, "8", vec![]), node(AIR, 0x0b, "0", vec![])])])]))) }));

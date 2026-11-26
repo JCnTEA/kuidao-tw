@@ -234,7 +234,7 @@ fn top_memory(biggest: &HashMap<String, u64>, name: &str) -> u64 {
     biggest.get(&name.to_lowercase()).copied().unwrap_or(0)
 }
 
-/// 由進程號找到程序文件，取它的圖標。系統進程打不開或沒有文件時返回空。
+/// 由進程號找到程序檔案，取它的圖標。系統進程打不開或沒有檔案時返回空。
 fn program_icon(pid: usize) -> Option<std::sync::Arc<eframe::egui::ColorImage>> {
     use ::windows::Win32::Foundation::CloseHandle;
     use ::windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION};
@@ -345,7 +345,7 @@ fn volumes() -> Vec<Volume> {
         .filter_map(|i| {
             let letter = (b'A' + i) as char;
             let root: Vec<u16> = format!("{letter}:\\").encode_utf16().chain([0]).collect();
-            // 只統計本地固定磁盤（DRIVE_FIXED = 3），不碰網絡盤和光驅。
+            // 只統計本地固定磁盤（DRIVE_FIXED = 3），不碰網路盤和光驅。
             if unsafe { GetDriveTypeW(PCWSTR(root.as_ptr())) } != 3 {
                 return None;
             }
@@ -519,9 +519,9 @@ impl Gpu {
         let friendly = String::from_utf16_lossy(&name[..name.iter().position(|&n| n == 0).unwrap_or(name.len())]);
         match kind {
             DXGK_ENGINE_TYPE_3D => Some("3D"),
-            DXGK_ENGINE_TYPE_VIDEO_DECODE => Some("視頻解碼"),
-            DXGK_ENGINE_TYPE_VIDEO_ENCODE => Some("視頻編碼"),
-            DXGK_ENGINE_TYPE_VIDEO_PROCESSING => Some("視頻處理"),
+            DXGK_ENGINE_TYPE_VIDEO_DECODE => Some("影片解碼"),
+            DXGK_ENGINE_TYPE_VIDEO_ENCODE => Some("影片編碼"),
+            DXGK_ENGINE_TYPE_VIDEO_PROCESSING => Some("影片處理"),
             DXGK_ENGINE_TYPE_COPY => Some("複製"),
             DXGK_ENGINE_TYPE_OTHER if friendly.to_lowercase().starts_with("compute") => Some("計算"),
             _ => None,

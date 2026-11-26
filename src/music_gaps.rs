@@ -1,5 +1,5 @@
 //! 音樂識別缺口記錄：一首歌播放一段時間後，歌手、時長、封面、類型等仍缺哪一樣，就在
-//! `diagnostics/music-gaps.log` 記一行（每首歌最多一行，信息齊全的歌不記）。
+//! `diagnostics/music-gaps.log` 記一行（每首歌最多一行，資訊齊全的歌不記）。
 //! 用戶反饋「沒封面」「沒歌詞」時，診斷包裡能直接看出是哪一層缺了：播放器沒給，還是我們沒補上。
 use super::{MediaKind,NowPlaying};
 use std::time::{Duration,Instant};
@@ -16,7 +16,7 @@ fn looks_like_program(title:&str)->bool {
     ["電台","廣播","fm","radio","podcast","播客","節目","dj","有聲"].iter().any(|word|lower.contains(word))
 }
 
-/// 這首歌缺了哪些信息；全都有時返回空。
+/// 這首歌缺了哪些資訊；全都有時返回空。
 pub(crate) fn gaps(media:&NowPlaying)->Vec<&'static str> {
     let mut gaps=Vec::new();
     if media.artist.trim().is_empty(){gaps.push("歌手");}

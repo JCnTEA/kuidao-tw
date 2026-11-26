@@ -312,7 +312,7 @@ fn draw_default(c: &Card, status: &PluginStatus, privacy: &SensitiveValues) {
     } else {
         56.0
     };
-    let device_offline = status.state == StatusState::Offline && status.label != "設備離線";
+    let device_offline = status.state == StatusState::Offline && status.label != "裝置離線";
     let title_width = TEXT_RIGHT - head_x - if device_offline { 73.0 } else { 12.0 };
     c.circle(head_x + 3.0, 61.0, 2.8, color);
     let label = c.fit(&status.label, size::TITLE, W::Semibold, title_width);
@@ -329,7 +329,7 @@ fn draw_default(c: &Card, status: &PluginStatus, privacy: &SensitiveValues) {
         c.centered_text(
             TEXT_RIGHT,
             61.0,
-            "設備離線",
+            "裝置離線",
             size::TINY,
             W::Regular,
             theme::GRAY,
@@ -778,7 +778,7 @@ fn draw_state(
     x: f32,
     y: f32,
 ) {
-    let device_offline = status.state == StatusState::Offline && status.label != "設備離線";
+    let device_offline = status.state == StatusState::Offline && status.label != "裝置離線";
     let indicator = match status.state {
         StatusState::Paused | StatusState::Error | StatusState::Offline => {
             Accent::native(state_color(status.state))
@@ -803,7 +803,7 @@ fn draw_state(
         c.centered_text(
             TEXT_RIGHT,
             y,
-            "設備離線",
+            "裝置離線",
             size::TINY,
             W::Regular,
             theme::GRAY,
@@ -960,11 +960,11 @@ fn draw_unavailable(c: &Card, health: StatusHealth) {
     let (name, hint, color) = match health {
         StatusHealth::Waiting | StatusHealth::Ready => ("等待數據", None, theme::DIM),
         StatusHealth::Unconfigured => {
-            ("等待數據源授權", Some("可在插件設置中授權讀取"), theme::DIM)
+            ("等待數據源授權", Some("可在插件設定中授權讀取"), theme::DIM)
         }
         StatusHealth::Offline => (
             "數據源失聯",
-            Some("檢查已授權的文件或本機接口"),
+            Some("檢查已授權的檔案或本機接口"),
             theme::ORANGE,
         ),
         StatusHealth::Stale => ("狀態已過期", None, theme::ORANGE),

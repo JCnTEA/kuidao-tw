@@ -80,7 +80,7 @@ fn gmail_proxy_routes_connection_test_background_mail_and_management() {
     let deadline = Instant::now() + Duration::from_secs(8);
     let (mut tested, mut synced, mut managed) = (false, false, false);
     while !(tested && synced && managed) {
-        assert!(Instant::now() < deadline, "連接測試、收信或管理缺少回執");
+        assert!(Instant::now() < deadline, "連線測試、收信或管理缺少回執");
         match service.try_recv() {
             Some(Event::Test { account: email, ok, note }) => {
                 assert_eq!(email, account.email);
@@ -118,10 +118,10 @@ fn gmail_proxy_routes_connection_test_background_mail_and_management() {
                 socket.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
                 let mut record_type = [0];
                 socket.read_exact(&mut record_type).unwrap();
-                assert_eq!(record_type, [0x16], "其他郵箱應直接向郵箱服務器發起 TLS 握手");
+                assert_eq!(record_type, [0x16], "其他信箱應直接向信箱伺服器發起 TLS 握手");
                 break;
             }
-            assert!(Instant::now() < deadline, "其他郵箱未走直連");
+            assert!(Instant::now() < deadline, "其他信箱未走直連");
             std::thread::sleep(Duration::from_millis(5));
         }
     });

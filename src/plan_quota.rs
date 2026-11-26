@@ -59,7 +59,7 @@ fn glm_error(v:&Value,http:Option<u16>)->(String,u64){
     let reason=v["msg"].as_str().or_else(||v["message"].as_str()).or_else(||v.pointer("/error/message").and_then(Value::as_str)).unwrap_or_default().to_ascii_lowercase();
     // HTTP 429 也可能表示套餐到期，先按業務碼區分；服務端原文不進入界面或緩存。
     let (message,retry)=match code{
-        Some(1003)=>("GLM 金鑰已過期，請在所選地區控制檯重新獲取套餐 Key",0),
+        Some(1003)=>("GLM 金鑰已過期，請在所選地區控制檯重新取得套餐 Key",0),
         Some(401|1000|1001)=>("GLM 金鑰認證失敗，請核對 Key、有效期及所選地區",0),
         Some(1005)=>("GLM 帳號需要二次認證，請在所選地區控制檯完成驗證後重試",60),
         Some(403|1220)=>("GLM 額度查詢無許可權，請核對所選地區及 Coding Plan 套餐 Key",60),
@@ -71,7 +71,7 @@ fn glm_error(v:&Value,http:Option<u16>)->(String,u64){
         Some(1305)=>("GLM 服務當前繁忙，請稍後重試",180),
         Some(1308|1310|1316..=1321)=>("GLM 當前套餐額度已用盡，請在控制檯檢視恢復時間",180),
         _ if ["不存在coding plan","不存在 coding plan","no coding plan","coding plan not found","未開通coding plan","套餐不存在"].iter().any(|s|reason.contains(s))=>("GLM 未查詢到有效的 Coding Plan，請確認套餐已開通並使用套餐 Key",60),
-        _ if reason.contains("token expired")||reason.contains("invalid api key")=>("GLM 金鑰無效或已過期，請重新獲取套餐 Key 並核對所選地區",0),
+        _ if reason.contains("token expired")||reason.contains("invalid api key")=>("GLM 金鑰無效或已過期，請重新取得套餐 Key 並核對所選地區",0),
         _=>return match http{
             Some(401)=>("GLM 金鑰認證失敗，請核對 Key、有效期及所選地區".into(),0),
             Some(403)=>("GLM 額度查詢被拒絕（403），請檢查帳號許可權、地區和網路訪問情況".into(),60),

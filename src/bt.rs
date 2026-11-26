@@ -1,4 +1,4 @@
-//! 藍牙設備連接與多來源電量監控。
+//! 藍牙裝置連線與多來源電量監控。
 mod state;
 pub use state::{Device,DeviceKind,BatterySource,BatteryReading,FRESH_FOR};
 
@@ -138,7 +138,7 @@ mod tests {
         assert_eq!(device_kind("MX Anywhere", false, Some(962)), DeviceKind::Mouse);
         assert_eq!(device_kind("耳機", true, Some(0x0404)), DeviceKind::Headphones);
         assert_eq!(device_kind("AirPods", true, None), DeviceKind::EarbudsStem);
-        assert_eq!(device_kind("未知設備", false, None), DeviceKind::Other);
+        assert_eq!(device_kind("未知裝置", false, None), DeviceKind::Other);
     }
 
     #[test]

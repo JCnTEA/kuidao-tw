@@ -135,7 +135,7 @@ impl CoverCache {
         if self.image.is_none() && self.pending.is_none() && self.worker.as_ref().is_none_or(|worker|worker.is_finished()) && self.retry_at.is_none_or(|at|Instant::now()>=at){
             let (sender,receiver)=mpsc::channel();let url=self.url.clone();
             self.pending=Some(receiver);self.retry_at=Some(Instant::now()+Duration::from_secs(3));
-            // 網絡與解碼不佔用媒體輪詢線程，歌詞時間軸繼續正常推進。
+            // 網路與解碼不佔用媒體輪詢線程，歌詞時間軸繼續正常推進。
             self.worker=crate::resources::COVER.spawn(move||{let _=sender.send(load(&url));});
             if self.worker.is_none(){self.pending=None;}
         }
@@ -345,9 +345,9 @@ impl Reader {
         let id=self.playback.media.song_id;
         if id.is_some() && (!self.playback.media.is_music() || self.playback.media.artist.is_empty() || self.playback.media.duration<=0.0 || self.playback.artwork_url.is_empty()) && (self.lookup.0!=id || now.saturating_sub(self.lookup.1)>=5000){
             let root=path.parent()?;
-            // 大歌單的隊列文件可達數十 MB：同一首歌且文件沒有變化時不重複查找（這首歌本來就沒有封面時會一直滿足上面的條件）。
+            // 大歌單的隊列檔案可達數十 MB：同一首歌且檔案沒有變化時不重複查找（這首歌本來就沒有封面時會一直滿足上面的條件）。
             let print=queue_fingerprint(root);
-            // 完整讀過、確實沒有這首歌（搜索、每日推薦等不在隊列裡的歌）也記下指紋：文件不變就不再整份重讀，
+            // 完整讀過、確實沒有這首歌（搜索、每日推薦等不在隊列裡的歌）也記下指紋：檔案不變就不再整份重讀，
             // 否則大歌單下每 5 秒都要解析幾十 MB。只有讀取失敗（被佔用、寫入中途）才清空指紋，稍後重試。
             if self.lookup.0!=id || self.queue_print!=print {
                 match queue_lookup(root,id?) {
@@ -387,7 +387,7 @@ fn queue_fingerprint(root:&Path)->Vec<Option<(std::time::SystemTime,u64)>>{
     QUEUE_FILES.iter().map(|(file,_)|std::fs::metadata(root.join("webdata/file").join(file)).ok().and_then(|meta|Some((meta.modified().ok()?,meta.len())))).collect()
 }
 
-/// 隊列文件只防異常：長期用戶的「我喜歡」等大歌單可達上萬首（約 2KB/首）。
+/// 隊列檔案只防異常：長期用戶的「我喜歡」等大歌單可達上萬首（約 2KB/首）。
 const QUEUE_LIMIT:u64=256*1024*1024;
 
 /// 隊列查找結果：找到（可能缺時長）、兩個隊列都完整讀過且沒有這首歌、或有隊列暫時讀不了。
@@ -404,7 +404,7 @@ fn queue_lookup(root:&Path,id:u64)->QueueLookup{
                 Err(error) if error.kind()==std::io::ErrorKind::NotFound=>return Ok(None),
                 Err(_)=>return Err(()),
             };
-            // 超過上限的文件不變就一直超限，按「沒有」處理，不反覆嘗試。
+            // 超過上限的檔案不變就一直超限，按「沒有」處理，不反覆嘗試。
             if file.metadata().map_err(|_|())?.len()>QUEUE_LIMIT{crate::resources::REJECTED_DATA.fetch_add(1,std::sync::atomic::Ordering::Relaxed);return Ok(None);}
             search_queue(std::io::BufReader::new(file),key,id)
         })();
@@ -420,7 +420,7 @@ fn queue_lookup(root:&Path,id:u64)->QueueLookup{
 fn find_in_queue<R:Read>(reader:R,key:&str,id:u64)->Option<(NowPlaying,String)>{search_queue(reader,key,id).ok().flatten()}
 
 /// 與 `find_in_queue` 相同，但區分「完整讀完、確實沒有這首歌」（`Ok(None)`）
-/// 和「格式不符或寫入中途截斷」（`Err`）：前者文件不變就不必再查，後者要稍後重試。
+/// 和「格式不符或寫入中途截斷」（`Err`）：前者檔案不變就不必再查，後者要稍後重試。
 fn search_queue<R:Read>(reader:R,key:&str,id:u64)->Result<Option<(NowPlaying,String)>,()>{
     use serde::de::{Deserializer as _,DeserializeSeed,Error as _,IgnoredAny,MapAccess,SeqAccess,Visitor};
     const FOUND:&str="daozai:found";
@@ -677,7 +677,7 @@ mod tests{
     }
     #[test]
     fn song_missing_from_an_unchanged_queue_is_not_reparsed_every_poll(){
-        // 搜索、每日推薦的歌不在播放隊列裡：完整讀過一次後，文件不變就不能每 5 秒再整份解析一遍。
+        // 搜索、每日推薦的歌不在播放隊列裡：完整讀過一次後，檔案不變就不能每 5 秒再整份解析一遍。
         let files=QueueFixture::new("absent");let mut other=incomplete_track(456);other["duration"]=240000.into();
         files.queue("playingList","list",serde_json::json!([other]));files.log(incomplete_track(123));
         let mut reader=Reader::default();assert_eq!(reader.read(&files.path,Some(9),2000).unwrap().duration,0.0);
@@ -775,7 +775,7 @@ mod tests{
         let mut reader=Reader::default();let first=reader.poll().expect("未讀到網易雲原生播放事件");
         println!("歌曲={} 歌手={} ID={:?} 播放={} 進度={:.2}/{:.2}",first.title,first.artist,first.song_id,first.playing,first.position,first.duration);
         let lyrics=crate::lyrics::fetch_for_source(&first.source,&first.title,&first.artist,first.duration,first.song_id).unwrap();
-        assert!(lyrics.synced && !lyrics.lines.is_empty());println!("已獲取 {} 行同步歌詞",lyrics.lines.len());
+        assert!(lyrics.synced && !lyrics.lines.is_empty());println!("已取得 {} 行同步歌詞",lyrics.lines.len());
         std::thread::sleep(std::time::Duration::from_secs(2));let next=reader.poll().unwrap();
         if first.playing && next.playing && first.song_id==next.song_id{assert!(next.position>first.position);}
     }
@@ -817,7 +817,7 @@ mod tests{
                 if next.song_id==media.song_id{assert!(Arc::ptr_eq(next.artwork.as_ref().unwrap(),image));}
                 println!("歌曲={} 封面={}x{}，重複取樣複用快取",media.title,image.size[0],image.size[1]);break;
             }
-            assert!(start.elapsed()<Duration::from_secs(10),"未獲取到網易雲專輯封面");std::thread::sleep(Duration::from_millis(100));
+            assert!(start.elapsed()<Duration::from_secs(10),"未取得到網易雲專輯封面");std::thread::sleep(Duration::from_millis(100));
         }
     }
 }

@@ -34,7 +34,7 @@ impl State {
                     let ok=SendMessageTimeoutW(ime,WM_IME_CONTROL,WPARAM(command),LPARAM(0),SMTO_ABORTIFHUNG|SMTO_ERRORONEXIT,30,Some(&mut value));
                     (ok.0!=0).then_some(value)
                 };
-                // 查詢前台輸入法線程，避免跨進程獲取輸入上下文失敗。
+                // 查詢前台輸入法線程，避免跨進程取得輸入上下文失敗。
                 native=query(0x0005).and_then(|open|if open==0{Some(false)}else{query(0x0001).map(|mode|mode&1!=0)});
             }
         }

@@ -1,4 +1,4 @@
-//! 通過已連接的官方 CLI 獲取額度，複用島仔的 AI 額度面板。
+//! 通過已連線的官方 CLI 取得額度，複用島仔的 AI 額度面板。
 use std::path::{Path, PathBuf};
 
 #[cfg(windows)]
@@ -8,10 +8,10 @@ mod parse;
 
 pub(crate) const INSTALL_URL: &str = "https://antigravity.google/docs/getting-started?tab=cli";
 pub(crate) const CLI_MISSING: &str = "請先安裝 Antigravity CLI";
-pub(crate) const CLI_OLD: &str = "請更新 Antigravity CLI 後再連接";
+pub(crate) const CLI_OLD: &str = "請更新 Antigravity CLI 後再連線";
 pub(crate) const CLI_UNTRUSTED: &str = "無法驗證 Antigravity CLI 的 Google 簽名，請從官網重新安裝";
 pub(crate) const LOGIN_REQUIRED: &str = "請在 Antigravity CLI 中登錄";
-pub(crate) const SLASH_DISABLED: &str = "請在 Antigravity CLI 啟用斜槓命令後刷新";
+pub(crate) const SLASH_DISABLED: &str = "請在 Antigravity CLI 啟用斜槓命令後重新整理";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Mode {
@@ -88,7 +88,7 @@ pub(super) fn fetch(source: &Path) -> Result<super::Snapshot, (String, u64)> {
     {
         let exe = discover().ok_or((CLI_MISSING.into(), 0))?;
         if source != exe {
-            return Err(("Antigravity CLI 位置已變化，請重新連接".into(), 0));
+            return Err(("Antigravity CLI 位置已變化，請重新連線".into(), 0));
         }
         let exe = exe.canonicalize().map_err(|_| (CLI_MISSING.into(), 0))?;
         let _verified_file = lock_official_cli(&exe).ok_or((CLI_UNTRUSTED.into(), 0))?;
@@ -106,7 +106,7 @@ pub(super) fn fetch(source: &Path) -> Result<super::Snapshot, (String, u64)> {
                 let credits = match cli::report(&exe, true) {
                     Ok(json) => parse::credits(&json),
                     Err(Failure::Login | Failure::UnsupportedMode(_)) => {
-                        return Err(("CLI 登錄狀態已變化，請確認當前帳號後刷新".into(), 0))
+                        return Err(("CLI 登錄狀態已變化，請確認當前帳號後重新整理".into(), 0))
                     }
                     Err(_) => None,
                 };

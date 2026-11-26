@@ -1,4 +1,4 @@
-//! 離線農曆和節氣換算，支持公曆 1901 年至 2100 年。
+//! 離線農曆和節氣換算，支援公曆 1901 年至 2100 年。
 //
 // 年度數據沿用「今日農曆」已核對的數據，由 lunar-javascript 生成。
 // https://github.com/6tail/lunar-javascript/tree/5c92e62c904ba5cc0b62f032796aeef433702268

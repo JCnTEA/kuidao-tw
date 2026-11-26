@@ -1,4 +1,4 @@
-//! 任務欄提醒共用主窗口消息循環；按帳號未讀狀態合併，不讀取聊天內容。
+//! 任務欄提醒共用主窗口訊息循環；按帳號未讀狀態合併，不讀取聊天內容。
 use std::{cell::RefCell, path::PathBuf, time::{Duration, Instant}};
 use windows::{core::{w, PCWSTR}, Win32::{
     Foundation::{CloseHandle, HWND, LPARAM, LRESULT, WPARAM},
@@ -74,7 +74,7 @@ fn installed_paths() -> Vec<String> {
     }
     if let Some(path)=registry_string(HKEY_CLASSES_ROOT,w!("weixin\\shell\\open\\command"),PCWSTR::null()).and_then(|cmd|protocol_executable(&cmd)){paths.push(path);}
     let mut paths:Vec<String>=paths.into_iter().filter(|p|p.is_absolute() && p.is_file()).filter_map(|p|p.canonicalize().ok()).map(|p|normalized(&p.to_string_lossy())).collect();
-    // 註冊表路徑可能過期（升級、換目錄、複製一份雙開、綠色版）：再認文件名相同、且由騰訊發佈的程序。
+    // 註冊表路徑可能過期（升級、換目錄、複製一份雙開、綠色版）：再認檔案名相同、且由騰訊發佈的程序。
     paths.extend(["*weixin.exe".to_string(),"*wechat.exe".to_string()]);
     paths
 }
@@ -202,7 +202,7 @@ fn window_rect(hwnd:HWND)->windows::Win32::Foundation::RECT{
     r
 }
 
-/// 系統設置了「自動隱藏任務欄」。
+/// 系統設定了「自動隱藏任務欄」。
 fn taskbar_autohide()->bool{
     use windows::Win32::UI::Shell::{SHAppBarMessage,ABM_GETSTATE,APPBARDATA};
     const ABS_AUTOHIDE:usize=1;
@@ -221,7 +221,7 @@ fn taskbar_fully_shown(taskbar:HWND)->bool{
     r.right>r.left && r.bottom>r.top && r.left>=m.left && r.top>=m.top && r.right<=m.right && r.bottom<=m.bottom
 }
 
-/// 讓自動隱藏的任務欄彈出來並等它滑完（最多約 1 秒）。先按系統方式切到任務欄，不行再由無障礙接口設置焦點。
+/// 讓自動隱藏的任務欄彈出來並等它滑完（最多約 1 秒）。先按系統方式切到任務欄，不行再由無障礙接口設定焦點。
 unsafe fn reveal_taskbar(ui:&windows::Win32::UI::Accessibility::IUIAutomation,taskbar:HWND)->bool{
     if taskbar_fully_shown(taskbar){return true;}
     let wait=||{for _ in 0..20 {if taskbar_fully_shown(taskbar){std::thread::sleep(Duration::from_millis(120));return true;} std::thread::sleep(Duration::from_millis(50));} false};
@@ -256,7 +256,7 @@ unsafe fn tray_overflow_button(ui:&windows::Win32::UI::Accessibility::IUIAutomat
 }
 
 /// 微信縮在託盤時：通過無障礙接口按下該帳號自己的託盤按鈕，由微信自己喚起主窗口。
-/// 不移動鼠標、不向微信發送內部消息、不注入、不讀取內容；定位不到唯一按鈕就放棄。
+/// 不移動鼠標、不向微信發送內部訊息、不注入、不讀取內容；定位不到唯一按鈕就放棄。
 /// 兼容新版 Win11 託盤與 Windows 10 / 早期 Win11 的舊式託盤。會阻塞幾百毫秒，必須在後台線程調用。
 pub fn open_wechat_from_tray(unread:crate::app::Unread)->Result<(),String>{
     use windows::{core::Interface,Win32::{Foundation::RECT,System::Com::*,UI::{Accessibility::*,HiDpi::*}}};
@@ -336,7 +336,7 @@ pub fn open_wechat_from_tray(unread:crate::app::Unread)->Result<(),String>{
         let overflow_open=||[w!("TopLevelWindowForOverflowXamlIsland"),w!("NotifyIconOverflowWindow")].into_iter()
             .find_map(|class|FindWindowW(class,PCWSTR::null()).ok().filter(|h|IsWindowVisible(*h).as_bool()));
         let Ok(taskbar)=FindWindowW(w!("Shell_TrayWnd"),PCWSTR::null()) else {return Err(log.fail("T3","找不到工作列"));};
-        // 任務欄自動隱藏時縮在屏幕外，無障礙樹裡沒有託盤按鈕：先讓它彈出來（與鼠標移到屏幕邊緣相同），
+        // 任務欄自動隱藏時縮在螢幕外，無障礙樹裡沒有託盤按鈕：先讓它彈出來（與鼠標移到螢幕邊緣相同），
         // 微信切到前台後任務欄會自己縮回去。
         if taskbar_autohide() {
             let before=window_rect(taskbar);
@@ -438,7 +438,7 @@ pub fn open_wechat_from_tray(unread:crate::app::Unread)->Result<(),String>{
             }
         }
         if pressed {return confirmed(account.pid,&mut log);}
-        // 沒按成：把展開的摺疊區收回去，不留在屏幕上。
+        // 沒按成：把展開的摺疊區收回去，不留在螢幕上。
         if !was_open && overflow_open().is_some(){let _=invoke(&chevron);}
         Err(log.fail(if started.elapsed()>=Duration::from_millis(1500){"T4"}else{"T5"},"摺疊區裡找不到或按不下微信託盤按鈕"))
     }
@@ -450,7 +450,7 @@ struct State {
     source:crate::messenger::Messenger,
     registered: bool,
     paths: Vec<String>,
-    /// 各帳號獨立合併閃動；確認查看後立即重置。
+    /// 各帳號獨立合併閃動；確認查看後立即重設。
     burst: Vec<(u32,Burst)>,
     /// 尚未取走的提醒，辦公客戶端額外保留閃動發生時確認的進程啟動時間。
     pending: Vec<TaskbarNotice>,
@@ -572,7 +572,7 @@ impl Listener {
             if message==0{return Err(format!("無法註冊{}提醒事件",source.name()));}
             let taskbar_created=RegisterWindowMessageW(w!("TaskbarCreated"));
             let hwnd=CreateWindowExW(WS_EX_TOOLWINDOW,w!("STATIC"),w!("KuidaoWechatListener"),WS_POPUP,0,0,0,0,None,None,None,None).map_err(|_|format!("無法建立{}監聽視窗",source.name()))?;
-            // 鬼島以管理員身份運行時，系統會攔下資源管理器發來的窗口事件；顯式允許這兩條消息。
+            // 鬼島以管理員身份運行時，系統會攔下資源管理器發來的窗口事件；顯式允許這兩條訊息。
             for allowed in [message,taskbar_created] {
                 let _=ChangeWindowMessageFilterEx(hwnd,allowed,MSGFLT_ALLOW,None);
             }
@@ -622,7 +622,7 @@ mod tests {
             SendMessageW(hwnd,message,WPARAM(FLASH),LPARAM(window.0 as isize));let repeated=listener.take();
             DestroyWindow(window).unwrap();drop(listener);
             let expected=TaskbarNotice{pid,window:window.0 as isize,started:(source!=Messenger::Wechat).then_some(started)};
-            assert_eq!(first,[expected],"{} 收起後的第一輪消息不能被查看後的寬限期吞掉",source.name());
+            assert_eq!(first,[expected],"{} 收起後的第一輪訊息不能被查看後的寬限期吞掉",source.name());
             assert!(repeated.is_empty(),"同一輪持續閃動仍只提醒一次");
         }
     }}
@@ -641,7 +641,7 @@ mod tests {
             let state=Box::new(RefCell::new(State{message,taskbar_created:RegisterWindowMessageW(w!("TaskbarCreated")),source,registered:true,paths:vec![normalized(&std::env::current_exe().unwrap().to_string_lossy())],burst:Vec::new(),pending:Vec::new(),ctx:Default::default()}));
             SetWindowSubclass(hwnd,Some(subclass),SUBCLASS_ID,(&*state as *const RefCell<State>)as usize).ok().unwrap();
             let listener=Listener{hwnd,state};
-            // 模擬消息只發給本測試自己的監聽窗口，不發送給任何真實客戶端。
+            // 模擬訊息只發給本測試自己的監聽窗口，不發送給任何真實客戶端。
             if source==Messenger::DingTalk{
                 for (width,height) in [(600,798),(451,599)]{
                     let login=CreateWindowExW(WINDOW_EX_STYLE(0),class,w!(""),WINDOW_STYLE(0x86020000),-10000,-10000,width,height,None,None,instance,None).unwrap();
@@ -1033,7 +1033,7 @@ mod tests {
         assert!(state.attention(100,11,None,start));assert!(state.attention(200,22,None,start));assert!(state.attention(0,0,None,start));
         state.pending.clear();
         state.clear(0);
-        assert!(!state.attention(100,11,None,start+Duration::from_millis(100)),"關閉未知帳號不能重置其他帳號的閃動合併");
+        assert!(!state.attention(100,11,None,start+Duration::from_millis(100)),"關閉未知帳號不能重設其他帳號的閃動合併");
         assert!(!state.attention(200,22,None,start+Duration::from_millis(100)));
         assert!(state.attention(0,0,None,start+Duration::from_millis(100)));
         state.clear(100);assert!(state.attention(100,11,None,start+Duration::from_millis(200)),"確認查看後，下一輪立即可提醒");
@@ -1044,7 +1044,7 @@ mod tests {
     }
     #[test]
     fn wechat_is_recognized_by_tencent_file_name_when_registry_path_is_stale(){
-        // 註冊表裡的舊路徑對不上時，仍按「文件名 + 騰訊發佈」識別；其它公司的同名程序不算。
+        // 註冊表裡的舊路徑對不上時，仍按「檔案名 + 騰訊發佈」識別；其它公司的同名程序不算。
         let stale=vec![normalized(r"C:\Old\Weixin\Weixin.exe"),"*weixin.exe".to_string()];
         let me=normalized(&std::env::current_exe().unwrap().to_string_lossy());
         assert!(!path_allowed(&me,&stale),"測試程式不是騰訊釋出的微信");

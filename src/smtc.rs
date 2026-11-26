@@ -124,13 +124,13 @@ impl NowPlaying {
         // 使用者在瀏覽器播放 YouTube／YouTube Music 時，Windows 播放卡仍會保留工作階段，
         // 瀏覽器縮小或切到別的分頁都能讀到歌名；不能因缺少專輯或型別被標成影片就被濾掉。
         if is_browser_source(&self.source) && is_youtube(self) {return MediaKind::Music;}
-        // 部分瀏覽器把所有媒體都上報為音樂，補充識別明確的視頻頁面標題。
+        // 部分瀏覽器把所有媒體都上報為音樂，補充識別明確的影片頁面標題。
         let title=self.title.trim().to_lowercase();
         if [" - 抖音"," - youtube","_嗶哩嗶哩_bilibili"," - 嗶哩嗶哩"].iter().any(|suffix|title.ends_with(suffix)) {
             return MediaKind::Video;
         }
         // 瀏覽器回報 Video 時多半是 YouTube／網頁播放器把 MV 標成影片；
-        // 只要標題看起來像歌名（不是上面的明確視頻站），仍當成音樂上島，
+        // 只要標題看起來像歌名（不是上面的明確影片站），仍當成音樂上島，
         // 否則 Chrome／Edge 播放歌曲時會被整個濾掉，島上永遠「暫無音樂」。
         if self.playback_type==MediaKind::Video {
             if !is_browser_source(&self.source) {return MediaKind::Video;}
@@ -143,7 +143,7 @@ impl NowPlaying {
             if ["youtube","bilibili","抖音","嗶哩嗶哩"].contains(&album.as_str()){return MediaKind::Video;}
             // 網頁版 KKBOX／Spotify 的歌名就在視窗標題裡，專輯欄被填成服務名，仍要當成歌曲。
             if ["kkbox","spotify","spotify web","網頁播放"].contains(&album.as_str()){return MediaKind::Music;}
-            // 視頻作者也可能被放進 Artist；瀏覽器缺少專輯信息時不自動認作歌曲。
+            // 影片作者也可能被放進 Artist；瀏覽器缺少專輯資訊時不自動認作歌曲。
             if album.is_empty(){return MediaKind::Unknown;}
         }
         if self.artist.trim().is_empty(){MediaKind::Unknown}else{MediaKind::Music}
@@ -505,7 +505,7 @@ fn query_system(artwork:&mut ArtworkCache) -> Result<Option<NowPlaying>,()> {
     for session in all{if !sessions.contains(&session){sessions.push(session);}}
     artwork.events.get_or_insert_with(MediaEvents::new).sync(&mgr,&sessions);
     if sessions.is_empty(){return Ok(None);}
-    // 先比較全部會話；視頻不能遮擋音樂，封面只為最終選中的會話讀取。
+    // 先比較全部會話；影片不能遮擋音樂，封面只為最終選中的會話讀取。
     let previous=artwork.system.as_ref().map(|(media,_)|media.source.clone());
     let mut unreadable_previous=false;
     let (session,mut media)=sessions.iter().filter_map(|session|{
@@ -773,7 +773,7 @@ fn seek_apple(session:&windows::Media::Control::GlobalSystemMediaTransportContro
         loop{if ready(){return true;}if start.elapsed()>=timeout{return false;}std::thread::sleep(Duration::from_millis(100));}
     };
     let success=(||{
-        // Apple Music 暫停時忽略滑塊設置；跳轉完成後恢復原來的暫停狀態。
+        // Apple Music 暫停時忽略滑塊設定；跳轉完成後恢復原來的暫停狀態。
         if paused && (media_result(||session.TryPlayAsync())!=Some(true) || !wait(Duration::from_secs(2),&||status()==Some(Status::Playing))){return false;}
         for attempt in 0..2 {
             if !player_seek::seek(source,target,duration){return false;}
@@ -999,7 +999,7 @@ impl MediaMemory {
     fn update(&mut self,media:&mut NowPlaying,now:std::time::Instant){
         if media.playback_type==MediaKind::Video{self.last=None;return;}
         if media.title.trim().is_empty(){
-            // 會話重建時可短暫返回空值；保留窗口不刷新期限，真正退出最多延遲兩秒收起。
+            // 會話重建時可短暫返回空值；保留窗口不重新整理期限，真正退出最多延遲兩秒收起。
             if let Some((old,at))=&self.last {
                 if now.duration_since(*at)<=Duration::from_secs(2) && (media.source.is_empty() || media.source==old.source){
                     *media=old.clone();return;
@@ -1017,7 +1017,7 @@ impl MediaMemory {
                 if media.artist.trim().is_empty(){media.artist=old.artist.clone();}
                 if media.song_id.is_none(){media.song_id=old.song_id;}
                 if media.duration<=0.0{media.duration=old.duration;}
-                // 同一歌曲的秒數舍入波動不代表換歌，避免重置歌詞和重複請求。
+                // 同一歌曲的秒數舍入波動不代表換歌，避免重設歌詞和重複請求。
                 if (media.duration-old.duration).abs()<=1.0{media.duration=old.duration;}
             }else if !same {self.last=None;}
         }
@@ -1053,7 +1053,7 @@ impl Drop for Poller {
     }
 }
 
-/// 後台線程：刷新正在播放；持有者銷燬後停止，不在界面線程等待 COM 返回。
+/// 後台線程：重新整理正在播放；持有者銷燬後停止，不在界面線程等待 COM 返回。
 pub fn spawn_poller(state: Shared,ctx:eframe::egui::Context)->Poller {
     let enabled=Arc::new(std::sync::atomic::AtomicBool::new(true));
     let active=enabled.clone();

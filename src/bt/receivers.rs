@@ -30,7 +30,7 @@ fn receiver_snapshot(
             if serial_or_path.is_empty() || serial_or_path.contains('\\') {
                 return None;
             }
-            // 只匹配完整 USB 設備的硬件 ID，複合設備的 MI_* 子接口不會單獨出現。
+            // 只匹配完整 USB 裝置的硬件 ID，複合裝置的 MI_* 子接口不會單獨出現。
             let name = builtin
                 .receiver_name(hardware)
                 .or_else(|| pack?.receiver_name(hardware))?;
@@ -144,7 +144,7 @@ pub(super) fn run(
 ) {
     let (events, changes) = mpsc::sync_channel(1);
     let notification = Notification::register(events.clone());
-    // 接口事件可能先於設備樹更新。輕量的 USB 枚舉為先到的通知和註冊失敗兜底。
+    // 接口事件可能先於裝置樹更新。輕量的 USB 枚舉為先到的通知和註冊失敗兜底。
     let scan_interval = Duration::from_secs(if notification.is_some() { 2 } else { 1 });
     run_scans(
         tx,
@@ -418,7 +418,7 @@ mod tests {
         let _notification = Notification::register(sender).expect("Windows USB 拔插通知註冊應成功");
         let devices = receiver_snapshot(
             None,
-            present_usb_instances().expect("Windows 已插入 USB 設備枚舉應成功"),
+            present_usb_instances().expect("Windows 已插入 USB 裝置枚舉應成功"),
         );
         for device in devices {
             println!(

@@ -9,7 +9,7 @@ fn rgba_layout(w: i32, h: i32) -> Option<(usize, usize)> {
     Some((stride, stride.checked_mul(h as usize)?))
 }
 
-/// 從當前窗口的默認雙緩衝讀出上一張已交換的畫面。
+/// 從當前窗口的預設雙緩衝讀出上一張已交換的畫面。
 /// 調用方須保證這個窗口的 GL 表面當前已綁定，且其外框尚未調整。
 pub(crate) fn read_front(gl: &glow::Context, hw: i32, hh: i32, raw: &mut Vec<u8>) -> bool {
     let Some((stride, len)) = rgba_layout(hw, hh) else {

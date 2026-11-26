@@ -14,7 +14,7 @@ fn entries(data:&[u8])->Option<Vec<&[u8]>> {
     if le(data,size+24,4)?!=0xbeefc0de || le(data,size+28,4)?!=2{return None;}
     let meta=if le(data,152,8)?>le(data,size+152,8)?{0}else{size};
     let mut pending=vec![le(data,meta+136,8)?];let mut visited=HashSet::new();let mut result=Vec::new();
-    // 每頁最多訪問一次：上限按文件實際頁數，不再按固定頁數（原先 4096 頁約 16MB 即放棄）。
+    // 每頁最多訪問一次：上限按檔案實際頁數，不再按固定頁數（原先 4096 頁約 16MB 即放棄）。
     let pages=data.len()/size;
     while let Some(page)=pending.pop(){
         if !visited.insert(page) || visited.len()>pages{return None;}
@@ -108,7 +108,7 @@ fn select(value:&Value,title:&str,artist:&str,duration:f64)->Option<String>{
 }
 fn path()->Option<std::path::PathBuf>{Some(std::path::PathBuf::from(std::env::var_os("APPDATA")?).join("SodaMusic/LunaCacheV2/entries.db"))}
 
-/// 緩存文件的修改時間與大小；沒變化時輪詢不再整份讀取（文件最大 32MB）。
+/// 緩存檔案的修改時間與大小；沒變化時輪詢不再整份讀取（檔案最大 32MB）。
 pub fn fingerprint()->Option<(std::time::SystemTime,u64)>{
     let meta=std::fs::metadata(path()?).ok()?;
     Some((meta.modified().ok()?,meta.len()))
@@ -129,7 +129,7 @@ impl Miss {
     }
 }
 
-/// 只防異常文件：Windows 下按需映射，不再整份複製進內存，正常緩存再大也不受影響。
+/// 只防異常檔案：Windows 下按需映射，不再整份複製進內存，正常緩存再大也不受影響。
 const LIMIT:u64=1024*1024*1024;
 
 /// 只讀打開的緩存內容：Windows 下為內存映射，其餘平台整份讀入（僅開發用途）。
@@ -139,7 +139,7 @@ struct Snapshot {
 }
 impl Snapshot {
     fn open(file:&std::fs::File)->Option<Self>{
-        // SAFETY：只讀映射；LMDB 打開期間不會截短數據文件，且有映射時 Windows 拒絕截短；所有偏移都經越界檢查。
+        // SAFETY：只讀映射；LMDB 打開期間不會截短數據檔案，且有映射時 Windows 拒絕截短；所有偏移都經越界檢查。
         #[cfg(windows)] {Some(Self{map:unsafe{memmap2::Mmap::map(file)}.ok()?})}
         #[cfg(not(windows))] {use std::io::Read;let mut data=Vec::new();(&*file).read_to_end(&mut data).ok()?;Some(Self{data})}
     }

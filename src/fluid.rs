@@ -11,7 +11,7 @@
 //! - **光標光暈**跟隨鼠標在島上的位置，很淡很散，移開即衰減消失；
 //! - **追光**：進度條頭部常駐一團柔光，隨播放前進，按住拖動時略微加強；
 //! - **靜止即靜止**：沒有播放、沒有光標移動、沒有換曲與拖動時，
-//!   [`Fluid::animating`] 返回 false，界面可以降到低頻刷新，這是控制功耗的關鍵。
+//!   [`Fluid::animating`] 返回 false，界面可以降到低頻重新整理，這是控制功耗的關鍵。
 
 use eframe::egui::{Color32, ColorImage};
 
@@ -38,7 +38,7 @@ pub struct Fluid {
     cursor: Option<(f32, f32)>,
     glow: (f32, f32),
     glow_a: f32,
-    /// 光暈是否還在追隨（用於判斷要不要繼續刷新）。
+    /// 光暈是否還在追隨（用於判斷要不要繼續重新整理）。
     glow_moving: bool,
     /// 拖動進度條時的光斑位置與強度。
     seek: Option<(f32, f32)>,
@@ -231,7 +231,7 @@ impl Fluid {
         unmultiply(c, a)
     }
 
-    /// 是否還需要連續刷新（功耗閘門）。
+    /// 是否還需要連續重新整理（功耗閘門）。
     pub fn animating(&self) -> bool {
         (self.t - self.tint_at) < TINT_FADE
             || self.glow_moving

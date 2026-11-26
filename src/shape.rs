@@ -6,14 +6,14 @@
 use eframe::egui::{self, Color32, Pos2, Rect, Vec2};
 use crate::model::Dock;
 
-/// 左右停靠時，輪廓先在「貼頂」座標系裡生成：x 沿屏幕邊緣（= 屏幕 y），
-/// y 是離開邊緣的距離（0 = 貼邊）；再映射回屏幕。頂部停靠為恆等映射。
+/// 左右停靠時，輪廓先在「貼頂」座標系裡生成：x 沿螢幕邊緣（= 螢幕 y），
+/// y 是離開邊緣的距離（0 = 貼邊）；再映射回螢幕。頂部停靠為恆等映射。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EdgeMap { dock: Dock, edge: f32 }
 
 impl EdgeMap {
     pub const TOP: EdgeMap = EdgeMap { dock: Dock::Top, edge: 0.0 };
-    /// `rect` 為屏幕座標裡的島體外接矩形，返回映射與對應的貼頂矩形。
+    /// `rect` 為螢幕座標裡的島體外接矩形，返回映射與對應的貼頂矩形。
     pub fn of(rect: Rect, dock: Dock) -> (EdgeMap, Rect) {
         match dock {
             Dock::Top => (Self::TOP, rect),
@@ -33,7 +33,7 @@ impl EdgeMap {
     fn code(self) -> f32 { match self.dock { Dock::Top => 0.0, Dock::Bottom => 3.0, Dock::Left => 1.0, Dock::Right => 2.0 } }
 }
 
-/// 貼著 `dock` 邊緣的輪廓（屏幕座標）。
+/// 貼著 `dock` 邊緣的輪廓（螢幕座標）。
 pub fn outline_docked(rect: Rect, dock: Dock, flare: f32, flare_h: f32, radius: f32) -> Vec<Pos2> {
     let (map, frame) = EdgeMap::of(rect, dock);
     outline(frame, flare, flare_h, radius).into_iter().map(|p| map.apply(p)).collect()
@@ -178,7 +178,7 @@ fn gradient_mesh(rect:Rect,flare:f32,flare_h:f32,radius:f32,top:Color32,bottom:C
         mesh.add_triangle(i, i + 1, i + 2);
         mesh.add_triangle(i, i + 2, i + 3);
     }
-    // 2) 外輪廓羽化帶（不含頂邊：貼著屏幕頂）
+    // 2) 外輪廓羽化帶（不含頂邊：貼著螢幕頂）
     let pts: Vec<Pos2> = rows
         .iter()
         .map(|&(y, _, r)| Pos2::new(r, y))

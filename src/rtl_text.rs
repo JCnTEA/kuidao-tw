@@ -73,7 +73,7 @@ fn transparent(c: char) -> bool {
     matches!(c as u32, 0x0610..=0x061A | 0x064B..=0x065F | 0x0670 | 0x06D6..=0x06DC | 0x06DF..=0x06E4 | 0x06E7..=0x06E8 | 0x06EA..=0x06ED)
 }
 
-/// 能和前後字母相連的「連接符」：阿拉伯延長線、零寬連接符。
+/// 能和前後字母相連的「連線符」：阿拉伯延長線、零寬連線符。
 fn join_causing(c: char) -> bool {
     matches!(c, '\u{0640}' | '\u{200D}')
 }
@@ -222,7 +222,7 @@ fn reorder(text: &[char]) -> String {
     }).collect()
 }
 
-/// 測試導出「修復前」對照圖時關閉轉換。
+/// 測試匯出「修復前」對照圖時關閉轉換。
 #[cfg(test)]
 pub(crate) static BYPASS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 

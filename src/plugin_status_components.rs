@@ -300,7 +300,7 @@ mod tests {
             "state":"running", "label":"最長測試標題已進入打印隊列".repeat(3),
             "progress_pct":95,
             "items":[
-                {"label":"任務","detail":"非常長的文件名稱".repeat(8),"state":"running"},
+                {"label":"任務","detail":"非常長的檔案名稱".repeat(8),"state":"running"},
                 {"label":"列表第二條","state":"paused"},
                 {"label":"列表第三條","state":"idle"},
                 {"label":"列表第四條","state":"succeeded"}

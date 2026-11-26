@@ -1,11 +1,11 @@
-//! 歌詞：按播放器與歌曲信息匹配 QQ 音樂、網易雲及 LRCLIB，同步歌詞成功後緩存。
+//! 歌詞：按播放器與歌曲資訊匹配 QQ 音樂、網易雲及 LRCLIB，同步歌詞成功後緩存。
 
 const MAX_TEXT:usize=1024*1024;
 const MAX_LINES:usize=5000;
 const MAX_LINE_TEXT:usize=8192;
 fn rejected_lyrics()->Lyrics{crate::resources::REJECTED_DATA.fetch_add(1,std::sync::atomic::Ordering::Relaxed);Lyrics::default()}
 
-/// 確認「所有來源都沒有同步歌詞」後記住 7 天，期間不再聯網；網絡失敗不會寫入。
+/// 確認「所有來源都沒有同步歌詞」後記住 7 天，期間不再聯網；網路失敗不會寫入。
 const NEGATIVE_TTL:std::time::Duration=std::time::Duration::from_secs(7*24*3600);
 const TRACE_LIMIT:usize=24;
 
@@ -103,7 +103,7 @@ pub enum FetchError {
 impl FetchError {
     pub fn label(&self)->&'static str {
         match self {
-            Self::Unavailable(_)=>"暫未獲取歌詞，請重試",
+            Self::Unavailable(_)=>"暫未取得歌詞，請重試",
             Self::NotFound=>"未找到匹配歌詞",
             Self::InvalidResponse(_)=>"歌詞響應異常",
             Self::IncompleteMetadata=>"播放器未提供完整歌曲資訊",
@@ -217,7 +217,7 @@ pub(crate) mod kugou_cache;
 
 pub fn is_soda(source:&str)->bool {matches!(source,"汽水音樂"|"汽水音樂") || source.to_ascii_lowercase().contains("sodamusic")}
 
-/// 本地歌詞緩存的「版本」：文件修改時間與大小都沒變時不必再完整讀取。目前只有汽水音樂的單文件緩存可靠適用。
+/// 本地歌詞緩存的「版本」：檔案修改時間與大小都沒變時不必再完整讀取。目前只有汽水音樂的單檔案緩存可靠適用。
 pub(crate) fn native_fingerprint(source:&str)->Option<(std::time::SystemTime,u64)> {
     if is_soda(source){return soda_cache::fingerprint();}
     None
@@ -250,7 +250,7 @@ pub fn fetch_for_display(source:&str,track:&str,artist:&str,duration:f64,song_id
     fetch_for_display_with(source,track,artist,duration,song_id,cached,false)
 }
 
-/// `manual`：用戶手動重試，跳過近期「沒有歌詞」的記錄。網絡失敗仍不會被記成沒有歌詞。
+/// `manual`：用戶手動重試，跳過近期「沒有歌詞」的記錄。網路失敗仍不會被記成沒有歌詞。
 pub fn fetch_for_display_with(source:&str,track:&str,artist:&str,duration:f64,song_id:Option<u64>,cached:Option<Lyrics>,manual:bool)->Result<(Lyrics,bool),FetchError>{
     take_trace();
     let _skip=SkipNegative::set(manual);
@@ -1106,7 +1106,7 @@ fn fetch_with_sources_detail_hints(netease:Option<&str>,qq:Option<&str>,lrclib:O
     (best.unwrap_or(Err(FetchError::NotFound)),false)
 }
 
-/// 按順序嘗試，命中同步歌詞立即停止；全部只有純文本時取第一個，網絡類錯誤優先於「未找到」上報以便重試。
+/// 按順序嘗試，命中同步歌詞立即停止；全部只有純文本時取第一個，網路類錯誤優先於「未找到」上報以便重試。
 /// 第二個返回值表示是否有來源失敗（斷網、限流、響應異常），這時結果不能當作「確認沒有」緩存。
 fn fetch_with_sources_once(netease:Option<&str>,qq:Option<&str>,lrclib:Option<&str>,track:&str,artist:&str,duration:f64)->(Result<Lyrics,FetchError>,bool) {
     let mut plain=None;
@@ -1144,7 +1144,7 @@ pub(crate) fn same_song(title:&str,artist:&str,other_title:&str,other_artist:&st
     !a.0.is_empty() && a.0==b.0 && (a.1.is_empty() || b.1.is_empty() || a.1==b.1)
 }
 
-/// 同一會話裡前後兩次歌曲信息的關係：`Some(true)` 同一首（歌手相同或一方為空），
+/// 同一會話裡前後兩次歌曲資訊的關係：`Some(true)` 同一首（歌手相同或一方為空），
 /// `Some(false)` 同一首但署名有補全（如單人署名補全為合唱），`None` 不同歌曲。
 pub(crate) fn song_relation(title:&str,artist:&str,other_title:&str,other_artist:&str)->Option<bool> {
     if same_song(title,artist,other_title,other_artist){return Some(true);}
@@ -1172,7 +1172,7 @@ fn split_feature(text:&str)->(&str,&str) {
     }
 }
 
-/// 合唱署名可能位於歌名或歌手字段；只移動明確的署名，保留 Live、Remix 等版本信息。
+/// 合唱署名可能位於歌名或歌手字段；只移動明確的署名，保留 Live、Remix 等版本資訊。
 fn song_identity(title:&str,artist:&str)->(String,Vec<String>) {
     let cleaned=clean_title(title);
     let (title,guests)=split_feature(&cleaned);
@@ -1366,7 +1366,7 @@ fn request_json_with_retry(url:&str,referer:&str,retry:bool)->Result<serde_json:
         .set("Accept","application/json")
         .timeout(std::time::Duration::from_secs(5));
     let mut result=request.clone().call();
-    // QQ 的偶發連接超時、網關錯誤只重試一次；拒絕訪問和無歌詞不重複請求。
+    // QQ 的偶發連線超時、網關錯誤只重試一次；拒絕訪問和無歌詞不重複請求。
     if retry && result.as_ref().is_err_and(|error|matches!(error,ureq::Error::Transport(_)|ureq::Error::Status(408|500|502|503|504,_))) {
         std::thread::sleep(std::time::Duration::from_millis(200));
         result=request.call();
@@ -1742,7 +1742,7 @@ mod tests {
         let worker=std::thread::spawn(move||{
             let (mut stalled,_)=listener.accept().unwrap();
             let mut buffer=[0;4096];stalled.read(&mut buffer).unwrap();
-            // 保持第一條連接不響應，第二次請求才返回，真實覆蓋五秒讀取超時。
+            // 保持第一條連線不響應，第二次請求才返回，真實覆蓋五秒讀取超時。
             let (mut recovered,_)=listener.accept().unwrap();
             recovered.read(&mut buffer).unwrap();
             write!(recovered,"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}").unwrap();

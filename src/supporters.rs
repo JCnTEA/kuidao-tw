@@ -1,4 +1,4 @@
-//! 關於頁感謝牆的後台刷新與離線快照。
+//! 關於頁感謝牆的後台重新整理與離線快照。
 
 use eframe::egui;
 use image::{codecs::webp::WebPDecoder, ImageDecoder};
@@ -150,7 +150,7 @@ impl Manifest {
     fn parse(bytes: &[u8]) -> Option<Self> {
         let manifest: Self = serde_json::from_slice(bytes).ok()?;
         let version = &manifest.version;
-        // 由版號限定文件名，清單無法把請求引到站點外或其他目錄。
+        // 由版號限定檔案名，清單無法把請求引到站點外或其他目錄。
         (manifest.count > 0
             && version.len() == 24
             && version.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
@@ -210,7 +210,7 @@ fn check(agent: &ureq::Agent, base: &str, known: Option<&str>, cache_dir: &Path)
     let wall = fetch(agent, &format!("{base}{}", manifest.wall), WALL_LIMIT).ok_or(())?;
     let snapshot = manifest.snapshot(&recent, &wall).ok_or(())?;
 
-    // 先校驗整版，再原子替換一個文件，緩存與界面始終使用同一批圖。
+    // 先校驗整版，再原子替換一個檔案，緩存與界面始終使用同一批圖。
     if fs::create_dir_all(cache_dir).is_ok() {
         let packed = pack(&bytes, &recent, &wall);
         let _ = crate::model::atomic_write(&cache_dir.join(CACHE_FILE), &packed);
@@ -370,7 +370,7 @@ mod tests {
         let age = Duration::from_secs(60 * 60);
         opened.set_times(FileTimes::new().set_modified(SystemTime::now() - age)).unwrap();
         drop(opened);
-        let (_, next) = check_when_due(&dir, Some(&manifest.version), || panic!("有效緩存應跳過網絡"));
+        let (_, next) = check_when_due(&dir, Some(&manifest.version), || panic!("有效緩存應跳過網路"));
         let remaining = next.saturating_duration_since(Instant::now());
         assert!(remaining <= CHECK_AFTER - age);
         assert!(remaining > CHECK_AFTER - age - Duration::from_secs(60));

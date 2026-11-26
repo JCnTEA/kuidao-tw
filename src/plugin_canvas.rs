@@ -88,7 +88,7 @@ impl Canvas {
                     || matches!(&node.kind, Kind::Group { group, .. } if has_interaction(group)))
             }
             if has_interaction(&nodes) {
-                return Err("常駐畫布只支持綁定、數字翻動與橫向滾動文字".into());
+                return Err("常駐畫布只支援綁定、數字翻動與橫向滾動文字".into());
             }
         }
         Ok(Self {
