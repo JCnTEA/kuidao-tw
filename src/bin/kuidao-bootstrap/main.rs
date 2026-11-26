@@ -589,11 +589,76 @@ struct Release {
     hash: String,
 }
 
+/// API 限流時的備援：從發布頁取得最新標籤，再抓 SHA256SUMS.txt 與下載檔大小。
+/// 全程只讀 github.com 網頁與 release 資產，不再打 GitHub API。
+fn fetch_release_from_web() -> Result<Release, String> {
+    let agent = agent(20)?;
+    let response = agent
+        .get(&format!("{REPOSITORY}/releases/latest"))
+        .set(
+            "User-Agent",
+            concat!("KuidaoBootstrap/", env!("CARGO_PKG_VERSION")),
+        )
+        .call()
+        .map_err(|_| "更新服務暫時限流，請稍後再試".to_owned())?;
+    let page = response.get_url().to_owned();
+    let tag = page
+        .split("/releases/tag/")
+        .nth(1)
+        .map(|tag| tag.split(|c| c == '?' || c == '#').next().unwrap_or(tag))
+        .filter(|tag| !tag.is_empty())
+        .ok_or_else(|| "找不到可用的正式版本".to_owned())?;
+    let name = format!("Kuidao-v{}-windows-x64.zip", tag.trim_start_matches('v'));
+    let url = format!("{REPOSITORY}/releases/download/{tag}/{name}");
+    let sums = agent
+        .get(&format!(
+            "{REPOSITORY}/releases/download/{tag}/SHA256SUMS.txt"
+        ))
+        .set(
+            "User-Agent",
+            concat!("KuidaoBootstrap/", env!("CARGO_PKG_VERSION")),
+        )
+        .call()
+        .map_err(|_| "無法取得更新校驗檔".to_owned())?
+        .into_string()
+        .map_err(|_| "無法讀取更新校驗檔".to_owned())?;
+    let hash = checksum_for(&sums, &name).ok_or_else(|| "更新校驗檔缺少安裝包".to_owned())?;
+    let response = agent
+        .head(&url)
+        .set(
+            "User-Agent",
+            concat!("KuidaoBootstrap/", env!("CARGO_PKG_VERSION")),
+        )
+        .call()
+        .map_err(|_| "無法查詢更新包大小".to_owned())?;
+    let size = response
+        .header("content-length")
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|size| *size > 0 && *size <= 200 * 1024 * 1024)
+        .ok_or_else(|| "更新包大小不符".to_owned())?;
+    Ok(Release {
+        version: tag.to_owned(),
+        url,
+        size,
+        hash: hash.to_ascii_lowercase(),
+    })
+}
+
+fn checksum_for(sums: &str, name: &str) -> Option<String> {
+    sums.lines().find_map(|line| {
+        let mut parts = line.split_whitespace();
+        let hash = parts.next()?;
+        let file = parts.next()?.trim_start_matches('*');
+        (file == name && hash.len() == 64 && hash.bytes().all(|byte| byte.is_ascii_hexdigit()))
+            .then(|| hash.to_owned())
+    })
+}
+
 fn fetch_release() -> Result<Release, String> {
     if is_dev() {
         return fetch_dev_release();
     }
-    let response = agent(20)?
+    let response = match agent(20)?
         .get(API)
         .set(
             "User-Agent",
@@ -601,11 +666,17 @@ fn fetch_release() -> Result<Release, String> {
         )
         .set("Accept", "application/vnd.github+json")
         .call()
-        .map_err(|error| match error {
-            ureq::Error::Status(403 | 429, _) => "更新服務暫時限流，請稍後再試".to_owned(),
-            ureq::Error::Status(404, _) => "找不到可用的正式版本".to_owned(),
-            _ => "無法連線更新服務，請檢查網路或代理".to_owned(),
-        })?;
+    {
+        Ok(response) => response,
+        // GitHub API 匿名額度用完時改走發布頁與資產檔，避免第一次啟動就被限流卡住。
+        Err(ureq::Error::Status(403 | 429, _)) => return fetch_release_from_web(),
+        Err(error) => {
+            return Err(match error {
+                ureq::Error::Status(404, _) => "找不到可用的正式版本".to_owned(),
+                _ => "無法連線更新服務，請檢查網路或代理".to_owned(),
+            })
+        }
+    };
     let value: serde_json::Value = serde_json::from_reader(response.into_reader())
         .map_err(|_| "更新資訊格式異常".to_owned())?;
     if value["draft"].as_bool() == Some(true) || value["prerelease"].as_bool() == Some(true) {
