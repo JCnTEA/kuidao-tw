@@ -61,6 +61,7 @@ impl State {
         }
         state.notified_version = notified_version;
         state.history_path = Some(path);
+        state.refresh_latest_notes();
         state
     }
 
@@ -139,6 +140,7 @@ impl State {
                         _ => None,
                     };
                     self.result = Some(result); self.rx = None;
+                    self.refresh_latest_notes();
                     if let Some(release) = automatic_package {
                         if !cfg!(test) {
                             self.start_download(ctx, release);
@@ -468,7 +470,13 @@ fn check_dev() -> Result<Option<Release>, String> {
                 && hash.len() == 64 && hash.bytes().all(|c| c.is_ascii_hexdigit()))
                 .then(|| Package { url: expected, size, hash: hash.to_ascii_lowercase() })
         });
-    Ok(Some(Release { version: stem, notes: value["body"].as_str().unwrap_or("").to_owned(),
+    let body = value["body"].as_str().unwrap_or("").trim().to_owned();
+    // 開發版的發布都標成 prerelease，正式版那條筆記規則擋掉它；這裡單獨留一筆給「關於」頁的更新內容。
+    if !cfg!(test) && !body.is_empty() {
+        let record = NotesRecord { version: tag.clone(), notes: body.clone(), page: format!("{REPOSITORY}/releases/tag/{tag}"), checked_unix: chrono::Utc::now().timestamp() };
+        let _ = write_notes_record(&crate::model::config_dir().join("update-notes.json"), &record);
+    }
+    Ok(Some(Release { version: stem, notes: body,
         page: format!("{REPOSITORY}/releases/tag/{tag}"), package }))
 }
 

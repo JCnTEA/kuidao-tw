@@ -212,10 +212,20 @@ impl Catalog {
     }
 
     fn parse(path: PathBuf, official_index: Option<Url>, bytes: &[u8]) -> Result<Self> {
-        let file: CatalogFile = serde_json::from_slice(bytes)
+        let mut file: CatalogFile = serde_json::from_slice(bytes)
             .map_err(|error| fail(&format!("集市目錄格式無效：{error}")))?;
         if file.format != CATALOG_FORMAT {
             return Err(fail("當前島仔不支持此集市目錄版本"));
+        }
+        // 上游目錄的中文是簡體：只在記憶體裡轉繁體，原檔案照原樣快取，雜湊與下載都不受影響。
+        for entry in &mut file.plugins {
+            entry.name = crate::zh::to_traditional(&entry.name);
+            entry.author = crate::zh::to_traditional(&entry.author);
+            if let Some(presentation) = &mut entry.presentation {
+                if let Some(description) = &presentation.description {
+                    presentation.description = Some(crate::zh::to_traditional(description));
+                }
+            }
         }
         let mut seen = BTreeSet::new();
         for entry in &file.plugins {
@@ -410,7 +420,7 @@ fn github_avatar_url(profile: &[u8], username: &str) -> Result<Url> {
     if !login.eq_ignore_ascii_case(username)
         || !is_https_host(&avatar_url, "avatars.githubusercontent.com")
     {
-        return Err(fail("GitHub 返回的賬號或頭像地址與請求不符"));
+        return Err(fail("GitHub 返回的帳號或頭像地址與請求不符"));
     }
     avatar_url.set_query(Some("s=64"));
     Ok(avatar_url)

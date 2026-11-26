@@ -74,7 +74,7 @@ pub(super) fn request_plugin_feedback(ui: &egui::Ui, id: &str, name: &str, versi
 }
 
 /// 插件反饋彈窗：三種反饋各是一張可點的選項卡，點了直接去對應入口；
-/// 沒有 GitHub 賬號時可以複製反饋信息轉交。
+/// 沒有 GitHub 帳號時可以複製反饋信息轉交。
 pub(super) fn plugin_feedback(ui: &egui::Ui) {
     use crate::extras::{settings_apply_style, settings_hint, settings_modal_frame, settings_modal_title};
     let id = egui::Id::new("plugin-feedback");

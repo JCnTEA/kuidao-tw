@@ -444,7 +444,16 @@ impl Manifest {
                 "需要更新島仔。此插件需要 API v{api}，當前支持 v{API_VERSION}"
             )));
         }
-        let manifest: Self = serde_json::from_str(contents)?;
+        let mut manifest: Self = serde_json::from_str(contents)?;
+        // 上游清單的中文是簡體；顯示層一律轉成繁體（台灣字形），不改 id、版本與結構。
+        manifest.name = crate::zh::to_traditional(&manifest.name);
+        manifest.author = crate::zh::to_traditional(&manifest.author);
+        if let Some(accent) = &manifest.title_accent {
+            manifest.title_accent = Some(crate::zh::to_traditional(accent));
+        }
+        for field in &mut manifest.settings {
+            field.label = crate::zh::to_traditional(&field.label);
+        }
         manifest.validate()?;
         if manifest.cover.is_none() {
             return Err(fail("請在插件清單中聲明 cover: \"cover.png\""));

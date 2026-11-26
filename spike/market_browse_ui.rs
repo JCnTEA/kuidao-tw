@@ -138,7 +138,7 @@ fn compact(value: Option<u64>) -> String {
     format!("{}{}", rounded.strip_suffix(".0").unwrap_or(&rounded), suffix)
 }
 
-/// 下載量以托盤圖標和簡寫數字展示。
+/// 下載量以託盤圖標和簡寫數字展示。
 fn download_count(ui: &mut egui::Ui, value: &str) -> egui::Response {
     let tint = muted_color(ui);
     let galley = ui.fonts(|fonts| {
