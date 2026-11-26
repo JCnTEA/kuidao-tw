@@ -271,9 +271,19 @@ mod platform {
         if parse_title(&title, suffix).is_none() {
             return BOOL(1);
         }
-        let youtube = title.contains("YouTube");
-        let preferred = pick.best.as_ref().is_none_or(|(known, _, _)| !known.contains("YouTube"));
-        if youtube || preferred {
+        // 同一套瀏覽器可能同時開很多視窗；先挑真的在播音樂的頁面，
+        // 免得把信箱、文件這類標題當成歌名。分數只影響挑選，不改標題內容。
+        let lower = title.to_lowercase();
+        let music_page = ["youtube", "kkbox", "spotify", "streetvoice", "bilibili", "嗶哩嗶哩", "music"]
+            .iter().any(|hint| lower.contains(hint));
+        let score = if title.contains("YouTube") { 3 } else if music_page { 2 } else { 1 };
+        let current = pick.best.as_ref().map_or(0, |(known, _, _)| {
+            let lower = known.to_lowercase();
+            if known.contains("YouTube") { 3 }
+            else if ["kkbox", "spotify", "streetvoice", "bilibili", "嗶哩嗶哩", "music"].iter().any(|hint| lower.contains(hint)) { 2 }
+            else { 1 }
+        });
+        if score >= current {
             pick.best = Some((title, suffix, source));
         }
         BOOL(1)
@@ -294,7 +304,12 @@ mod platform {
         unsafe {
             let _ = EnumWindows(Some(visit), LPARAM(&mut pick as *mut Pick as isize));
         }
-        let (raw, suffix, source) = pick.best?;
+        let Some((raw, suffix, source)) = pick.best else {
+            // 有瀏覽器正在出聲，但視窗標題抓不到或不是可辨識的歌名（Edge 常見）：
+            // 仍回一個只有來源的空殼，讓上層繼續走「聽聲音認歌」那條路，
+            // 而不是整輪只拿到 None、島上一直顯示暫無音樂。
+            return Some(now_playing(browsers[0], String::new(), String::new(), String::new()));
+        };
         let (title, artist, album) = parse_title(&raw, suffix)?;
         Some(now_playing(source, title, artist, album))
     }

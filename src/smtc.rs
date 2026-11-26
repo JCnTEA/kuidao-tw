@@ -124,11 +124,17 @@ impl NowPlaying {
         // 使用者在瀏覽器播放 YouTube／YouTube Music 時，Windows 播放卡仍會保留工作階段，
         // 瀏覽器縮小或切到別的分頁都能讀到歌名；不能因缺少專輯或型別被標成影片就被濾掉。
         if is_browser_source(&self.source) && is_youtube(self) {return MediaKind::Music;}
-        if self.playback_type==MediaKind::Video {return MediaKind::Video;}
         // 部分瀏覽器把所有媒體都上報為音樂，補充識別明確的視頻頁面標題。
         let title=self.title.trim().to_lowercase();
         if [" - 抖音"," - youtube","_嗶哩嗶哩_bilibili"," - 嗶哩嗶哩"].iter().any(|suffix|title.ends_with(suffix)) {
             return MediaKind::Video;
+        }
+        // 瀏覽器回報 Video 時多半是 YouTube／網頁播放器把 MV 標成影片；
+        // 只要標題看起來像歌名（不是上面的明確視頻站），仍當成音樂上島，
+        // 否則 Chrome／Edge 播放歌曲時會被整個濾掉，島上永遠「暫無音樂」。
+        if self.playback_type==MediaKind::Video {
+            if !is_browser_source(&self.source) {return MediaKind::Video;}
+            if title.is_empty() {return MediaKind::Video;}
         }
         let source=self.source.to_lowercase();
         if (matches!(source.as_str(),"kugou"|"kugou.exe"|"cloudmusic.exe"|"汽水音樂"|"汽水音樂"|"sodamusic.exe"|"spotify"|"spotify.exe"|"kwmusic.exe"|"bodian_pc.exe") || is_qqmusic(&source) || is_kkbox(&source) || apple_music::is_source(&source)) && self.playback_type==MediaKind::Music{return MediaKind::Music;}
@@ -454,7 +460,7 @@ fn query(artwork:&mut ArtworkCache) -> Option<NowPlaying> {
     let result=query_system(artwork);
     let system=artwork.system_result(result,std::time::Instant::now());
     // 播放卡有「正在播放」的工作階段就直接用，時間軸與控制都最準。
-    if system.as_ref().is_some_and(|media|media.playing && !media.title.trim().is_empty()) {return system;}
+    if system.as_ref().is_some_and(|media|media.playing && media.is_music() && !media.title.trim().is_empty()) {return system;}
     // Windows 播放卡沒有登記瀏覽器分頁時（部分 Chrome／Edge 版本不註冊 SMTC），
     // 改用音量混音器正在出聲的瀏覽器 + 視窗標題當後備來源。
     // 播放卡只有時間軸、標題是空的（Chrome 常見）時，把時間軸接到標題那條來源上，
