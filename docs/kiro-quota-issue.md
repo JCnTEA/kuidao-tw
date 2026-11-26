@@ -1,16 +1,16 @@
 # Kiro 额度适配
 
-通过本机 Kiro 登录缓存查询 GetUsageLimits。只读登录文件，不儲存令牌副本，不回写，不使用 refreshToken 自动续期。
+通过本机 Kiro 登录缓存查询 GetUsageLimits。只读登录文件，不保存令牌副本，不回写，不使用 refreshToken 自动续期。
 
 ## 登录与身份
 
-默认路径为 `%USERPROFILE%\.aws\sso\cache\kiro-auth-token.json`，也可选择其他登录 JSON。连接与重连在后台核验成功、配置儲存成功后生效。取消或关闭窗口后，晚到结果不会儲存账号。
+默认路径为 `%USERPROFILE%\.aws\sso\cache\kiro-auth-token.json`，也可选择其他登录 JSON。连接与重连在后台核验成功、配置保存成功后生效。取消或关闭窗口后，晚到结果不会保存账号。
 
 - `accessToken`：Bearer 凭据，仅发往下列固定官方端点。
 - `profileArn`：有值时随请求发送；缺少时允许空请求体，兼容企业 IdC 登录。
 - `region`：与 ARN 区域一致时使用；缺少时从 ARN 提取，两者都缺少时使用美国东部区域。
 - `expiresAt`：RFC3339 格式的客户端续期时间，登录失效以服务端 401 / 403 为准。
-- `userInfo.userId`：使用响应中的用户标识绑定账号，配置和缓存仅儲存其 SHA-256 摘要。缺少可核验用户标识时不显示额度。
+- `userInfo.userId`：使用响应中的用户标识绑定账号，配置和缓存仅保存其 SHA-256 摘要。缺少可核验用户标识时不显示额度。
 
 客户端注册 `clientIdHash`、profile ARN 和访问令牌均不作为用户身份。原版本尚未核验的身份需要重新连接；已经核验的账号重连时必须仍是原用户。重连保留账号 ID、备注、配色及常驻设置。
 
@@ -21,7 +21,7 @@
 | us-east-1 | https://codewhisperer.us-east-1.amazonaws.com/ |
 | eu-central-1 | https://q.eu-central-1.amazonaws.com/ |
 
-其他区域暂不支援，不根据登录文件拼接任意主机。请求使用 POST、`application/x-amz-json-1.0` 和 `X-Amz-Target: AmazonCodeWhispererService.GetUsageLimits`。禁用重定向，使用既有代理与请求超时；解压后响应上限为 1 MiB。
+其他区域暂不支持，不根据登录文件拼接任意主机。请求使用 POST、`application/x-amz-json-1.0` 和 `X-Amz-Target: AmazonCodeWhispererService.GetUsageLimits`。禁用重定向，使用既有代理与请求超时；解压后响应上限为 1 MiB。
 
 401 / 403 提示重新登录；429 保留服务端 Retry-After 并按账号退避。查询期间登录文件发生变化时丢弃结果。Kiro 请求独立执行，避免阻塞其他额度服务。
 

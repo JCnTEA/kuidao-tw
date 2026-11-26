@@ -13,8 +13,5 @@
 *.key
 .DS_Store
 Thumbs.db
-/.upstream-incoming/
-
-# 監控台 .NET 建置殘留，不進版本庫
-/docs/archive/records/2024/reference/legacy-utilities/bin/
-/docs/archive/records/2024/reference/legacy-utilities/obj/
+/编译并测试-Claude.cmd
+/编译测试版-Claude.cmd

@@ -29,7 +29,7 @@ InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
 ManifestDPIAware true
 SetCompressor /SOLID lzma
-VIProductVersion "${DISPLAY_VERSION_NUM}"
+VIProductVersion "0.6.70.0"
 VIAddVersionKey /LANG=1028 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=1028 "FileDescription" "${APP_NAME}安裝程式"
 VIAddVersionKey /LANG=1028 "FileVersion" "${DISPLAY_VERSION}"

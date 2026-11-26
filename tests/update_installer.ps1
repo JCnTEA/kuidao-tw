@@ -19,7 +19,7 @@ try {
     [IO.File]::WriteAllText($installer, [IO.File]::ReadAllText((Join-Path $project 'installer\update.ps1')), [Text.UTF8Encoding]::new($true))
     $targetDir = Join-Path $testRoot 'installed'
     New-Item -ItemType Directory -Path $targetDir | Out-Null
-    $target = Join-Path $targetDir 'kuidao.exe'
+    $target = Join-Path $targetDir 'daozai.exe'
     $data = Join-Path $targetDir 'settings.json'
     Set-Content -LiteralPath $data -Value 'keep-user-data'
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -27,12 +27,12 @@ try {
         Remove-Item -LiteralPath (Join-Path $targetDir 'started.txt') -ErrorAction SilentlyContinue
         Set-Content -LiteralPath $target -Value 'previous-program'
         $before = (Get-FileHash -LiteralPath $target).Hash
-        $work = Join-Path $env:LOCALAPPDATA ('Kuidao\Updates\' + $case)
+        $work = Join-Path $env:LOCALAPPDATA ('Daozai\Updates\' + $case)
         New-Item -ItemType Directory -Path $work -Force | Out-Null
         $archive = Join-Path $work 'update.zip'
         $zip = [IO.Compression.ZipFile]::Open($archive, [IO.Compression.ZipArchiveMode]::Create)
         $version = if ($case -eq 'wrong-version') {'9.8.8'} else {'9.8.7'}
-        $entry = if ($case -eq 'traversal') {'../kuidao.exe'} else {"Kuidao-v$version-tw-windows-x64/kuidao.exe"}
+        $entry = if ($case -eq 'traversal') {'../daozai.exe'} else {"Daozai-v$version-windows-x64/daozai.exe"}
         [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $fixture, $entry) | Out-Null
         $zip.Dispose()
         Set-Content -LiteralPath (Join-Path $work 'version.txt') -Value $version

@@ -8,36 +8,30 @@ try {
     # 用 CARGO_ENCODED_RUSTFLAGS（\x1f 分隔）避免路径里的空格被拆开；它会覆盖 .cargo/config.toml 的 rustflags，所以带上 crt-static。
     $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $env:USERPROFILE '.cargo' }
     $targetDirectory = if ($env:CARGO_TARGET_DIR) { [IO.Path]::GetFullPath($env:CARGO_TARGET_DIR) } else { Join-Path $projectRoot 'target' }
-    # GitHub Actions 的建置目錄是固定的 runner 路徑，不含使用者目錄；QuickJS 的 __FILE__
-    # 會把該路徑寫進執行檔，因此 CI 只檢查使用者目錄與 Cargo 目錄。
-    $privatePaths = if ($env:GITHUB_ACTIONS -eq 'true') {
-        @($cargoHome, $env:USERPROFILE) | Where-Object { $_ } | Select-Object -Unique
-    } else {
-        @($targetDirectory, $projectRoot, $cargoHome, $env:USERPROFILE) | Where-Object { $_ } | Select-Object -Unique
-    }
+    $privatePaths = @($targetDirectory, $projectRoot, $cargoHome, $env:USERPROFILE) | Where-Object { $_ } | Select-Object -Unique
     $env:CARGO_ENCODED_RUSTFLAGS = @('-C', 'target-feature=+crt-static', "--remap-path-prefix=$cargoHome=cargo", "--remap-path-prefix=$projectRoot=daozai", '-C', 'link-arg=/PDBALTPATH:%_PDB%') -join [char]0x1f
     if ($env:CARGO_TARGET_DIR) { $env:CARGO_ENCODED_RUSTFLAGS += [string][char]0x1f + "--remap-path-prefix=$targetDirectory=target" }
     if (-not $SkipBuild) {
         $env:CARGO_BUILD_JOBS = '1'
         # QuickJS 的 C 断言使用宽字符源文件名，MSVC 要单独去掉构建目录前缀。
         $originalCL = $env:CL
+        $originalTestBuild = $env:DAOZAI_TEST_BUILD
         try {
+            Remove-Item Env:DAOZAI_TEST_BUILD -ErrorAction SilentlyContinue
             $trimFlags = $privatePaths | ForEach-Object { '"/d1trimfile:' + $_ + '"' }
             $env:CL = (@($originalCL) + $trimFlags) -join ' '
-            cargo +stable-x86_64-pc-windows-msvc build --locked --release --bin kuidao --bin kuidao-bootstrap --target x86_64-pc-windows-msvc
+            cargo +stable-x86_64-pc-windows-msvc build --locked --release --features sdk-js,sdk-material --bin daozai --target x86_64-pc-windows-msvc
             if ($LASTEXITCODE -ne 0) { throw 'Release build failed' }
         } finally {
             $env:CL = $originalCL
+            $env:DAOZAI_TEST_BUILD = $originalTestBuild
         }
     }
     if (-not $Executable) {
-        $Executable = Join-Path $targetDirectory 'x86_64-pc-windows-msvc\release\kuidao.exe'
+        $Executable = Join-Path $targetDirectory 'x86_64-pc-windows-msvc\release\daozai.exe'
     }
-    $bootstrap = Join-Path (Split-Path $Executable -Parent) 'kuidao-bootstrap.exe'
-    if (-not (Test-Path -LiteralPath $bootstrap)) { throw 'Bootstrap executable not found' }
     $binary = Get-Item -LiteralPath $Executable
     & (Join-Path $PSScriptRoot 'check-runtime.ps1') -Executable $binary.FullName
-    & (Join-Path $PSScriptRoot 'check-runtime.ps1') -Executable $bootstrap
     if ($binary.VersionInfo.FileVersion -ne $version -and $binary.VersionInfo.FileVersion -ne "$version.0") { throw 'Executable version mismatch' }
     $bytes = [IO.File]::ReadAllBytes($binary.FullName)
     foreach ($encoding in @([Text.Encoding]::UTF8, [Text.Encoding]::Unicode)) {
@@ -46,8 +40,6 @@ try {
             if ($content.IndexOf($private.Replace('/', '\'), [StringComparison]::OrdinalIgnoreCase) -ge 0) { throw "发布程序包含本机构建路径（$($encoding.WebName)）" }
         }
     }
-    # 在打包前簽署主程式與啟動器：啟動器會被 NSIS 嵌進安裝檔，主程式則進入 ZIP，故要先簽。
-    & (Join-Path $PSScriptRoot 'sign.ps1') -FilePath @($binary.FullName, $bootstrap)
     if (-not $NsisCompiler) {
         $compiler = Get-Command makensis.exe -ErrorAction SilentlyContinue
         if ($compiler) { $NsisCompiler = $compiler.Source }
@@ -55,26 +47,22 @@ try {
         else { $NsisCompiler = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe' }
     }
     if (-not (Test-Path -LiteralPath $NsisCompiler)) { throw 'NSIS compiler not found; install NSIS or pass -NsisCompiler' }
-    $packageName = "Kuidao-v$version-tw-windows-x64"
+    $packageName = "Daozai-v$version-windows-x64"
     if (-not $OutputDirectory) { $OutputDirectory = Join-Path $projectRoot 'dist' }
     $outputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
     $stagingDirectory = Join-Path $outputDirectory $packageName
     if (Test-Path -LiteralPath $stagingDirectory) { throw 'Package directory already exists' }
     New-Item -ItemType Directory -Path $stagingDirectory -Force | Out-Null
-    Copy-Item -LiteralPath $binary.FullName -Destination (Join-Path $stagingDirectory 'kuidao.exe')
-    # ZIP 保留给发布与应用内更新；普通用户只需下载安装 EXE。
+    Copy-Item -LiteralPath $binary.FullName -Destination (Join-Path $stagingDirectory 'daozai.exe')
+    # ZIP 保留给免安装使用和应用内更新；普通用户只需下载安装 EXE。
     @('LICENSE','THIRD_PARTY_NOTICES.txt') | ForEach-Object {
         Copy-Item -LiteralPath (Join-Path $projectRoot $_) -Destination $stagingDirectory -Recurse
     }
-    # 發佈包没有开始菜单：附带一个只调用 daozai.exe --collect-diagnostics 的 cmd，岛仔打不开时双击收集。
-    # 诊断脚本本身内嵌在程序里，不再单独附带，也就不会出现新程序配旧脚本。
+    # 免安装包没有开始菜单：附带一个只调用 daozai.exe --collect-diagnostics 的 cmd，岛仔打不开时双击收集。
     Copy-Item -LiteralPath (Join-Path $projectRoot 'installer\收集岛仔诊断.cmd') -Destination $stagingDirectory
-    # 台灣版：安裝檔固定用英文檔名，避免郵件與防毒對中文名誤判。
-    $setup = Join-Path $outputDirectory "Kuidao-Setup-TW-x64.exe"
-    & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DPROJECT_DIR=$projectRoot" "/DBOOTSTRAP_EXE=$bootstrap" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
+    $setup = Join-Path $outputDirectory "Daozai-Setup-v$version-x64.exe"
+    & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DPROJECT_DIR=$projectRoot" "/DSOURCE_EXE=$($binary.FullName)" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
-    # 安裝檔本身再補上一層 Authenticode 簽章（內嵌的啟動器已先簽過）。
-    & (Join-Path $PSScriptRoot 'sign.ps1') -FilePath @($setup)
     $archive = Join-Path $outputDirectory "$packageName.zip"
     Compress-Archive -LiteralPath $stagingDirectory -DestinationPath $archive
     @($setup, $archive) | ForEach-Object {
