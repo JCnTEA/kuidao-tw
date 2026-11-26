@@ -2893,7 +2893,7 @@ impl App {
                 if a.source!=crate::extras::AlertSource::Internal {
                     paint::bell(&c.scaled(18.0,15.0,0.85),18.0,15.0,theme::WHITE,paint::bell_swing(self.t-a.at));
                     crate::social::badge(&c,22.0,10.5,self.mail_unread.max(1),6.0,8.0);
-                }else{crate::extras::notice_badge(&c,18.0,15.0,&a);}
+                }else{crate::extras::notice_badge(&c,18.0,15.0,&a);c.circle(22.0,10.5,2.0,Color32::from_rgb(255,72,72));}
                 let button=crate::quota_ui::bar_tooltip(c.hit(0.0,0.0,36.0,BAR_H,"notice-badge"),format!("{}\n{}",a.title,a.body));
                 if interactive {top_bar_notice=Some(button.interact_rect);}
                 if button.clicked(){if let Some(kind)=a.health(){self.confirm_health_reminder(kind);}else{self.notice_details=!self.notice_details;}}
