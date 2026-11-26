@@ -175,7 +175,7 @@ fn wireless_page_tracks_receiver_extensions_without_losing_bluetooth_or_builtin_
     h.receivers=vec![builtin.clone()];
     open_page(&mut h);
     let check=|h:&mut H,enabled:bool|{
-        // USB 工作線程始終返回內置型號，僅在啟用時追加兼容包識別出的型號。
+        // USB 工作線程始終返回內置型號，僅在啟用時追加相容包識別出的型號。
         h.receivers=vec![builtin.clone()];
         if enabled {
             h.receivers.push(extension.clone());
@@ -409,8 +409,8 @@ fn wireless_settings_controls_are_in_their_own_page() {
     let output=wireless_settings_capture(&mut h,560.0);
     let mut raster=crate::preview_raster::Raster::new(690,560);
     for (tab,name,visible,hidden) in [
-        (10,"wireless-page-management",vec!["無線裝置電量"],vec!["常駐樣式","常駐裝置","電量提醒","安裝兼容包…"]),
-        (crate::extras::SETTINGS_TAB_WIRELESS,"wireless-settings",vec!["島上常駐","常駐樣式","常駐裝置","電量提醒"],vec!["藍牙裝置連線","裝置兼容","反饋裝置適配","本地插件"]),
+        (10,"wireless-page-management",vec!["無線裝置電量"],vec!["常駐樣式","常駐裝置","電量提醒","安裝相容包…"]),
+        (crate::extras::SETTINGS_TAB_WIRELESS,"wireless-settings",vec!["島上常駐","常駐樣式","常駐裝置","電量提醒"],vec!["藍牙裝置連線","裝置相容","反饋裝置適配","本機插件"]),
         (6,"wireless-notifications",vec!["藍牙裝置連線"],vec!["無線裝置電量","電量提醒"]),
     ] {
         h.app.settings_tab=tab;
@@ -474,12 +474,12 @@ fn wireless_compat_settings_follow_install_and_switch() {
     let check=|h:&mut H,tab,expected|{
         for _ in 0..3 {frame(h,tab);}
         let labels=texts(h);
-        for label in ["裝置兼容","啟用兼容包","無線裝置兼容包 v1.0.0","反饋裝置適配"] {
+        for label in ["裝置相容","啟用相容包","無線裝置相容包 v1.0.0","反饋裝置適配"] {
             assert_eq!(labels.iter().any(|s|s==label),expected,"設定頁 {tab} 的 {label}");
         }
-        assert!(!labels.iter().any(|s|matches!(s.as_str(),"本地插件"|"安裝兼容包…"|"卸載")));
+        assert!(!labels.iter().any(|s|matches!(s.as_str(),"本機插件"|"安裝相容包…"|"卸載")));
         let title=h.shapes.iter().find_map(|shape|match &shape.shape {
-            egui::Shape::Text(text) if text.galley.text()=="啟用兼容包"=>Some(text.visual_bounding_rect()),
+            egui::Shape::Text(text) if text.galley.text()=="啟用相容包"=>Some(text.visual_bounding_rect()),
             _=>None,
         });
         let has_plugin_tag=title.is_some_and(|title|h.shapes.iter().any(|shape| {
@@ -487,10 +487,10 @@ fn wireless_compat_settings_follow_install_and_switch() {
                 && text.visual_bounding_rect().left()>=title.right()
                 && (text.visual_bounding_rect().center().y-title.center().y).abs()<8.0)
         }));
-        assert_eq!(has_plugin_tag,expected,"設定頁 {tab} 的兼容包標題旁應有插件小標");
+        assert_eq!(has_plugin_tag,expected,"設定頁 {tab} 的相容包標題旁應有插件小標");
     };
     let click=|h:&mut H|{
-        let pos=frame(h,wireless).expect("已安裝兼容包應顯示啟停開關");
+        let pos=frame(h,wireless).expect("已安裝相容包應顯示啟停開關");
         for pressed in [true,false] {
             *events.lock().unwrap()=vec![
                 egui::Event::PointerMoved(pos),
@@ -512,9 +512,9 @@ fn wireless_compat_settings_follow_install_and_switch() {
     let pos=frame(&mut h,wireless).expect("開關應仍可見");
     assert!(h.shapes.iter().any(|shape|matches!(&shape.shape,egui::Shape::Rect(rect)
         if rect.fill==egui::Color32::from_rgb(140,127,208) && rect.rect.center().distance(pos)<0.1)),
-        "已啟用的兼容包開關應為紫色");
+        "已啟用的相容包開關應為紫色");
     click(&mut h);
-    assert!(store.package().is_none(),"停用後收回兼容數據");
+    assert!(store.package().is_none(),"停用後收回相容數據");
     check(&mut h,wireless,true);
     h.app.plugins.test_uninstall_wireless_compat().unwrap();
     check(&mut h,wireless,false);

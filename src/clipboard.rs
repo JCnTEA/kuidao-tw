@@ -19,7 +19,7 @@ pub const MAX_PINNED: usize = 20;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Clip {
     pub text: String,
-    /// 本地時間 `HH:MM`。
+    /// 本機時間 `HH:MM`。
     pub at: String,
     pub pinned: bool,
 }

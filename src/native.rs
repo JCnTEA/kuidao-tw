@@ -194,7 +194,7 @@ fn enable_alpha_composition(hwnd:HWND)->windows::core::Result<()> {
 
 // ---------- 毛玻璃：窗口區域 ----------
 //
-// 兼容後端（無逐像素透明）按輪廓裁剪窗口區域；毛玻璃的實時模糊見 `composition.rs`。
+// 相容後端（無逐像素透明）按輪廓裁剪窗口區域；毛玻璃的實時模糊見 `composition.rs`。
 
 /// Windows「透明效果」開關；讀不到時返回 None。
 fn system_transparency() -> Option<bool> {
@@ -526,7 +526,7 @@ unsafe fn top_bar_above(hwnd:HWND,bounds:crate::display_layout::Bounds,target:Op
     false
 }
 
-/// 兼容後端的分層窗口狀態。Direct3D 首幀交付前先保持主窗口的區域為空。
+/// 相容後端的分層窗口狀態。Direct3D 首幀交付前先保持主窗口的區域為空。
 #[derive(Default)]
 enum Layering {
     Starting(Option<Instant>),
@@ -737,7 +737,7 @@ impl Window {
         }).unwrap_or_default();
         // 本機驗證用：DAOZAI_OUTLINE_TEST=alpha 按 AMD 等路徑處理；=opaque 再假裝讀回的畫面沒有透明通道。
         let opaque_surface=!direct_composition && (surface_needs_outline_clip(backend,&vendor,&renderer) || outline_test().is_some());
-        if opaque_surface{glass_diagnostic(&format!("渲染兼容：{vendor} {renderer} {backend:?}，不直接信任系統透明合成，首幀前先按輪廓裁剪"));}
+        if opaque_surface{glass_diagnostic(&format!("渲染相容：{vendor} {renderer} {backend:?}，不直接信任系統透明合成，首幀前先按輪廓裁剪"));}
         // 收緊外框只走 OpenGL 前緩衝讀回；GPU 材質的透明交換鏈不收緊。
         let crop=Crop{supported:cc.gl.is_some() && !opaque_surface && !direct_composition,gl:cc.gl.clone(),..Default::default()};
         watch_drag(hwnd,cc.egui_ctx.clone(),Arc::clone(&crop.drag_wake));
@@ -928,7 +928,7 @@ impl Window {
         eframe::egui_wgpu::winit::direct_composition_active(self.hwnd.0 as isize).then_some(self.hwnd)
     }
 
-    /// 是否需要每幀讀回畫面交給分層窗口（兼容後端，且分層窗口仍可用）。
+    /// 是否需要每幀讀回畫面交給分層窗口（相容後端，且分層窗口仍可用）。
     pub fn wants_frames(&self)->bool {self.opaque_surface && !matches!(self.layering,Layering::Unavailable)}
 
     pub fn waiting_for_first_layered_frame(&self)->bool {matches!(self.layering,Layering::Starting(_))}
@@ -953,15 +953,15 @@ impl Window {
                     match self.capture_exclusion.render(targets, Some(target), || layered.present(hwnd, size, frame)) {
                         Ok(true)=>{
                             self.outline.active=!real;
-                            glass_diagnostic(if real {"渲染兼容：已切換為分層窗口逐像素透明（邊緣抗鋸齒）"}
-                                else {"渲染兼容：讀回的畫面沒有透明通道，按島體輪廓補算邊緣透明度（分層窗口，邊緣抗鋸齒）"});
+                            glass_diagnostic(if real {"渲染相容：已切換為分層窗口逐像素透明（邊緣抗鋸齒）"}
+                                else {"渲染相容：讀回的畫面沒有透明通道，按島體輪廓補算邊緣透明度（分層窗口，邊緣抗鋸齒）"});
                             self.layering=Layering::Active(layered);
                             return true;
                         }
                         Ok(false)=>return false,
                         Err(error)=>{
                             layered.detach(self.hwnd);
-                            glass_diagnostic(&format!("渲染兼容：首幀無法交給分層窗口，回到輪廓裁剪：{error:?}"));
+                            glass_diagnostic(&format!("渲染相容：首幀無法交給分層窗口，回到輪廓裁剪：{error:?}"));
                             self.layering=Layering::Unavailable;
                             return false;
                         }
@@ -1292,7 +1292,7 @@ mod tests {
                 assert!(!PtInRegion(region,px(10.0),px(10.0)).as_bool(),"相容後端不能保留畫布上的黑色背景：{backend:?} / {vendor} / {renderer}");
                 assert!(!PtInRegion(region,px(81.0),px(61.0)).as_bool(),"圓角外側必須透出桌面");
                 assert!(!native.blur);
-                assert!(native.backdrop.is_none(),"輪廓兼容模式不能再啟用獨立模糊底板");
+                assert!(native.backdrop.is_none(),"輪廓相容模式不能再啟用獨立模糊底板");
                 native.update((0.0,0.0,0.0,0.0),(0.0,0.0,0.0,0.0),None,None,None,false,ppp,false,false,None);
                 GetWindowRgn(hwnd,region);
                 assert!(!PtInRegion(region,px(200.0),px(100.0)).as_bool(),"隱藏時不能留下上一幀輪廓");
@@ -1515,9 +1515,9 @@ mod tests {
                 let display=match &native.layering {Layering::Active(layered)=>layered.display(),_=>island.0};
                 let foreground=GetForegroundWindow();
                 SetWindowPos(cover.0,HWND_TOPMOST,bounds.left,bounds.top,1920,32,flags).unwrap();
-                assert!(top_bar_above(display,bounds,None),"復現頂欄遮擋，兼容渲染={layered}");
+                assert!(top_bar_above(display,bounds,None),"復現頂欄遮擋，相容渲染={layered}");
                 native.keep_above_top_bar(bounds,None);
-                assert!(!top_bar_above(display,bounds,None),"收起時也應恢復實際層級，兼容渲染={layered}");
+                assert!(!top_bar_above(display,bounds,None),"收起時也應恢復實際層級，相容渲染={layered}");
                 assert_eq!(GetForegroundWindow(),foreground,"置頂不能搶走輸入焦點");
                 for (x,y,w,h) in [(-10000,-10000,400,140),(-10480,-10000,1920,300),(-10480,-10000,1920,1080),(-10480,-9600,1920,32),(-12400,-10000,1920,32)] {
                     SetWindowPos(cover.0,HWND_TOPMOST,x,y,w,h,flags).unwrap();
@@ -1590,8 +1590,8 @@ mod tests {
                     *hit().lock().unwrap_or_else(|e|e.into_inner())=saved.clone();
 
                     assert!(short_bar_stayed_above,"通知按 150% 換成物理座標後沒有被短頂欄擋住，層級應保持");
-                    assert_eq!(obscured,cover.0,"頂欄在前時按鈕被擋，兼容渲染={layered}，緊湊通知={compact}");
-                    assert_eq!(clickable,island.0,"恢復層級後應命中負責交互的主窗口，兼容渲染={layered}，緊湊通知={compact}");
+                    assert_eq!(obscured,cover.0,"頂欄在前時按鈕被擋，相容渲染={layered}，緊湊通知={compact}");
+                    assert_eq!(clickable,island.0,"恢復層級後應命中負責交互的主窗口，相容渲染={layered}，緊湊通知={compact}");
                     assert_eq!(outside,cover.0,"通知外仍應命中任務欄");
                     assert_eq!(foreground_after,foreground,"恢復通知的交互不能搶走焦點");
                     assert_eq!(obscured_again,cover.0,"任務欄重新置頂後應再次形成遮擋");

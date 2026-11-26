@@ -18,7 +18,7 @@ struct Shell {
     t0: Instant,
     #[cfg(windows)]
     frame_at: Instant,
-    /// 兼容渲染上一次請求讀回畫面的時刻（無輸入的持續動畫按約 30 幀/秒讀回）。
+    /// 相容渲染上一次請求讀回畫面的時刻（無輸入的持續動畫按約 30 幀/秒讀回）。
     #[cfg(windows)]
     readback_at: Option<Instant>,
     #[cfg(windows)]
@@ -251,7 +251,7 @@ impl Shell {
             self.material_requested_id = id.map(str::to_owned);
             self.material_failed = false;
         }
-        // 通用設定的兼容渲染開關在重啟時切換後端，期間沿用當前已載入的材質。
+        // 通用設定的相容渲染開關在重啟時切換後端，期間沿用當前已載入的材質。
         let Some(spec) = spec.filter(|spec| self.app.settings.render_compat
             || self.app.material_active_id.as_deref() == Some(spec.id)) else {
             if self.material.take().is_some() {
@@ -989,7 +989,7 @@ impl eframe::App for Shell {
         let mut out = out;
         #[cfg(windows)]
         // 頁面自己驅動的動畫（天氣日出日落、性能詳情、翻頁後的頁面緩動）靠 egui 立即重繪推進，
-        // 兼容渲染下也按交互幀交付。插件狀態頁已經在 FrameOut 標記畫布動畫，截圖回調的重繪只負責交付。
+        // 相容渲染下也按交互幀交付。插件狀態頁已經在 FrameOut 標記畫布動畫，截圖回調的重繪只負責交付。
         let page_animating = self.app.render_compat_running && out.expanded
             && !self.app.is_plugin_status_page() && ctx.requested_repaint_last_pass();
         #[cfg(windows)]
@@ -1020,7 +1020,7 @@ impl eframe::App for Shell {
         #[cfg(windows)]
         if let Some(native) = &mut self.native {
             native.begin_crop_frame(_frame.root_gl_front_ready);
-            // 兼容渲染：讀回的畫面交給分層窗口，邊緣保留抗鋸齒。畫面變化（或有其他輸入）時才請求下一次讀回，
+            // 相容渲染：讀回的畫面交給分層窗口，邊緣保留抗鋸齒。畫面變化（或有其他輸入）時才請求下一次讀回，
             // 讀回完成本身觸發的那一幀若畫面沒變就停下，靜止時不會一直空轉。
             if native.wants_frames() {
                 let (shot,other_input)=ctx.input(|i|(
@@ -1298,7 +1298,7 @@ impl eframe::App for Shell {
             if std::env::var_os("DAOZAI_FRAME_TRACE").is_some() {
                 let (page,open)=self.app.debug_state();
                 daozai::resources::append_log(&daozai::model::config_dir().join("diagnostics"),"frames",
-                    &format!("間隔 {:.0} ms｜頁面 {}｜展開 {}｜上幀邏輯 {:.1}（前置 {:.1}、設定窗口 {:.1}、其餘 {:.1}、材質與提醒 {:.1}）｜邏輯之外 {:.1}｜本幀島體 {:.1}（插件 {:.1}）｜窗口 {:.1}｜本幀前置：{}｜過渡 {} 交互起點 {} 兼容 {}",
+                    &format!("間隔 {:.0} ms｜頁面 {}｜展開 {}｜上幀邏輯 {:.1}（前置 {:.1}、設定窗口 {:.1}、其餘 {:.1}、材質與提醒 {:.1}）｜邏輯之外 {:.1}｜本幀島體 {:.1}（插件 {:.1}）｜窗口 {:.1}｜本幀前置：{}｜過渡 {} 交互起點 {} 相容 {}",
                         interval.as_secs_f64()*1000.0,page,open,logic.as_secs_f64()*1000.0,
                         parts[0].as_secs_f64()*1000.0,parts[1].as_secs_f64()*1000.0,parts[2].as_secs_f64()*1000.0,parts[3].as_secs_f64()*1000.0,
                         interval.saturating_sub(logic).as_secs_f64()*1000.0,draw_cost.as_secs_f64()*1000.0,

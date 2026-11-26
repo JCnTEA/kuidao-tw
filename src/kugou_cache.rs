@@ -91,7 +91,7 @@ fn read_directory(root:&Path,title:&str,artist:&str,duration:f64)->Option<Lyrics
         let Some(candidate)=select(&raw,&name,&singer,duration) else{continue;};
         // 同一首歌可能緩存過多份歌詞：正文是羅馬音的那份只作備選，優先用原文。
         if romanized(title,&candidate) {if transliterated.is_none(){transliterated=Some(candidate);}continue;}
-        // 時長明確匹配的緩存優先；沒有時長資訊時才沿用最新的兼容緩存。
+        // 時長明確匹配的緩存優先；沒有時長資訊時才沿用最新的相容緩存。
         if duration<=0.0 || header(&raw,"total").and_then(|s|s.parse::<u32>().ok()).is_some_and(|total|total>0){return Some(candidate);}
         if fallback.is_none(){fallback=Some(candidate);}
     }

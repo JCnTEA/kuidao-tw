@@ -552,7 +552,7 @@ fn transport_issue(mut error: &(dyn std::error::Error + 'static)) -> TransportIs
         }
         #[cfg(windows)]
         if let Some(native) = error.downcast_ref::<native_tls::Error>() {
-            // native-tls 不公開底層系統錯誤碼；只讀 Rust 的數字後綴，不匹配本地化文案。
+            // native-tls 不公開底層系統錯誤碼；只讀 Rust 的數字後綴，不匹配本機化文案。
             let detail = native.to_string();
             let code = detail.rsplit_once("(os error ").and_then(|(_, code)| code.strip_suffix(')'))
                 .and_then(|code| code.parse::<i32>().ok());
@@ -747,7 +747,7 @@ pub fn month_grid(date: NaiveDate) -> [NaiveDate; 42] {
     std::array::from_fn(|i| start + chrono::Duration::days(i as i64))
 }
 
-/// 按本地月份查詢，結束時間為下月一日零點，不截成未來 24 小時。
+/// 按本機月份查詢，結束時間為下月一日零點，不截成未來 24 小時。
 pub fn fetch_month(cfg: &Config, password: &str, month: NaiveDate) -> Result<Fetched, Failure> {
     let first = month_start(month);
     let end = first.checked_add_months(chrono::Months::new(1)).unwrap();
@@ -969,7 +969,7 @@ fn discover(agent:&ureq::Agent,cfg:&Config,password:&str)->Result<String,Failure
     discover_calendars(agent,cfg,password)?.0.into_iter().next().ok_or_else(||Failure::text("沒有找到行事曆"))
 }
 
-/// 只選擇行事曆集合或已有的 UUID 兼容路徑，不能把主目錄/收件箱當成行事曆。
+/// 只選擇行事曆集合或已有的 UUID 相容路徑，不能把主目錄/收件箱當成行事曆。
 fn pick_calendar(xml: &str, base: &str) -> Option<String> {
     let want = path_of(base).trim_end_matches('/').to_string();
     let mut best: Option<(u8, String)> = None;

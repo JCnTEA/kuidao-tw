@@ -4,7 +4,7 @@
 //! 只有 Windows 自帶的 OpenGL 1.1（GDI Generic），egui_glow 報「requires OpenGL 2.0+」。
 //! 這時改用 Direct3D 12 重新啟動，不需要用戶拔擴展塢。
 
-/// 兼容圖形後端（低功耗顯卡優先）：指定 Direct3D 12 或 Vulkan。
+/// 相容圖形後端（低功耗顯卡優先）：指定 Direct3D 12 或 Vulkan。
 fn compatible(mut options:eframe::NativeOptions,backends:eframe::wgpu::Backends)->eframe::NativeOptions {
     options.renderer=eframe::Renderer::Wgpu;
     #[cfg(all(windows, feature = "sdk-material"))]
@@ -27,7 +27,7 @@ fn small_memory_blocks(descriptor:eframe::wgpu::DeviceDescriptor<'static>)->efra
     eframe::wgpu::DeviceDescriptor{memory_hints:eframe::wgpu::MemoryHints::MemoryUsage,required_limits,..descriptor}
 }
 
-/// 兼容渲染優先用 Direct3D 12（Windows 原生、睡眠喚醒與換屏處理最穩）；
+/// 相容渲染優先用 Direct3D 12（Windows 原生、睡眠喚醒與換屏處理最穩）；
 /// 裝置不支援時再退到 Vulkan。兩者都不經過顯卡的 OpenGL 驅動。
 fn launch_compatible(options:eframe::NativeOptions,launch:&mut impl FnMut(eframe::NativeOptions)->eframe::Result<()>)->eframe::Result<()> {
     let first=launch(compatible(options.clone(),eframe::wgpu::Backends::DX12));
@@ -46,7 +46,7 @@ fn launch_compatible(options:eframe::NativeOptions,launch:&mut impl FnMut(eframe
     }
 }
 
-/// 驗收與排障：設定環境變量 `KUIDAO_RENDERER=wgpu` 直接使用兼容圖形後端，
+/// 驗收與排障：設定環境變量 `KUIDAO_RENDERER=wgpu` 直接使用相容圖形後端，
 /// 在正常電腦上也能檢查 OpenGL 失敗後用戶會看到的畫面。
 fn forced_compatible()->bool {
     std::env::var("KUIDAO_RENDERER").is_ok_and(|value|value.trim().eq_ignore_ascii_case("wgpu"))
@@ -85,7 +85,7 @@ fn opengl(mut options:eframe::NativeOptions)->eframe::NativeOptions {
 
 fn run_with(compat_first:bool,options:eframe::NativeOptions,mut launch:impl FnMut(eframe::NativeOptions)->eframe::Result<()>)->eframe::Result<()> {
     if compat_first {
-        // 兼容渲染是被要求的（設定、崩潰標記或環境變量），但這台電腦可能根本沒有 DX12 / Vulkan 裝置
+        // 相容渲染是被要求的（設定、崩潰標記或環境變量），但這台電腦可能根本沒有 DX12 / Vulkan 裝置
         // （遠程桌面、虛擬機、只有基本顯示適配器、老顯卡）。這時退回 OpenGL，不讓用戶每次都打不開。
         daozai::renderer::set_compat_active(true);
         let error=match launch_compatible(options.clone(),&mut launch) {
@@ -167,7 +167,7 @@ mod tests {
         daozai::material::configure_startup(&mut options,true,true);
         let mut attempts=Vec::new();
         launch_compatible(options,&mut |options|{
-            let eframe::egui_wgpu::WgpuSetup::CreateNew(setup)=options.wgpu_options.wgpu_setup else{panic!("應創建兼容圖形裝置")};
+            let eframe::egui_wgpu::WgpuSetup::CreateNew(setup)=options.wgpu_options.wgpu_setup else{panic!("應創建相容圖形裝置")};
             let direct_composition=options.wgpu_options.direct_composition;
             attempts.push((setup.instance_descriptor.backends,direct_composition));
             if direct_composition {

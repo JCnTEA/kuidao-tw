@@ -280,7 +280,7 @@ mod tests {
             let mut data = json!({
                 "id":"daozai.wireless-receivers","api_version":1,"version":"1.1.0",
                 "receivers":[
-                    {"vid":"2717","pid":"5055","name":"兼容包裡的同型號名稱"},
+                    {"vid":"2717","pid":"5055","name":"相容包裡的同型號名稱"},
                     {"vid":"046D","pid":"C542","name":"羅技 Nano 接收器"}
                 ]
             });
@@ -331,7 +331,7 @@ mod tests {
         assert_xiaomi();
         let data = json!({
             "id":"daozai.wireless-receivers","api_version":1,"version":"1.0.1",
-            "receivers":[{"vid":"2717","pid":"5055","name":"兼容包裡的同型號名稱"}]
+            "receivers":[{"vid":"2717","pid":"5055","name":"相容包裡的同型號名稱"}]
         });
         let package = Package::parse(&serde_json::to_vec(&data).unwrap()).unwrap();
         store.set(Some(package));

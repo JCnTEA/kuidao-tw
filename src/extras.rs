@@ -1509,7 +1509,7 @@ impl App {
     }
 }
 
-/// 將本地提醒時間規範化，拒絕不存在的日期與超出範圍的時分。
+/// 將本機提醒時間規範化，拒絕不存在的日期與超出範圍的時分。
 pub(crate) fn parse_due(value: &str, today: &str) -> Option<String> {
     let value = value.trim();
     let full = if value.len() == 5 {

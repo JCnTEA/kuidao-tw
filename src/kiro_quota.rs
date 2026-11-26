@@ -1,4 +1,4 @@
-//! Kiro 額度：只讀登錄緩存與 GetUsageLimits，不回寫、不續期；令牌是否失效以服務端 401/403 為準（本地 expiresAt 只是客戶端的續期計劃時間）。
+//! Kiro 額度：只讀登錄緩存與 GetUsageLimits，不回寫、不續期；令牌是否失效以服務端 401/403 為準（本機 expiresAt 只是客戶端的續期計劃時間）。
 use super::{Account, Amount, Config, Provider, Snapshot, Window};
 use serde_json::{json, Value};
 use std::{io::Read, path::{Path, PathBuf}, sync::mpsc};

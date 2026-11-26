@@ -41,7 +41,7 @@ fn send_seek(base:&str,token:&str,seconds:f64)->Option<()> {
 
 pub fn seek(seconds:f64)->bool {
     if !seconds.is_finite() || !(0.0..86400.0).contains(&seconds){return false;}
-    // 串行化首次握手和跳轉，避免連續拖動產生多個本地服務會話。
+    // 串行化首次握手和跳轉，避免連續拖動產生多個本機服務會話。
     static LOCK:std::sync::Mutex<()>=std::sync::Mutex::new(());
     let Ok(_guard)=LOCK.lock() else{return false;};
     let Some((pid,executable))=player() else{return false;};

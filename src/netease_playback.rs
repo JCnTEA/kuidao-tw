@@ -12,7 +12,7 @@ fn monotonic_millis()->u64 {
     epoch.saturating_add(start.elapsed().as_millis() as u64)
 }
 
-// 初次讀取歷史記錄時，使用可讀的本地日期恢復進度；實時推進只依賴 Instant。
+// 初次讀取歷史記錄時，使用可讀的本機日期恢復進度；實時推進只依賴 Instant。
 fn historical_millis(line:&str,now:u64)->Option<u64> {
     use chrono::{Datelike,TimeZone};
     let date=line.strip_prefix('[')?.split(':').nth(2)?;
@@ -143,7 +143,7 @@ impl CoverCache {
     }
 }
 
-/// 本地日誌和隊列都沒有歌名時（漫遊、私人 FM 續載、每日推薦等網易雲不落盤的歌），按歌曲 ID 在線查一次。
+/// 本機日誌和隊列都沒有歌名時（漫遊、私人 FM 續載、每日推薦等網易雲不落盤的歌），按歌曲 ID 在線查一次。
 /// 只保留當前這首；請求在後台進行，不佔媒體輪詢線程；失敗按 10 秒、60 秒再試，第三次失敗後這首歌不再請求。
 #[derive(Default)]
 pub(super) struct DetailCache {
@@ -190,7 +190,7 @@ fn fetch_detail(id:u64)->Option<(NowPlaying,String)>{
     detail_from(&serde_json::from_slice(&bytes).ok()?,id)
 }
 
-/// `{"code":200,"songs":[{…}]}`：歌曲字段與本地隊列一致，只接受 ID 完全相同的那一首。
+/// `{"code":200,"songs":[{…}]}`：歌曲字段與本機隊列一致，只接受 ID 完全相同的那一首。
 fn detail_from(value:&serde_json::Value,id:u64)->Option<(NowPlaying,String)>{
     if value.get("code").and_then(|v|v.as_i64())!=Some(200){return None;}
     value.get("songs")?.as_array()?.iter().filter_map(track).find(|(media,_)|media.song_id==Some(id))
@@ -303,7 +303,7 @@ pub(super) struct Reader {
     pid:u32,offset:u64,prefix:Vec<u8>,carry:Vec<u8>,skip_line:bool,
     playback:Playback,lookup:(Option<u64>,u64),cover:CoverCache,
     queue_print:Vec<Option<(std::time::SystemTime,u64)>>,
-    /// 本地隊列確認查不到歌名的歌曲 ID：只對它們在線補全。
+    /// 本機隊列確認查不到歌名的歌曲 ID：只對它們在線補全。
     queue_missed:Option<u64>,detail:DetailCache,
 }
 impl Reader {
@@ -347,7 +347,7 @@ impl Reader {
             let root=path.parent()?;
             // 大歌單的隊列檔案可達數十 MB：同一首歌且檔案沒有變化時不重複查找（這首歌本來就沒有封面時會一直滿足上面的條件）。
             let print=queue_fingerprint(root);
-            // 完整讀過、確實沒有這首歌（搜索、每日推薦等不在隊列裡的歌）也記下指紋：檔案不變就不再整份重讀，
+            // 完整讀過、確實沒有這首歌（搜尋、每日推薦等不在隊列裡的歌）也記下指紋：檔案不變就不再整份重讀，
             // 否則大歌單下每 5 秒都要解析幾十 MB。只有讀取失敗（被佔用、寫入中途）才清空指紋，稍後重試。
             if self.lookup.0!=id || self.queue_print!=print {
                 match queue_lookup(root,id?) {
@@ -358,7 +358,7 @@ impl Reader {
             }
             self.lookup=(id,now);
         }
-        // 本地查不到歌名（漫遊等模式）時按 ID 在線補全；每次輪詢都取一下結果，查到後下一次採樣就能顯示。
+        // 本機查不到歌名（漫遊等模式）時按 ID 在線補全；每次輪詢都取一下結果，查到後下一次採樣就能顯示。
         if let Some(id)=id.filter(|id|self.queue_missed==Some(*id)) {
             if !self.playback.media.is_music() || self.playback.media.artist.is_empty() || self.playback.media.duration<=0.0 || self.playback.artwork_url.is_empty() {
                 let load:fn(u64)->Option<(NowPlaying,String)>=if cfg!(test){|_|None}else{fetch_detail};
@@ -677,7 +677,7 @@ mod tests{
     }
     #[test]
     fn song_missing_from_an_unchanged_queue_is_not_reparsed_every_poll(){
-        // 搜索、每日推薦的歌不在播放隊列裡：完整讀過一次後，檔案不變就不能每 5 秒再整份解析一遍。
+        // 搜尋、每日推薦的歌不在播放隊列裡：完整讀過一次後，檔案不變就不能每 5 秒再整份解析一遍。
         let files=QueueFixture::new("absent");let mut other=incomplete_track(456);other["duration"]=240000.into();
         files.queue("playingList","list",serde_json::json!([other]));files.log(incomplete_track(123));
         let mut reader=Reader::default();assert_eq!(reader.read(&files.path,Some(9),2000).unwrap().duration,0.0);

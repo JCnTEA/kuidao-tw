@@ -432,7 +432,7 @@ fn discovery_due(last:Option<Instant>,hint:impl FnOnce()->bool)->bool{
     since.is_none_or(|since|since>=DISCOVER_FALLBACK) || since.is_some_and(|since|since>=DISCOVER_HINTED) && hint()
 }
 
-/// 便宜的線索：波點主窗口（實測類名 BODIAN_FLUTTER_WIN32_WINDOW，也兼容 Flutter 預設類名）屬於 bodian_pc.exe。
+/// 便宜的線索：波點主窗口（實測類名 BODIAN_FLUTTER_WIN32_WINDOW，也相容 Flutter 預設類名）屬於 bodian_pc.exe。
 /// 窗口類名若再被改，仍有 30 秒一次的兜底查找。
 fn window_hint()->bool{
     use windows::{core::{w,PCWSTR},Win32::{Foundation::HWND,UI::WindowsAndMessaging::{FindWindowExW,GetWindowThreadProcessId}}};

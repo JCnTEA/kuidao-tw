@@ -119,7 +119,7 @@ pub fn wait_for_previous_instance() {
 }
 
 /// 進程級崩潰（例如顯卡驅動裡訪問了無效內存）：Rust 的 panic 記錄覆蓋不到，這裡記下崩在哪個模塊；
-/// 崩在顯卡的 OpenGL 驅動裡時，下次啟動改用兼容渲染；隨後按頻率限制自動重啟。
+/// 崩在顯卡的 OpenGL 驅動裡時，下次啟動改用相容渲染；隨後按頻率限制自動重啟。
 #[cfg(windows)]
 mod native_crash {
     use std::sync::atomic::{AtomicBool, Ordering};

@@ -1,5 +1,5 @@
 //! 渲染方式：預設 OpenGL；部分顯卡的 OpenGL 驅動在長時間運行後會崩潰或畫面錯亂，
-//! 這時改用 Direct3D 12（兼容渲染）。崩潰處理只留一個標記檔案，下次啟動時再寫入設定，
+//! 這時改用 Direct3D 12（相容渲染）。崩潰處理只留一個標記檔案，下次啟動時再寫入設定，
 //! 避免在崩潰現場改寫設定檔案。
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -15,7 +15,7 @@ pub fn is_gl_driver(module: &str) -> bool {
     stem == "opengl32" || stem.contains("ogl") || (stem.contains("icd") && !stem.contains("vk"))
 }
 
-/// 本次運行實際使用的是不是兼容渲染（崩潰處理據此判斷是否還需要切換）。
+/// 本次運行實際使用的是不是相容渲染（崩潰處理據此判斷是否還需要切換）。
 pub fn compat_active() -> bool { COMPAT_ACTIVE.load(Ordering::Relaxed) }
 pub fn set_compat_active(active: bool) { COMPAT_ACTIVE.store(active, Ordering::Relaxed) }
 
@@ -26,7 +26,7 @@ pub fn request_fallback(module: &str) {
     let _ = std::fs::write(path, module.chars().filter(|c| !c.is_control()).take(120).collect::<String>());
 }
 
-/// 啟動時調用：有標記就打開兼容渲染並記下原因，返回原因（寫入診斷用）。
+/// 啟動時調用：有標記就打開相容渲染並記下原因，返回原因（寫入診斷用）。
 pub fn apply_pending_fallback() -> Option<String> {
     let path = marker();
     let module = std::fs::read_to_string(&path).ok()?;
@@ -41,7 +41,7 @@ pub fn apply_pending_fallback() -> Option<String> {
     Some(settings.render_compat_reason)
 }
 
-/// 本次啟動是否使用兼容渲染。
+/// 本次啟動是否使用相容渲染。
 pub fn compat_requested() -> bool { crate::model::Settings::load().render_compat }
 
 #[cfg(test)]

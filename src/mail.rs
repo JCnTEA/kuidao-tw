@@ -43,7 +43,7 @@ impl Default for Provider {
 }
 
 impl Provider {
-    /// 台灣版：選單只列本地可連線的服務；大陸信箱仍能解析舊帳號，但不再出現在清單。
+    /// 台灣版：選單只列本機可連線的服務；大陸信箱仍能解析舊帳號，但不再出現在清單。
     pub const ALL: [Provider; 5] = [
         Provider::Yahoo,
         Provider::ICloud,
@@ -75,7 +75,7 @@ impl Provider {
             Provider::Exmail => "騰訊企業郵",
             Provider::ICloud => "iCloud 信箱",
             Provider::Gmail => "Gmail",
-            Provider::Microsoft => "Outlook / Hotmail",
+            Provider::Microsoft => "Outlook / Hotmail（暫不支援）",
             Provider::Custom => "自定義 IMAP",
         }
     }
@@ -289,7 +289,7 @@ pub struct Item {
     pub account: String,
     pub from: String,
     pub subject: String,
-    /// 本地時間 `MM-DD HH:MM`
+    /// 本機時間 `MM-DD HH:MM`
     pub time: String,
     pub code: Option<String>,
     /// IMAP INTERNALDATE, used only to bound code display age.
@@ -353,11 +353,11 @@ pub fn links_of(parsed:&Parsed)->Vec<Link> {
 pub struct Meeting {
     pub all_day: bool,
     pub title: String,
-    /// 開始時間（Unix 秒，本地時區解釋）。
+    /// 開始時間（Unix 秒，本機時區解釋）。
     pub start: i64,
     /// 來源提供的結束時間；缺失或無效時不推測時長。
     pub end: Option<i64>,
-    /// 本地時間 `MM-DD HH:MM`，直接顯示。
+    /// 本機時間 `MM-DD HH:MM`，直接顯示。
     pub at: String,
     /// iCalendar 的 `UID`；郵件和行事曆兩條來源靠它 + 開始時間去重。
     pub uid: String,

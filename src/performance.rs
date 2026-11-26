@@ -187,7 +187,7 @@ pub(crate) struct Process {
     /// 程序圖標（32 px），取不到時為空，界面畫首字母。
     pub icon: Option<std::sync::Arc<eframe::egui::ColorImage>>,
 }
-/// 一個本地固定磁盤分區的容量。
+/// 一個本機固定磁盤分區的容量。
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Volume {
     pub letter: char,

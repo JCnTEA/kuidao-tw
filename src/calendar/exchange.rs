@@ -456,7 +456,7 @@ mod tests {
         assert_eq!(result.events.len(), 1);
         server.join().unwrap();
     }
-    /// 本地模擬 Exchange：按順序處理請求，返回 (狀態碼, 響應)；記錄每個請求的命令、策略標識和正文。
+    /// 本機模擬 Exchange：按順序處理請求，返回 (狀態碼, 響應)；記錄每個請求的命令、策略標識和正文。
     fn mock(replies: Vec<Box<dyn Fn(&Node) -> (u16, Option<Node>) + Send>>) -> (String, std::thread::JoinHandle<Vec<(String, Option<String>, Node)>>) {
         use std::{io::Write, net::TcpListener};
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();

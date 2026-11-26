@@ -1,4 +1,4 @@
-//! 兼容 CC Switch 的 request / extractor 查詢腳本。
+//! 相容 CC Switch 的 request / extractor 查詢腳本。
 use super::{amount,window,read_response,Scope,Quota,Snapshot};
 use serde_json::Value;
 use std::time::{Duration,Instant};

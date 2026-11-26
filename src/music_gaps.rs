@@ -7,7 +7,7 @@ use std::time::{Duration,Instant};
 /// 等這麼久再判斷：系統縮略圖、本機補全和在線補全都是異步的，剛換歌時缺東西是正常的。
 pub(crate) const SETTLE:Duration=Duration::from_secs(15);
 
-/// 一首歌最終來自哪裡：系統媒體會話，還是播放器本地記錄（網易雲日誌、波點、酷我）。
+/// 一首歌最終來自哪裡：系統媒體會話，還是播放器本機記錄（網易雲日誌、波點、酷我）。
 pub(crate) fn origin(media:&NowPlaying)->&'static str {if media.song_id.is_some(){"播放器本機記錄"}else{"系統媒體會話"}}
 
 /// 標題像節目、電台名而不是歌名（常見於電台、FM、DJ 模式）。

@@ -483,7 +483,7 @@ fn weather_cities_switch_from_the_island_title_and_keep_their_own_cache(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.app.settings.pet=false;
     let hz=crate::weather::Position{lat:30.27,lon:120.15,label:"杭州".into(),region:"浙江 · 中國".into()};
     let bj=crate::weather::Position{lat:39.90,lon:116.40,label:"北京".into(),region:"北京 · 中國".into()};
-    // 設定頁新增兩個城市：只加入列表，搜索框清空。
+    // 設定頁新增兩個城市：只加入列表，搜尋框清空。
     for city in [&hz,&bj] {
         h.app.weather.city_input=city.label.clone();h.app.weather.selected_city=Some(city.clone());
         assert!(h.app.add_weather_city());
@@ -535,7 +535,7 @@ fn weather_city_ime_enter_keeps_focus_and_waits_for_confirmed_text(){
         harness.t+=1.0;harness.app.t=harness.t;
         let input=egui::RawInput{events,time:Some(harness.t),screen_rect:Some(Rect::from_min_size(Pos2::ZERO,Vec2::new(560.0,380.0))),..Default::default()};
         let output=harness.ctx.run(input,|ctx|{egui::CentralPanel::default().show(ctx,|ui|{assert!(!harness.app.weather_city_picker(ui));});});
-        let hint=output.shapes.iter().find_map(|shape|match &shape.shape{egui::Shape::Text(text) if text.galley.text()=="輸入城市名稱搜索"=>Some(text.visual_bounding_rect().center()),_=>None});
+        let hint=output.shapes.iter().find_map(|shape|match &shape.shape{egui::Shape::Text(text) if text.galley.text()=="輸入城市名稱搜尋"=>Some(text.visual_bounding_rect().center()),_=>None});
         (hint,harness.ctx.memory(|memory|memory.focused()),harness.app.weather.city_input.clone())
     };
     let point=draw(vec![]).0.unwrap();
@@ -764,7 +764,7 @@ fn regression_blur_follows_its_switch_even_when_compat_rendering_needs_the_conto
                 blur=Some(out.blur);
             });
         });
-        assert_eq!(blur,Some(skin.is_glass() && glass_blur),"皮膚={skin:?}，模糊={glass_blur}，兼容渲染={opaque_surface}");
+        assert_eq!(blur,Some(skin.is_glass() && glass_blur),"皮膚={skin:?}，模糊={glass_blur}，相容渲染={opaque_surface}");
     }}}
 }
 
@@ -3044,6 +3044,7 @@ fn music_header_shortcut_returns_from_every_page_without_controlling_playback() 
         let mut h=H::new();h.app.settings.page_order=[5,2,0,1,3,4,6,7,8,9,10,11,12];
         h.media=crate::smtc::NowPlaying{source:"cloudmusic.exe".into(),title:"Track".into(),artist:"Artist".into(),playing,duration:120.0,..Default::default()};
         h.app.set_page_visible(crate::app::PERFORMANCE_PAGE,true);
+        h.app.set_page_visible(11,true);h.app.set_page_visible(12,true);
         for page in 1..crate::app::PAGE_NAMES.len() {
             h.app.show_page(page);h.hover(H::local(300.0,60.0),0.8);h.cmds.clear();
             h.click(H::local(if page==3 {339.0}else{367.0},18.0));
@@ -3103,6 +3104,7 @@ fn arrows_and_dots_switch_pages() {
 fn wheel_navigation_reaches_every_page_in_both_directions(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
     h.app.shelf.items.clear();h.app.todos.items.clear();
+    h.app.set_page_visible(11,false);h.app.set_page_visible(12,false);
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
     h.hover(H::local(210.0,18.0),0.3);
     for (delta,pages) in [(-40.0,[1,2,3,4,5,6,7,8,10,0]),(40.0,[10,8,7,6,5,4,3,2,1,0])] {
@@ -3434,6 +3436,7 @@ fn wheel_handles_small_deltas_without_skipping_pages_on_bursts(){
 #[test]
 fn navigation_wraps_between_ten_pages_and_notification_settings_remain_accessible() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
+    h.app.set_page_visible(11,false);h.app.set_page_visible(12,false);
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);h.click(H::local(21.0,68.0));assert_eq!(h.app.page,crate::app::BLUETOOTH_PAGE);
     h.hover(H::local(300.0,60.0),0.8);h.click(H::local(398.0,68.0));assert_eq!(h.app.page,0);
     h.app.open_settings_category(3);assert!(h.app.settings_open);assert_eq!(h.app.settings_tab,6);
@@ -3930,7 +3933,7 @@ fn quota_update_status_is_visible_for_every_provider_and_keeps_failed_data(){
         h.hover(H::local(300.0,60.0),1.0);
         assert_eq!(h.app.expanded_height(),176.0,"{provider:?} 額度頁應採用同寬加高的佈局");
         assert!((h.app.current_width()-PW).abs()<0.1,"{provider:?} 額度頁應保持原有寬度：{}",h.app.current_width());
-        let expected=if provider==Provider::Claude{format!("本地記錄 · {time}")}else if provider==Provider::DeepSeek{format!("CNY · {time} 更新")}else{format!("{time} 更新")};
+        let expected=if provider==Provider::Claude{format!("本機記錄 · {time}")}else if provider==Provider::DeepSeek{format!("CNY · {time} 更新")}else{format!("{time} 更新")};
         let status=h.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()==expected=>Some(t.visual_bounding_rect()),_=>None}).unwrap_or_else(||panic!("{provider:?} 缺少更新時間：{expected}"));
         assert!(status.bottom()+6.0<=H::local(0.0,h.app.expanded_height()-9.2).y,"{provider:?} 更新時間 {status:?} 應與分頁圓點留出間距");
         for shape in &h.shapes{if let egui::Shape::Text(text)=&shape.shape{
@@ -3967,7 +3970,7 @@ fn quota_page_navigation_tracks_the_taller_panel(){
     h.hover(H::local(300.0,60.0),0.8);assert_eq!(h.app.expanded_height(),PH);
     h.click(H::local(398.0,68.0));assert_eq!(h.app.page,6);
     h.hover(H::local(300.0,60.0),0.8);
-    h.click(H::local(398.0,68.0));assert_eq!(h.app.page,crate::app::CALENDAR_PAGE);
+    h.click(H::local(398.0,68.0));assert_eq!(h.app.page,crate::app::MAIL_PAGE);
 }
 
 #[test]
@@ -3995,9 +3998,9 @@ fn claude_local_quota_shows_the_record_time_and_does_not_invent_resets(){
         let output=h.ctx.run(raw,|ctx|{egui::CentralPanel::default().frame(egui::Frame::new()).show(ctx,|ui|{h.app.frame(ui,Rect::from_min_size(ui.max_rect().min,Vec2::new(WIN_W,WIN_H)),&env);});});raster.update_textures(&output.textures_delta);shapes=output.shapes;raster.free_textures(&output.textures_delta);
     }
     let texts:Vec<_>=shapes.iter().filter_map(|s|match &s.shape{egui::Shape::Text(t)=>Some(t),_=>None}).collect();
-    let label=texts.iter().find(|t|t.galley.text()=="Claude · 本地記錄").expect("應明確標註本地來源");
+    let label=texts.iter().find(|t|t.galley.text()=="Claude · 本機記錄").expect("應明確標註本機來源");
     let time=chrono::DateTime::from_timestamp(at,0).unwrap().with_timezone(&chrono::Local).format("%H:%M").to_string();
-    let timestamp=texts.iter().find(|t|t.galley.text()==format!("本地記錄 · {time}")).expect("應顯示官方緩存的實際記錄時間");assert!(!label.visual_bounding_rect().intersects(timestamp.visual_bounding_rect()));assert_eq!(texts.iter().filter(|t|t.galley.text()=="重設時間未知").count(),2);
+    let timestamp=texts.iter().find(|t|t.galley.text()==format!("本機記錄 · {time}")).expect("應顯示官方緩存的實際記錄時間");assert!(!label.visual_bounding_rect().intersects(timestamp.visual_bounding_rect()));assert_eq!(texts.iter().filter(|t|t.galley.text()=="重設時間未知").count(),2);
     if let Some(path)=std::env::var_os("DAOZAI_CLAUDE_LOCAL_PREVIEW"){
         raster.buf.fill([0.15,0.15,0.15,1.0]);raster.draw(&h.ctx.tessellate(shapes,2.0),2.0);let mut rgba=Vec::new();raster.to_rgba8(&mut rgba);let image=image::RgbaImage::from_raw((crate::app::CANVAS_W*2.0) as u32,(WIN_H*2.0) as u32,rgba).unwrap();image::imageops::crop_imm(&image,200,0,880,350).to_image().save(path).unwrap();
     }
@@ -4041,7 +4044,7 @@ fn page_visibility_is_saved_and_sets_the_starting_page() {
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=000000\n").unwrap();
     assert_eq!(crate::model::Settings::load().visible_pages,[false,false,false,false,false,false,false,false,false,false,false,false,true],"舊版存檔全關時，新增的無線裝置頁按預設開啟，已有頁面可見");
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=1000000\n").unwrap();
-    assert_eq!(crate::model::Settings::load().visible_pages,[true,false,false,false,false,false,false,true,true,false,true,false,true],"舊版頁面開關應保留，並開啟新增的行程頁與天氣頁");
+    assert_eq!(crate::model::Settings::load().visible_pages,[true,false,false,false,false,false,false,true,true,true,true,false,true],"舊版頁面開關應保留，並開啟新增的行程頁與天氣頁");
     std::fs::write(crate::model::config_dir().join("settings.txt"),"visible_pages=invalid\n").unwrap();
     assert_eq!(crate::model::Settings::load().visible_pages,[true,true,true,true,true,true,true,true,true,true,true,false,true]);
 }
@@ -4083,7 +4086,7 @@ fn battery_module_can_disable_only_the_power_warning() {
 fn page_visibility_skips_hidden_pages_in_every_navigation_control() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
-    for page in [1,3,4,6,7,8,9,10] {h.app.set_page_visible(page,false);}
+    for page in [1,3,4,6,7,8,9,10,11,12] {h.app.set_page_visible(page,false);}
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
     for expected in [2,5,0] {
         h.click(H::local(398.0,68.0));
@@ -4113,7 +4116,7 @@ fn page_visibility_moves_away_from_hidden_page_and_keeps_one_page() {
     h.app.set_page_visible(4,false);
     assert_eq!(h.app.page,0);
     assert!(!h.app.is_editing());
-    for page in [0,1,3,5,6,7,8,9,10] {h.app.set_page_visible(page,false);}
+    for page in [0,1,3,5,6,7,8,9,10,11,12] {h.app.set_page_visible(page,false);}
     assert_eq!(h.app.page,2);
     h.app.set_page_visible(2,false);
     assert!(h.app.settings.visible_pages[2],"不能關閉最後一個頁面");
@@ -5897,7 +5900,7 @@ fn top_bar_notice_covers_the_compact_mail_badge_and_detail(){
     let detail=h.ctx.read_response(egui::Id::new(("card",true,"notice-action"))).expect("郵件詳情應提供查看按鈕");
     let hit=h.top_bar_notice.expect("展開郵件詳情後應繼續提供通知命中區");
     assert!(hit.contains(badge) && hit.contains_rect(detail.interact_rect));
-    h.click_text("查看");
+    h.click_text("檢視");
     h.frame(vec![]);
     assert_eq!(h.app.page,crate::app::MAIL_PAGE);
     assert!(h.top_bar_notice.is_none(),"郵件通知結束後應清空通知命中區");
@@ -6032,11 +6035,11 @@ fn calendar_notice_opens_the_calendar_instead_of_mail() {
     h.app.calendar_event(crate::calendar::Event::Synced{config:h.app.calendar.config.clone().unwrap(),events:vec![crate::mail::Meeting{ all_day:false, end:None,title:"產品評審".into(),start,at:"10-31 15:00".into(),uid:"calendar-review".into()}],at:"10-31 14:50".into()});
     for _ in 0..60 {h.frame(vec![]);}
     h.click_notice_badge();
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="查看")),"會議提醒按鈕使用「查看」");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="檢視")),"會議提醒按鈕使用「查看」");
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="產品評審")),"會議名稱應獨立顯示");
-    h.click_text("查看");
+    h.click_text("檢視");
     assert!(!h.app.settings_open,"會議提醒不應打開設定頁");
-    assert_eq!(h.app.page,7,"查看會議必須展開島上的行程頁");
+    assert_eq!(h.app.page,crate::app::MAIL_PAGE,"查看會議必須展開島上的行程頁");
     assert!(h.app.open);
     let date=chrono::DateTime::from_timestamp(start,0).unwrap().with_timezone(&chrono::Local).date_naive();
     assert_eq!(h.app.calendar.view.day,date);
@@ -6051,8 +6054,8 @@ fn mail_meeting_notice_opens_its_calendar_day() {
     h.app.mail.recent.push(crate::mail::Item {received_unix: None, account:"demo@example.com".into(),from:"項目組".into(),subject:"會議邀請".into(),html: String::new().into(), summary:String::new().into(),links:vec![],code:None,time:"14:50".into(),uid:9,
         meeting:Some(crate::mail::Meeting{ all_day:false, end:None,title:"產品評審".into(),start:chrono::Local::now().timestamp()+600,at:"10-31 15:00".into(),uid:"mail-review".into()})});
     for _ in 0..60 {h.frame(vec![]);}
-    h.click_text("查看");
-    assert_eq!(h.app.page,7);
+    h.click_text("檢視");
+    assert_eq!(h.app.page,crate::app::MAIL_PAGE);
     assert!(h.app.open);
     assert_ne!(h.app.page,5);
     let entries=h.app.calendar_entries(h.app.calendar.view.day);
@@ -6140,7 +6143,7 @@ fn calendar_first_schedule_has_a_large_time_and_keeps_the_lower_list_scrollable(
     assert!(text("10:45 結束").visual_bounding_rect().bottom()<text("會議 1").visual_bounding_rect().top());
     assert!(text("會議 4").visual_bounding_rect().bottom()<H::local(0.0,205.0).y);
     h.hover(H::local(300.0,194.0),0.25);h.wheel(-40.0);
-    assert_eq!(h.app.calendar.view.first,1,"列表底部也應滾動行程");assert_eq!(h.app.page,7);
+    assert_eq!(h.app.calendar.view.first,1,"列表底部也應滾動行程");assert_eq!(h.app.page,crate::app::MAIL_PAGE);
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="會議 0")),"滾動不能切換大卡片");
     h.click(H::local(260.0,138.0));h.hover(H::local(300.0,194.0),0.2);
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="12:00" && t.galley.job.sections[0].format.font_id.size>=23.0)),"點擊才切換大卡片");
@@ -6185,7 +6188,7 @@ fn calendar_agenda_starts_today_and_lists_only_days_with_events() {
     }
     h.hover(H::local(60.0,155.0),0.2);
     h.wheel(-40.0);
-    assert_eq!(h.app.page,crate::app::CALENDAR_PAGE);
+    assert_eq!(h.app.page,crate::app::MAIL_PAGE);
     assert!(visible(&h,"月底安排"));
     assert!(visible(&h,"10月28日"),"滾進同一天的後續行時仍應顯示日期");
 
@@ -6218,7 +6221,7 @@ fn calendar_month_navigation_and_today_select_the_right_day() {
     assert_eq!(h.app.calendar.view.day,chrono::NaiveDate::from_ymd_opt(2027,1,15).unwrap());
     h.click(H::local(67.0,18.0));
     assert_eq!(h.app.calendar.view.day,chrono::NaiveDate::from_ymd_opt(2026,10,28).unwrap());
-    assert_eq!(h.app.page,7);assert!(!h.app.settings_open);
+    assert_eq!(h.app.page,crate::app::MAIL_PAGE);assert!(!h.app.settings_open);
 }
 
 #[test]
@@ -6251,11 +6254,11 @@ fn calendar_month_results_preserve_reminders_and_ignore_old_requests() {
 fn calendar_island_collapses_and_reopens_on_the_same_page() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
     h.app.open_calendar(None);h.hover(H::local(300.0,60.0),1.0);
-    assert_eq!(h.app.page,7);assert!(h.app.open);
+    assert_eq!(h.app.page,crate::app::MAIL_PAGE);assert!(h.app.open);
     assert!(h.hit.bottom()>=crate::app::CALENDAR_H,"月曆最後一行必須位於可操作區域內");
     h.hover(Pos2::new(600.0,WIN_H+30.0),5.0);assert!(!h.app.open);
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);assert!(h.app.open);
-    assert_eq!(h.app.page,7);assert!(!h.app.settings_open);
+    assert_eq!(h.app.page,crate::app::MAIL_PAGE);assert!(!h.app.settings_open);
 }
 
 #[test]
@@ -6394,7 +6397,7 @@ fn calendar_reminder_fires_once_and_dedupes_with_mail() {
     h.frame(vec![]);
     let hits = h.app.history.iter().filter(|a| a.title == "會議提醒").count();
     assert_eq!(hits, 1, "同一場會只提醒一次");
-    assert_eq!(h.app.history.iter().find(|a|a.title=="會議提醒").unwrap().page,7,"會議提醒應指向島內行程頁");
+    assert_eq!(h.app.history.iter().find(|a|a.title=="會議提醒").unwrap().page,crate::app::MAIL_PAGE,"會議提醒應指向島內行程頁");
     // 再同步一次、再過幾幀，也不重複。
     h.app.calendar_event(crate::calendar::Event::Synced { config:h.app.calendar.config.clone().unwrap(),events: vec![meeting("週會（飛書）")], at: "10-30 09:05".into() });
     h.frame(vec![]);
@@ -6439,7 +6442,7 @@ fn todo_notice_view_locates_the_reminded_task() {
     let mut h=H::new();
     h.app.todos.items=(0..7).map(|i|crate::model::TodoItem{text:format!("任務 {i}"),done_on:None,due:if i==6{Some("2026-10-28 09:40".into())}else{None},reminded:false,..Default::default()}).collect();
     for _ in 0..60 {h.frame(vec![]);}
-    h.click_text("查看");
+    h.click_text("檢視");
     assert_eq!(h.app.page,4);
     assert!(h.app.todo_first>=4,"打開待辦頁時應能看到收到提醒的任務");
 }
@@ -6903,7 +6906,7 @@ fn frame_control_cream_startup_notice_keeps_view_action_whole() {
         for part in &h.shapes {
             if let egui::Shape::Text(t)=&part.shape {
                 let bounds=t.visual_bounding_rect();
-                if t.galley.text()=="查看" && part.clip_rect.intersect(bounds).is_positive() {
+                if t.galley.text()=="檢視" && part.clip_rect.intersect(bounds).is_positive() {
                     assert!(part.clip_rect.contains_rect(bounds),"通知動畫不能截掉查看文字");
                 }
             }
@@ -6915,7 +6918,7 @@ fn frame_control_cream_startup_notice_keeps_view_action_whole() {
     assert!(h.app.todos.items[0].reminded,"該用例必須觸發啟動時已有的待辦");
     let button=h.ctx.read_response(action).expect("待辦通知展開後應有查看按鈕");
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)
-        if t.galley.text()=="查看" && s.clip_rect.contains_rect(t.visual_bounding_rect()))));
+        if t.galley.text()=="檢視" && s.clip_rect.contains_rect(t.visual_bounding_rect()))));
     let pos=button.interact_rect.center();
     frame_control_draw(&mut h,Some(pos),vec![egui::Event::PointerMoved(pos)]);
     for pressed in [true,false] {
@@ -7497,7 +7500,7 @@ fn calendar_notice_overrides_island_lyrics_and_restores_the_current_line(){
     assert!(!h.app.compact_notices(),"行程提醒不應縮成歌詞旁的小圖標");
     assert!(h.hit.height()>130.0,"應直接展示完整 A 版提醒");
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="優先會議")));
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="查看")));
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="檢視")));
     assert!(!h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="首句歌詞")));
     let active=h.app.notice.as_ref().unwrap();h.t=active.at+active.duration-1.0/30.0;h.media.position=25.0;
     for _ in 0..90{
@@ -7926,7 +7929,7 @@ fn page_order_persists_and_controls_navigation() {
     assert_eq!(settings.page_order,[5,2,0,1,3,4,6,7,8,9,10,11,12]);
     let restarted=App::new(&h.ctx,Options{fetch_lyrics:false,pet_idle:1e9});
     assert_eq!(restarted.page(),5);
-    for page in [1,3,4,6,7,8,9,10] {h.app.set_page_visible(page,false);}
+    for page in [1,3,4,6,7,8,9,10,11,12] {h.app.set_page_visible(page,false);}
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
     for expected in [5,2,0] {
         h.click(H::local(398.0,68.0));
@@ -8583,7 +8586,7 @@ fn avoidance_picker_add_remove_and_save() {
     h.app.avoidance.open=true;
     draw(&mut h,vec![]);
     let out=draw(&mut h,vec![]);
-    click(&mut h,point(&out,"搜索應用或窗口標題"));
+    click(&mut h,point(&out,"搜尋應用或窗口標題"));
     draw(&mut h,vec![egui::Event::Text("插件面板".into())]);
     let out=draw(&mut h,vec![]);
     click(&mut h,point(&out,"全部新增"));
@@ -10430,7 +10433,7 @@ fn wheel_short_lists_turn_pages(){
     h.app.show_page(7);
     for (delta,first) in [(40.0,0),(-40.0,1),(-40.0,1),(40.0,0),(40.0,0)]{
         h.hover(H::local(300.0,160.0),0.5);h.wheel(delta);
-        assert_eq!(h.app.page,7,"行事曆溢出後邊界也應留在本頁");assert_eq!(h.app.calendar.view.first,first);
+        assert_eq!(h.app.page,crate::app::MAIL_PAGE,"行事曆溢出後邊界也應留在本頁");assert_eq!(h.app.calendar.view.first,first);
     }
 }
 
@@ -10592,14 +10595,14 @@ fn claude_local_only_settings_show_notice_without_manual_reset_controls(){
     }
     for dark in [true,false]{
         let mut h=H::new();h.ctx.set_visuals(if dark{egui::Visuals::dark()}else{egui::Visuals::light()});
-        let account=crate::quota::Account{id:"local-test".into(),provider:crate::quota::Provider::Claude,alias:"Claude 本地帳號".into(),source:"fixture/config.json".into(),slot:Some("fixture".into()),enabled:true,pinned:true};
+        let account=crate::quota::Account{id:"local-test".into(),provider:crate::quota::Provider::Claude,alias:"Claude 本機帳號".into(),source:"fixture/config.json".into(),slot:Some("fixture".into()),enabled:true,pinned:true};
         h.app.quota.config.accounts.push(account.clone());
         let snapshot=crate::quota::Snapshot{at:chrono::Utc::now().timestamp(),windows:vec![crate::quota::Window{label:"5 小時".into(),seconds:Some(18000),remaining:37.5,reset:None,amount:None},crate::quota::Window{label:"本週".into(),seconds:Some(604800),remaining:62.0,reset:None,amount:None}],..Default::default()};
         h.app.quota.rows.insert(account.id.clone(),Ok(snapshot.clone()));open_quota_details(&h);let mut raster=crate::preview_raster::Raster::new(640,760);
         for connection in [false,true]{
             h.app.quota.provider=crate::quota::Provider::Claude;h.app.quota.connect_open=connection;
             for _ in 0..4{frame(&mut h,&mut raster);}
-            for phrase in ["由於 Claude 對網路使用環境要求較高","只讀取本機用量記錄","重設時間未知","本地讀取不構成帳號安全保證"]{
+            for phrase in ["由於 Claude 對網路使用環境要求較高","只讀取本機用量記錄","重設時間未知","本機讀取不構成帳號安全保證"]{
                 let text=h.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text().contains(phrase)=>Some((s.clip_rect,t.visual_bounding_rect())),_=>None}).unwrap_or_else(||panic!("缺少說明：{phrase}"));
                 assert!(text.0.contains_rect(text.1),"說明不能被裁切：{phrase}");
             }
@@ -11249,7 +11252,7 @@ fn every_module_settings_tab_maps_to_its_page(){
     for tab in 0..titles.len() {
         if let Some(page)=crate::extras::settings_tab_module(tab) {assert!(crate::app::PAGE_NAMES[page].chars().next()==titles[tab].chars().next(),"{} ↔ {}",titles[tab],crate::app::PAGE_NAMES[page]);}
     }
-    pages.sort();assert_eq!(pages,(0..crate::app::PAGE_NAMES.len()).collect::<Vec<_>>(),"每個功能頁面各有一個設定分頁");
+    pages.sort();assert_eq!(pages,(0..crate::app::PAGE_NAMES.len()).filter(|page|*page!=crate::app::GAME_PAGE&&*page!=crate::app::POWER_PAGE).collect::<Vec<_>>(),"每個功能頁面各有一個設定分頁");
     assert_eq!(crate::app::PAGE_SETTINGS_TABS[crate::app::BLUETOOTH_PAGE],crate::extras::SETTINGS_TAB_WIRELESS);
 }
 

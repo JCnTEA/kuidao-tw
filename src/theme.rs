@@ -3,7 +3,7 @@
 //! 字體：拉丁/數字用 Segoe UI（Windows 原生 UI 字體，與原版 DirectWrite 渲染同源），
 //! 中文回退到微軟雅黑 UI，韓文回退到 Malgun Gothic。三檔字重：常規 / 半粗 / 粗。
 //! 非 Windows（開發機、錄屏）按 `KUIDAO_FONT_DIR` → 常見系統路徑依次查找
-//! 度量兼容的 Selawik 與 Noto Sans SC。
+//! 度量相容的 Selawik 與 Noto Sans SC。
 
 use eframe::egui::{self, Color32, FontData, FontDefinitions, FontFamily, FontId};
 use std::path::{Path, PathBuf};

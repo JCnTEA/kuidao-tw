@@ -319,7 +319,7 @@ fn detect_with(mut query:impl FnMut(&str,Duration)->Result<Value,ProbeError>,can
         if value["code"]==false||value["success"]==false||value["isValid"]==false||!value["error"].is_null(){return Err(("站點拒絕額度查詢，請核對 API Key 與查詢許可權".into(),60));}
         Ok(Some(value))
     };
-    // 優先專用額度協議；兼容計費接口不證明站點品牌，也不證明帳戶或 Key 範圍。
+    // 優先專用額度協議；相容計費接口不證明站點品牌，也不證明帳戶或 Key 範圍。
     for (kind,path) in [(Kind::General,"/user/balance"),(Kind::NewApi,"/api/usage/token/"),(Kind::Sub2Api,"/v1/usage"),(Kind::OneApi,"/dashboard/billing/subscription")] {
         let Some(value)=next(path)?else{continue;};
         let result=match kind{

@@ -1358,7 +1358,7 @@ impl App {
         self.section(c, VIZ_Y - 7., "讀取 ↑   寫入 ↓", &format!("刻度 {}", speed(Some(max))), FAINT);
         self.mirror(c, |s| s.disk, max, color, 56.);
         let more = r.volumes.len().saturating_sub(3);
-        self.section(c, 180., "本地分區", &if more > 0 { format!("另有 {more} 個分區") } else { String::new() }, FAINT);
+        self.section(c, 180., "本機分區", &if more > 0 { format!("另有 {more} 個分區") } else { String::new() }, FAINT);
         if r.volumes.is_empty() {
             c.text(COL_X, 198., "正在統計…", 10., W::Regular, FAINT, H::Left);
         }

@@ -19,7 +19,7 @@ fn integer(value: &Value) -> Option<i64> {
     value.as_i64().or_else(|| value.as_str()?.parse().ok())
 }
 
-/// 額度字段兼容數字和帶千位分隔符的展示字符串。
+/// 額度字段相容數字和帶千位分隔符的展示字符串。
 fn amount(value: &Value) -> Option<f64> {
     value.as_f64().or_else(|| value.as_str()?.replace(',', "").trim().parse().ok())
         .filter(|number| number.is_finite() && *number >= 0.0)

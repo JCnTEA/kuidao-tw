@@ -138,9 +138,11 @@ impl NowPlaying {
         }
         let source=self.source.to_lowercase();
         if (matches!(source.as_str(),"kugou"|"kugou.exe"|"cloudmusic.exe"|"汽水音樂"|"汽水音樂"|"sodamusic.exe"|"spotify"|"spotify.exe"|"kwmusic.exe"|"bodian_pc.exe") || is_qqmusic(&source) || is_kkbox(&source) || apple_music::is_source(&source)) && self.playback_type==MediaKind::Music{return MediaKind::Music;}
-        if ["chrome","msedge","firefox","brave","opera"].iter().any(|name|source.contains(name)) {
-            let album=self.album.trim().to_lowercase();
-            if ["youtube","bilibili","抖音","嗶哩嗶哩"].contains(&album.as_str()){return MediaKind::Video;}
+        let album=self.album.trim().to_lowercase();
+        if ["youtube","bilibili","抖音","嗶哩嗶哩"].contains(&album.as_str()) {
+            if self.playback_type==MediaKind::Video || ["chrome","msedge","firefox","brave","opera","iexplore"].iter().any(|name|source.contains(name)) {return MediaKind::Video;}
+        }
+        if ["chrome","msedge","firefox","brave","opera","iexplore"].iter().any(|name|source.contains(name)) {
             // 網頁版 KKBOX／Spotify 的歌名就在視窗標題裡，專輯欄被填成服務名，仍要當成歌曲。
             if ["kkbox","spotify","spotify web","網頁播放"].contains(&album.as_str()){return MediaKind::Music;}
             // 影片作者也可能被放進 Artist；瀏覽器缺少專輯資訊時不自動認作歌曲。
@@ -1031,7 +1033,7 @@ pub struct Poller {
 }
 /// 看著音樂頁或剛點過播放控制時的採樣間隔，與改版前一致。
 pub const POLL_FAST:Duration=Duration::from_millis(250);
-/// 島上收起顯示歌詞時：換歌、暫停最多晚半秒，歌詞進度由本地時鐘推算，不受影響。
+/// 島上收起顯示歌詞時：換歌、暫停最多晚半秒，歌詞進度由本機時鐘推算，不受影響。
 pub const POLL_LYRICS:Duration=Duration::from_millis(500);
 /// 其他時候只需跟上歌名和播放狀態。
 pub const POLL_BACKGROUND:Duration=Duration::from_millis(1000);

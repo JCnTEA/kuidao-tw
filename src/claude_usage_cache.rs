@@ -15,7 +15,7 @@ impl Cache {
         let path=self.path.join(name);
         if !self.files.contains_key(&path){
             let mut options=OpenOptions::new();options.read(true);
-            // 與運行中的 Chromium 兼容，只申請讀取權限，不阻止它更新或替換檔案。
+            // 與運行中的 Chromium 相容，只申請讀取權限，不阻止它更新或替換檔案。
             #[cfg(windows)]{use std::os::windows::fs::OpenOptionsExt;options.share_mode(7);}
             self.files.insert(path.clone(),options.open(&path).ok()?);
         }

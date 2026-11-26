@@ -95,7 +95,7 @@ impl App {
         }else{None};
         // 鬆手後播放器的新位置要等下一輪採樣才回來（QQ 音樂尤其慢），先用目標值頂著，否則滑塊會先彈回舊位置再跳過去。
         let pending_position=self.music_seek_ui.as_ref().filter(|(_,title)|*title==np.title).map(|(target,_)|*target);
-        // 切到上一首 / 下一首後先本地歸零：新歌位置要等下一輪採樣，否則會拿舊歌進度配新歌名停一下。
+        // 切到上一首 / 下一首後先本機歸零：新歌位置要等下一輪採樣，否則會拿舊歌進度配新歌名停一下。
         let restart=self.music_restart_at.filter(|at|self.t<at+1.5).map(|at|(self.t-at).max(0.0));
         let position=seek_position.or(pending_position).unwrap_or_else(||match restart {
             Some(fresh) if np.position>fresh+1.0=>fresh,

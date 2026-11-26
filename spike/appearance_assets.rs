@@ -298,13 +298,13 @@ fn parse_expressions(source: &str) -> Result<crate::pet_expressions::ExpressionS
     let mut sheets = crate::pet_expressions::ExpressionSheets::default();
     for expression in Expression::ALL {
         if let Some(encoded) = expressions.remove(expression.key()) {
-            let limit: usize = 64 * 1024;
+            let limit: usize = 128 * 1024;
             if encoded.len() > limit.div_ceil(3) * 4 {
-                return Err(fail("每個表情的 PNG 序列圖最多 64 KiB"));
+                return Err(fail("每個表情的 PNG 序列圖最多 128 KiB"));
             }
             let bytes = STANDARD.decode(encoded)?;
             if bytes.len() > limit {
-                return Err(fail("每個表情的 PNG 序列圖最多 64 KiB"));
+                return Err(fail("每個表情的 PNG 序列圖最多 128 KiB"));
             }
             if !bytes.ends_with(b"\0\0\0\0IEND\xaeB`\x82") {
                 return Err(fail("表情序列必須是完整的 PNG 圖片"));

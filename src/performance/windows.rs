@@ -345,7 +345,7 @@ fn volumes() -> Vec<Volume> {
         .filter_map(|i| {
             let letter = (b'A' + i) as char;
             let root: Vec<u16> = format!("{letter}:\\").encode_utf16().chain([0]).collect();
-            // 只統計本地固定磁盤（DRIVE_FIXED = 3），不碰網路盤和光驅。
+            // 只統計本機固定磁盤（DRIVE_FIXED = 3），不碰網路盤和光驅。
             if unsafe { GetDriveTypeW(PCWSTR(root.as_ptr())) } != 3 {
                 return None;
             }

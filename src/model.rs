@@ -388,9 +388,9 @@ pub struct Settings {
     pub weather_position: Option<crate::weather::Position>,
     /// 已儲存、可在島上下拉切換的城市（不含自動定位），最多 `weather::MAX_CITIES` 個。
     pub weather_saved: Vec<crate::weather::Position>,
-    /// 兼容渲染：用 Direct3D 12 代替 OpenGL（部分顯卡的 OpenGL 驅動會崩潰或畫面錯亂）。重啟後生效。
+    /// 相容渲染：用 Direct3D 12 代替 OpenGL（部分顯卡的 OpenGL 驅動會崩潰或畫面錯亂）。重啟後生效。
     pub render_compat: bool,
-    /// 自動切換到兼容渲染的原因；手動開啟時為空。
+    /// 自動切換到相容渲染的原因；手動開啟時為空。
     pub render_compat_reason: String,
 }
 
@@ -683,7 +683,7 @@ pub struct TodoItem {
     pub text: String,
     /// 一次性待辦：完成日期；每週重複：最近一次完成的日期（只算當天）。YYYY-MM-DD
     pub done_on: Option<String>,
-    /// 本地日期與時間：YYYY-MM-DD HH:MM；每週重複只用其中的時間。
+    /// 本機日期與時間：YYYY-MM-DD HH:MM；每週重複只用其中的時間。
     pub due: Option<String>,
     pub reminded: bool,
     /// 每週重複：bit0 = 週一 … bit6 = 週日；0 = 不重複（一次性待辦）。

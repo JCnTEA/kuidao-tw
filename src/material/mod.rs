@@ -258,7 +258,7 @@ impl Runtime {
         options: Options,
     ) -> Result<Self, String> {
         if render_state.adapter.get_info().backend != eframe::wgpu::Backend::Dx12 {
-            return Err("材質需要 Direct3D 12 兼容渲染".into());
+            return Err("材質需要 Direct3D 12 相容渲染".into());
         }
         Ok(Self {
             pipeline: Pipeline::new(render_state, shader)?,

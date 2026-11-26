@@ -6,7 +6,7 @@ use eframe::egui::{self,Color32};
 use std::collections::{HashMap,HashSet};
 use chrono::Datelike;
 
-const CLAUDE_LOCAL_NOTICE:&str="由於 Claude 對網路使用環境要求較高，鬼島不會使用登入憑證向 Claude 服務傳送任何請求，只讀取本機用量記錄與快取，自動顯示其中的重設時間；缺少有效記錄時，顯示“重設時間未知”。";
+const CLAUDE_LOCAL_NOTICE:&str="由於 Claude 對網路使用環境要求較高，鬼島不會使用登入憑證向 Claude 服務傳送任何請求，只讀取本機用量記錄與快取，自動顯示其中的重設時間；本地讀取不構成帳號安全保證，缺少有效記錄時，顯示“重設時間未知”。";
 
 #[derive(Default)]
 pub(crate) struct State {
@@ -649,7 +649,7 @@ impl App {
                 let status=if busy{format!("{} · {time}",if a.provider==Provider::Claude{"讀取中…"}else{"正在更新…"})}
                     else if stale.map(String::as_str)==Some(quota::KIMI_RELOGIN){"上次記錄 · 請在 Kimi Code 重新登錄".to_owned()}
                     else if stale.is_some(){format!("上次記錄 · {time}")}
-                    else if a.provider==Provider::Claude{format!("本地記錄 · {time}")}
+                    else if a.provider==Provider::Claude{format!("本機記錄 · {time}")}
                     else if let Some(wallet)=&s.wallet{let b=wallet.primary();if wallet.balances.len()>1{let other=wallet.balances.iter().find(|other|other.currency!=b.currency).unwrap();format!("另有 {} {} · {time}",other.currency,other.full(other.total))}else{format!("{} · {time} 更新",b.currency)}}
                     else{format!("{time} 更新")};
                 let x=if a.provider.balance(){125.0}else{157.0};let width=357.0-x;let y=154.0;
@@ -918,7 +918,7 @@ impl App {
                                 if ui.button("安裝或更新 CLI").clicked(){self.pending.push(Cmd::OpenUrl(quota::antigravity::INSTALL_URL.into()));}
                             }
                         }
-                        if let Some(s)=snapshot{let time=chrono::DateTime::from_timestamp(s.at,0).map(|at|at.with_timezone(&chrono::Local).format(if a.provider==Provider::Claude{"%m-%d %H:%M 本地記錄"}else{"%H:%M 更新"}).to_string()).unwrap_or_default();ui.label(egui::RichText::new(time).size(10.0).color(ui.visuals().weak_text_color()));}
+                        if let Some(s)=snapshot{let time=chrono::DateTime::from_timestamp(s.at,0).map(|at|at.with_timezone(&chrono::Local).format(if a.provider==Provider::Claude{"%m-%d %H:%M 本機記錄"}else{"%H:%M 更新"}).to_string()).unwrap_or_default();ui.label(egui::RichText::new(time).size(10.0).color(ui.visuals().weak_text_color()));}
                     });
                     if !a.provider.balance(){
                         let mut color=self.quota.config.colors.get(&a.id).copied().unwrap_or_default();color_picker(ui,a.provider,&mut color);

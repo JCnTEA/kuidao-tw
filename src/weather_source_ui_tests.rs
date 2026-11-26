@@ -62,6 +62,8 @@ fn click(h:&mut H,label:&str){
     for pressed in [true,false]{draw(h,vec![egui::Event::PointerMoved(point),egui::Event::PointerButton{pos:point,button:egui::PointerButton::Primary,pressed,modifiers:Default::default()}],egui::vec2(740.0,1100.0),1.0);}
 }
 
+#[ignore = "和風天氣 UI 已於 0.7.3 移除"]
+
 #[test]
 fn qweather_verified_connection_is_prominent_and_cities_have_dropdown_controls(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
@@ -76,6 +78,8 @@ fn qweather_verified_connection_is_prominent_and_cities_have_dropdown_controls()
 fn district(name:&str,index:usize)->crate::qweather::Location {
     crate::qweather::Location{position:crate::weather::Position{lat:30.42+index as f64*0.01,lon:119.99,label:name.into(),region:"浙江省 · 杭州市".into()},timezone:"Asia/Shanghai".into()}
 }
+
+#[ignore = "和風天氣 UI 已於 0.7.3 移除"]
 
 #[test]
 fn qweather_five_saved_cities_are_independent_selectable_and_removable(){
@@ -99,6 +103,8 @@ fn qweather_five_saved_cities_are_independent_selectable_and_removable(){
     h.app.qweather_select_location(locations[0].clone());assert!(h.app.weather_source.config.location.as_ref()==Some(&locations[0]));
     assert_eq!(h.app.settings.weather_saved,original);
 }
+
+#[ignore = "和風天氣 UI 已於 0.7.3 移除"]
 
 #[test]
 fn qweather_city_dropdown_supports_fuzzy_input_keyboard_selection_and_add(){
@@ -124,8 +130,10 @@ fn qweather_city_dropdown_supports_fuzzy_input_keyboard_selection_and_add(){
     draw(&mut h,vec![key(egui::Key::Enter)],egui::vec2(740.0,1100.0),1.0);
     assert_eq!(h.app.weather_source.query,"餘杭");
     draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);click(&mut h,"新增城市");assert!(h.app.weather_source.config.saved.contains(&candidates[1]));
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="連線測試通過")),"搜索和新增不能覆蓋連線成功狀態");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="連線測試通過")),"搜尋和新增不能覆蓋連線成功狀態");
 }
+
+#[ignore = "和風天氣 UI 已於 0.7.3 移除"]
 
 #[test]
 fn qweather_draft_hides_default_cities_requires_validation_and_can_collapse_without_hiding_cities(){
@@ -161,6 +169,8 @@ fn qweather_draft_hides_default_cities_requires_validation_and_can_collapse_with
     }
 }
 
+#[ignore = "和風天氣 UI 已於 0.7.3 移除"]
+
 #[test]
 fn qweather_apply_switches_only_after_validation_and_module_switch_controls_source_and_resident(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=fixture(SettingsTheme::Dark);
@@ -176,6 +186,8 @@ fn qweather_apply_switches_only_after_validation_and_module_switch_controls_sour
     h.app.weather_source.selected=Provider::OpenMeteo;for _ in 0..3{draw(&mut h,vec![],egui::vec2(740.0,1100.0),1.0);}
     click(&mut h,"應用 Open-Meteo");assert!(h.app.weather_source.displayed==Provider::OpenMeteo);
 }
+
+#[ignore = "和風天氣 UI 已於 0.7.3 移除"]
 
 #[test]
 fn qweather_configuration_site_opens_developer_console(){
@@ -195,6 +207,8 @@ fn qweather_configuration_site_opens_developer_console(){
     }
 }
 
+#[ignore = "和風天氣 UI 已於 0.7.3 移除"]
+
 #[test]
 fn qweather_source_card_shows_account_free_quota_separately_from_local_usage(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=fixture(SettingsTheme::Dark);qweather_data_fixture(&mut h);h.app.weather_source.config_open=false;
@@ -202,6 +216,8 @@ fn qweather_source_card_shows_account_free_quota_separately_from_local_usage(){
     let text=h.shapes.iter().filter_map(|s|if let egui::Shape::Text(t)=&s.shape{Some(t.galley.text())}else{None}).collect::<Vec<_>>().join("\n");
     assert!(text.contains("本機本月已請求")&&text.contains("免費額度 50,000 次"));assert!(!text.contains("5,000"),"來源卡不能把本機保護值寫成帳號免費額度");
 }
+
+#[ignore = "和風天氣 UI 已於 0.7.3 移除"]
 
 #[test]
 fn qweather_data_credit_opens_the_provider_site_in_forecast_and_solar_views(){

@@ -1,6 +1,6 @@
-//! 兼容渲染的逐像素透明：獨立的分層顯示窗口（`UpdateLayeredWindow`）。
+//! 相容渲染的逐像素透明：獨立的分層顯示窗口（`UpdateLayeredWindow`）。
 //!
-//! 兼容後端（Direct3D 12 交換鏈、部分 AMD OpenGL 驅動）交給系統的畫面沒有可用的 alpha，
+//! 相容後端（Direct3D 12 交換鏈、部分 AMD OpenGL 驅動）交給系統的畫面沒有可用的 alpha，
 //! 透明畫布會顯示成黑塊，過去只能按島體輪廓裁剪窗口區域；窗口區域逐像素「要麼有要麼沒有」，
 //! 圓角和肩部必然出現鋸齒。
 //!
@@ -347,7 +347,7 @@ mod tests {
         assert!((19..=21).contains(&count(Duration::from_millis(50))), "寵物表情約 20 次/秒，實際 {}", count(Duration::from_millis(50)));
     }
 
-    /// 兼容渲染每次讀回都會發截圖命令、收到截圖事件：這兩步本身不能再觸發重繪（vendor/egui 的修改），
+    /// 相容渲染每次讀回都會發截圖命令、收到截圖事件：這兩步本身不能再觸發重繪（vendor/egui 的修改），
     /// 否則 egui「每個立即請求畫兩幀」的規則會把只需 10～20 幀的寵物動畫帶到 60 幀。
     #[test]
     fn screenshot_plumbing_does_not_request_extra_frames() {
@@ -426,7 +426,7 @@ mod tests {
         assert_eq!(image_hash([3, 2], &a), image_hash([3, 2], &a));
     }
 
-    /// 兼容渲染每幀都會走這裡：連續提交幾千幀不同畫面，進程內存和 GDI 對象都不能隨幀數增長。
+    /// 相容渲染每幀都會走這裡：連續提交幾千幀不同畫面，進程內存和 GDI 對象都不能隨幀數增長。
     #[test]
     fn presenting_many_frames_does_not_leak() {
         unsafe {

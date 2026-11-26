@@ -217,7 +217,7 @@ pub(crate) mod kugou_cache;
 
 pub fn is_soda(source:&str)->bool {matches!(source,"汽水音樂"|"汽水音樂") || source.to_ascii_lowercase().contains("sodamusic")}
 
-/// 本地歌詞緩存的「版本」：檔案修改時間與大小都沒變時不必再完整讀取。目前只有汽水音樂的單檔案緩存可靠適用。
+/// 本機歌詞緩存的「版本」：檔案修改時間與大小都沒變時不必再完整讀取。目前只有汽水音樂的單檔案緩存可靠適用。
 pub(crate) fn native_fingerprint(source:&str)->Option<(std::time::SystemTime,u64)> {
     if is_soda(source){return soda_cache::fingerprint();}
     None
@@ -227,7 +227,7 @@ pub(crate) fn read_native(source:&str,track:&str,artist:&str,duration:f64)->Opti
     read_native_detail(source,track,artist,duration).ok()
 }
 
-/// 本地緩存讀取；未命中時給出原因，供診斷日誌使用。
+/// 本機緩存讀取；未命中時給出原因，供診斷日誌使用。
 pub(crate) fn read_native_detail(source:&str,track:&str,artist:&str,duration:f64)->Result<Lyrics,&'static str> {
     if source.to_ascii_lowercase().contains("kugou") {return kugou_cache::read(track,artist,duration).ok_or("未命中");}
     if is_soda(source) {
@@ -237,7 +237,7 @@ pub(crate) fn read_native_detail(source:&str,track:&str,artist:&str,duration:f64
     Err("不支援本機讀取")
 }
 
-/// 後台本地輪詢（客戶端稍後才寫好歌詞）的結果單獨記一行，命中或放棄時各寫一次。
+/// 後台本機輪詢（客戶端稍後才寫好歌詞）的結果單獨記一行，命中或放棄時各寫一次。
 pub(crate) fn log_native(source:&str,track:&str,artist:&str,outcome:&str,elapsed:std::time::Duration) {
     if cfg!(test) {return;}
     let line=format!("{} {source} · {track} - {artist} → 本機輪詢:{outcome} 用時{}ms\n",
@@ -338,7 +338,7 @@ pub fn fetch_for_source(source:&str,track:&str,artist:&str,duration:f64,song_id:
                     if !failed{write_negative(&path,Some(&plain));}
                     return Ok(plain);
                 }
-                // 按 ID 取詞失敗（限流、斷網）時仍走搜索，避免一次失敗就整首無詞。
+                // 按 ID 取詞失敗（限流、斷網）時仍走搜尋，避免一次失敗就整首無詞。
                 Err(_)=>{}
             }
         }
@@ -366,7 +366,7 @@ fn parse_krc(raw:&str)->Lyrics {
     if raw.len()>MAX_TEXT || raw.lines().count()>MAX_LINES/2{return rejected_lyrics();}
     static LINE_TAG:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
     static WORD_TAG:std::sync::OnceLock<regex::Regex>=std::sync::OnceLock::new();
-    // 本地歌詞會被輪詢讀取，正則只編譯一次。
+    // 本機歌詞會被輪詢讀取，正則只編譯一次。
     let line_tag=LINE_TAG.get_or_init(||regex::Regex::new(r"^\[(\d+),(\d+)\]").unwrap());
     let word_tag=WORD_TAG.get_or_init(||regex::Regex::new(r"<\d+,\d+,\d+>").unwrap());
     let mut timed=Vec::new();

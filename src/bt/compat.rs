@@ -34,15 +34,15 @@ pub(crate) struct Package {
 
 impl Package {
     pub(crate) fn parse(raw: &[u8]) -> Result<Self, &'static str> {
-        let manifest: Manifest = serde_json::from_slice(raw).map_err(|_| "兼容包格式無效")?;
+        let manifest: Manifest = serde_json::from_slice(raw).map_err(|_| "相容包格式無效")?;
         if manifest.id != PACKAGE_ID {
-            return Err("此檔案不是島仔無線裝置兼容包");
+            return Err("此檔案不是島仔無線裝置相容包");
         }
         if manifest.api_version != API_VERSION {
-            return Err("當前島仔版本不支援此兼容包接口");
+            return Err("當前島仔版本不支援此相容包接口");
         }
         if !valid_text(&manifest.version, 32) {
-            return Err("兼容包版本無效");
+            return Err("相容包版本無效");
         }
         Ok(Self {
             version: manifest.version,
@@ -74,7 +74,7 @@ impl ReceiverTable {
                 return Err("接收器名稱無效");
             }
             if receivers.insert((vid, pid), receiver.name).is_some() {
-                return Err("兼容包有重複的接收器 VID/PID");
+                return Err("相容包有重複的接收器 VID/PID");
             }
         }
         Ok(Self(receivers))

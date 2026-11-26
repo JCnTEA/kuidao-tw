@@ -114,7 +114,7 @@ pub fn fingerprint()->Option<(std::time::SystemTime,u64)>{
     Some((meta.modified().ok()?,meta.len()))
 }
 
-/// 本地讀取未命中的原因，寫入歌詞診斷日誌，便於定位「為什麼沒詞」。
+/// 本機讀取未命中的原因，寫入歌詞診斷日誌，便於定位「為什麼沒詞」。
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum Miss {Missing,TooLarge,Busy,Format,NoMatch}
 impl Miss {

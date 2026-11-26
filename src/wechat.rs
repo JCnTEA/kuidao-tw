@@ -79,7 +79,7 @@ fn installed_paths() -> Vec<String> {
     paths
 }
 
-/// 閃動與前台查看使用同一帳號進程口徑，兼容主窗口與託盤宿主位於不同進程。
+/// 閃動與前台查看使用同一帳號進程口徑，相容主窗口與託盤宿主位於不同進程。
 pub(crate) fn account_pid(pid:u32,paths:&[String])->u32{
     let owners:std::collections::HashSet<_>=unsafe{tray_hosts(paths)}.into_iter().map(|(pid,_)|pid).collect();
     if owners.is_empty() || owners.contains(&pid){return pid;}
@@ -257,7 +257,7 @@ unsafe fn tray_overflow_button(ui:&windows::Win32::UI::Accessibility::IUIAutomat
 
 /// 微信縮在託盤時：通過無障礙接口按下該帳號自己的託盤按鈕，由微信自己喚起主窗口。
 /// 不移動鼠標、不向微信發送內部訊息、不注入、不讀取內容；定位不到唯一按鈕就放棄。
-/// 兼容新版 Win11 託盤與 Windows 10 / 早期 Win11 的舊式託盤。會阻塞幾百毫秒，必須在後台線程調用。
+/// 相容新版 Win11 託盤與 Windows 10 / 早期 Win11 的舊式託盤。會阻塞幾百毫秒，必須在後台線程調用。
 pub fn open_wechat_from_tray(unread:crate::app::Unread)->Result<(),String>{
     use windows::{core::Interface,Win32::{Foundation::RECT,System::Com::*,UI::{Accessibility::*,HiDpi::*}}};
     let mut log=TrayLog::new(unread);

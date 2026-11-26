@@ -13,7 +13,7 @@ fn track(raw:&[u8],filename:&str)->Option<(String,f64)>{
 }
 
 fn scan(bytes:&[u8],filename:&str)->Option<(String,f64)>{
-    // 整段標記用字面量查找（內部為向量化子串搜索），不再逐個引號比對。
+    // 整段標記用字面量查找（內部為向量化子串搜尋），不再逐個引號比對。
     static MARKER:std::sync::OnceLock<regex::bytes::Regex>=std::sync::OnceLock::new();
     let marker=MARKER.get_or_init(||regex::bytes::Regex::new(r#""duration":"#).unwrap());
     for found in marker.find_iter(bytes) {

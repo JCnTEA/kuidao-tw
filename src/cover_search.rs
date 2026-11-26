@@ -4,7 +4,7 @@ use super::NowPlaying;
 use eframe::egui::ColorImage;
 use std::{sync::{mpsc,Arc},time::{Duration,Instant}};
 
-/// 先給系統縮略圖和播放器本地封面一點時間，避免每次換歌都去網上搜。
+/// 先給系統縮略圖和播放器本機封面一點時間，避免每次換歌都去網上搜。
 const WAIT:Duration=Duration::from_secs(4);
 const RETRY:Duration=Duration::from_secs(30);
 
@@ -48,7 +48,7 @@ impl CoverSearch {
     }
 }
 
-/// 搜索結果裡挑同一首歌：有歌手時歌名、歌手都要對上；沒有歌手時歌名完全一致且時長相差 3 秒內才用，寧缺毋錯。
+/// 搜尋結果裡挑同一首歌：有歌手時歌名、歌手都要對上；沒有歌手時歌名完全一致且時長相差 3 秒內才用，寧缺毋錯。
 pub(crate) fn pick(songs:&[serde_json::Value],title:&str,artist:&str,duration:f64)->Option<String> {
     songs.iter().find_map(|song|{
         let name=song.get("name")?.as_str()?;

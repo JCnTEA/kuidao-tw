@@ -1,4 +1,4 @@
-//! 只讀 Claude 本地用量；不解密登錄令牌，不請求遠程接口。
+//! 只讀 Claude 本機用量；不解密登錄令牌，不請求遠程接口。
 use super::{Account,Snapshot,Window};
 use ring::digest;
 use serde_json::{json,Value};

@@ -393,7 +393,7 @@ fn rank_cities(name: &str, mut found: Vec<(Position, u64)>) -> Vec<Position> {
     ranked
 }
 
-/// 搜索多個同名地點，保留行政區供用戶確認。
+/// 搜尋多個同名地點，保留行政區供用戶確認。
 pub fn search_cities(agent: &ureq::Agent, name: &str) -> Result<Vec<Position>, String> {
     let name=name.trim();
     let mut found=Vec::new();
@@ -517,7 +517,7 @@ pub fn clock(at: i64) -> String {
         .unwrap_or_else(|| "--:--".into())
 }
 
-/// 輸入停頓後再搜索，最多一個在途請求；舊關鍵詞的結果不覆蓋新輸入。
+/// 輸入停頓後再搜尋，最多一個在途請求；舊關鍵詞的結果不覆蓋新輸入。
 #[derive(Default)]
 pub struct CitySearch {
     pub results: Vec<Position>,
@@ -624,7 +624,7 @@ impl State {
         let city=city.trim().to_string();
         self.rx=None;self.loading=false;self.error=None;self.failures=0;
         self.picker_open=false;self.solar_open=false;
-        // 設定頁的搜索框是「新增城市」用的草稿，切換城市不改動它。
+        // 設定頁的搜尋框是「新增城市」用的草稿，切換城市不改動它。
         self.manual_city=position.is_some();self.active_position=position.clone();
         self.snapshot=self.cached_for(&city,position.as_ref()).cloned();
         if self.snapshot.as_ref().is_some_and(|s|(0..INTERVAL).contains(&(now-s.at))) {
@@ -647,7 +647,7 @@ impl State {
         }
     }
 
-    /// 設定頁搜索框裡已確認的地區（輸入框文字與所選地區一致）。
+    /// 設定頁搜尋框裡已確認的地區（輸入框文字與所選地區一致）。
     pub fn picked_city(&self) -> Option<&Position> {
         self.selected_city.as_ref().filter(|p|p.valid() && p.label==self.city_input.trim())
     }

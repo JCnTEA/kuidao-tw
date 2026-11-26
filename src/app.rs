@@ -178,7 +178,7 @@ pub struct Env {
     pub backdrop: Option<[f32; 3]>,
     /// 毛玻璃皮膚：系統背景模糊當前是否生效。
     pub glass_blur: bool,
-    /// 不支援逐像素透明的兼容後端需要按內容輪廓裁剪窗口。
+    /// 不支援逐像素透明的相容後端需要按內容輪廓裁剪窗口。
     pub opaque_surface: bool,
     #[cfg(all(windows, feature = "sdk-material"))]
     pub material_active: bool,
@@ -536,7 +536,7 @@ pub struct FrameOut {
     pub region: Rect,
     /// 毛玻璃 + 系統模糊時，替代 `region` 的貼合輪廓；其餘情況為 None。
     pub glass: Option<Vec<GlassShape>>,
-    /// 是否在 glass 輪廓下方顯示系統模糊；兼容渲染只借輪廓裁剪時為 false。
+    /// 是否在 glass 輪廓下方顯示系統模糊；相容渲染只借輪廓裁剪時為 false。
     pub blur: bool,
     #[cfg(all(windows, feature = "sdk-material"))]
     pub(crate) material_layer: Option<crate::material::Layer>,
@@ -600,7 +600,7 @@ impl Pomo {
     }
 }
 
-/// 本地歌詞（酷狗、汽水）每 5 秒複查，最多約 1 分鐘；網路失敗每 30 秒重試，最多約 5 分鐘。手動點重試會重新計數。
+/// 本機歌詞（酷狗、汽水）每 5 秒複查，最多約 1 分鐘；網路失敗每 30 秒重試，最多約 5 分鐘。手動點重試會重新計數。
 const NATIVE_RETRIES:u32=12;
 const NETWORK_RETRIES:u32=10;
 
@@ -885,7 +885,7 @@ pub struct App {
     pub material_active_id: Option<String>,
     #[cfg(all(windows, feature = "sdk-material"))]
     material_appearance: crate::material::Appearance,
-    /// 本次運行實際使用兼容渲染（Direct3D 12）；設定裡的開關與它不同時提示重啟。
+    /// 本次運行實際使用相容渲染（Direct3D 12）；設定裡的開關與它不同時提示重啟。
     pub render_compat_running: bool,
     pub(crate) todos: model::TodoList,
     pub(crate) water: model::Water,
@@ -1077,7 +1077,7 @@ pub struct App {
     pub(crate) current_hour: usize,
     pub(crate) cursor_local: Option<Pos2>,
     started: bool,
-    /// v0.5.4：音量條展示值（拖動時先用本地值，隨後跟上系統回報）。
+    /// v0.5.4：音量條展示值（拖動時先用本機值，隨後跟上系統回報）。
     pub(crate) volume_ui: Option<(u32, bool)>,
     /// 拖動/滾輪剛改過音量，這段時間內系統回聲不再單獨彈一條。
     pub(crate) volume_quiet_until: f64,
@@ -1086,10 +1086,10 @@ pub struct App {
     pub(crate) music_volume_ui: Option<(u32,bool)>,
     pub(crate) music_volume_quiet_until: f64,
     pub(crate) music_volume_open: bool,
-    /// 拖動進度條鬆手後先用本地目標值顯示：播放器回報新位置有延遲，等追上、換歌或超時再交還（來自 PR #162）。
+    /// 拖動進度條鬆手後先用本機目標值顯示：播放器回報新位置有延遲，等追上、換歌或超時再交還（來自 PR #162）。
     pub(crate) music_seek_ui: Option<(f64,String)>,
     pub(crate) music_seek_quiet_until: f64,
-    /// 點了上一首 / 下一首的時刻：先本地把進度歸零，等播放器報回新歌位置再交還。
+    /// 點了上一首 / 下一首的時刻：先本機把進度歸零，等播放器報回新歌位置再交還。
     pub(crate) music_restart_at: Option<f64>,
     /// 上一次看到的藍牙裝置，用來只在連線/斷開時提示一次。
     pub(crate) bt_shown: Vec<crate::bt::Device>,
@@ -4590,7 +4590,7 @@ impl App {
     // ---------------------------------------------------------------
     fn tick(&mut self, env: &Env, dt: f32, elapsed: f32) {
         if self.toast.as_ref().is_some_and(|(_,at)|self.t-at>2.4){self.toast=None;}
-        // 跳轉後先用本地目標位置顯示；播放器回報追上了、換歌了或超時就交還真實位置。
+        // 跳轉後先用本機目標位置顯示；播放器回報追上了、換歌了或超時就交還真實位置。
         let seek_done=self.music_seek_ui.as_ref().is_some_and(|(target,title)|{
             (self.media.duration>0.0 && (self.media.position-*target).abs()<1.5)
                 || self.t>=self.music_seek_quiet_until || &self.media.title!=title

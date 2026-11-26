@@ -90,7 +90,7 @@ fn query(agent:&ureq::Agent,s:&Session,id:&str)->Result<Snapshot,Failure>{
 fn with_transport_retry<T>(agent:&ureq::Agent,origin:&str,request:impl Fn(&ureq::Agent)->Result<T,Failure>)->Result<T,Failure>{
     let result=request(agent);
     if !matches!(result,Err(Failure::Transport)){return result;}
-    // 僅在本地代理映射到基準測試地址且連線失敗時重新解析；TLS 仍校驗原官網域名。
+    // 僅在本機代理映射到基準測試地址且連線失敗時重新解析；TLS 仍校驗原官網域名。
     use std::net::{Ipv4Addr,SocketAddr,ToSocketAddrs};
     let host=origin.trim_start_matches("https://");
     let mapped=(host,443).to_socket_addrs().ok().is_some_and(|mut addresses|addresses.any(|a|matches!(a,SocketAddr::V4(v) if v.ip().octets()[0]==198 && matches!(v.ip().octets()[1],18|19))));

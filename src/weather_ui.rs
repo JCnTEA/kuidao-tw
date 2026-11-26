@@ -698,7 +698,7 @@ impl App {
         self.weather.switch(&city,position,chrono::Utc::now().timestamp());
     }
 
-    /// 設定頁「新增城市」：把搜索框裡確認的地區加入列表，不改變當前城市。
+    /// 設定頁「新增城市」：把搜尋框裡確認的地區加入列表，不改變當前城市。
     pub(crate) fn add_weather_city(&mut self) -> bool {
         if !self.module_on(WEATHER_PAGE) {return false;}
         let Some(position)=self.weather.picked_city().cloned() else {return false;};
@@ -1269,7 +1269,7 @@ pub(crate) fn city_row(ui: &mut egui::Ui, selected: bool, removable: bool, title
     (response.clicked() && !removed, removed)
 }
 
-/// 城市搜索下拉的一項：定位標記 + 名稱（粗）+ 行政區（灰），左對齊；
+/// 城市搜尋下拉的一項：定位標記 + 名稱（粗）+ 行政區（灰），左對齊；
 /// 已選中的右側打勾，已在列表裡的標「已新增」。
 pub(crate) fn city_option(ui: &mut egui::Ui, position: &weather::Position, chosen: bool, saved: bool) -> egui::Response {
     use crate::settings_theme::color;

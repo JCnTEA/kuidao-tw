@@ -160,7 +160,7 @@ fn check_settings_file(path: &Path) -> Result<(), Failure> {
 }
 
 fn classify_failure(output: &Output, json: &Value) -> Failure {
-    // 來自 CLI 的診斷只用於本地分類，界面和日誌使用固定提示。
+    // 來自 CLI 的診斷只用於本機分類，界面和日誌使用固定提示。
     let text_error = if output.code != 0 && json.is_null() {
         String::from_utf8_lossy(&output.stdout)
     } else {

@@ -174,7 +174,7 @@ impl App {
         let (lo,hi)=(now-chrono::Duration::days(30),now+chrono::Duration::days(366));
         let mut entries=self.calendar.local.clone();
         let mut known:std::collections::HashSet<_>=entries.iter().map(|entry|entry.event.uid.clone()).collect();
-        // 兼容舊版本對缺少 UID 的行程生成的標識，重新匯入時保留已有本機記錄。
+        // 相容舊版本對缺少 UID 的行程生成的標識，重新匯入時保留已有本機記錄。
         for entry in &entries{if entry.event.uid==format!("ics--{}",entry.event.start){known.insert(fallback_ics_uid(&entry.event));}}
         let (mut added,mut duplicates,mut capacity,mut errors)=(0usize,0usize,0usize,Vec::new());
         let mut report=crate::calendar::ReadReport::default();
