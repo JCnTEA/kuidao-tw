@@ -191,6 +191,30 @@ pub fn external_dir(key: &str) -> PathBuf {
         .join("Kuidao").join("mascot-packs").join(key)
 }
 
+/// 把使用者選的資料夾整份複製進 `mascot-packs/<形象>`，資料夾裡必須有 `pack.json`。
+pub fn import_folder(key: &str, source: &Path) -> Result<(), String> {
+    if !source.join("pack.json").is_file() {
+        return Err("這個資料夾裡沒有 pack.json".into());
+    }
+    let dest = external_dir(key);
+    copy_tree(source, &dest).map_err(|error| format!("複製失敗：{error}"))
+}
+
+fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let source = entry.path();
+        let target = to.join(entry.file_name());
+        if source.is_dir() {
+            copy_tree(&source, &target)?;
+        } else if source.is_file() {
+            std::fs::copy(&source, &target)?;
+        }
+    }
+    Ok(())
+}
+
 pub fn open_folder(key: &str) {
     let dir = external_dir(key);
     let _ = std::fs::create_dir_all(&dir);

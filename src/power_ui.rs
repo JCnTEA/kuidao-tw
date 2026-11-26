@@ -155,6 +155,15 @@ impl App {
         let all = rings(env.battery.map(|level| (level, env.charging)), &env.bt, env.bt_present);
         let total = all.len();
         let list = &all[..total.min(MAX_RINGS)];
+        // 只有一台時沿用「無線設備」的詳情版式：左邊大環、右邊名稱與讀數，不再一個小環擺中間。
+        if list.len() == 1 {
+            if let Some(device) = env.bt.iter().find(|device| {
+                device.name.trim() == list[0].name && device.battery == Some(list[0].level)
+            }) {
+                self.wireless_detail(c, device, false);
+                return;
+            }
+        }
         let summary = if list.is_empty() {
             "沒有偵測到可回報電量的裝置".to_string()
         } else {

@@ -4462,6 +4462,28 @@ impl App {
                             if pet!=self.settings.pet {self.set_pet(pet);}
                             #[cfg(feature="sdk-js")]
                             self.plugins.appearance_picker(ui,crate::sdk_spike::local::appearance_assets::Kind::Pet,None);
+                            ui.separator();
+                            ui.horizontal(|ui|{
+                                ui.label("吉祥物形象");
+                                ui.label(egui::RichText::new("島虎（石虎）").strong());
+                            });
+                            settings_hint(ui,"台灣版只保留島虎。經典、奶油、毛玻璃、懸浮雲與懸浮漸層都使用同一組台灣石虎影格；漸層只換島體底色，吉祥物不會變形狀。");
+                            ui.horizontal(|ui|{
+                                ui.label("吉祥物動畫包");
+                                if ui.button("開啟資料夾").clicked(){crate::mascot_pack::open_folder(self.settings.mascot.key());}
+                                if ui.button("匯入動畫包…").clicked(){
+                                    match crate::system::pick_folder_for("選擇吉祥物動畫包資料夾（內含 pack.json）") {
+                                        Ok(Some(dir))=>match crate::mascot_pack::import_folder(self.settings.mascot.key(),&dir){
+                                            Ok(())=>{self.pet.reload_mascot_pack();self.say("吉祥物動畫包已匯入，重新載入完成");}
+                                            Err(error)=>self.say(format!("匯入失敗：{error}")),
+                                        },
+                                        Ok(None)=>{},
+                                        Err(error)=>self.say(format!("無法開啟資料夾選擇視窗：{error}")),
+                                    }
+                                }
+                                if ui.button("重新載入").clicked(){self.pet.reload_mascot_pack();}
+                            });
+                            settings_hint(ui,"動畫包不放也可以，會用內建動畫；自行繪製的影格建議 144×90、透明背景。");
                             settings_advanced(ui,"settings-appearance-advanced",|ui|{
                                 setting_row(ui,"OLED 畫素偏移","防止 OLED 螢幕燒屏：收起靜止時讓島體緩慢移動幾個畫素，不改動你儲存的位置",&mut self.settings.oled_shift);
                             });
@@ -4688,7 +4710,7 @@ impl App {
                         });
                         // 聊天軟件：一個軟件一行、一個開關；附屬選項縮進跟在所屬軟件下面。
                         let master=self.settings.notifications;
-                        settings_label(ui,"聊天軟體");
+                        settings_label(ui,"社群與聊天軟體");
                         if !master {
                             ui.label(egui::RichText::new("提醒總開關已關閉，開啟後下面的提醒才會生效").size(12.0).color(Color32::from_rgb(230,150,40)));
                         }
@@ -4707,6 +4729,7 @@ impl App {
                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
                                         if self.settings.read_notifications {
                                             if ui.button("斷開通知").clicked(){self.pending.push(Cmd::DisconnectNotifications);}
+                                            if ui.button("重新連線").on_hover_text("收不到通知時按這裡，讓 Windows 重新授權").clicked(){self.pending.push(Cmd::RequestNotifications);}
                                         } else if ui.button("連線…").clicked(){open_connect=true;}
                                     });
                                 });
@@ -4731,97 +4754,6 @@ impl App {
                                 if before_apps!=self.notification_apps.items{self.notification_apps.save();}
                             });
                         });
-                        // LINE Login：只取 userId、顯示名稱與頭像，不讀聊天內容。
-                        settings_label(ui,"LINE 帳號");
-                        settings_card(ui,|ui|{
-                            let busy=self.line_login.pending();
-                            if let Some(account)=self.line_account.clone() {
-                                ui.horizontal(|ui|{
-                                    ui.vertical(|ui|{
-                                        ui.spacing_mut().item_spacing.y=2.0;
-                                        ui.label(egui::RichText::new(&account.display_name).size(13.0).color(settings_color(ctx,Color32::WHITE,Color32::from_rgb(30,34,41))));
-                                        ui.label(egui::RichText::new(format!("userId {}",account.user_id)).size(11.0).color(settings_color(ctx,Color32::from_gray(170),Color32::from_gray(92))));
-                                    });
-                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
-                                        if ui.button("解除綁定").clicked() {
-                                            crate::line_login::logout(&account);
-                                            self.line_account=None;
-                                            self.line_message="已解除 LINE 綁定，並撤銷存取權杖。".into();
-                                        }
-                                    });
-                                });
-                                if !account.picture_url.is_empty() && ui.small_button("開啟大頭貼").clicked() {
-                                    self.pending.push(Cmd::OpenUrl(account.picture_url.clone()));
-                                }
-                            } else {
-                                ui.horizontal(|ui|{
-                                    ui.label(egui::RichText::new("Channel ID").size(12.0));
-                                    ui.add(egui::TextEdit::singleline(&mut self.settings.line_channel_id).desired_width(170.0).hint_text("1234567890"));
-                                    ui.label(egui::RichText::new("LINE Login Channel 的數字 ID").size(11.0).color(settings_color(ctx,Color32::from_gray(150),Color32::from_gray(110))));
-                                });
-                                ui.horizontal(|ui|{
-                                    ui.label(egui::RichText::new("Channel Secret").size(12.0));
-                                    ui.add(egui::TextEdit::singleline(&mut self.line_secret_input).password(true).desired_width(220.0).hint_text("留空＝沿用已儲存的 Secret"));
-                                    ui.label(egui::RichText::new("存進 Windows 憑據管理器").size(11.0).color(settings_color(ctx,Color32::from_gray(150),Color32::from_gray(110))));
-                                });
-                                ui.horizontal(|ui|{
-                                    ui.label(egui::RichText::new("Callback URL").size(12.0));
-                                    ui.add(egui::TextEdit::singleline(&mut self.settings.line_redirect_uri).desired_width(300.0));
-                                    ui.label(egui::RichText::new("與 Console 一字不差").size(11.0).color(settings_color(ctx,Color32::from_gray(150),Color32::from_gray(110))));
-                                });
-                                ui.horizontal(|ui|{
-                                    if ui.add_enabled(!busy,egui::Button::new("登入 LINE")).clicked() {
-                                        let secret=if self.line_secret_input.trim().is_empty() {
-                                            crate::line_login::stored_secret().unwrap_or_default()
-                                        } else {
-                                            self.line_secret_input.trim().to_string()
-                                        };
-                                        let config=crate::line_login::Config {
-                                            channel_id:self.settings.line_channel_id.trim().into(),
-                                            channel_secret:secret,
-                                            redirect_uri:self.settings.line_redirect_uri.trim().into(),
-                                        };
-                                        match config.validate() {
-                                            Ok(()) => {
-                                                if !self.line_secret_input.trim().is_empty() {
-                                                    if let Err(message)=crate::line_login::remember_secret(&self.line_secret_input) {
-                                                        self.line_message=message;
-                                                    }
-                                                }
-                                                self.settings.save();
-                                                self.line_message.clear();
-                                                self.line_login=crate::line_login::Login::start(config);
-                                            }
-                                            Err(message)=>self.line_message=message,
-                                        }
-                                    }
-                                    if busy {
-                                        ui.spinner();
-                                        ui.label(egui::RichText::new("請在瀏覽器完成授權…").size(11.5).color(settings_color(ctx,Color32::from_gray(180),Color32::from_gray(90))));
-                                        if ui.button("取消").clicked() {
-                                            self.line_login.cancel();
-                                            self.line_message="已取消 LINE 登入。".into();
-                                        }
-                                    }
-                                });
-                                if !busy {
-                                    settings_hint(ui,"首次使用時，Channel ID／Secret 與 Callback URL 要跟 LINE Developers Console 完全一致；回呼只走本機 http://localhost，不會把授權碼送到外部。");
-                                }
-                            }
-                            if !self.line_message.is_empty() {
-                                ui.label(egui::RichText::new(&self.line_message).size(11.5).color(Color32::from_rgb(230,150,40)));
-                            }
-                            settings_hint(ui,"只取得 userId、顯示名稱與頭像，不讀聊天內容；之後要用官方帳號推播時，同一個 Provider 下的 Messaging API Channel 會沿用這個 userId。");
-                        });
-                        if self.line_login.pending() {
-                            ctx.request_repaint_after(std::time::Duration::from_millis(250));
-                            if let Some(result)=self.line_login.poll() {
-                                match result {
-                                    Ok(account)=>{self.line_message=format!("已綁定：{}",account.display_name);self.line_account=Some(account);}
-                                    Err(message)=>self.line_message=message,
-                                }
-                            }
-                        }
                         let connect_id=egui::Id::new("settings-notify-connect");
                         if open_connect {ctx.data_mut(|d|d.insert_temp(connect_id,true));}
                         if ctx.data(|d|d.get_temp::<bool>(connect_id)).unwrap_or(false) {
@@ -4836,8 +4768,6 @@ impl App {
                             });
                             if close || modal.should_close() {ctx.data_mut(|d|d.remove::<bool>(connect_id));}
                         }
-                        #[cfg(windows)]
-                        self.plugin_notice_settings(ui);
                     }
                     7=>{
                         let mut add_mail=false;

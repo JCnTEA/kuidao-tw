@@ -396,7 +396,7 @@ impl App {
         }
     }
     /// 詳情：環、名稱、讀數與總覽同一順序，只是放大。有返回入口時標題前帶“‹”。
-    fn wireless_detail(&mut self,c:&Card,device:&Device,back:bool) {
+    pub(crate) fn wireless_detail(&mut self,c:&Card,device:&Device,back:bool) {
         if back {
             let wa=c.text(15.0,25.0,"‹ 無線",crate::theme::size::TITLE,W::Bold,theme::WHITE,H::Left);
             c.text(15.0+wa+1.5,25.0,"設備",crate::theme::size::TITLE,W::Bold,theme::CYAN,H::Left);
