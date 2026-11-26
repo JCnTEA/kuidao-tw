@@ -1,8 +1,8 @@
-﻿param([string]$Executable)
+param([string]$Executable)
 
 $ErrorActionPreference = 'Stop'
 $project = Split-Path $PSScriptRoot -Parent
-if (!$Executable) { $Executable = Join-Path $project 'target\x86_64-pc-windows-msvc\release\daozai.exe' }
+if (!$Executable) { $Executable = Join-Path $project 'target\x86_64-pc-windows-msvc\release\kuidao.exe' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
 $target = (New-Item -Path (Join-Path $project 'target') -ItemType Directory -Force).FullName
 $root = Join-Path $target ("诊断测试 " + [Guid]::NewGuid().ToString('N'))
