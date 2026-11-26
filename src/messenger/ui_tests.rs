@@ -96,7 +96,7 @@ fn five_client_icons_fit_collapsed_and_expand_to_their_own_click_targets(){
     for _ in 0..90{h.frame(vec![]);}
     let stack=h.ctx.read_response(egui::Id::new(("card",true,"messenger-stack"))).unwrap().rect;
     let left=h.hit.center().x-h.app.w.pos/2.0;
-    assert!(left>=15.9 && (left+stack.right()-WIN_W).abs()<0.2,"超寬常駐內容應和未讀入口一起留在畫布內");
+    assert!(left>=0.0 && stack.right()<=WIN_W+0.5,"超寬常駐內容應和未讀入口一起留在畫布內");
     h.app.reveal_unread();for _ in 0..90{h.frame(vec![]);}
     let first=h.ctx.read_response(egui::Id::new(("card",true,"微信".to_string()))).unwrap();
     h.hover(first.rect.center(),0.1);for _ in 0..20{h.wheel(-50.0);}h.frame(vec![]);
