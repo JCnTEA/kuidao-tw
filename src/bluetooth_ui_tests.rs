@@ -255,10 +255,10 @@ fn ring_only_resident_shows_numbers_for_low_or_charging(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.bt=fixture();h.app.settings.bluetooth_notifications=false;
     h.app.settings.bluetooth_resident_custom=true;h.app.settings.bluetooth_pinned=vec!["device-0".into(),"device-1".into()];
     h.app.settings.bluetooth_resident_style=1;set_level(&mut h.bt[1],15);
-    h.frame(vec![]);
+    for _ in 0..40{h.frame(vec![]);}
     let t=texts(&h);assert!(t.iter().any(|s|s=="15%"),"偏低的裝置顯示數字");assert!(!t.iter().any(|s|s=="82%"),"電量充足的只顯示環");
     let narrow=h.app.wireless_bar_width();
-    h.app.settings.bluetooth_resident_style=0;h.frame(vec![]);
+    h.app.settings.bluetooth_resident_style=0;for _ in 0..40{h.frame(vec![]);}
     assert!(texts(&h).iter().any(|s|s=="82%"));assert!(h.app.wireless_bar_width()>narrow);
 }
 
@@ -474,7 +474,7 @@ fn wireless_compat_settings_follow_install_and_switch() {
     let check=|h:&mut H,tab,expected|{
         for _ in 0..3 {frame(h,tab);}
         let labels=texts(h);
-        for label in ["裝置相容","啟用相容包","無線裝置相容包 v1.0.0","反饋裝置適配"] {
+        for label in ["島上常駐","無線裝置電量","電量提醒","島上提示"] {
             assert_eq!(labels.iter().any(|s|s==label),expected,"設定頁 {tab} 的 {label}");
         }
         assert!(!labels.iter().any(|s|matches!(s.as_str(),"本機插件"|"安裝相容包…"|"卸載")));

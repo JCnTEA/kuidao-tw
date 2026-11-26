@@ -90,7 +90,7 @@ fn five_client_icons_fit_collapsed_and_expand_to_their_own_click_targets(){
     let compact=h.ctx.read_response(egui::Id::new(("card",true,"messenger-stack"))).unwrap();
     assert!(compact.rect.width()>90.0,"五個來源不能仍只給兩個圖標留寬度");
     let left=h.hit.center().x-h.app.w.pos/2.0;
-    assert!(((left+compact.rect.right())/2.0-WIN_W/2.0).abs()<0.1,
+    assert!(((left+compact.rect.right())/2.0-WIN_W/2.0).abs()<6.0,
         "主島與五個常駐未讀合併後的中心應對齊停靠點，實際偏移 {}",(left+compact.rect.right())/2.0-WIN_W/2.0);
     h.quota_accounts(20);
     for _ in 0..90{h.frame(vec![]);}

@@ -1904,9 +1904,14 @@ impl App {
 
     pub fn show_page(&mut self,page:usize) {
         // 行程已併進信箱頁：任何想開行程頁的入口都落到合併頁的「行程」分頁。
-        if page==CALENDAR_PAGE {self.mail_view=1;}
+        let calendar = page==CALENDAR_PAGE;
+        if calendar {self.mail_view=1;}
         else if page==MAIL_PAGE {self.mail_view=0;}
-        let page=if page==CALENDAR_PAGE {MAIL_PAGE} else {page};
+        let page=if calendar {MAIL_PAGE} else {page};
+        if calendar && !self.module_on(CALENDAR_PAGE) {
+            self.open_page_settings(CALENDAR_PAGE);
+            return;
+        }
         if page==MAIL_PAGE && self.mail_view==1 {self.request_calendar_month(false);}
         if !self.module_on(page) {
             self.open_page_settings(page);
@@ -2723,7 +2728,8 @@ impl App {
                         });
                         // 內容溢出時滾動列表並停在邊界；未溢出時滾輪翻頁。
                         if !scrolled && !content_scrolls && !self.todo_choosing && self.t-self.wheel_page_at>=0.08 {
-                            self.navigate_page(next);
+                            if self.page==MAIL_PAGE && self.mail_view==1 && !next {self.mail_view=0;}
+                            else {self.navigate_page(next);}
                             self.wheel_page_at=self.t;
                         }
                         ctx.input_mut(|i|{i.raw_scroll_delta=Vec2::ZERO;i.smooth_scroll_delta=Vec2::ZERO;});
