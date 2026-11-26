@@ -57,7 +57,7 @@ pub(crate) fn color(device:&Device,fx:Option<&WirelessFx>)->Color32 {
     display_band(device,fx).filter(|_|!stale(device)).map_or(theme::DIM,band_color)
 }
 fn low(device:&Device,fx:Option<&WirelessFx>)->bool {
-    !stale(device)&&!charging(device,fx)&&display_band(device,fx).is_some_and(|b|b<2)
+    !stale(device)&&!charging(device,fx)&&device.battery.map(band).is_some_and(|b|b<2)
 }
 
 /// 閃電由兩個三角拼成（填充多邊形只支援凸形）。設計稿座標系 12×16。

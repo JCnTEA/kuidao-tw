@@ -821,9 +821,12 @@ pub(crate) struct CalendarForm {
 impl CalendarState {
     pub fn load() -> Self {
         let config = calendar::load_config();
-        let form = CalendarForm { provider: calendar::selected_provider(),
+        let selected = calendar::selected_provider();
+        let form_provider = if selected == calendar::Provider::Google { calendar::Provider::Ical } else { selected };
+        let form = CalendarForm { provider: form_provider,
             username: config.as_ref().map(|cfg| cfg.username.clone()).unwrap_or_default(),
-            server: config.as_ref().filter(|cfg| cfg.provider.custom_server()).and_then(|cfg| cfg.server.clone()).unwrap_or_default(), ..Default::default() };
+            server: config.as_ref().filter(|cfg| cfg.provider.custom_server()).and_then(|cfg| cfg.server.clone()).unwrap_or_default(),
+            guide_open: selected == calendar::Provider::Google, ..Default::default() };
         let feeds = calendar::load_configs().into_iter().map(CalendarFeed::new).collect();
         let (local,local_error)=match crate::local_calendar::load(){Ok(events)=>(events,String::new()),Err(error)=>(vec![],error)};
         Self { config, form, feeds, local, local_error, ..Default::default() }
@@ -2060,6 +2063,7 @@ impl App {
     }
 
     fn page_settings_tab(&self, page: usize) -> usize {
+        let page=if page==MAIL_PAGE && self.mail_view==1 {CALENDAR_PAGE} else {page};
         PAGE_SETTINGS_TABS.get(page).copied().unwrap_or(crate::extras::SETTINGS_TAB_PAGES)
     }
 
@@ -2701,7 +2705,7 @@ impl App {
                         let clipboard_tab=self.page==3 && self.shelf_tab==1;
                         let clipboard_body=clipboard_tab && Rect::from_min_max(Pos2::new(42.0,31.0),Pos2::new(377.0,124.0)).contains(cursor);
                         let list=match self.page {
-                            CALENDAR_PAGE=>self.calendar_scroll(cursor,env),
+                            MAIL_PAGE if self.mail_view==1=>self.calendar_scroll(cursor,env),
                             4 if Rect::from_min_max(Pos2::new(196.0,31.0),Pos2::new(377.0,124.0)).contains(cursor)
                                 =>Some((&mut self.todo_first,self.todos.items.len().saturating_sub(3))),
                             3 if clipboard_body

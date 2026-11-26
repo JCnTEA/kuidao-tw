@@ -5035,7 +5035,7 @@ impl App {
                             egui::Frame::new().fill(settings_color(ctx,Color32::from_rgb(29,29,31),Color32::from_rgb(236,239,244))).corner_radius(8.0).inner_margin(3).show(ui,|ui|{
                                 ui.set_min_width(ui.available_width());
                                 ui.spacing_mut().item_spacing.x=2.0;
-                                // 四個平台：Google / iCloud / CalDAV，第二行 Exchange。
+                                // 四個平台：iCal / iCloud / CalDAV，第二行 Exchange。Google 只接受 OAuth，不再提供密碼連線。
                                 let width=((ui.available_width()-4.0)/3.0).max(80.0);
                                 for row in crate::calendar::Provider::ALL.chunks(3){
                                     ui.horizontal(|ui|{

@@ -28,8 +28,7 @@ const WINDOW_SECS: i64 = 24 * 3600;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Provider {
-    /// Google 行事曆：Gmail 地址 + 應用程式密碼。
-    #[default]
+    /// Google 已停止 CalDAV 密碼登入；保留鍵值僅供舊設定辨識，不再提供新連線。
     Google,
     /// 蘋果 iCloud 行事曆：Apple ID + App 專用密碼。
     ICloud,
@@ -38,11 +37,12 @@ pub enum Provider {
     /// 自建或第三方 Exchange（ActiveSync），地址由使用者填寫。
     Exchange,
     /// 只讀訂閱：直接填行事曆服務提供的 iCal（.ics）網址，不需要帳號密碼。
+    #[default]
     Ical,
 }
 
 impl Provider {
-    pub const ALL: [Provider; 5] = [Provider::Google, Provider::ICloud, Provider::Custom, Provider::Exchange, Provider::Ical];
+    pub const ALL: [Provider; 4] = [Provider::Ical, Provider::ICloud, Provider::Custom, Provider::Exchange];
 
     pub fn key(self) -> &'static str {
         match self {

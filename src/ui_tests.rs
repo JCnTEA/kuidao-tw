@@ -106,7 +106,7 @@ fn gemini_connect_form_opens_default_browser_without_claiming_connection(){
             raster.update_textures(&out.textures_delta);h.shapes=out.shapes;
         }
         let texts=h.shapes.iter().filter_map(|s|if let egui::Shape::Text(t)=&s.shape{Some(t.galley.text())}else{None}).collect::<Vec<_>>();
-        assert!(texts.contains(&"打開預設瀏覽器登入"),"Gemini 應在系統預設瀏覽器中登入");
+        assert!(texts.contains(&"開啟預設瀏覽器登入"),"Gemini 應在系統預設瀏覽器中登入");
         assert!(texts.contains(&"連線已登入的 Chrome"),"Gemini 應支援本人授權連線現有 Chrome 會話");
         assert!(texts.iter().any(|s|s.contains("chrome://inspect/#remote-debugging")),"首次連線應提供 Chrome 原生設定入口");
         assert!(!texts.iter().any(|s|s.contains("自動連線")),"打開官網不能表示島仔已獲得登入會話");
@@ -159,7 +159,7 @@ fn weather_content_tap_switches_both_ways_with_a_short_transition(){
 #[test]
 fn weather_content_tap_keeps_other_controls_independent(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
-    for (x,y,target) in [(375.0,crate::app::WEATHER_H-7.0,8),(394.0,18.0,8),(367.0,18.0,0),(398.0,68.0,crate::app::BLUETOOTH_PAGE),(20.0,68.0,7)] {
+    for (x,y,target) in [(375.0,crate::app::WEATHER_H-7.0,8),(394.0,18.0,8),(367.0,18.0,0),(398.0,68.0,crate::app::PERFORMANCE_PAGE),(20.0,68.0,crate::app::MAIL_PAGE)] {
         let mut h=H::new();h.app.settings.pet=false;
         h.media=crate::smtc::NowPlaying{source:"cloudmusic.exe".into(),title:"歌曲".into(),artist:"歌手".into(),playing:true,..Default::default()};
         h.app.weather.snapshot=Some(crate::weather::Snapshot{place:"杭州".into(),temp:19.0,..Default::default()});
@@ -466,14 +466,12 @@ fn weather_settings_maps_to_the_module_switch(){
 #[test]
 fn weather_city_draft_keeps_the_saved_location_until_confirmed(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();
-    h.app.settings.weather_city="杭州".into();h.app.settings.wecom_notifications=true;
-    h.app.settings.feishu_notifications=true;h.app.settings.dingtalk_notifications=true;
+    h.app.settings.weather_city="杭州".into();
     h.app.settings.save();h.app.weather.city_input="北京".into();
     h.frame(vec![]);
     assert_eq!(h.app.settings.weather_city,"杭州");
     let saved=crate::model::Settings::load();
     assert_eq!(saved.weather_city,"杭州");
-    assert!(saved.wecom_notifications && saved.feishu_notifications && saved.dingtalk_notifications);
     h.app.set_page_visible(8,false);h.app.add_weather_city();
     assert_eq!(h.app.settings.weather_city,"杭州");assert!(!h.app.weather.loading);
 }
@@ -810,7 +808,7 @@ fn top_bar_settings_switch_modes_and_respect_the_master_switch(){
         let output=std::sync::Arc::new(Mutex::new(None));let capture=output.clone();
         egui::Context::set_immediate_viewport_renderer(move|ctx,mut viewport|{
             let id=viewport.ids.this;
-            let raw=egui::RawInput{viewport_id:id,time:Some(time),focused:true,events:events.clone(),screen_rect:Some(Rect::from_min_size(Pos2::ZERO,egui::vec2(690.0,1800.0))),viewports:std::iter::once((id,egui::ViewportInfo{native_pixels_per_point:Some(1.0),..Default::default()})).collect(),..Default::default()};
+            let raw=egui::RawInput{viewport_id:id,time:Some(time),focused:true,events:events.clone(),screen_rect:Some(Rect::from_min_size(Pos2::ZERO,egui::vec2(690.0,2200.0))),viewports:std::iter::once((id,egui::ViewportInfo{native_pixels_per_point:Some(1.0),..Default::default()})).collect(),..Default::default()};
             *capture.lock().unwrap()=Some(ctx.run(raw,|ctx|(viewport.viewport_ui_cb)(ctx)));
         });
         let root=h.ctx.run(Default::default(),|ctx|h.app.settings_ui(ctx,false));raster.update_textures(&root.textures_delta);
@@ -820,9 +818,9 @@ fn top_bar_settings_switch_modes_and_respect_the_master_switch(){
     for dark in [true,false] {
         let mut h=H::new();h.app.open_settings();h.app.settings_tab=crate::extras::SETTINGS_TAB_POSITION;h.ctx.set_embed_viewports(false);
         h.app.settings.settings_theme=if dark{crate::settings_theme::SettingsTheme::Dark}else{crate::settings_theme::SettingsTheme::Light};
-        let mut raster=crate::preview_raster::Raster::new(690,1800);
+        let mut raster=crate::preview_raster::Raster::new(690,2200);
         for _ in 0..3{let _=draw(&mut h,vec![],&mut raster);}
-        for (on_top,label) in [(true,"島仔置頂"),(false,"避開頂欄")] {
+        for (on_top,label) in [(true,"鬼島置頂"),(false,"避開頂欄")] {
             let output=draw(&mut h,vec![],&mut raster);
             let position=output.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()==label=>{
                 assert!(s.clip_rect.contains_rect(t.visual_bounding_rect()),"顯示方式按鈕不能裁切");Some(t.visual_bounding_rect().center())
@@ -838,7 +836,7 @@ fn top_bar_settings_switch_modes_and_respect_the_master_switch(){
         }
         h.app.settings.avoid_top_bar=false;
         let output=draw(&mut h,vec![],&mut raster);
-        assert!(!output.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="島仔置頂")),"關閉適配後收起顯示方式選項");
+        assert!(!output.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="鬼島置頂")),"關閉適配後收起顯示方式選項");
     }
 }
 
@@ -865,7 +863,7 @@ fn v0649_settings_and_mail_accounts_survive_upgrade(){
         let saved=std::fs::read_to_string(directory.join("settings.txt")).unwrap();
         for line in legacy.lines().filter(|line|!line.starts_with("visible_pages=")&&!line.starts_with("page_order=")){assert!(saved.lines().any(|value|value==line),"升級儲存不能改變舊設定：{line}");}
         assert!(saved.lines().any(|value|value=="visible_pages=1011111111101"),"舊頁面開關應保留，並預設開啟天氣頁");
-        assert!(saved.lines().any(|value|value=="page_order=5,2,0,1,3,4,6,7,8,9,10"),"舊順序應保留，並把天氣頁接在最後");
+        assert!(saved.lines().any(|value|value=="page_order=5,2,0,1,3,4,6,7,8,9,10,11,12"),"舊順序應保留，並把天氣頁接在最後");
     }
     std::fs::write(directory.join("mail-accounts.json"),br#"[{"email":"OldUser@qq.com","provider":"qq","enabled":true},{"email":"old@icloud.com","provider":"icloud","enabled":false}]"#).unwrap();
     let accounts=crate::mail::load_accounts();
@@ -1260,7 +1258,8 @@ fn expanded_settings_routes_preserve_inline_controls(){
         let mut h=H::new();h.app.set_page_visible(page,true);h.app.show_page(page);h.hover(H::local(200.0,40.0),1.0);
         h.click(H::local(394.0,18.0));
         assert!(h.app.settings_open,"頁面 {page} 應打開設定窗口");
-        assert_eq!(h.app.settings_tab,tab);assert_eq!(h.app.page,page);
+        assert_eq!(h.app.settings_tab,tab);
+        assert_eq!(h.app.page,if page==crate::app::CALENDAR_PAGE {crate::app::MAIL_PAGE} else {page});
         assert!(h.app.subpage.is_none());
     }
     for (page,point) in [(1,H::local(111.0,18.0)),(2,H::local(149.0,110.0))]{
@@ -3107,7 +3106,7 @@ fn wheel_navigation_reaches_every_page_in_both_directions(){
     h.app.set_page_visible(11,false);h.app.set_page_visible(12,false);
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
     h.hover(H::local(210.0,18.0),0.3);
-    for (delta,pages) in [(-40.0,[1,2,3,4,5,6,7,8,10,0]),(40.0,[10,8,7,6,5,4,3,2,1,0])] {
+    for (delta,pages) in [(-40.0,[1,2,3,4,5,6,8,9,10,0]),(40.0,[10,9,8,6,5,4,3,2,1,0])] {
         for page in pages {
             h.wheel(delta);
             assert_eq!(h.app.page,page,"滾輪翻頁不能被空的置物架或待辦卡住");
@@ -3327,7 +3326,7 @@ fn wheel_between_different_heights_keeps_the_unread_bubble_in_place() {
     let id=egui::Id::new(("card",true,"微信"));
     let center=h.ctx.read_response(id).unwrap().rect.center();
     let height=h.app.expanded_height();
-    for (delta,page) in [(-40.0,crate::app::CALENDAR_PAGE),(40.0,crate::app::QUOTA_PAGE)] {
+    for (delta,page) in [(-40.0,crate::app::WEATHER_PAGE),(40.0,crate::app::QUOTA_PAGE)] {
         h.wheel(delta);
         assert_eq!(h.app.page,page);
         if delta<0.0 {assert_ne!(h.app.expanded_height(),height);}
@@ -3970,7 +3969,7 @@ fn quota_page_navigation_tracks_the_taller_panel(){
     h.hover(H::local(300.0,60.0),0.8);assert_eq!(h.app.expanded_height(),PH);
     h.click(H::local(398.0,68.0));assert_eq!(h.app.page,6);
     h.hover(H::local(300.0,60.0),0.8);
-    h.click(H::local(398.0,68.0));assert_eq!(h.app.page,crate::app::MAIL_PAGE);
+    h.click(H::local(398.0,68.0));assert_eq!(h.app.page,crate::app::WEATHER_PAGE);
 }
 
 #[test]
@@ -4057,15 +4056,14 @@ fn battery_module_hides_power_in_collapsed_and_expanded_headers() {
         h.app.settings.pet=false;
         h.app.settings.show_battery=false;
         if expanded {h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);} else {h.frame(vec![]);}
+        let settle=|h:&mut H|{for _ in 0..30{h.frame(vec![]);}};
+        settle(&mut h);
         let baseline=h.shapes.clone();
-        h.power=(Some(80),true);
-        h.t-=1.0/60.0;h.frame(vec![]);
+        h.power=(Some(80),true);settle(&mut h);
         assert!(h.shapes==baseline,"關閉電量後，本機電池狀態不應影響界面佈局");
-        h.app.settings.show_battery=true;
-        h.t-=1.0/60.0;h.frame(vec![]);
+        h.app.settings.show_battery=true;settle(&mut h);
         assert!(h.shapes!=baseline,"開啟後應顯示電量");
-        h.power=(None,true);
-        h.t-=1.0/60.0;h.frame(vec![]);
+        h.power=(None,true);settle(&mut h);
         assert!(h.shapes==baseline,"沒有電池的裝置應自動隱藏電量並釋放佔位");
     }
 }
@@ -6044,7 +6042,7 @@ fn calendar_notice_opens_the_calendar_instead_of_mail() {
     let date=chrono::DateTime::from_timestamp(start,0).unwrap().with_timezone(&chrono::Local).date_naive();
     assert_eq!(h.app.calendar.view.day,date);
     assert_eq!(h.app.calendar.view.focus.as_deref(),Some(crate::calendar::dedupe_key(&h.app.calendar.events[0])).as_deref());
-    assert_ne!(h.app.page,5);
+    assert_eq!(h.app.mail_view,1,"行程應顯示在同一個信箱頁的行程分頁");
 }
 
 #[test]
@@ -6397,7 +6395,7 @@ fn calendar_reminder_fires_once_and_dedupes_with_mail() {
     h.frame(vec![]);
     let hits = h.app.history.iter().filter(|a| a.title == "會議提醒").count();
     assert_eq!(hits, 1, "同一場會只提醒一次");
-    assert_eq!(h.app.history.iter().find(|a|a.title=="會議提醒").unwrap().page,crate::app::MAIL_PAGE,"會議提醒應指向島內行程頁");
+    assert_eq!(h.app.history.iter().find(|a|a.title=="會議提醒").unwrap().page,crate::app::CALENDAR_PAGE,"會議提醒應指向島內行程頁");
     // 再同步一次、再過幾幀，也不重複。
     h.app.calendar_event(crate::calendar::Event::Synced { config:h.app.calendar.config.clone().unwrap(),events: vec![meeting("週會（飛書）")], at: "10-30 09:05".into() });
     h.frame(vec![]);
@@ -6626,7 +6624,7 @@ fn page_arrows_stay_at_same_position_across_pages_and_docks() {
         let mut h=H::new();
         h.app.settings.dock=dock;
         h.app.settings.visible_pages.fill(true);
-        let pages=h.app.settings.page_order;
+        let pages:Vec<_>=h.app.settings.page_order.iter().copied().filter(|page|*page!=crate::app::CALENDAR_PAGE).collect();
         h.app.show_page(pages[0]);
         for _ in 0..100 {frame_control_draw(&mut h,None,vec![]);}
 
@@ -6741,7 +6739,7 @@ fn page_resize_quota_calendar_weather_keep_date_and_grip_fixed() {
             (date,grip)
         };
         let (date,grip)=positions(&h);
-        for (page,dir) in [(7,1.0),(8,1.0),(7,-1.0),(6,-1.0)] {
+        for (page,dir) in [(8,1.0),(6,1.0),(8,-1.0),(6,-1.0)] {
             h.app.go(page,dir);
             for _ in 0..35 {
                 frame(&mut h);
@@ -7697,6 +7695,7 @@ fn page_management_resident_switches_follow_their_modules(){
 
     // 逐項使用頁面管理的開關，檢查退出當前頁面、儲存以及重新進入。
     for (page,name) in PAGE_NAMES.iter().enumerate() {
+        if page==crate::app::CALENDAR_PAGE {continue;}
         h.app.show_page(page);
         draw_page_management(&mut h,vec![]);
         let point=switch(&h,name,true).0.center();
@@ -7708,7 +7707,8 @@ fn page_management_resident_switches_follow_their_modules(){
         assert!(h.app.module_on(page),"{name} 應可重新開啟");
         assert!(crate::model::Settings::load().visible_pages[page]);
         h.app.show_page(page);
-        assert_eq!(h.app.page(),page,"重新開啟後應能進入 {name}");
+        let expected=if page==crate::app::CALENDAR_PAGE {crate::app::MAIL_PAGE} else {page};
+        assert_eq!(h.app.page(),expected,"重新開啟後應能進入 {name}");
     }
 
     let residents=[(WEATHER_PAGE,"天氣",true),(BLUETOOTH_PAGE,"無線裝置電量",false),(QUOTA_PAGE,"AI 額度",true)];
@@ -8019,7 +8019,7 @@ fn settings_theme_follows_system_and_preserves_island_style() {
     let mut h=H::new();h.app.open_settings();h.ctx.set_embed_viewports(false);
     assert_eq!(h.app.settings.settings_theme,SettingsTheme::System);
     assert_eq!(SettingsTheme::parse("unknown"),SettingsTheme::System);
-    let mut raster=crate::preview_raster::Raster::new(690,1240);
+    let mut raster=crate::preview_raster::Raster::new(690,1600);
     for (mode,system,dark) in [(SettingsTheme::System,false,false),(SettingsTheme::System,true,true),
         (SettingsTheme::System,false,false),(SettingsTheme::Dark,false,true),(SettingsTheme::Light,true,false)] {
         h.app.settings.settings_theme=mode;
@@ -8028,7 +8028,7 @@ fn settings_theme_follows_system_and_preserves_island_style() {
         let output=std::sync::Arc::new(std::sync::Mutex::new(None));let capture=output.clone();
         egui::Context::set_immediate_viewport_renderer(move|ctx,mut viewport|{
             let id=viewport.ids.this;
-            let raw=egui::RawInput{viewport_id:id,screen_rect:Some(Rect::from_min_size(Pos2::ZERO,egui::vec2(690.0,1240.0))),
+            let raw=egui::RawInput{viewport_id:id,screen_rect:Some(Rect::from_min_size(Pos2::ZERO,egui::vec2(690.0,1600.0))),
                 viewports:std::iter::once((id,egui::ViewportInfo{native_pixels_per_point:Some(1.0),..Default::default()})).collect(),..Default::default()};
             *capture.lock().unwrap()=Some(ctx.run(raw,|ctx|(viewport.viewport_ui_cb)(ctx)));
         });
@@ -8052,7 +8052,7 @@ fn settings_theme_follows_system_and_preserves_island_style() {
                         2=>&[("專注","25 分鐘"),("休息","5 分鐘")],
                         3=>&[("每日目標","2000 ml"),("每次記錄","250 ml"),("提醒間隔","45 分鐘"),("提醒時段","9 時")],
                         7=>&[("信箱","輸入信箱地址"),("授權碼","輸入信箱授權碼")],
-                        8=>&[("會議提前","15 分鐘"),("使用者名","輸入使用者名或粘貼帳號資訊"),("密碼","輸入平台生成的密碼")],
+                        8=>&[("會議提前","15 分鐘"),("使用者名稱","輸入使用者名稱或貼上帳號資訊"),("密碼","輸入平台生成的密碼")],
                         11=>&[("服務","Codex"),("備註","例如：個人、工作、備用"),("選擇該帳號的登入檔案","選擇…")],
                         _=>&[],
                     };
@@ -8625,7 +8625,7 @@ fn avoidance_icon_area_stays_one_row_and_scrolls() {
     fn text(out:&egui::FullOutput,label:&str)->Rect {
         out.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t) if t.galley.text()==label=>Some(t.visual_bounding_rect()),_=>None}).unwrap()
     }
-    let footer="切到插件浮窗時，宿主窗口仍遮住島就會繼續避讓。";
+    let footer="切到外掛浮窗時，宿主視窗仍遮住島就會繼續避讓。";
     h.app.settings.avoid_apps=vec![("D:/sample/A.exe".into(),"A應用".into())];
     draw(&mut h,vec![]);let one=draw(&mut h,vec![]);let baseline=text(&one,footer).top();
     let cross=text(&one,"×").center();
@@ -8704,6 +8704,7 @@ fn qq_only_notifications_filter_by_app_id_before_display_and_respect_preview(){
     assert_eq!(h.app.alerts.back().unwrap().body,"測試聯繫人 · 測試訊息");assert!(h.app.history.is_empty());
 }
 
+#[ignore = "台灣版停用微信／企業微信／飛書／釘釘通知"]
 #[test]
 fn wechat_notifications_work_without_toast_permission_and_stop_when_disabled(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.frame(vec![]);
@@ -10424,7 +10425,7 @@ fn wheel_short_lists_turn_pages(){
     h.app.calendar.view.day=day;h.app.calendar.view.month=crate::calendar::month_start(day);h.app.calendar.view.loaded=Some(h.app.calendar.view.month);
     for (count,ended,all_day) in [(0,false,false),(1,false,false),(5,false,false),(8,true,false),(4,false,true)]{
         h.app.calendar.view.events=(0..count).map(|i|crate::mail::Meeting{all_day,title:format!("行程 {i}"),start:if ended{start-7200}else{start+i*60},end:Some(if ended{start-3600}else{start+3600}),at:String::new(),uid:format!("wheel-{i}")}).collect();
-        for (delta,page) in [(-40.0,8),(40.0,6)]{
+        for (delta,page) in [(-40.0,6),(40.0,5)]{
             h.app.show_page(7);h.hover(H::local(300.0,160.0),0.5);h.wheel(delta);
             assert_eq!(h.app.page,page,"行事曆可見列表未溢出應翻頁，條數 {count}");
         }
@@ -11400,11 +11401,11 @@ fn performance_gallery() {
     }
     // 設定頁：深色 / 淺色各一張，再加一張自由搭配。
     h.app.open_settings();h.ctx.set_embed_viewports(false);h.app.settings_tab=15;
-    let mut settings_raster=crate::preview_raster::Raster::new(690,1240);
+    let mut settings_raster=crate::preview_raster::Raster::new(690,1600);
     let output=std::sync::Arc::new(std::sync::Mutex::new(None));let capture=output.clone();
     egui::Context::set_immediate_viewport_renderer(move|ctx,mut viewport|{
         let id=viewport.ids.this;
-        let raw=egui::RawInput{viewport_id:id,screen_rect:Some(Rect::from_min_size(Pos2::ZERO,egui::vec2(690.0,1240.0))),
+        let raw=egui::RawInput{viewport_id:id,screen_rect:Some(Rect::from_min_size(Pos2::ZERO,egui::vec2(690.0,1600.0))),
             viewports:std::iter::once((id,egui::ViewportInfo{native_pixels_per_point:Some(1.0),..Default::default()})).collect(),..Default::default()};
         *capture.lock().unwrap()=Some(ctx.run(raw,|ctx|(viewport.viewport_ui_cb)(ctx)));
     });
