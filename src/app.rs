@@ -3505,7 +3505,7 @@ impl App {
         match self.effective_skin() {
             model::Skin::GlassDark=>{let (r,g,b)=glass::GROUND_DARK;Color32::from_rgba_unmultiplied(r,g,b,215)}
             model::Skin::GlassLight=>{let [r,g,b]=glass::LIGHT_GROUND.map(|v|(v*255.0).round() as u8);Color32::from_rgba_unmultiplied(r,g,b,225)}
-            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient_with_brightness(self.settings.skin,self.settings.gradient_brightness).map_or(Color32::BLACK,|g|g.mid()),
+            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient_with_brightness(self.settings.skin,self.settings.gradient_percent()).map_or(Color32::BLACK,|g|g.mid()),
             _=>self.glass_fill(),
         }
     }
@@ -3522,7 +3522,7 @@ impl App {
             model::Skin::GlassDark=>{let (r,g,b)=glass::GROUND_DARK;Color32::from_rgba_unmultiplied(r,g,b,alpha)}
             model::Skin::GlassLight=>{let [r,g,b]=glass::LIGHT_GROUND.map(|v|(v*255.0).round() as u8);Color32::from_rgba_unmultiplied(r,g,b,alpha)}
             model::Skin::Cream=>{let [r,g,b]=crate::skin_paint::CREAM.paper;Color32::from_rgb(r,g,b)}
-            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient_with_brightness(self.settings.skin,self.settings.gradient_brightness).map_or(Color32::BLACK,|g|g.mid()),
+            model::Skin::GradAurora|model::Skin::GradAbyss|model::Skin::GradNeon|model::Skin::GradSunset|model::Skin::GradPink|model::Skin::GradViolet|model::Skin::GradMeadow=>crate::skin_paint::gradient_with_brightness(self.settings.skin,self.settings.gradient_percent()).map_or(Color32::BLACK,|g|g.mid()),
             model::Skin::Classic=>Color32::BLACK,
             model::Skin::Fluid=>self.fluid.compose(0.5,0.5,1.0,1.0,0.0),
         }
@@ -3559,7 +3559,7 @@ impl App {
             return;
         }
         // 懸浮漸層皮膚：固定色停沿島體縱向鋪滿，內容維持深色主題的白字白圖示。
-        if let Some(grad)=crate::skin_paint::gradient_with_brightness(skin,self.settings.gradient_brightness) {
+        if let Some(grad)=crate::skin_paint::gradient_with_brightness(skin,self.settings.gradient_percent()) {
             let pill=self.settings.island_shape==model::IslandShape::Pill;
             let (map,frame)=shape::EdgeMap::of(rect,if pill {model::Dock::Top}else{self.dock()});
             let mut rows=shape::sections(frame,flare,flare_h,radius);

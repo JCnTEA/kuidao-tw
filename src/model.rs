@@ -266,6 +266,8 @@ pub struct Settings {
     pub glass_blur: bool,
     /// 懸浮漸層的亮度百分比（60–100）；隻影響漸層色停，不改文字與圖示。
     pub gradient_brightness: u32,
+    /// 漸層亮度調整開關；關閉時漸層維持原始亮度（100%）。
+    pub gradient_brightness_on: bool,
     pub island_size: u32,
     pub island_offset: i32,
     /// OLED 像素偏移：島體收起靜止時沿停靠邊緩慢移動幾個像素，減輕 OLED 靜態顯示留下的痕跡。
@@ -394,7 +396,7 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { display_id: String::new(), skin: Skin::Classic, island_shape: IslandShape::Notch, glass_blur: true, island_size: 100, island_offset: 0, oled_shift: false, dock: Dock::Top, settings_theme: Default::default(), pet: true, minimal: false, browser_minimal: false, avoid_browsers: true, avoid_apps: Vec::new(), visible_pages: [true,true,true,true,true,true,true,true,true,true,true,false,true], page_order: [0,1,2,3,4,5,6,7,8,9,10,11,12], show_page_shortcuts: true, show_clock: true, resident_date: ResidentDate::Off, show_battery: true, show_weather: true, show_performance: true, performance_bar: Default::default(), performance_metrics: 7, performance_view: Default::default(), clock_12h: false, clock_period: 0, clock_seconds: false, resident_order: Vec::new(), system_hud: true, bluetooth_notifications: true, show_bluetooth:true, bluetooth_pinned:Vec::new(), bluetooth_resident_style:0, bluetooth_resident_custom:false, bluetooth_battery_notifications:true, read_notifications:false, wechat_notifications:false, wecom_notifications:false, feishu_notifications:false, dingtalk_notifications:false, wechat_tray_open:false, qq_only:false, notification_preview:false, notifications: true, system_notify: true, sound: false, lyrics_enabled:true, island_lyrics:false, lyric_delay_ms:-350, hide_fullscreen: true, exclude_from_capture: false, avoid_top_bar: true, top_bar_on_top: false, focus_minutes: 25, rest_minutes: 5, water_minutes: 45, serving_ml: 250, water_start: 9, water_end: 22, sit_remind: true, sit_minutes: 60, lunch_rest: true, lunch_start: 720, lunch_end: 810, mail_enabled: true, mail_sync_operations:false, mail_code_only_notifications: false, mail_code: true, mail_code_popup: false, mail_code_hide_seconds:60, mail_interval: 120, mail_ics: 15, ignored_mail_events: Vec::new(), calendar_prompt: true, calendar_auto_sync: true, clipboard_history: true, weather_city: String::new(), weather_position: None, weather_saved: Vec::new(), render_compat: false, render_compat_reason: String::new(), gradient_brightness: 80, listen_id: true, mascot: crate::mascot::Mascot::default(), social_order: crate::social::Social::default_order(), line_channel_id: String::new(), line_redirect_uri: crate::line_login::DEFAULT_REDIRECT.into(), lyrics_translate: false, lyric_gradient: false, lyric_gradient_preset: 0, lyric_gradient_shift: 0.0, lyric_gradient_hint: true, lyric_karaoke: false, lyric_karaoke_style: crate::lyric_karaoke::BUILTIN.into() }
+        Self { display_id: String::new(), skin: Skin::Classic, island_shape: IslandShape::Notch, glass_blur: true, island_size: 100, island_offset: 0, oled_shift: false, dock: Dock::Top, settings_theme: Default::default(), pet: true, minimal: false, browser_minimal: false, avoid_browsers: true, avoid_apps: Vec::new(), visible_pages: [true,true,true,true,true,true,true,true,true,true,true,false,true], page_order: [0,1,2,3,4,5,6,7,8,9,10,11,12], show_page_shortcuts: true, show_clock: true, resident_date: ResidentDate::Off, show_battery: true, show_weather: true, show_performance: true, performance_bar: Default::default(), performance_metrics: 7, performance_view: Default::default(), clock_12h: false, clock_period: 0, clock_seconds: false, resident_order: Vec::new(), system_hud: true, bluetooth_notifications: true, show_bluetooth:true, bluetooth_pinned:Vec::new(), bluetooth_resident_style:0, bluetooth_resident_custom:false, bluetooth_battery_notifications:true, read_notifications:false, wechat_notifications:false, wecom_notifications:false, feishu_notifications:false, dingtalk_notifications:false, wechat_tray_open:false, qq_only:false, notification_preview:false, notifications: true, system_notify: true, sound: false, lyrics_enabled:true, island_lyrics:false, lyric_delay_ms:-350, hide_fullscreen: true, exclude_from_capture: false, avoid_top_bar: true, top_bar_on_top: false, focus_minutes: 25, rest_minutes: 5, water_minutes: 45, serving_ml: 250, water_start: 9, water_end: 22, sit_remind: true, sit_minutes: 60, lunch_rest: true, lunch_start: 720, lunch_end: 810, mail_enabled: true, mail_sync_operations:false, mail_code_only_notifications: false, mail_code: true, mail_code_popup: false, mail_code_hide_seconds:60, mail_interval: 120, mail_ics: 15, ignored_mail_events: Vec::new(), calendar_prompt: true, calendar_auto_sync: true, clipboard_history: true, weather_city: String::new(), weather_position: None, weather_saved: Vec::new(), render_compat: false, render_compat_reason: String::new(), gradient_brightness: 80, gradient_brightness_on: true, listen_id: true, mascot: crate::mascot::Mascot::default(), social_order: crate::social::Social::default_order(), line_channel_id: String::new(), line_redirect_uri: crate::line_login::DEFAULT_REDIRECT.into(), lyrics_translate: false, lyric_gradient: false, lyric_gradient_preset: 0, lyric_gradient_shift: 0.0, lyric_gradient_hint: true, lyric_karaoke: false, lyric_karaoke_style: crate::lyric_karaoke::BUILTIN.into() }
     }
 }
 
@@ -441,6 +443,7 @@ impl Settings {
                 "dock" => s.dock = Dock::parse(&v),
                 "glass_blur" => s.glass_blur = v != "0",
                 "gradient_brightness" => s.gradient_brightness = v.parse::<u32>().unwrap_or(80).clamp(60,100),
+                "gradient_brightness_on" => s.gradient_brightness_on = v != "0",
                 "island_size" => s.island_size = island_size_value(v.parse::<u32>().unwrap_or(ISLAND_SIZE_DEFAULT)),
                 "island_offset" => s.island_offset = v.parse::<i32>().unwrap_or(0).clamp(-ISLAND_OFFSET_MAX, ISLAND_OFFSET_MAX),
                 "oled_shift" => s.oled_shift = v != "0",
@@ -558,6 +561,11 @@ impl Settings {
         s
     }
 
+    /// 實際套用到漸層的亮度；開關關閉時固定 100。
+    pub fn gradient_percent(&self)->u32 {
+        if self.gradient_brightness_on {self.gradient_brightness.clamp(60,100)} else {100}
+    }
+
     pub fn save(&self) {
         let _ = write_kv(
             &config_dir().join("settings.txt"),
@@ -568,6 +576,7 @@ impl Settings {
                 ("dock".into(),self.dock.key().into()),
                 ("glass_blur".into(),(self.glass_blur as u8).to_string()),
                 ("gradient_brightness".into(),self.gradient_brightness.clamp(60,100).to_string()),
+                ("gradient_brightness_on".into(),(self.gradient_brightness_on as u8).to_string()),
                 ("island_size".into(),island_size_value(self.island_size).to_string()),
                 ("island_offset".into(),self.island_offset.clamp(-ISLAND_OFFSET_MAX,ISLAND_OFFSET_MAX).to_string()),
                 ("oled_shift".into(),(self.oled_shift as u8).to_string()),

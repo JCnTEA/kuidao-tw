@@ -3591,12 +3591,7 @@ pub(crate) fn settings_label(ui: &mut egui::Ui, text: &str) {
     )));
     ui.add_space(2.0);
 }
-const SUPPORT_RECENT_URI: &str = "support-recent-uri";
-const BUNDLED_SUPPORTERS: usize = 108;
-
-fn support_author(ui:&mut egui::Ui, supporters: &mut crate::supporters::State){
-    supporters.refresh(ui.ctx());
-    let snapshot = supporters.snapshot();
+fn support_author(ui:&mut egui::Ui){
     let id=egui::Id::new("support-author-open");
     let open=ui.ctx().data(|data|data.get_temp::<bool>(id).unwrap_or(false));
     if !open {release_support_codes(ui.ctx());}
@@ -3650,47 +3645,9 @@ fn support_author(ui:&mut egui::Ui, supporters: &mut crate::supporters::State){
     }
     ui.add_space(if open{4.0}else{7.0});
     ui.label(egui::RichText::new("完全自願 · 感謝每一份支持 · 不影響功能使用").size(11.0).color(ui.visuals().weak_text_color()));
-    if !open {
-        ui.add_space(4.0);
-        ui.separator();
-        let count = snapshot.map_or(BUNDLED_SUPPORTERS, |data| data.count);
-        ui.label(format!("已有 {count} 位朋友請鬼島喝過咖啡"));
-        ui.horizontal_wrapped(|ui| {
-            ui.label(egui::RichText::new("最近支持").size(11.0).weak());
-            let image = match snapshot {
-                Some(data) => egui::Image::from_bytes(format!("bytes://supporters/recent-{}.webp", data.version), data.recent.clone()),
-                None => egui::Image::new(egui::include_image!("../assets/support/recent.webp")),
-            }.max_size(egui::vec2(190.0, 29.0)).alt_text("最近支持的朋友");
-            add_support_image(ui, image, SUPPORT_RECENT_URI);
-        });
-    } else {
-        release_support_image(ui.ctx(), SUPPORT_RECENT_URI);
-    }
 }
 
-fn add_support_image(ui: &mut egui::Ui, image: egui::Image<'_>, key: &str) {
-    if let Some(uri) = image.uri() {
-        let previous = ui.ctx().data_mut(|data| {
-            let slot = data.get_temp_mut_or_default::<String>(egui::Id::new(key));
-            (slot.as_str() != uri).then(|| std::mem::replace(slot, uri.to_owned()))
-        });
-        if let Some(previous) = previous.filter(|old| !old.is_empty()) {
-            ui.ctx().forget_image(&previous);
-        }
-    }
-    ui.add(image);
-}
 
-fn release_support_image(ctx: &egui::Context, key: &str) {
-    if let Some(uri) = ctx.data_mut(|data| data.remove_temp::<String>(egui::Id::new(key))) {
-        ctx.forget_image(&uri);
-    }
-}
-
-fn release_support_images(ctx: &egui::Context) {
-    let uris = ctx.data_mut(|data| [SUPPORT_RECENT_URI].map(|key| data.remove_temp::<String>(egui::Id::new(key))));
-    for uri in uris.into_iter().flatten() { ctx.forget_image(&uri); }
-}
 pub(crate) fn settings_control_row(
     ui: &mut egui::Ui,
     title: &str,
@@ -4055,7 +4012,7 @@ impl App {
         if !self.module_on(crate::app::CALENDAR_PAGE) {self.calendar.form.open=false;}
         if !self.module_on(crate::app::QUOTA_PAGE)&&self.quota.connect_open {self.quota_close_connection();}
         if !self.settings_open{
-            if self.window_layout().close(){release_support_images(ctx);}
+            self.window_layout().close();
             release_support_codes(ctx);
             self.weather_source.close();
         }
@@ -4195,7 +4152,6 @@ impl App {
                 ui.add_space(6.0);
                 // 合併頁：健康（3）併入專注（2），置物（4→5）併入待辦，舊序號仍能打開對應頁面。
                 let tab=match self.settings_tab {3=>2,5=>4,t=>t};
-                if tab != 9 { release_support_images(ctx); }
                 let scroll = egui::ScrollArea::vertical().auto_shrink([false,false]);
                 #[cfg(feature="sdk-js")]
                 let scroll = if let Some((id, _)) = plugin { scroll.id_salt(("settings-plugin-scroll", id)) }
@@ -4452,6 +4408,22 @@ impl App {
                                 settings_control_row_right(ui,"皮膚",|ui|{settings_segmented(ui,&mut self.settings.skin,&skins,64.0);});
                             }
                             settings_hint(ui,self.effective_skin().description());
+                            if self.effective_skin().is_gradient() {
+                                let mut on=self.settings.gradient_brightness_on;
+                                setting_row(ui,"調整漸層亮度","關閉時漸層保持原始亮度（100%），打開後可往下調暗",&mut on);
+                                self.settings.gradient_brightness_on=on;
+                                ui.add_enabled_ui(on,|ui|{
+                                    settings_control_row(ui,"亮度",56.0,|ui|{
+                                        ui.horizontal_wrapped(|ui|{
+                                            ui.spacing_mut().slider_width=(ui.available_width()-96.0).clamp(64.0,180.0);
+                                            ui.add(egui::Slider::new(&mut self.settings.gradient_brightness,60..=100).suffix("%").show_value(false));
+                                            ui.label(format!("{}%",self.settings.gradient_brightness));
+                                            if ui.add_enabled(self.settings.gradient_brightness!=80,egui::Button::new("恢復預設")).clicked(){self.settings.gradient_brightness=80;}
+                                        }).response
+                                    });
+                                });
+                                settings_hint(ui,"只調漸層底色深淺，文字與圖示亮度不變；60% 最深、100% 最亮。");
+                            }
                             if self.effective_skin().is_glass() {
                                 let mut blur=self.settings.glass_blur;
                                 setting_row(ui,"背景模糊","需開啟系統“透明效果”；關閉後改為煙燻半透明",&mut blur);
@@ -5258,7 +5230,7 @@ impl App {
                             ui.add_space(2.0);
                             ui.add(egui::Label::new(egui::RichText::new("下載、更新與全部功能都免費。如果它真的幫到你，可以用下面的收款碼請作者喝杯咖啡；完全自願，不影響任何功能。").size(11.0).color(settings_color(ctx,Color32::from_gray(175),Color32::from_gray(85)))).wrap());
                         });
-                        settings_card(ui,|ui|support_author(ui,&mut self.supporters));
+                        settings_card(ui,|ui|support_author(ui));
                     }
                     _=>{
                         settings_label(ui,"鬼島 Kuidao 桌面靈動島");
@@ -5342,7 +5314,7 @@ impl App {
             if before!=format!("{:?}",self.settings){self.settings.save();}
             ctx.set_style(original_style);
         });
-        if !self.settings_open && self.window_layout().close(){release_support_images(ctx);}
+        if !self.settings_open {self.window_layout().close();}
         if self.settings_open&&self.module_on(crate::app::WEATHER_PAGE) {self.weather_tutorial_ui(ctx);}
         else {self.weather_source.close();}
     }
