@@ -151,7 +151,7 @@ fn arc_band(c: &Card, cx: f32, cy: f32, r: f32, a0: f32, a1: f32, width: f32, co
 }
 
 impl App {
-    pub(crate) fn page_power(&self, c: &Card, env: &Env) {
+    pub(crate) fn page_power(&mut self, c: &Card, env: &Env) {
         let all = rings(env.battery.map(|level| (level, env.charging)), &env.bt, env.bt_present);
         let total = all.len();
         let list = &all[..total.min(MAX_RINGS)];

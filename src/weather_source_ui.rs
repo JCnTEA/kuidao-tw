@@ -90,7 +90,8 @@ impl State {
         let config=Config::load();let gate=Arc::new(AtomicBool::new(true));
         let client=Client::load(&config.host,&config.credential,gate);
         let mut runtime=qweather::Runtime::default();runtime.reset(&config.host,config.location.clone());
-        let active=config.provider;
+        // 和風已下架，啟動一律回到預設的 Open-Meteo。
+        let active=Provider::OpenMeteo;
         Self{selected:active,displayed:active,host:config.host.clone(),picked:config.location.clone(),config,runtime,client,..Default::default()}
     }
     fn invalidate(&mut self){
@@ -234,77 +235,14 @@ impl App {
     pub(crate) fn weather_source_settings(&mut self,ui:&mut egui::Ui){
         settings_label(ui,"天氣來源");
         settings_card(ui,|ui|{
-            let width=(ui.available_width()-ui.spacing().item_spacing.x)/2.0;
-            ui.horizontal(|ui|{
-                for provider in [Provider::OpenMeteo,Provider::Qweather]{
-                    let selected=self.weather_source.selected==provider;
-                    if provider_option(ui,provider,selected,width).clicked()&& !selected{
-                        self.weather_source.selected=provider;self.weather_source.message=None;
-                        self.weather_source.query.clear();self.weather_source.results.clear();
-                        self.weather_source.picked=if provider==Provider::Qweather{self.weather_source.config.location.clone()}else{None};
-                        if provider==Provider::Qweather&&self.weather_source.client.is_none(){self.weather_source.config_open=true;}
-                    }
-                }
-            });
+            provider_option(ui,Provider::OpenMeteo,true,ui.available_width());
             ui.add_space(5.0);
-            settings_hint(ui,&format!("當前生效：{}{}",self.weather_source.displayed.name(),if self.weather_source.selected!=self.weather_source.displayed{" · 所選來源尚未應用程式"}else{""}));
-            if self.weather_source.selected==Provider::OpenMeteo {
-                settings_hint(ui,"無需 Key。點選應用程式後使用 Open-Meteo 自己的城市與定位設定。");
-                if self.weather_source.displayed!=Provider::OpenMeteo&&ui.button("應用程式 Open-Meteo").clicked(){self.apply_weather_source();}
-                return;
-            }
-            ui.add_space(4.0);ui.separator();ui.add_space(3.0);
-            ui.horizontal_wrapped(|ui|{
-                ui.label(RichText::new("和風配置").strong());
-                if ui.small_button(if self.weather_source.config_open{"收起"}else{"展開"}).clicked(){self.weather_source.config_open=!self.weather_source.config_open;}
-                ui.hyperlink_to("配置網站 ↗","https://console.qweather.com/");
-                if ui.link("配置教程 ↗").clicked(){self.weather_source.tutorial_open=true;}
-            });
-            if !self.weather_source.config_open {self.weather_source.connection_status(ui);}
-            if self.weather_source.config_open {
-                ui.add_space(6.0);
-                qweather_step(ui,1,"建立專案和 API Key");
-                step_body(ui,|ui|{
-                    settings_hint(ui,"在和風控制檯建立專案和憑據：點上方「配置網站 ↗」開啟控制檯，照「配置教程 ↗」的 10 步圖文操作。只需 GeoAPI 和天氣預報兩類許可權。");
-                });
-                qweather_step(ui,2,"填寫並測試連線");
-                ui.label(RichText::new("API Host").size(12.0));
-                let host=ui.add(egui::TextEdit::singleline(&mut self.weather_source.host).id_salt("qweather-host").hint_text("專屬域名.qweatherapi.com").desired_width(f32::INFINITY));
-                ui.label(RichText::new("API Key").size(12.0));
-                let stored=self.weather_source.client.as_ref().is_some_and(|c|c.host==self.weather_source.host);
-                let key=ui.add(egui::TextEdit::singleline(&mut self.weather_source.key).id_salt("qweather-key").password(true).hint_text(if stored{"已安全儲存；填寫新 Key 可更換"}else{"貼上專門為鬼島建立的 API Key"}).desired_width(f32::INFINITY));
-                if host.changed()||key.changed(){self.weather_source.invalidate();}
-                ui.add_space(5.0);
-                ui.horizontal_wrapped(|ui|{
-                    if ui.add_enabled(self.weather_source.testing.is_none(),egui::Button::new("測試連線")).clicked(){self.weather_source.test_connection();}
-                    if self.weather_source.testing.is_some(){ui.spinner();ui.label("測試中…");ui.ctx().request_repaint_after(std::time::Duration::from_millis(100));}
-                    if ui.add_enabled(stored||!self.weather_source.key.is_empty(),egui::Button::new("清除本機 Key")).clicked(){
-                        if self.weather_source.displayed==Provider::Qweather {
-                            self.weather_source.selected=Provider::OpenMeteo;self.apply_weather_source();self.weather_source.selected=Provider::Qweather;
-                            if self.weather_source.displayed!=Provider::OpenMeteo{return;}
-                        }
-                        let slot=self.weather_source.config.credential.clone();
-                        let removed=if slot.is_empty(){Ok(())}else{Client::delete(&slot)};
-                        match removed {Err(e)=>self.weather_source.message=Some((e.text(),true)),Ok(())=>{
-                            if let Some(c)=self.weather_source.client.take(){c.gate.store(false,Ordering::SeqCst);}
-                            self.weather_source.key.clear();self.weather_source.invalidate();self.weather_source.message=Some(("本機 Key 已清除。填寫並測試新憑據後可重新啟用。",false));
-                        }}
-                    }
-                });
-                self.weather_source.connection_status(ui);
-                settings_hint(ui,"Key 安全儲存在 Windows 憑據管理器。");
-                ui.add_space(4.0);
-                qweather_step(ui,3,"選擇城市並啟用");
-                step_body(ui,|ui|{settings_hint(ui,"在下方「和風城市」搜尋並新增城市，然後點「儲存並啟用」。和風暫不支援自動定位。");});
-                egui::CollapsingHeader::new("免費額度詳情").id_salt("qweather-free-details").show(ui,|ui|{
-                    ui.label("每自然月前 50,000 次免費");
-                    settings_hint(ui,"同一和風開發者帳號合計，GeoAPI 與天氣預報共享，並非每個 Key 各享一份。超額繼續按量計費，不會自動停止。");
-                    settings_hint(ui,"鬼島限制本機每自然月最多 5,000 次請求，包含搜尋、測試、重新整理和失敗嘗試；不能限制同帳號其他裝置、應用程式或專案的用量。");
-                    ui.hyperlink_to("官方計費說明","https://dev.qweather.com/docs/finance/pricing/");
-                });
-            }
-            if self.weather_source.test_error.is_none(){if let Some((message,error))=self.weather_source.message {ui.add(egui::Label::new(RichText::new(message).size(11.5).color(if error{color(ui.ctx(),Color32::from_rgb(255,137,137),Color32::from_rgb(183,48,48))}else{ui.visuals().weak_text_color()})).wrap());}}
+            settings_hint(ui,"當前生效：Open-Meteo");
+            settings_hint(ui,"無需 Key。海外免費源，使用 Open-Meteo 自己的城市與定位設定。");
         });
+        // 和風已移除，來源固定為 Open-Meteo；舊版存過和風也會自動回到預設。
+        self.weather_source.selected=Provider::OpenMeteo;
+        if self.weather_source.displayed!=Provider::OpenMeteo {self.apply_weather_source();}
     }
 
     fn qweather_city_picker(&mut self,ui:&mut egui::Ui){
