@@ -26,7 +26,7 @@ try {
             Remove-Item Env:DAOZAI_TEST_BUILD -ErrorAction SilentlyContinue
             $trimFlags = $privatePaths | ForEach-Object { '"/d1trimfile:' + $_ + '"' }
             $env:CL = (@($originalCL) + $trimFlags) -join ' '
-            cargo +stable-x86_64-pc-windows-msvc build --locked --release --features sdk-js,sdk-material --bin daozai --target x86_64-pc-windows-msvc
+            cargo +stable-x86_64-pc-windows-msvc build --locked --release --features sdk-js,sdk-material --bin kuidao --bin kuidao-bootstrap --target x86_64-pc-windows-msvc
             if ($LASTEXITCODE -ne 0) { throw 'Release build failed' }
         } finally {
             $env:CL = $originalCL
