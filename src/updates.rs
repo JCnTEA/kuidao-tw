@@ -1,4 +1,4 @@
-//! 自動檢查正式版更新，下載與安裝由用戶確認。
+//! 自動檢查正式版更新；使用者按「檢查更新」時直接開更新視窗並自動下載。
 use eframe::egui;
 use std::{io::{Read, Write}, path::{Path, PathBuf}, sync::{mpsc::{self, Receiver}, Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 
@@ -40,6 +40,8 @@ pub(crate) struct State {
     latest_notes: Option<NotesRecord>,
     /// 使用者手動按下「檢查更新」：查到有安裝包就直接下載安裝、自動重啟。
     auto_download: bool,
+    /// 對話框開啟時立刻開始下載，不必再按「立即更新」。
+    auto_start: bool,
 }
 
 /// 開發版（建置時帶 KUIDAO_CHANNEL=dev）：更新由同資料夾的開發版啟動器統一套用整包。
@@ -98,7 +100,7 @@ impl State {
     fn begin_check(&mut self, ctx: &egui::Context, automatic_until: Option<Instant>, load: impl FnOnce() -> Result<Option<Release>, String> + Send + 'static) -> bool {
         if self.rx.is_some() || (automatic_until.is_none() && !self.manual_wait().is_zero()) { return false; }
         let (tx, rx) = mpsc::channel(); self.rx = Some(rx); self.automatic_check_until = automatic_until;
-        self.message.clear(); self.result = None; self.dialog_open = false; self.focus_requested = false;
+        self.message.clear(); self.result = None; self.dialog_open = false; self.focus_requested = false; self.auto_start = false;
         let ctx = ctx.clone();
         std::thread::spawn(move || { let _ = tx.send(Event::Checked(load())); ctx.request_repaint(); });
         true
@@ -119,15 +121,15 @@ impl State {
                 Event::Checked(result) => {
                     let automatic_until = self.automatic_check_until.take();
                     let manual_auto = std::mem::take(&mut self.auto_download);
-                    let auto = automatic_until.is_some() || manual_auto;
+                    let automatic = automatic_until.is_some();
                     let now = Instant::now();
                     self.manual_check_after = Some(now + MANUAL_INTERVAL);
                     let has_package = matches!(&result, Ok(Some(release)) if release.package.is_some());
                     let new_notice = matches!(&result, Ok(Some(release)) if self.notified_version.as_deref() != Some(release.version.as_str()));
-                    // 手動按下時若已有安裝包就直接更新，不再多開一層對話框要使用者確認。
+                    // 手動按下時直接開更新視窗並開始下載，不必再按一次「有新版本」才能執行。
                     self.dialog_open = matches!(&result, Ok(Some(_)))
-                        && !(manual_auto && has_package)
-                        && automatic_until.is_none_or(|until| now < until && new_notice);
+                        && (manual_auto || automatic_until.is_none_or(|until| now < until && new_notice));
+                    self.auto_start = manual_auto && has_package;
                     self.focus_requested = self.dialog_open;
                     if self.dialog_open { if let Ok(Some(release)) = &result { self.notified_version = Some(release.version.clone()); } }
                     // 錯過啟動時段的新版留在設置裡，下次啟動時可以再提醒。
@@ -136,7 +138,7 @@ impl State {
                         else { CHECK_INTERVAL };
                     self.remember_check(delay);
                     let automatic_package = match &result {
-                        Ok(Some(release)) if auto && release.package.is_some() => Some(release.clone()),
+                        Ok(Some(release)) if automatic && release.package.is_some() => Some(release.clone()),
                         _ => None,
                     };
                     self.result = Some(result); self.rx = None;
@@ -205,6 +207,7 @@ impl State {
     fn dismiss(&mut self) {
         if let Some(cancel) = &self.cancel { cancel.store(true, Ordering::Relaxed); }
         self.dialog_open = false;
+        self.auto_start = false;
     }
 
     fn start_download(&mut self, ctx: &egui::Context, release: Release) {
@@ -224,6 +227,10 @@ impl State {
         use crate::theme::{self, W};
         if !self.dialog_open { return; }
         let Some(Ok(Some(release))) = self.result.clone() else { return; };
+        let auto_start = std::mem::take(&mut self.auto_start);
+        if auto_start && self.rx.is_none() && self.cancel.is_none() && release.package.is_some() {
+            self.start_download(ctx, release.clone());
+        }
         let focus = std::mem::take(&mut self.focus_requested);
         let logo = self.logo.get_or_insert_with(|| {
             let icon = theme::app_icon();
@@ -703,6 +710,18 @@ mod tests {
         assert!(next <= chrono::Utc::now().timestamp());
         assert!(notified_version.is_none());
         std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn manual_check_opens_dialog_and_auto_starts_download() {
+        let mut state = State::default();
+        let (tx, rx) = mpsc::channel(); state.rx = Some(rx); state.auto_download = true;
+        tx.send(Event::Checked(Ok(Some(Release { version: "v0.7.2".into(), notes: String::new(), page: RELEASES.into(),
+            package: Some(Package { url: String::new(), size: 1, hash: String::new() }) })))).unwrap();
+        state.poll(&egui::Context::default());
+        assert!(state.dialog_open && state.focus_requested && state.auto_start);
+        assert!(matches!(&state.result, Some(Ok(Some(release))) if release.version == "v0.7.2"));
+        assert!(state.rx.is_none() && state.cancel.is_none());
     }
 
     #[test]
