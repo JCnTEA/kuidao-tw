@@ -297,9 +297,9 @@ mod platform {
 
     pub fn probe() -> Option<NowPlaying> {
         let browsers = audible_browsers();
-        if browsers.is_empty() {
+        let Some(&first) = browsers.first() else {
             return None;
-        }
+        };
         let mut pick = Pick { browsers, best: None };
         unsafe {
             let _ = EnumWindows(Some(visit), LPARAM(&mut pick as *mut Pick as isize));
@@ -308,7 +308,7 @@ mod platform {
             // 有瀏覽器正在出聲，但視窗標題抓不到或不是可辨識的歌名（Edge 常見）：
             // 仍回一個只有來源的空殼，讓上層繼續走「聽聲音認歌」那條路，
             // 而不是整輪只拿到 None、島上一直顯示暫無音樂。
-            return Some(now_playing(browsers[0], String::new(), String::new(), String::new()));
+            return Some(now_playing(first, String::new(), String::new(), String::new()));
         };
         let (title, artist, album) = parse_title(&raw, suffix)?;
         Some(now_playing(source, title, artist, album))
