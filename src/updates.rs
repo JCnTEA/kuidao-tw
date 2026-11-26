@@ -429,9 +429,19 @@ fn check_error(error: ureq::Error) -> String {
 
 fn check() -> Result<Option<Release>, String> {
     if dev_channel() { return check_dev(); }
-    let response = http_agent()?
+    let response = match http_agent()?
         .get(API).set("User-Agent", concat!("Kuidao/", env!("CARGO_PKG_VERSION")))
-        .set("Accept", "application/vnd.github+json").call().map_err(check_error)?;
+        .set("Accept", "application/vnd.github+json").call() {
+        Ok(response) => response,
+        // GitHub API 匿名額度用完（403／429）時改走發布頁與下載檔，不再讓「檢查更新」直接被限流卡死。
+        Err(ureq::Error::Status(403 | 429, response)) => {
+            return match release_from_web(env!("CARGO_PKG_VERSION")) {
+                Ok(release) => Ok(release),
+                Err(_) => Err(check_error(ureq::Error::Status(response.status(), response))),
+            };
+        }
+        Err(error) => return Err(check_error(error)),
+    };
     let value: serde_json::Value = serde_json::from_reader(response.into_reader())
         .map_err(|_| "更新資訊格式異常，請稍後重試".to_owned())?;
     let update = release_info(&value, env!("CARGO_PKG_VERSION"))?;
@@ -532,6 +542,48 @@ fn release_info(value: &serde_json::Value, current: &str) -> Result<Option<Relea
         });
     Ok(Some(Release { page: format!("{REPOSITORY}/releases/tag/{tag}"), version: tag,
         notes: value["body"].as_str().unwrap_or("").to_owned(), package }))
+}
+
+/// API 被限流時的備援：從發布頁取得最新標籤，再抓 SHA256SUMS 與下載檔大小，
+/// 全程只讀 github.com 網頁與 release 資產，不消耗 GitHub API 額度。
+fn release_from_web(current: &str) -> Result<Option<Release>, String> {
+    let agent = http_agent()?;
+    let response = agent.get(RELEASES)
+        .set("User-Agent", concat!("Kuidao/", env!("CARGO_PKG_VERSION")))
+        .call().map_err(|_| "無法連線發布頁".to_owned())?;
+    let page = response.get_url().to_owned();
+    let tag = page.split("/releases/tag/").nth(1)
+        .map(|tag| tag.split(|c| c == '?' || c == '#').next().unwrap_or(tag))
+        .filter(|tag| !tag.is_empty())
+        .ok_or_else(|| "發布頁沒有版本資訊".to_owned())?;
+    let Some(numbers) = version(tag) else { return Ok(None) };
+    let Some(current_numbers) = version(current) else { return Ok(None) };
+    if numbers <= current_numbers { return Ok(None); }
+    let zip_name = format!("Kuidao-v{}-windows-x64.zip", tag.trim_start_matches('v'));
+    let zip_url = format!("{REPOSITORY}/releases/download/{tag}/{zip_name}");
+    let sums = agent.get(&format!("{REPOSITORY}/releases/download/{tag}/SHA256SUMS.txt"))
+        .set("User-Agent", concat!("Kuidao/", env!("CARGO_PKG_VERSION")))
+        .call().map_err(|_| "無法取得校驗檔".to_owned())?
+        .into_string().map_err(|_| "無法讀取校驗檔".to_owned())?;
+    let hash = checksum_for(&sums, &zip_name).ok_or_else(|| "校驗檔沒有安裝包資料".to_owned())?;
+    let response = agent.head(&zip_url)
+        .set("User-Agent", concat!("Kuidao/", env!("CARGO_PKG_VERSION")))
+        .call().map_err(|_| "無法查詢安裝包大小".to_owned())?;
+    let size = response.header("content-length").and_then(|value| value.parse::<u64>().ok())
+        .filter(|size| *size > 0 && *size <= 200 * 1024 * 1024)
+        .ok_or_else(|| "安裝包大小不符".to_owned())?;
+    Ok(Some(Release { version: tag.to_owned(), notes: "GitHub API 暫時限流，已自動改用發布頁資訊。".into(),
+        page: page.clone(), package: Some(Package { url: zip_url, size, hash: hash.to_ascii_lowercase() }) }))
+}
+
+fn checksum_for(sums: &str, name: &str) -> Option<String> {
+    sums.lines().find_map(|line| {
+        let mut parts = line.split_whitespace();
+        let hash = parts.next()?;
+        let file = parts.next()?.trim_start_matches('*');
+        (file == name && hash.len() == 64 && hash.bytes().all(|byte| byte.is_ascii_hexdigit()))
+            .then(|| hash.to_owned())
+    })
 }
 
 fn download(release: &Release, tx: &mpsc::Sender<Event>, cancel: &AtomicBool) -> Result<PathBuf, String> {
@@ -779,6 +831,15 @@ mod tests {
             let message = check_error(ureq::Error::Status(code, response));
             assert!(message.contains(if limited { "暫時限流" } else { "拒絕訪問" }), "{message}");
         }
+    }
+
+    #[test]
+    fn web_fallback_reads_zip_checksum() {
+        let sums = "b7dfb470a11932de064ec2a3bfb5c2f943bfa5f96f07070146104d8d2335f5c2  Kuidao-Setup-TW-x64.exe\ndfe379e85911edd02296511ef88fa21c80c1f6081d76c49da31c1ff111f5fb8b  Kuidao-v0.7.4-tw-windows-x64.zip\n";
+        assert_eq!(checksum_for(sums, "Kuidao-v0.7.4-tw-windows-x64.zip").as_deref(),
+            Some("dfe379e85911edd02296511ef88fa21c80c1f6081d76c49da31c1ff111f5fb8b"));
+        assert!(checksum_for(sums, "Kuidao-Setup-TW-x64.exe").is_some());
+        assert!(checksum_for(sums, "missing.zip").is_none());
     }
 
     #[test]

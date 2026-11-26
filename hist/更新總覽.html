@@ -63,6 +63,8 @@ footer{text-align:center;color:var(--dim);font-size:11.5px;letter-spacing:.1em;m
   <section class="section">
     <div class="sec-title"><span class="bar"></span><h2>目前狀態</h2><span class="line"></span></div>
     <div class="grid">
+<div class="card"><span class="badge">修正</span><h3>GitHub 檢查更新被限流時自動改走發布頁</h3><p>匿名 API 額度用完（403／429）不再只顯示「暫時限流」：程式會改讀發布頁、SHA256SUMS 與檔案大小，仍可正常提示與下載新版本。</p></div>
+
 <div class="card"><span class="badge">調整</span><h3>設定教學裡的網址可以直接點開</h3><p>行事曆新增向導的步驟只要出現 https 網址，現在會顯示成藍色連結；點一下用系統預設瀏覽器開啟，不用再複製貼上。Google 設定、Apple 帳戶與 iCal 網址都適用。</p></div>
 
 <div class="card"><span class="badge">修正</span><h3>Google 行程改成 iCal 網址訂閱</h3><p>Google 已停止 CalDAV 的密碼登入，只接受 OAuth 2.0，所以「Gmail + 應用程式密碼」一定回 401。新增「iCal」平台：到 Google 日曆 → 設定 → 整合行事曆複製「秘密 iCal 網址」，貼上就能只讀同步，不需帳號密碼。原本的 Google 卡保留但會提示改走 iCal。</p></div>
