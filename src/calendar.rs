@@ -96,11 +96,11 @@ impl Provider {
         match self {
             Provider::Google => [
                 "Google 已停止 CalDAV 的密碼登入，只接受 OAuth 2.0；應用程式密碼必定回 401",
-                "請改選「iCal」，到 Google 日曆 → 設定 → 整合行事曆，複製「秘密 iCal 網址」",
+                "請改選「iCal」，到 https://calendar.google.com/calendar/r/settings 選擇日曆 → 整合行事曆，複製「秘密 iCal 網址」",
                 "把網址貼到 iCal 欄位即可只讀同步，不需要帳號密碼",
             ],
             Provider::ICloud => [
-                "用瀏覽器開啟 account.apple.com，登入 Apple 帳戶",
+                "用瀏覽器開啟 https://account.apple.com，登入 Apple 帳戶",
                 "登入與安全 → App 專用密碼 → 生成一個（名稱可填「鬼島」）",
                 "使用者名稱填 Apple ID 信箱，密碼填剛生成的 App 專用密碼",
             ],
@@ -115,7 +115,7 @@ impl Provider {
                 "只讀同步行事曆；Microsoft 365 / Outlook.com 已不支援密碼登入，暫不能連線",
             ],
             Provider::Ical => [
-                "Google 日曆 → 設定 → 選擇日曆 → 整合行事曆，複製「秘密 iCal 網址」",
+                "開啟 https://calendar.google.com/calendar/r/settings → 選擇日曆 → 整合行事曆，複製「秘密 iCal 網址」",
                 "iCloud、Outlook 等服務也有類似的 .ics 訂閱網址，複製後直接貼上",
                 "只讀同步，不需要帳號密碼；Google CalDAV 已改為只接受 OAuth，密碼登入必定 401",
             ],

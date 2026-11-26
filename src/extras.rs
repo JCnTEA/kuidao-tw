@@ -5105,7 +5105,7 @@ impl App {
                             if self.calendar.form.guide_open{
                                 ui.add_space(4.0);
                                 for(i,step)in self.calendar.form.provider.guide().iter().enumerate(){
-                                    ui.label(egui::RichText::new(format!("{}. {}",i+1,step)).size(12.0).color(settings_color(ctx,Color32::from_gray(200),Color32::from_gray(55))));
+                                    guide_line(ui,i+1,step);
                                 }
                             }
                             ui.add_space(9.0);
@@ -5340,4 +5340,21 @@ fn support_codes_are_cropped_small_and_released_when_hidden() {
         0,
         "收起後應釋放收款碼貼圖"
     );
+}
+
+/// 引導步驟中的網址自動變成可點連結，點了用系統瀏覽器開啟。
+fn guide_line(ui:&mut egui::Ui,index:usize,text:&str){
+    let link=regex::Regex::new(r"https?://[^\s，。；、）)]+").unwrap();
+    ui.horizontal_wrapped(|ui|{
+        ui.spacing_mut().item_spacing.x=0.0;
+        let color=settings_color(ui.ctx(),Color32::from_gray(200),Color32::from_gray(55));
+        ui.label(egui::RichText::new(format!("{index}. ")).size(12.0).color(color));
+        let mut cursor=0;
+        for found in link.find_iter(text){
+            if found.start()>cursor {let before=&text[cursor..found.start()];if !before.is_empty(){ui.label(egui::RichText::new(before).size(12.0).color(color));}}
+            ui.hyperlink_to(egui::RichText::new(found.as_str()).size(12.0),found.as_str());
+            cursor=found.end();
+        }
+        if cursor<text.len(){ui.label(egui::RichText::new(&text[cursor..]).size(12.0).color(color));}
+    });
 }
