@@ -447,17 +447,23 @@ fn check_dev() -> Result<Option<Release>, String> {
     let current = version(env!("CARGO_PKG_VERSION")).ok_or_else(|| "更新資訊格式異常，請稍後重試".to_owned())?;
     let releases = list.as_array().ok_or_else(|| "更新資訊格式異常，請稍後重試".to_owned())?;
     let mut best: Option<(&serde_json::Value, String, [u64; 3])> = None;
+    let mut newest: Option<(&serde_json::Value, String, [u64; 3])> = None;
     for value in releases {
         if value["draft"].as_bool() == Some(true) { continue; }
         let Some(tag) = value["tag_name"].as_str() else { continue };
         if !tag.ends_with("-tw-dev") { continue; }
         let stem = tag.trim_start_matches('v').trim_end_matches("-tw-dev");
         let Some(numbers) = version(stem) else { continue };
+        // 不論有沒有比本機新，都記住目前最新那一版，讓「關於」頁的更新內容有東西可看。
+        if newest.as_ref().is_none_or(|(_, _, newest_numbers)| numbers > *newest_numbers) {
+            newest = Some((value, stem.to_owned(), numbers));
+        }
         if numbers <= current { continue; }
         if best.as_ref().is_none_or(|(_, _, best_numbers)| numbers > *best_numbers) {
             best = Some((value, stem.to_owned(), numbers));
         }
     }
+    if let Some((value, stem, _)) = &newest { store_dev_notes(value, stem); }
     let Some((value, stem, _)) = best else { return Ok(None) };
     let tag = format!("v{stem}-tw-dev");
     let name = format!("Kuidao-Dev-v{stem}-tw-windows-x64.zip");
@@ -471,13 +477,18 @@ fn check_dev() -> Result<Option<Release>, String> {
                 .then(|| Package { url: expected, size, hash: hash.to_ascii_lowercase() })
         });
     let body = value["body"].as_str().unwrap_or("").trim().to_owned();
-    // 開發版的發布都標成 prerelease，正式版那條筆記規則擋掉它；這裡單獨留一筆給「關於」頁的更新內容。
-    if !cfg!(test) && !body.is_empty() {
-        let record = NotesRecord { version: tag.clone(), notes: body.clone(), page: format!("{REPOSITORY}/releases/tag/{tag}"), checked_unix: chrono::Utc::now().timestamp() };
-        let _ = write_notes_record(&crate::model::config_dir().join("update-notes.json"), &record);
-    }
     Ok(Some(Release { version: stem, notes: body,
         page: format!("{REPOSITORY}/releases/tag/{tag}"), package }))
+}
+
+/// 開發版的發布都標成 prerelease，正式版那條筆記規則會擋掉它；這裡單獨留一筆給「關於」頁的更新內容。
+fn store_dev_notes(value: &serde_json::Value, stem: &str) {
+    if cfg!(test) { return; }
+    let body = value["body"].as_str().unwrap_or("").trim();
+    if body.is_empty() { return; }
+    let tag = format!("v{stem}-tw-dev");
+    let record = NotesRecord { version: tag.clone(), notes: body.to_owned(), page: format!("{REPOSITORY}/releases/tag/{tag}"), checked_unix: chrono::Utc::now().timestamp() };
+    let _ = write_notes_record(&crate::model::config_dir().join("update-notes.json"), &record);
 }
 
 fn notes_record(value: &serde_json::Value) -> Option<NotesRecord> {
