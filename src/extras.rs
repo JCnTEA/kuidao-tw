@@ -3592,33 +3592,11 @@ pub(crate) fn settings_label(ui: &mut egui::Ui, text: &str) {
     ui.add_space(2.0);
 }
 const SUPPORT_RECENT_URI: &str = "support-recent-uri";
-const SUPPORT_WALL_URI: &str = "support-wall-uri";
 const BUNDLED_SUPPORTERS: usize = 108;
 
 fn support_author(ui:&mut egui::Ui, supporters: &mut crate::supporters::State){
     supporters.refresh(ui.ctx());
     let snapshot = supporters.snapshot();
-    let wall_id = egui::Id::new("support-author-wall");
-    if ui.ctx().data(|data| data.get_temp::<bool>(wall_id).unwrap_or(false)) {
-        release_support_image(ui.ctx(), SUPPORT_RECENT_URI);
-        ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("感謝牆").size(17.0).strong());
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.link("← 返回").clicked() {
-                    ui.ctx().data_mut(|data| data.insert_temp(wall_id, false));
-                }
-            });
-        });
-        ui.label(egui::RichText::new("按累計支持排序").size(11.0).weak());
-        ui.add_space(4.0);
-        let image = match snapshot {
-            Some(data) => egui::Image::from_bytes(format!("bytes://supporters/wall-{}.webp", data.version), data.wall.clone()),
-            None => egui::Image::new(egui::include_image!("../assets/support/wall.webp")),
-        }.fit_to_original_size(1.0).max_width(ui.available_width()).alt_text("鬼島感謝牆");
-        add_support_image(ui, image, SUPPORT_WALL_URI);
-        return;
-    }
-    release_support_image(ui.ctx(), SUPPORT_WALL_URI);
     let id=egui::Id::new("support-author-open");
     let open=ui.ctx().data(|data|data.get_temp::<bool>(id).unwrap_or(false));
     if !open {release_support_codes(ui.ctx());}
@@ -3684,9 +3662,6 @@ fn support_author(ui:&mut egui::Ui, supporters: &mut crate::supporters::State){
                 None => egui::Image::new(egui::include_image!("../assets/support/recent.webp")),
             }.max_size(egui::vec2(190.0, 29.0)).alt_text("最近支持的朋友");
             add_support_image(ui, image, SUPPORT_RECENT_URI);
-            if ui.link("查看感謝牆 →").clicked() {
-                ui.ctx().data_mut(|data| data.insert_temp(wall_id, true));
-            }
         });
     } else {
         release_support_image(ui.ctx(), SUPPORT_RECENT_URI);
@@ -3713,7 +3688,7 @@ fn release_support_image(ctx: &egui::Context, key: &str) {
 }
 
 fn release_support_images(ctx: &egui::Context) {
-    let uris = ctx.data_mut(|data| [SUPPORT_RECENT_URI, SUPPORT_WALL_URI].map(|key| data.remove_temp::<String>(egui::Id::new(key))));
+    let uris = ctx.data_mut(|data| [SUPPORT_RECENT_URI].map(|key| data.remove_temp::<String>(egui::Id::new(key))));
     for uri in uris.into_iter().flatten() { ctx.forget_image(&uri); }
 }
 pub(crate) fn settings_control_row(
@@ -5359,8 +5334,6 @@ impl App {
                                 }
                             }
                         });
-                        settings_label(ui,"支持作者");
-                        settings_card(ui,|ui|support_author(ui,&mut self.supporters));
                     }
                     }
                 });

@@ -19,8 +19,8 @@ BEGIN
             VALUE "InternalName", "Kuidao"
             VALUE "OriginalFilename", "kuidao.exe"
             VALUE "ProductName", "鬼島 Kuidao"
-            VALUE "ProductVersion", "0.6.138"
-            VALUE "FileVersion", "0.6.138"
+            VALUE "ProductVersion", "0.6.139"
+            VALUE "FileVersion", "0.6.139"
         END
     END
     BLOCK "VarFileInfo"
