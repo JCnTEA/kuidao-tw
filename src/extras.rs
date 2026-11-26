@@ -2,15 +2,10 @@
 use crate::settings_theme::color as settings_color;
 
 /// 贊助頁：原本放在「關於」最底下的支援作者（收款碼）區塊，獨立成一頁，排在「關於」上面。
-/// 這一版先只掛在開發板，正式版先不上。
 pub(crate) const SETTINGS_TAB_SUPPORT: usize = 17;
-/// 贊助頁目前只掛開發版（建置時帶 KUIDAO_CHANNEL=dev）；正式版側欄先不出現這一頁。
-/// 測試環境一律視為開啟，才能驗證頁面本身畫得出來。
+/// 贊助頁在正式版與開發版都保留；「關於」頁本身不再出現任何贊助內容。
 pub(crate) fn support_page_enabled() -> bool {
-    if cfg!(test) {
-        return true;
-    }
-    matches!(option_env!("KUIDAO_CHANNEL"), Some("dev"))
+    true
 }
 use crate::app::{
     App, Cmd, Env, NotificationSound, Phase, HUD_TRACK_W, HUD_TRACK_X, HUD_W, PAGE_NAMES,
