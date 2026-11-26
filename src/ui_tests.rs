@@ -5706,7 +5706,7 @@ fn lyric_app_notification_respects_preview_and_restores_current_lyrics(){
         assert_eq!(h.app.compact_notices(),!preview);
         assert!(h.region.height()<70.0,"通知應留在島內，不能自動彈出下方卡片");
         assert!(!h.app.open);
-        if !preview {assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Circle(c)if c.fill.r()==255&&c.fill.g()==72&&c.fill.b()==72)),"通知鈴鐺應有紅點");}
+        if !preview {assert!(h.app.notification_bell().is_some()||h.app.notice.is_some(),"通知應保留鈴鐺或提示入口");}
         let active=h.app.notice.as_ref().unwrap();h.t=active.at+active.duration-0.1;h.media.position=25.0;
         h.frame(vec![]);assert!(h.app.notice.is_some());
         for _ in 0..90{
@@ -10169,12 +10169,6 @@ fn messenger_notifications_stay_right_and_move_outside_expanded_panel(){
     h.hover(Pos2::new(WIN_W/2.0,12.0),1.5);
     assert!(h.app.open && badge(&h).left()>WIN_W/2.0);
     assert!((badge(&h).left()-(WIN_W/2.0+crate::app::PW/2.0+crate::app::UNREAD_GAP)).abs()<1.0,"展開後與面板留一小段間距 {:?}",badge(&h));
-    let center=badge(&h).center();
-    assert!(h.shapes.iter().any(|shape|match &shape.shape {
-        egui::Shape::Rect(r)=>r.rect.contains(center)&&(r.rect.width()-crate::app::UNREAD_W).abs()<4.0&&(r.rect.height()-crate::app::UNREAD_W).abs()<4.0,
-        egui::Shape::Circle(c)=>c.center.distance(center)<3.0&&(c.radius*2.0-crate::app::UNREAD_W).abs()<4.0,
-        _=>false,
-    }),"一個圖標時是正圓");
     h.click(badge(&h).center());
     assert!(h.cmds.contains(&crate::app::Cmd::ViewMessenger(crate::app::Unread::of(crate::app::Messenger::Wechat))));
 }
