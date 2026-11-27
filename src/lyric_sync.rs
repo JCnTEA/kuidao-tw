@@ -335,6 +335,7 @@ impl LyricClock {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn resolved_measures_the_gap_between_track_and_player() {
