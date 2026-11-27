@@ -1229,6 +1229,20 @@ fn switching_music_source_discards_previous_lyrics() {
 }
 
 #[test]
+fn browser_source_alias_keeps_the_current_lyrics(){
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();
+    h.media=crate::smtc::NowPlaying{source:"chrome.exe".into(),title:"Track".into(),artist:"Artist".into(),position:5.0,playing:true,duration:120.0,..Default::default()};
+    h.frame(vec![]);
+    h.app.set_lyrics("Track","Artist",120.0,crate::lyrics::parse_lrc("[00:05]當前歌詞"));
+    assert!(h.app.ly.lyrics.is_some());
+    // 切視窗時同一首 YouTube 分頁可能從 chrome.exe 變成 AppUserModelId；這不是換播放程式。
+    h.media.source="www.youtube.com-abc!App".into();
+    h.frame(vec![]);
+    assert!(h.app.ly.lyrics.is_some(),"瀏覽器來源字串變動不應清空歌詞重查");
+}
+
+#[test]
 fn closing_a_player_then_starting_native_netease_restores_music_and_lyrics(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());let mut h=H::new();h.app.settings.island_lyrics=true;
     h.media=crate::smtc::NowPlaying{source:"SodaMusic.exe".into(),title:"舊歌曲".into(),artist:"歌手".into(),playing:true,duration:120.0,..Default::default()};h.frame(vec![]);
@@ -2504,7 +2518,7 @@ fn music_lyric_timing_follows_saved_delay_and_preserves_playback_position(){
     for (delay,position,expected) in [(500,10.2,Some("當前歌詞")),(-500,9.8,Some("下一句")),(0,9.8,Some("當前歌詞")),(500,0.2,None),(500,0.6,Some("第一句"))]{
         std::fs::write(crate::model::config_dir().join("settings.txt"),format!("lyric_delay_ms={delay}\nisland_lyrics=1\n")).unwrap();
         h.app.settings=crate::model::Settings::load();
-        h.media.position=position;h.frame(vec![]);
+        h.media.position=position;h.app.lyric_clock.reset();h.frame(vec![]);
         assert_eq!(h.app.island_lyric().map(|(_,line)|line),expected,"延時 {delay} ms，播放位置 {position}");
         assert!((h.app.media.position-position).abs()<0.001,"調整歌詞不應改變播放進度");
         h.hover(Pos2::new(WIN_W/2.0,12.0),1.0);
