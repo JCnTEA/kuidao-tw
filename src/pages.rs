@@ -142,6 +142,8 @@ impl App {
             if let Some(position)=seek_position {
                 self.music_seek_ui=Some((position,np.title.clone()));
                 self.music_seek_quiet_until=self.t+2.5;
+                // 拖動進度條是真正的跳轉：歌詞時鐘要立即改以目標秒數為新基準。
+                self.lyric_clock.reset();
                 cmds.push(Cmd::Media(Transport::Seek(position)));
             }
         }
@@ -190,9 +192,9 @@ impl App {
             }
         }
         if has {
-            if previous.clicked() {self.music_restart_at=Some(self.t);self.music_seek_ui=None;cmds.push(Cmd::Media(Transport::Prev));}
+            if previous.clicked() {self.music_restart_at=Some(self.t);self.music_seek_ui=None;self.lyric_clock.reset();cmds.push(Cmd::Media(Transport::Prev));}
             if play.clicked() {cmds.push(Cmd::Media(Transport::Toggle));}
-            if next.clicked() {self.music_restart_at=Some(self.t);self.music_seek_ui=None;cmds.push(Cmd::Media(Transport::Next));}
+            if next.clicked() {self.music_restart_at=Some(self.t);self.music_seek_ui=None;self.lyric_clock.reset();cmds.push(Cmd::Media(Transport::Next));}
         }
         if lyrics_button.on_hover_text(if self.show_lyrics {"隱藏歌詞"}else{"顯示歌詞"}).clicked() {
             if !has {self.say("先放一首歌吧");}

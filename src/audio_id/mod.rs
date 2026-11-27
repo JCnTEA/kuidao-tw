@@ -34,6 +34,8 @@ pub struct Recognized {
     pub position: f32,
     /// 取樣起點在歌曲裡是第幾秒；校正歌詞位移要用這一個（跟 mark_capture 的時刻對齊）。
     pub started: f32,
+    /// 取樣結束時回推的播放器秒數；比錄音前的時間準，能扣掉裝置初始化延遲。
+    pub player_start: Option<f64>,
     pub captured: Instant,
 }
 
@@ -248,6 +250,9 @@ fn listen_window(seconds: u32) -> Window {
     if pcm.len() < fingerprint::SAMPLE_RATE as usize * 3 {
         return Window::Miss("音訊太短".into());
     }
+    let listened = pcm.len() as f32 / fingerprint::SAMPLE_RATE as f32;
+    // 錄音裝置可能要幾百毫秒才真正開始，用結束時間回推才是這段音的實際起點。
+    let player_start = crate::lyric_sync::capture_start(listened);
     let signature = fingerprint::make_signature(&pcm);
     let peaks: usize = signature.bands.iter().map(|(_, peaks)| peaks.len()).sum();
     log(&format!("聽 {seconds} 秒：峰值{peaks}\n"));
@@ -257,7 +262,6 @@ fn listen_window(seconds: u32) -> Window {
     }
     match shazam::identify(&signature) {
         Ok(Some(found)) => {
-            let listened = pcm.len() as f32 / fingerprint::SAMPLE_RATE as f32;
             let label = if found.artist.trim().is_empty() {
                 found.title.clone()
             } else {
@@ -269,6 +273,7 @@ fn listen_window(seconds: u32) -> Window {
                 artist: found.artist,
                 position: found.offset_seconds + listened,
                 started: found.offset_seconds,
+                player_start,
                 captured: Instant::now(),
             });
             set_status(format!("已辨識：{label}"), false);
@@ -305,7 +310,7 @@ pub fn apply(target: &mut crate::smtc::NowPlaying, found: &Recognized) {
     // 位置就被反覆釘在同一個值上，歌詞看起來像卡住不動。現在改成只記「這首歌在播放器上的位移」，
     // 進度條維持播放器自己的真實時間，歌詞在繪製時再換算成曲內時間（見 lyric_sync）。
     if found.position > 0.0 {
-        crate::lyric_sync::anchor(&found.title, &found.artist, &target.source, found.started.max(0.0));
+        crate::lyric_sync::anchor(&found.title, &found.artist, &target.source, found.started.max(0.0), found.captured, found.player_start);
     }
 }
 
@@ -324,6 +329,7 @@ mod tests {
             artist: "周杰倫".into(),
             position: 63.0,
             started: 58.0,
+            player_start: Some(58.0),
             captured: Instant::now(),
         }
     }

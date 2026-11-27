@@ -1003,6 +1003,8 @@ pub struct App {
     island_lyric_layout: Option<std::sync::Arc<egui::Galley>>,
     island_lyric_translation: Option<std::sync::Arc<egui::Galley>>,
     media_anchor: (String, f64, f64, bool),
+    /// 歌詞專用的播放時鐘：只跟歌名／歌手，不受切換視窗造成的採樣落後影響。
+    pub(crate) lyric_clock: crate::lyric_sync::LyricClock,
     pub(crate) media: NowPlaying,
     pub(crate) music_artwork: Option<(std::sync::Arc<egui::ColorImage>,egui::TextureHandle)>,
 
@@ -1255,6 +1257,7 @@ impl App {
             island_lyric_layout: None,
             island_lyric_translation: None,
             media_anchor: (String::new(), 0.0, 0.0, false),
+            lyric_clock: crate::lyric_sync::LyricClock::default(),
             media: NowPlaying::default(),
             music_artwork: None,
             #[cfg(feature="sdk-js")]
@@ -2248,9 +2251,10 @@ impl App {
 
     /// 換句、分段和展開高亮共用時間調整；正數延後，負數提前。
     pub(crate) fn lyric_position(&self)->f32 {
-        // 播放器時間 + 這首歌學到的位移（聽歌辨識校準）→ 曲內時間；再套全域的時間調整。
-        let offset=crate::lyric_sync::offset_seconds(&self.media.title,&self.media.artist,&self.media.source) as f64;
-        (self.media.position+offset-self.settings.lyric_delay_ms as f64/1000.0)as f32
+        // 先用不受焦點影響的歌詞時鐘，再加上這首歌學到的位移（聽歌辨識校準）；
+        // 最後才套全域的時間調整。直接讀播放器原始位置會在切視窗或採樣落後時前後跳。
+        let offset=crate::lyric_sync::offset_seconds(&self.media.title,&self.media.artist,&self.media.source);
+        self.lyric_clock.seconds()+offset-self.settings.lyric_delay_ms as f32/1000.0
     }
 
     /// 導唱進度：目前這一句唱到幾成；尚未同步或對不上歌時回 None。
@@ -4741,6 +4745,7 @@ impl App {
             self.music_volume_open=false;
             self.media=NowPlaying::default();
             self.media_anchor=(String::new(),0.0,0.0,false);
+            self.lyric_clock.reset();
             self.music_artwork=None;
             self.ly=LyricsState::default();
             return;
@@ -4762,9 +4767,22 @@ impl App {
         }
         // 網易雲的 song_id 只來自本機日誌，SMTC 那一路沒有；None 與 Some 之間來回不是換歌，不能每次都清空歌詞重查。
         let other_song=matches!((self.media.song_id,np.song_id),(Some(old),Some(new)) if old!=new);
-        if self.media.source != np.source || other_song { self.ly=LyricsState::default(); }
+        // 切視窗時播放卡可能短暫換一個等價的來源字串（例如瀏覽器分頁的 AppUserModelId），
+        // 那不是換歌，不能因此清掉歌詞、重新查詢而讓進度跳回開頭。
+        if other_song { self.ly=LyricsState::default(); }
         crate::lyric_sync::tick(&np.title,&np.artist,np.position,np.playing);
         self.media = np;
+        // 歌詞時鐘只認歌名／歌手：切視窗、採樣變慢或播放器回報暫時落後時，
+        // 進度仍按本機經過時間前進；小幅倒退視為噪聲，不把歌詞拉回去。
+        if self.media.title.trim().is_empty() {
+            self.lyric_clock.reset();
+        } else {
+            let key = format!("{}\u{1f}{}", self.media.title, self.media.artist);
+            let raw = self.music_seek_ui.as_ref()
+                .filter(|(_, title)| title == &self.media.title)
+                .map_or(self.media.position, |(target, _)| *target);
+            self.lyric_clock.observe(&key, raw, self.media.playing, self.media.duration);
+        }
         // 播放器版本比已適配的舊、歌詞無法同步：島下浮出一句提示（與網易雲不支援跳轉的提示同一樣式），同一播放器版本只提醒一次。
         #[cfg(windows)]
         if let Some(message)=crate::smtc::music_compat::take_update_notice() {self.say(message);self.toast_below=true;}
