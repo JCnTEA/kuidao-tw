@@ -167,7 +167,7 @@ mod tests {
         daozai::material::configure_startup(&mut options,true,true);
         let mut attempts=Vec::new();
         launch_compatible(options,&mut |options|{
-            let eframe::egui_wgpu::WgpuSetup::CreateNew(setup)=options.wgpu_options.wgpu_setup else{panic!("應創建相容圖形裝置")};
+            let eframe::egui_wgpu::WgpuSetup::CreateNew(setup)=options.wgpu_options.wgpu_setup else{panic!("應建立相容圖形裝置")};
             let direct_composition=options.wgpu_options.direct_composition;
             attempts.push((setup.instance_descriptor.backends,direct_composition));
             if direct_composition {

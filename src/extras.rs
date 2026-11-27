@@ -4165,7 +4165,7 @@ impl App {
                     if tab==4 {crate::sdk_spike::live_settings(ui);}
                     match tab {
                     15=>{
-                        let on=self.settings_feature_header(ui,crate::app::PERFORMANCE_PAGE,"查看硬件負載和實時吞吐量",|_,_|{});
+                        let on=self.settings_feature_header(ui,crate::app::PERFORMANCE_PAGE,"查看硬體負載和實時吞吐量",|_,_|{});
                         ui.add_enabled_ui(on,|ui|self.performance_settings(ui));
                     }
                     SETTINGS_TAB_WIRELESS=>{

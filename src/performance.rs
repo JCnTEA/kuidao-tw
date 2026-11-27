@@ -22,7 +22,7 @@ impl Metric {
     ];
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::Cpu => "CPU", Self::Gpu => "GPU", Self::Ram => "內存", Self::Vram => "顯存",
+            Self::Cpu => "CPU", Self::Gpu => "GPU", Self::Ram => "記憶體", Self::Vram => "顯存",
             Self::GpuTemp => "顯卡溫度", Self::Download => "下載", Self::Upload => "上傳",
             Self::Read => "磁盤讀", Self::Write => "磁盤寫",
         }
@@ -121,7 +121,7 @@ impl BarStyle {
     /// 設定裡樣式卡片上的一句話概括。
     pub(crate) fn summary(self) -> &'static str {
         match self {
-            Self::Gauges => "CPU、顯卡、內存",
+            Self::Gauges => "CPU、顯卡、記憶體",
             Self::Pulse => "佔用率與負載曲線",
             Self::Network => "下載與上傳速度",
             Self::Dashboard => "負載、網速與磁盤",
@@ -163,7 +163,7 @@ impl View {
             Self::Overview => "總覽",
             Self::Cpu => "CPU",
             Self::Gpu => "顯卡",
-            Self::Memory => "內存",
+            Self::Memory => "記憶體",
             Self::Disk => "磁盤",
             Self::Network => "網路",
         }

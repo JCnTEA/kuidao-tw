@@ -43,7 +43,7 @@ fn device_kind(name: &str, classic: bool, class: Option<u32>) -> DeviceKind {
     if any(&["hearing", "助聽"]) { return HearingAid; }
     if any(&["trackpad", "touchpad", "觸控板"]) { return Trackpad; }
     if any(&["keyboard", "鍵盤"]) { return Keyboard; }
-    if any(&["mouse", "鼠標"]) { return Mouse; }
+    if any(&["mouse", "滑鼠"]) { return Mouse; }
     if any(&["stylus", "手寫筆", "觸控筆"]) || word("pen") || word("pencil") { return Pen; }
     if any(&["presenter", "spotlight", "翻頁"]) { return Presenter; }
     if any(&["gamepad", "controller", "dualsense", "dualshock", "手柄"]) { return Gamepad; }

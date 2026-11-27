@@ -21,7 +21,7 @@ fn disabled_module_settings_dismiss_existing_popups_and_allow_reenabling() {
         for _ in 0..3 {draw_page_management(&mut h,vec![]);}
         assert!(!h.app.mail.form.open && !h.app.calendar.form.open
             && !h.app.quota.connect_open && !h.app.weather_source.tutorial_open,
-            "關閉的模塊應收起舊設定彈窗：{page}");
+            "關閉的模塊應收起舊設定彈出視窗：{page}");
         let enable=h.shapes.iter().find_map(|shape|match &shape.shape {
             egui::Shape::Text(text) if text.galley.text()=="開啟" =>Some(text.visual_bounding_rect().center()),
             _=>None,

@@ -216,7 +216,7 @@ fn plugin_status_layout_renders_author_ring_and_bar_from_the_same_snapshot() {
     fs::write(
         &source,
         json!({
-            "state":"running", "label":"打印中", "summary":"拓竹模擬任務 · 收納盒",
+            "state":"running", "label":"列印中", "summary":"拓竹模擬任務 · 收納盒",
             "progress_pct":48, "observed_at":1793756400,
             "metrics":[
                 {"label":"噴嘴溫度","value":"220 °C"},
@@ -233,7 +233,7 @@ fn plugin_status_layout_renders_author_ring_and_bar_from_the_same_snapshot() {
         &mut h,
         &profile,
         ring,
-        "拓竹打印（圓環）",
+        "拓竹列印（圓環）",
         &source,
         Some(json!({
             "components": [
@@ -247,7 +247,7 @@ fn plugin_status_layout_renders_author_ring_and_bar_from_the_same_snapshot() {
         &mut h,
         &profile,
         bar,
-        "拓竹打印（進度條）",
+        "拓竹列印（進度條）",
         &source,
         Some(json!({
             "components": [
@@ -392,9 +392,9 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
         &mut h,
         &profile,
         printer,
-        "拓竹打印（模擬）",
+        "拓竹列印（模擬）",
         &json!({
-            "state":"running", "label":"打印中", "summary":"拓竹模擬任務 · 收納盒",
+            "state":"running", "label":"列印中", "summary":"拓竹模擬任務 · 收納盒",
             "progress_pct":48,
             "metrics":[
                 {"label":"噴嘴溫度","value":"220 °C"}, {"label":"熱床溫度","value":"60 °C"},
@@ -423,8 +423,8 @@ fn plugin_status_pages_render_from_authorized_data_and_keep_the_native_carousel(
     h.wheel(-40.0);
     h.hover(cursor, 0.65);
     assert_eq!(h.app.page(), crate::app::PAGE_NAMES.len());
-    assert!(has_text(&h, "拓竹打印（模擬）"));
-    assert!(has_text(&h, "打印中"));
+    assert!(has_text(&h, "拓竹列印（模擬）"));
+    assert!(has_text(&h, "列印中"));
     assert!(has_text(&h, "48"));
     assert!(has_text(&h, "220 °C"));
     assert!(has_text(&h, "耗材餘量偏低"));
@@ -493,7 +493,7 @@ fn plugin_status_long_card_scrolls_without_changing_island_page() {
     fs::write(
         &source_path,
         json!({
-            "state":"running", "label":"打印任務",
+            "state":"running", "label":"列印任務",
             "note":(1..=14).map(|i| format!("說明第 {i} 項")).collect::<Vec<_>>().join("\n"),
             "items":(1..=8).map(|i| json!({"label":format!("隊列第 {i} 項")})).collect::<Vec<_>>(),
             "tags":["隊列底部"]
@@ -505,7 +505,7 @@ fn plugin_status_long_card_scrolls_without_changing_island_page() {
         &mut h,
         &profile,
         id,
-        "打印任務",
+        "列印任務",
         &source_path,
         Some(json!({
             "components":[{"type":"state"},{"type":"text"},{"type":"list"},{"type":"badge"}]

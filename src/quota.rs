@@ -709,7 +709,7 @@ fn fetch_subscription_at(agent:&ureq::Agent,account:&Account,url:&str)->Result<S
         let cache=json!({"old":{"provider":"ZCode","slot":"old-reference","snapshot":Snapshot{at:1900000000,..Default::default()}}});
         assert!(account.cached_snapshot(&cache).is_none());
         let mut service=Service::start();
-        assert!(service.refresh_with(original.accounts,|_,_|panic!("舊 ZCode 帳號不應創建查詢任務")));
+        assert!(service.refresh_with(original.accounts,|_,_|panic!("舊 ZCode 帳號不應建立查詢任務")));
         assert!(service.workers.is_empty());
         let agent=ureq::AgentBuilder::new().middleware(|_:ureq::Request,_:ureq::MiddlewareNext|panic!("舊 ZCode 帳號不應發請求")).build();
         assert_eq!(fetch(&agent,&config.accounts[0]).unwrap_err().0,ZCODE_RECONNECT);

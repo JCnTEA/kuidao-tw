@@ -92,7 +92,7 @@ impl Target {
         let valid=target.valid(&process);
         // 酷我在運行但音頻服務不是已適配的版本：讀不到歌名、進度和本機歌詞。
         super::music_compat::set("kwmusic.exe",super::music_compat::Item::Reader,if valid{super::music_compat::Support::Ok}
-            else{super::music_compat::Support::Unavailable("音頻服務版本不在適配表裡（已適配酷我 9.6）".into())});
+            else{super::music_compat::Support::Unavailable("音訊服務版本不在適配表裡（已適配酷我 9.6）".into())});
         let stamp=process.number(target.core+60).filter(|pe|*pe<4096).and_then(|pe|process.number(target.core+pe as usize+8));
         if !valid && target.core!=0 && stamp.is_some_and(|stamp|stamp<0x6a1fa2a8) {super::music_compat::outdated("kwmusic.exe");}
         valid.then_some(target)

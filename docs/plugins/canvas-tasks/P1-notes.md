@@ -5,7 +5,7 @@
 ## 插件
 
 - 能力：`status.page`、`status.canvas`、`action`、`event`、`notice`、`storage`、`island.pinned`、`settings`。
-- 設置：
+- 設定：
   - `pin_mode`（choice）：指定一張、最新一張、置頂輪播；
   - `pin_id`（隱藏的 text，記錄被指定的那張）。
 - 存儲：`{notes:[{id,text,color,source,pinned,done_at,created_at}], current, next_id}`，不設條數上限。

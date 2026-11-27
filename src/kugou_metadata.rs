@@ -228,7 +228,7 @@ impl Cache {
                     self.failures+=1;self.checked=Some(Instant::now());self.resume=state.cursor;
                     log_scan(&key.1,"未找到",&state,self.failures);
                     if self.failures>=RETRY.len() {
-                        super::music_compat::set("KuGou.exe",super::music_compat::Item::Duration,super::music_compat::Support::Unavailable("這首歌在酷狗內存裡沒有找到時長".into()));
+                        super::music_compat::set("KuGou.exe",super::music_compat::Item::Duration,super::music_compat::Support::Unavailable("這首歌在酷狗記憶體裡沒有找到時長".into()));
                     }
                 }
             }

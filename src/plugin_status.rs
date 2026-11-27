@@ -440,7 +440,7 @@ mod tests {
     #[test]
     fn plugin_status_accepts_bounded_fields_and_honors_expiry() {
         let status: PluginStatus = serde_json::from_value(json!({
-            "state":"running", "label":"打印中", "summary":"首層校準完成", "progress_pct":48.5,
+            "state":"running", "label":"列印中", "summary":"首層校準完成", "progress_pct":48.5,
             "metrics":[{"label":"噴嘴","value":"220 °C"}], "alert":"耗材餘量偏低",
             "observed_at":100, "expires_at":120
         }))
@@ -458,7 +458,7 @@ mod tests {
     #[test]
     fn plugin_status_rejects_invalid_or_oversized_values_and_unrecognized_fields() {
         for (key, value) in [
-            ("label", json!("休眠\n正在打印")),
+            ("label", json!("休眠\n正在列印")),
             ("summary", json!("測".repeat(121))),
             ("alert", json!(" ")),
             ("progress_pct", json!(100.1)),
@@ -470,7 +470,7 @@ mod tests {
             ),
             ("metrics", json!([{"label":"溫度","value":"測".repeat(33)}])),
         ] {
-            let mut input = json!({"state":"running","label":"打印中","observed_at":100});
+            let mut input = json!({"state":"running","label":"列印中","observed_at":100});
             input[key] = value;
             let status: PluginStatus = serde_json::from_value(input).unwrap();
             assert!(!status.valid(), "{key}: {status:?}");
@@ -488,7 +488,7 @@ mod tests {
     #[test]
     fn plugin_status_checks_component_data_limits() {
         let mut status: PluginStatus = serde_json::from_value(json!({
-            "state":"running", "label":"打印中",
+            "state":"running", "label":"列印中",
             "items":vec![json!({"label":"任務","detail":"熱床升溫","state":"paused"}); 8],
             "series":vec![15.0; 48],
             "note":format!("{}\r\n結束", "行".repeat(297)),
@@ -518,7 +518,7 @@ mod tests {
         status.items[0].detail = None;
         status.items[0].label = " ".into();
         assert!(!status.valid());
-        status.items[0].label = "打印".into();
+        status.items[0].label = "列印".into();
         status.note = Some("測".repeat(301));
         assert!(!status.valid());
         status.note = Some("第一行\t第二行".into());

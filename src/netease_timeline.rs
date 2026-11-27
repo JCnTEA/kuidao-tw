@@ -161,7 +161,7 @@ fn query(kugou:bool,playing:bool)->Option<(f64,f64)> {
     match discover(player) {
         Ok(found)=>{
             slot.found=Some(found);slot.missed=None;slot.stuck=None;
-            let (state,support)=if found.layout.learned {("已自動適配（沿用上次學到的位置），讀取內存進度",Support::Learned)}else{("已適配，讀取內存進度",Support::Ok)};
+            let (state,support)=if found.layout.learned {("已自動適配（沿用上次學到的位置），讀取記憶體進度",Support::Learned)}else{("已適配，讀取記憶體進度",Support::Ok)};
             super::music_log::state(player.topic,state);
             compat::set(player.exe,Item::Progress,support);
             sample(player,found).flatten()
@@ -473,7 +473,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore="需要本機酷狗正在播放：打印組件數據區與已驗證進度位置的關係，排查自動適配"]
+    #[ignore="需要本機酷狗正在播放：列印組件數據區與已驗證進度位置的關係，排查自動適配"]
     fn live_kugou_learning_diagnostics(){
         let (pid,base,stamp,size)=discover_in(KUGOU.exe,KUGOU.module,|_,_|None).err().and_then(|miss|miss.unknown).expect("需要酷狗正在運行");
         let p=Process::open(pid,KUGOU.exe).unwrap();

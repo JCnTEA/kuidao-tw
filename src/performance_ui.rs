@@ -970,7 +970,7 @@ impl App {
         c.seg((x + half + 0.5, y + 12.), (x + half + 0.5, y + h - 12.), 0.8, GRID);
         let columns: [(&str, View, &[Process], Box<dyn Fn(&Process) -> (f32, String)>); 2] = [
             ("CPU 最高", View::Cpu, &r.by_cpu, Box::new(|p: &Process| (p.cpu, format!("{:.1}%", p.cpu)))),
-            ("內存最多", View::Memory, &r.by_memory, Box::new(|p: &Process| (p.memory as f32, bytes(p.memory)))),
+            ("記憶體最多", View::Memory, &r.by_memory, Box::new(|p: &Process| (p.memory as f32, bytes(p.memory)))),
         ];
         for (k, (title, view, list, value)) in columns.into_iter().enumerate() {
             let color = view_color(view);
@@ -1306,7 +1306,7 @@ impl App {
             (None, None) => format!("可用 {}", bytes(available)),
         };
         let focus = if hovered.is_some() { Some(0) } else { focus };
-        self.section(c, VIZ_Y - 7., "內存構成", &note, if focus.is_some() { INK } else { FAINT });
+        self.section(c, VIZ_Y - 7., "記憶體構成", &note, if focus.is_some() { INK } else { FAINT });
         let energy = r.ram().unwrap_or(0.) / 100.;
         // 懸停「可用」時條本身不點亮任何一段：可用是餘量，只用括號和一圈淡描邊圈出來，和點亮某一段區分開。
         let bar_focus = if span.is_some() { Some(usize::MAX) } else if available_hover { None } else { focus };
@@ -1342,7 +1342,7 @@ impl App {
         let peak = self.peak(|s| s.ram(), 60.).map(|p| format!("峰值 {p:.0}%")).unwrap_or_default();
         self.section(c, 182., "最近一分鐘", &peak, FAINT);
         self.trend(c, |s| s.ram(), 100., color, [COL_X, 188., COL_W, 28.]);
-        self.section(c, LIST_Y, "佔用內存最多的程序", "", FAINT);
+        self.section(c, LIST_Y, "佔用記憶體最多的程序", "", FAINT);
         self.program_rows(c, LIST_Y, LIST_ROWS, &r.by_memory, Some(offset), color, |p| (p.memory as f32, bytes(p.memory)));
     }
 
@@ -1487,7 +1487,7 @@ impl App {
                     BarStyle::Custom => {
                         if self.settings.performance_metrics == 0 { "未選擇指標，常駐區已收起。" } else { "僅在島上顯示勾選的指標。" }
                     }
-                    BarStyle::Gauges => "依次顯示 CPU、顯卡和內存佔用率。",
+                    BarStyle::Gauges => "依次顯示 CPU、顯卡和記憶體佔用率。",
                     BarStyle::Cores => "顯示處理器佔用率，每個邏輯處理器一根柱，按負載升高；核心較多時相鄰的合成一根。",
                     BarStyle::Pulse => "顯示 CPU 佔用率和最近 16 秒的負載曲線。",
                     BarStyle::Dashboard => "橫向並排顯示負載曲線、三項佔用率、網速和磁盤讀寫；側邊停靠時同樣的內容豎著排。",
@@ -1499,7 +1499,7 @@ impl App {
         settings_label(ui, "展開頁");
         settings_card(ui, |ui| {
             settings_segmented(ui, &mut self.settings.performance_view, &View::ALL.map(|v| (v, v.label())), 44.);
-            crate::extras::settings_hint(ui, "展開時先顯示的頁面。總覽裡點卡片進入詳情，標題旁的返回鍵回到總覽；移開鼠標收起後再展開，仍停在剛才的頁面，點常駐指標或切到其它頁面後從這裡開始。硬件未提供的讀數顯示為 —。");
+            crate::extras::settings_hint(ui, "展開時先顯示的頁面。總覽裡點卡片進入詳情，標題旁的返回鍵回到總覽；移開滑鼠收起後再展開，仍停在剛才的頁面，點常駐指標或切到其它頁面後從這裡開始。硬體未提供的讀數顯示為 —。");
             crate::extras::settings_hint(ui, "程序排行和分區容量只在展開頁打開時統計，收起後停止。");
         });
     }

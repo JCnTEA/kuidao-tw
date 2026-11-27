@@ -411,7 +411,7 @@ fn wireless_settings_controls_are_in_their_own_page() {
     let mut raster=crate::preview_raster::Raster::new(690,560);
     for (tab,name,visible,hidden) in [
         (10,"wireless-page-management",vec!["無線裝置電量"],vec!["常駐樣式","常駐裝置","電量提醒","安裝相容包…"]),
-        (crate::extras::SETTINGS_TAB_WIRELESS,"wireless-settings",vec!["島上常駐","常駐樣式","常駐裝置","電量提醒"],vec!["藍牙裝置連線","裝置相容","反饋裝置適配","本機插件"]),
+        (crate::extras::SETTINGS_TAB_WIRELESS,"wireless-settings",vec!["島上常駐","常駐樣式","常駐裝置","電量提醒"],vec!["藍牙裝置連線","裝置相容","回饋裝置適配","本機插件"]),
         (6,"wireless-notifications",vec!["藍牙裝置連線"],vec!["無線裝置電量","電量提醒"]),
     ] {
         h.app.settings_tab=tab;

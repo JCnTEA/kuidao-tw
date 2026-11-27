@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn plugin_status_components_fit_at_both_densities_skins_and_scales() {
         let status: PluginStatus = serde_json::from_value(json!({
-            "state":"running", "label":"最長測試標題已進入打印隊列".repeat(3),
+            "state":"running", "label":"最長測試標題已進入列印隊列".repeat(3),
             "progress_pct":95,
             "items":[
                 {"label":"任務","detail":"非常長的檔案名稱".repeat(8),"state":"running"},
@@ -308,8 +308,8 @@ mod tests {
             "series":[-f64::MAX, 0.0, f64::MAX],
             "series_label":"近期讀數",
             "clock":{"label":"北京","utc_offset_minutes":480,"format":"HH:mm:ss"},
-            "note":"冷卻風扇運行正常\n準備打印下一件",
-            "tags":["精細打印","模擬","深度觀測","標籤四"]
+            "note":"冷卻風扇運行正常\n準備列印下一件",
+            "tags":["精細列印","模擬","深度觀測","標籤四"]
         }))
         .unwrap();
         assert!(status.valid());
@@ -412,8 +412,8 @@ mod tests {
                         "列表第二條",
                         "列表第三條",
                         "冷卻風扇運行正常",
-                        "準備打印下一件",
-                        "精細打印",
+                        "準備列印下一件",
+                        "精細列印",
                         "近期讀數",
                         "北京",
                     ] {

@@ -1370,7 +1370,7 @@ mod tests {
         assert!(cache.key.is_empty());
         assert!(cache.events.is_some(),"空閒時要保留事件監聽，才能喚醒採樣線程");
         cache.clear(false);
-        assert!(cache.events.is_none(),"停用採樣時應註銷事件監聽");
+        assert!(cache.events.is_none(),"停用採樣時應登出事件監聽");
     }
 
     #[cfg(windows)]
@@ -1390,7 +1390,7 @@ mod tests {
         assert_eq!(event_interval(fast,false,"QQMusic.exe"),1000,"系統會話的變化由事件喚醒，定時檢查只需兜底");
         assert_eq!(event_interval(fast,false,"汽水音樂"),1000);
         for source in ["kugou","cloudmusic.exe","bodian_pc.exe","kwmusic.exe"] {
-            assert_eq!(event_interval(fast,false,source),fast,"{source} 的進度靠讀內存，沒有事件，保持原間隔");
+            assert_eq!(event_interval(fast,false,source),fast,"{source} 的進度靠讀記憶體，沒有事件，保持原間隔");
         }
         assert_eq!(event_interval(2000,false,"QQMusic.exe"),2000,"本來就更慢的不變快");
         assert_eq!(event_interval(fast,true,""),3000,"沒在播放時播放器開始放歌也會發事件");
@@ -2030,7 +2030,7 @@ fn live_discovery_cost(){
 }
 #[cfg(all(test,windows))]
 #[test]
-#[ignore="本機實測：同時打印系統會話與各播放器本機讀取的結果，以及最終選中的那一路"]
+#[ignore="本機實測：同時列印系統會話與各播放器本機讀取的結果，以及最終選取的那一路"]
 fn live_media_sources(){
     let _apartment=init_winrt();
     let mut artwork=ArtworkCache::default();let mut bodian=bodian::Reader::default();
@@ -2038,7 +2038,7 @@ fn live_media_sources(){
         let system=query(&mut artwork);let native=bodian.poll();
         let show=|m:&Option<NowPlaying>|m.as_ref().map_or("無".into(),|m|format!("{} · {} - {} ID={:?} 播放{} 類型{:?}",m.source,m.title,m.artist,m.song_id,m.playing,m.playback_type));
         println!("系統會話：{}",show(&system));println!("波點本機：{}",show(&native));
-        println!("最終選中：{}",show(&choose_media(system.clone(),native.clone())));
+        println!("最終選取：{}",show(&choose_media(system.clone(),native.clone())));
         std::thread::sleep(Duration::from_millis(800));
     }
 }

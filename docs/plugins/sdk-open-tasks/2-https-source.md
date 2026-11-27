@@ -1,12 +1,12 @@
 # 第 2 步：聯網取數與憑據
 
-開放受控聯網，一個插件最多可以有 3 個來源。密鑰由島仔託管，刷新間隔允許用戶調整，集市加版本撤回標記。分支為 `feat/plugin-https-source`，共同規則見 [README](README.md)。
+開放受控聯網，一個插件最多可以有 3 個來源。密鑰由島仔託管，刷新間隔允許使用者調整，集市加版本撤回標記。分支為 `feat/plugin-https-source`，共同規則見 [README](README.md)。
 
 ## 先讀
 
 - `spike/source_read.rs`：現有的文件和本機 HTTP 只讀來源。
 - `spike/local.rs`：`source_kind`、`set_source_grant`，以及 `tick_features` 裡的後台讀取。
-- `spike/local_ui.rs`：`source_dialog` 授權彈窗。
+- `spike/local_ui.rs`：`source_dialog` 授權彈出視窗。
 - `src/mail.rs` 的 `mod secrets`：已經在用 `keyring` 寫 Windows 憑據管理器。
 - `spike/market.rs`、`spike/market_state.rs`。
 - `docs/plugins/sdk-v1-design.md` 的第 5 節和第 12 節。
@@ -36,16 +36,16 @@
 - `hosts`：1 到 4 個完整域名。不接受通配符、IP、端口，也不接受 localhost。
 - `sources`：1 到 3 個來源，`key` 在同一插件裡不能重複。`url` 裡可以寫 `{settings.<key>}` 佔位符，宿主做 URL 編碼後填進去。填完後的地址必須滿足四條：協議是 https；主機在 `hosts` 裡；不含帳號密碼段；端口是 443 或不寫。佔位符只能出現在路徑和查詢串裡，不能出現在主機部分。
 - `credential`：可選。聲明後，宿主在每個來源的請求裡注入同一個請求頭。
-- `minRefreshSeconds`：可選，範圍 60 到 86400，默認等於 `refreshSeconds`。
+- `minRefreshSeconds`：可選，範圍 60 到 86400，預設等於 `refreshSeconds`。
 
 ### 授權
 
-- 新增 `SourceKind::Https`。授權彈窗列出全部來源的主機，用戶確認一次就覆蓋所有來源。
-- 聲明瞭 `credential` 的插件，彈窗裡多一個密鑰輸入框，內容遮擋顯示，標題用 `credential.label`。
+- 新增 `SourceKind::Https`。授權彈出視窗列出全部來源的主機，使用者確認一次就覆蓋所有來源。
+- 聲明瞭 `credential` 的插件，彈出視窗裡多一個密鑰輸入框，內容遮擋顯示，標題用 `credential.label`。
 - 密鑰存進 Windows 憑據管理器，複用 `keyring`。服務名單獨起一個，鍵用插件 ID。
 - 記錄 JSON 和日誌裡絕不能出現密鑰。
 - 撤銷授權或卸載插件時，同時刪除密鑰。
-- 插件更新後，如果 `hosts` 或 `sources` 變了，原授權失效，用戶要重新授權。
+- 插件更新後，如果 `hosts` 或 `sources` 變了，原授權失效，使用者要重新授權。
 
 ### 讀取
 
@@ -60,7 +60,7 @@
 
 ### 刷新間隔
 
-清單聲明瞭 `minRefreshSeconds` 時，插件設置頁自動多出一項「刷新間隔」。用戶可以在 `minRefreshSeconds` 到 86400 秒之間調整，用來照顧免費接口的額度。
+清單聲明瞭 `minRefreshSeconds` 時，插件設定頁自動多出一項「刷新間隔」。使用者可以在 `minRefreshSeconds` 到 86400 秒之間調整，用來照顧免費接口的額度。
 
 ### 數據來源標註
 
@@ -79,7 +79,7 @@
 - 在 `spike/examples/` 加一個「金價」樣例：
   - 主來源 xaus.com，需要的話再加一個匯率來源；
   - storage 保留最近 48 個價格點，供第 3 步的迷你折線使用；
-  - 用戶可以設一個提醒價位，漲過或跌破時用第 1 步的 `notice` 提醒；
+  - 使用者可以設一個提醒價位，漲過或跌破時用第 1 步的 `notice` 提醒；
   - 顯示數據來源；
   - 不給任何投資建議。
 - 另寫一份帶 `credential` 的清單示例放進文檔，以 GoldAPI.io 為例。

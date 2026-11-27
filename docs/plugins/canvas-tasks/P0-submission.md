@@ -1,4 +1,4 @@
-# P0：插件倉投稿校驗支持新插件
+# P0：插件倉投稿校驗支援新插件
 
 插件倉分支 `feat/submission-status-canvas`。無依賴，第一週就做。共同規則見 [README](README.md)。
 

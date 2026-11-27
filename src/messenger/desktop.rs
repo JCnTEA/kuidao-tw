@@ -360,7 +360,7 @@ mod tests{
         let paths=[normalized(&std::env::current_exe().unwrap().to_string_lossy())];
         assert_eq!(visible_relaunched_target(original,&paths),None);
         DestroyWindow(hidden).unwrap();
-        assert_eq!(visible_relaunched_target(original,&paths),None,"新主窗口尚未創建時應繼續等待");
+        assert_eq!(visible_relaunched_target(original,&paths),None,"新主窗口尚未建立時應繼續等待");
         let helper=create(w!("獨立會話"));
         let _=ShowWindow(helper,SW_SHOWNOACTIVATE);
         let unrelated=visible_relaunched_target(original,&paths);

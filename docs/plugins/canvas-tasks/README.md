@@ -14,8 +14,8 @@
 - 畫布是數據，不是代碼。插件每次刷新返回一份圖形描述，不能每幀運行腳本。
 - 會動的內容（時間、跳動的金額、倒計時、指針）用「綁定」交給島仔按秒或按分鐘計算。
 - 標準組件全部保留。畫布可以作為狀態頁裡的一個組件，也可以佔滿整頁。
-- 不強制打碼。隱私交給用戶，用戶可以用島仔已有的「截圖和錄屏中隱藏」等設置。
-- 字體默認用島仔自帶的。用戶安裝字體包後，畫布可以按名字引用這個字體，缺字時回退到島仔字體。
+- 不強制打碼。隱私交給使用者，使用者可以用島仔已有的「截圖和錄屏中隱藏」等設定。
+- 字體預設用島仔自帶的。使用者安裝字體包後，畫布可以按名字引用這個字體，缺字時回退到島仔字體。
 - 動畫不能讓島一直重繪。靜止時不出幀；有動畫時，兼容渲染下要按交互幀交付，參考 `src/main.rs` 裡 `page_animating` 的處理。
 
 ## 閱讀順序
@@ -30,8 +30,8 @@
 | --- | --- | --- | --- |
 | [A：畫布核心](A-canvas-core.md) | 島仔 | `feat/plugin-canvas` | 立即 |
 | [B：實時綁定、動畫與交互](B-canvas-live.md) | 島仔 | `feat/plugin-canvas-live` | A 之後 |
-| [C：常駐小畫布、字體包與設置補項](C-canvas-extras.md) | 島仔 | `feat/plugin-canvas-extras` | A 之後，與 B 並行 |
-| [P0：投稿校驗支持新插件](P0-submission.md) | 插件倉 | `feat/submission-status-canvas` | 立即 |
+| [C：常駐小畫布、字體包與設定補項](C-canvas-extras.md) | 島仔 | `feat/plugin-canvas-extras` | A 之後，與 B 並行 |
+| [P0：投稿校驗支援新插件](P0-submission.md) | 插件倉 | `feat/submission-status-canvas` | 立即 |
 | [P1：便籤本](P1-notes.md) | 插件倉 | `feat/official-notes` | 邏輯層立即；畫面層 A 之後 |
 | [P2：現貨金價](P2-gold.md) | 插件倉 | `feat/official-gold` | 同上 |
 | [P3：實時工資](P3-live-pay.md) | 插件倉 | `feat/official-live-pay` | 同上 |

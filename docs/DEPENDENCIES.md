@@ -6,10 +6,10 @@
 
 - `vendor/eframe`：基於 0.31.1，處理 Windows WGL 上下文複用、島體縮放和窗口焦點。
 - `vendor/egui`：基於 0.31.1，為不同縮放倍率維護獨立的字體紋理。
-- `vendor/imap`：基於 2.4.1，關閉 `nom` 默認功能並保留 `std`，移除郵件協議解析不需要的 `lexical-core` 浮點解析依賴。服務器拒絕進入 IDLE 時直接回到輪詢。
+- `vendor/imap`：基於 2.4.1，關閉 `nom` 預設功能並保留 `std`，移除郵件協議解析不需要的 `lexical-core` 浮點解析依賴。伺服器拒絕進入 IDLE 時直接回到輪詢。
 - `vendor/ureq`：基於 2.12.1。HTTP 代理的明文請求保持 absolute-form，HTTPS 的 CONNECT 隧道內改用 origin-form。原 MIT 與 Apache-2.0 許可證隨源碼保留。
 
-- `vendor/imap-proto`：兼容騰訊企業郵箱 CAPABILITY 響應末尾的空格，保留 IMAP4rev1 校驗和下一條響應邊界。
+- `vendor/imap-proto`：兼容騰訊企業信箱 CAPABILITY 響應末尾的空格，保留 IMAP4rev1 校驗和下一條響應邊界。
 
 ## 安全檢查
 

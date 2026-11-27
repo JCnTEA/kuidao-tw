@@ -499,7 +499,7 @@ fn weather_cities_switch_from_the_island_title_and_keep_their_own_cache(){
     h.click(H::local(115.0,112.0));h.hover(H::local(330.0,200.0),0.4);
     assert!(h.app.weather.picker_open,"點地點行展開城市下拉");assert!(!h.app.weather.solar_open,"點地點行不應切到日照");
     for phrase in ["自動定位","杭州","北京","新增或管理城市"] {
-        assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text().contains(phrase))),"下拉框缺少 {phrase}");
+        assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text().contains(phrase))),"下拉選單缺少 {phrase}");
     }
     let row=h.shapes.iter().find_map(|s|match &s.shape{egui::Shape::Text(t)if t.galley.text()=="杭州"=>Some(t.visual_bounding_rect().center()),_=>None}).unwrap();
     h.click(row);h.hover(row,0.3);
@@ -508,7 +508,7 @@ fn weather_cities_switch_from_the_island_title_and_keep_their_own_cache(){
     // 點面板外收起，不觸發日照視圖。
     h.click(H::local(209.0,147.0));h.hover(H::local(330.0,200.0),0.4);assert!(h.app.weather.picker_open,"無數據時入口在頁面中下方");
     h.click(H::local(330.0,200.0));h.hover(H::local(330.0,200.0),0.3);
-    assert!(!h.app.weather.picker_open);assert!(!h.app.weather.solar_open,"點外面只收起下拉框");
+    assert!(!h.app.weather.picker_open);assert!(!h.app.weather.solar_open,"點外面只收起下拉選單");
     // 刪除當前城市：回到自動定位。
     h.app.remove_weather_city(&hz);
     assert_eq!(h.app.settings.weather_saved,vec![bj.clone()]);assert!(h.app.settings.weather_city.is_empty());assert!(h.app.settings.weather_position.is_none());
@@ -561,8 +561,8 @@ fn weather_city_dropdown_selects_the_region_without_applying_the_draft(){
     for _ in 0..3 {draw(&mut h,vec![]);}
     h.ctx.memory_mut(|m|m.open_popup(egui::Id::new("weather-city-options")));
     for _ in 0..3 {draw(&mut h,vec![]);}
-    let point=h.shapes.iter().find_map(|s|match &s.shape {egui::Shape::Text(text) if text.galley.text()=="佛山市"=>Some(text.visual_bounding_rect().center()),_=>None}).expect("下拉框必須顯示完整城市名");
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="廣東 · 中國")),"下拉框必須顯示省份");
+    let point=h.shapes.iter().find_map(|s|match &s.shape {egui::Shape::Text(text) if text.galley.text()=="佛山市"=>Some(text.visual_bounding_rect().center()),_=>None}).expect("下拉選單必須顯示完整城市名");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t)if t.galley.text()=="廣東 · 中國")),"下拉選單必須顯示省份");
     draw(&mut h,vec![egui::Event::PointerMoved(point),egui::Event::PointerButton{pos:point,button:egui::PointerButton::Primary,pressed:true,modifiers:Default::default()}]);
     draw(&mut h,vec![egui::Event::PointerButton{pos:point,button:egui::PointerButton::Primary,pressed:false,modifiers:Default::default()}]);
     assert_eq!(h.app.weather.selected_city.as_ref(),Some(&correct));assert_eq!(h.app.weather.draft_city(),Some("佛山市"));
@@ -721,7 +721,7 @@ fn collapsed_resident_uses_its_outline_with_fewer_components() {
                 let out=h.app.frame(ui,Rect::from_min_size(ui.max_rect().min,size),&Env{t,..Default::default()});
                 if frame==89 {
                     assert!(out.hit.width()<crate::app::PW);
-                    assert!(out.resident_clip.is_some(),"收起後透明留白應放行鼠標");
+                    assert!(out.resident_clip.is_some(),"收起後透明留白應放行滑鼠");
                     assert!(out.glass.is_none());
                 }
             });
@@ -1375,7 +1375,7 @@ fn oled_shift_pauses_during_hover_intent() {
     assert!(h.app.oled_shift_idle(&h.ctx));
     h.hover(Pos2::new(WIN_W/2.0,12.0),0.05);
     assert!(!h.app.open,"懸停意圖緩衝期間尚未展開");
-    assert!(h.hit.contains(Pos2::new(WIN_W/2.0,12.0)),"鼠標已進入島體交互區域");
+    assert!(h.hit.contains(Pos2::new(WIN_W/2.0,12.0)),"滑鼠已進入島體交互區域");
     assert!(!h.app.oled_shift_idle(&h.ctx),"懸停交互期間不能移動島體");
 }
 
@@ -1696,9 +1696,9 @@ fn island_position_drag_tracks_screen_coordinates_and_saves_on_release(){
         for _ in 0..30{island_drag_frame(&mut h,bounds,ppp,Some(end),None);}
         let after=island_drag_frame(&mut h,bounds,ppp,Some(end),None);
         let movement=before.min-after.min;
-        assert!(((if dock.is_side(){movement.y}else{movement.x})-90.0).abs()<6.0,"{dock:?} / {ppp}：窗口應跟隨實際鼠標位移，允許整數位置刻度帶來的取整誤差");
+        assert!(((if dock.is_side(){movement.y}else{movement.x})-90.0).abs()<6.0,"{dock:?} / {ppp}：窗口應跟隨實際滑鼠位移，允許整數位置刻度帶來的取整誤差");
         assert_eq!(if dock.is_side(){movement.x}else{movement.y},0.0,"拖動不能脫離停靠邊緣");
-        assert_eq!(h.app.settings.island_offset,offset,"窗口跟隨鼠標移動後，原地持有不能發生累積漂移");
+        assert_eq!(h.app.settings.island_offset,offset,"窗口跟隨滑鼠移動後，原地持有不能發生累積漂移");
         island_drag_frame(&mut h,bounds,ppp,Some(end),Some(false));
         assert_eq!(crate::model::Settings::load().island_offset,offset,"鬆手後應儲存位置");
         assert_eq!((h.app.settings.dock,h.app.settings.display_id.as_str()),(dock,""));
@@ -1727,7 +1727,7 @@ fn island_position_drag_clamps_to_existing_limits_and_stays_resident(){
         island_drag_frame(&mut h,bounds,1.0,Some(end),Some(false));
         let offset=h.app.settings.island_offset;
         for _ in 0..40{island_drag_frame(&mut h,bounds,1.0,Some(start),None);}
-        assert_eq!(h.app.settings.island_offset,offset,"鬆手後不能繼續跟著鼠標移動");
+        assert_eq!(h.app.settings.island_offset,offset,"鬆手後不能繼續跟著滑鼠移動");
     }}
 }
 
@@ -1906,7 +1906,7 @@ fn shelf_drop_zone_leaves_normal_hover_and_text_selection_unchanged(){
     let point=zone.right_bottom()-Vec2::splat(12.0);assert!(!h.hit.contains(point));
     h.hover(point,0.8);assert!(!h.app.open);
     h.frame(vec![egui::Event::PointerButton{pos:point,button:egui::PointerButton::Primary,pressed:true,modifiers:Default::default()}]);
-    h.hover(point,0.8);assert!(!h.app.open,"按住鼠標拖選文字不應打開置物架");
+    h.hover(point,0.8);assert!(!h.app.open,"按住滑鼠拖選文字不應打開置物架");
     h.frame(vec![egui::Event::PointerButton{pos:point,button:egui::PointerButton::Primary,pressed:false,modifiers:Default::default()}]);
     h.app.settings.visible_pages[3]=false;h.frame(vec![]);assert!(h.file_drop_zone.is_none());
 }
@@ -2042,7 +2042,7 @@ fn settings_opening_restores_focus_once_without_becoming_topmost() {
     };
     h.app.open_mail_settings();
     let (builder,commands)=frame(&mut h,false);
-    assert_eq!(builder.visible,Some(false),"設定窗口應隱藏創建，避免首幀繪製前露出白色背景");
+    assert_eq!(builder.visible,Some(false),"設定窗口應隱藏建立，避免首幀繪製前露出白色背景");
     assert_eq!(builder.active,Some(false),"隱藏窗口不能提前激活");
     let show=commands.iter().position(|cmd|matches!(cmd,egui::ViewportCommand::Visible(true))).expect("首幀繪製後應顯示設定窗口");
     let focus=commands.iter().position(|cmd|matches!(cmd,egui::ViewportCommand::Focus)).unwrap();
@@ -2068,7 +2068,7 @@ fn settings_opening_restores_focus_once_without_becoming_topmost() {
     let _=h.ctx.run(egui::RawInput::default(),|ctx|h.app.settings_ui(ctx,false));
     h.app.open_settings();
     let (builder,commands)=frame(&mut h,false);
-    assert_eq!(builder.visible,Some(false),"關閉後重新創建也應隱藏到首幀完成");
+    assert_eq!(builder.visible,Some(false),"關閉後重新建立也應隱藏到首幀完成");
     assert!(commands.iter().any(|cmd|matches!(cmd,egui::ViewportCommand::Visible(true))),"重開設定應正常顯示");
 }
 
@@ -2117,7 +2117,7 @@ fn minimal_mode_stays_a_line_with_music_and_after_media_changes(){
     h.media=crate::smtc::NowPlaying{title:"Track".into(),artist:"Artist".into(),playing:true,duration:120.0,..Default::default()};
     for _ in 0..90 {h.frame(vec![]);}
     assert!(h.region.height()<20.0,"播放音樂時仍應遵守極簡開關");
-    assert!(h.hit.height()<=crate::app::BAR_H_MIN+0.1,"鼠標命中範圍也應收回細線");
+    assert!(h.hit.height()<=crate::app::BAR_H_MIN+0.1,"滑鼠命中範圍也應收回細線");
     h.media.title="Another Track".into();h.media.playing=false;
     for _ in 0..90 {h.frame(vec![]);}
     assert!(h.region.height()<20.0,"暫停或切歌不能覆蓋極簡開關");
@@ -2906,9 +2906,9 @@ fn minimal_hover_excludes_the_surrounding_browser_tabs() {
         Pos2::new(WIN_W/2.0+crate::app::BAR_W_MIN/2.0+2.0,2.0),
         Pos2::new(WIN_W/2.0-crate::app::BAR_W_MIN/2.0-2.0,2.0),
     ] {
-        assert!(!h.hit.contains(cursor),"劉海外的標籤欄應接收鼠標操作");
+        assert!(!h.hit.contains(cursor),"劉海外的標籤欄應接收滑鼠操作");
         h.hover(cursor,1.0);
-        assert!(!h.app.open,"鼠標未觸碰極簡劉海時不得展開");
+        assert!(!h.app.open,"滑鼠未觸碰極簡劉海時不得展開");
     }
 }
 
@@ -2977,7 +2977,7 @@ fn hold_open_shelf_tabs_and_all_page_exit() {
         }
         h.click(h.ctx.read_response(pin_id).unwrap().rect.center());
         h.hover(pin,0.5);
-        assert!(h.app.open,"取消固定時鼠標仍在島上");
+        assert!(h.app.open,"取消固定時滑鼠仍在島上");
         assert!(h.ctx.read_response(pin_id).is_none(),"其他頁面淡出後不能留下圖釘熱區");
         h.hover(away,1.0);
         assert!(!h.app.open,"取消後恢復自動收起");
@@ -4812,7 +4812,7 @@ fn music_mascot_puts_away_the_microphone_during_notices_and_their_fade_out(){
         assert!(h.media.playing);assert!(h.app.island_lyric().is_some());
     }
     h.app.pet.react(PetState::Satisfied);h.app.alert("大寫鎖定","已開啟",5,false);h.frame(vec![]);
-    assert_eq!(h.app.pet_state(),PetState::Satisfied,"已有的喝水反饋應保留優先級");
+    assert_eq!(h.app.pet_state(),PetState::Satisfied,"已有的喝水回饋應保留優先級");
 }
 
 #[test]
@@ -6148,7 +6148,7 @@ fn calendar_first_schedule_has_a_large_time_and_keeps_the_lower_list_scrollable(
     h.click(H::local(260.0,138.0));h.hover(H::local(300.0,194.0),0.2);
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="12:00" && t.galley.job.sections[0].format.font_id.size>=23.0)),"點擊才切換大卡片");
     h.wheel(-40.0);
-    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="12:00" && t.galley.job.sections[0].format.font_id.size>=23.0)),"選中後滾動仍保持詳情");
+    assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="12:00" && t.galley.job.sections[0].format.font_id.size>=23.0)),"選取後滾動仍保持詳情");
     h.app.open_calendar(Some(h.app.calendar.view.events[6].clone()));h.hover(H::local(300.0,40.0),0.3);
     assert!(h.shapes.iter().any(|s|matches!(&s.shape,egui::Shape::Text(t) if t.galley.text()=="會議 6")),"提醒定位的末條行程應完整可見");
 }
@@ -6525,7 +6525,7 @@ fn bottom_page_shortcuts_share_a_row_with_dots_on_every_dock() {
         egui::Shape::Rect(rect) if rect.fill.a()>0 && area.contains_rect(rect.rect)
             && rect.rect.center().distance(area.center())<0.1 => Some(rect.fill),
         _ => None,
-    }).expect("當前功能應有選中底色");
+    }).expect("當前功能應有選取底色");
     let settle=|h:&mut H| {
         for _ in 0..100 {frame_control_draw(h,None,vec![]);}
     };
@@ -6569,7 +6569,7 @@ fn bottom_page_shortcuts_share_a_row_with_dots_on_every_dock() {
         assert_eq!(h.app.page(),MUSIC_PAGE);
         settle(&mut h);
         let music=control(&h,"page-shortcut",MUSIC_PAGE).unwrap();
-        assert_ne!(highlight(&h,music),todo_color,"音樂和待辦的選中底色應不同");
+        assert_ne!(highlight(&h,music),todo_color,"音樂和待辦的選取底色應不同");
         let dot=control(&h,"dot",FOCUS_PAGE).unwrap();
         click(&mut h,dot.center());
         assert_eq!(h.app.page(),FOCUS_PAGE);
@@ -6938,7 +6938,7 @@ fn mail_hyperlink_click_requests_the_default_browser() {
     h.app.mail.recent=vec![crate::mail::Item {received_unix: None, account:"a@qq.com".into(),from:"產品團隊".into(),subject:"評審文檔".into(),time:"09:41".into(),code:None,html: String::new().into(), summary:"請查看以下文檔。".into(),links:vec![crate::mail::Link{label:"查看文檔".into(),url:"https://example.com/review?a=1&b=2".into()}],meeting:None,uid:10}];
     h.app.mail.open_uid=Some(("a@qq.com".into(),10));h.app.show_page(5);
     h.hover(H::local(300.0,60.0),1.0);
-    let link=h.shapes.iter().find_map(|shape|match &shape.shape{egui::Shape::Text(text)if text.galley.text().contains("查看文檔")=>Some(text.visual_bounding_rect()),_=>None}).expect("應展示郵件的超鏈接");
+    let link=h.shapes.iter().find_map(|shape|match &shape.shape{egui::Shape::Text(text)if text.galley.text().contains("查看文檔")=>Some(text.visual_bounding_rect()),_=>None}).expect("應展示郵件的超連結");
     h.click(link.center());
     assert!(h.cmds.iter().any(|cmd|matches!(cmd,crate::app::Cmd::OpenUrl(url)if url=="https://example.com/review?a=1&b=2")),"點擊後應通過預設瀏覽器打開完整地址");
 }
@@ -7009,7 +7009,7 @@ fn code_copy_confirmation_stays_below_the_island_and_does_not_capture_hover() {
         let bounds=confirmation(&h).expect("複製後應顯示確認提示");
         assert!(bounds.top()>PH+4.0,"確認提示應在島下方：{bounds:?}");
         assert!(h.region.contains_rect(bounds),"原生窗口區域應包含提示，避免被裁掉");
-        assert!(!h.hit.intersects(bounds),"確認提示不應攔截鼠標或維持島的展開");
+        assert!(!h.hit.intersects(bounds),"確認提示不應攔截滑鼠或維持島的展開");
         h.hover(Pos2::new(600.0,180.0),0.8);
         assert!(h.app.progress()<0.02);
         assert!(confirmation(&h).is_some(),"島收起後確認提示仍應顯示到正常結束");
@@ -7088,7 +7088,7 @@ fn todo_reminder_picker_is_embedded_in_the_island(){
     h.app.todos.items=vec![crate::model::TodoItem{text:"準備會議".into(),done_on:None,due:None,reminded:false,..Default::default()}];
     h.app.show_page(4);h.hover(H::local(300.0,60.0),1.0);
     h.ctx.set_embed_viewports(false);
-    egui::Context::set_immediate_viewport_renderer(|_,_|panic!("待辦提醒必須在島內選擇，不能創建獨立窗口"));
+    egui::Context::set_immediate_viewport_renderer(|_,_|panic!("待辦提醒必須在島內選擇，不能建立獨立窗口"));
     h.click(H::local(343.0,46.0));
     for _ in 0..90 {h.frame(vec![]);}
     assert_eq!(h.app.expanded_height(),PH,"右側滾輪應保持待辦頁原來的高度");
@@ -7345,7 +7345,7 @@ fn reminder_and_reader_layout_gallery(){
     for picker in [true,false]{
         let mut h=H::new();h.ctx.set_embed_viewports(true);
         h.app.todos.items=vec![crate::model::TodoItem{text:"提交產品方案".into(),due:None,done_on:None,reminded:false,..Default::default()}];h.app.open_task_reminder(0);
-        let body=(1..=12).map(|n|format!("第 {n} 項 · 工作安排\n請確認需求與交付範圍，整理設計方案和本週待辦，並在評審前同步進度。相關意見請彙總後反饋給產品團隊。\n\n")).collect::<String>();
+        let body=(1..=12).map(|n|format!("第 {n} 項 · 工作安排\n請確認需求與交付範圍，整理設計方案和本週待辦，並在評審前同步進度。相關意見請彙總後回饋給產品團隊。\n\n")).collect::<String>();
         h.app.mail.reading=Some(crate::mail::Item {received_unix: None, account:"work@icloud.com".into(),from:"產品團隊".into(),subject:"項目方案與下階段工作安排".into(),time:"10-31 09:41".into(),code:None,html: String::new().into(), summary:format!("各位好，\n\n以下是項目安排與交付要求，請逐項確認。\n\n{body}最後一段\n請在週五前確認，感謝配合。").into(),links:vec![crate::mail::Link{label:"查看項目資料".into(),url:"https://example.com/project".into()}],meeting:None,uid:42});
         let (w,height)=if picker{(WIN_W as u32,WIN_H as u32)}else{(700,620)};let ppp=1.5;
         let mut raster=crate::preview_raster::Raster::new((w as f32*ppp)as usize,(height as f32*ppp)as usize);
@@ -8235,7 +8235,7 @@ fn mail_report_save_and_failure_paths() {
     click(&mut h, "儲存並開始監控");
     let saved = crate::mail::load_accounts();
     assert_eq!(saved.iter().find(|account| account.email == gmail), Some(&tested));
-    assert!(h.app.mail.form.use_windows_proxy, "帳號儲存後彈窗裡的測試仍應使用原連線方式");
+    assert!(h.app.mail.form.use_windows_proxy, "帳號儲存後彈出視窗裡的測試仍應使用原連線方式");
     assert!(!saved[0].use_windows_proxy);
     assert_eq!(crate::mail::secrets::load(&gmail).unwrap(), "synthetic-gmail-secret");
 
@@ -8998,7 +8998,7 @@ fn skin_gallery_pages(){
         for page in 0..9usize {
             let mut h=H::new();h.app.settings.skin=skin;h.app.settings.island_shape=crate::model::IslandShape::Pill;
             h.quota_accounts(2);
-            h.app.todos.items.push(crate::model::TodoItem{text:"整理島仔皮膚反饋".into(),done_on:None,due:Some("2026-11-05 10:00".into()),reminded:false,..Default::default()});
+            h.app.todos.items.push(crate::model::TodoItem{text:"整理島仔皮膚回饋".into(),done_on:None,due:Some("2026-11-05 10:00".into()),reminded:false,..Default::default()});
             h.app.todos.items.push(crate::model::TodoItem{text:"已完成的事項".into(),done_on:Some("2026-11-04".into()),due:None,reminded:false,..Default::default()});
             h.media=crate::smtc::NowPlaying{title:"Paper Boats".into(),artist:"The Lanterns".into(),position:64.0,duration:201.0,playing:true,..Default::default()};
             let (w,hgt)=((crate::app::CANVAS_W*2.0) as usize,(WIN_H*2.0) as usize);
@@ -9543,7 +9543,7 @@ fn automatic_minimal_hides_unread_hit_area_until_reopened(){
         h.browser_at_top=Some(true);
         for _ in 0..90 {side_frame_with(&mut h,None);}
         let out=side_frame_with(&mut h,None);
-        assert!(out.notice_hit.is_none(),"{dock:?} 避讓時未讀仍佔用鼠標區域");
+        assert!(out.notice_hit.is_none(),"{dock:?} 避讓時未讀仍佔用滑鼠區域");
         assert!(out.click_through,"{dock:?} 細條可感應懸停，點擊應交給底下的程序");
         assert_eq!(h.app.pending_messengers.len(),2);
         h.app.show_page(0);
@@ -9701,7 +9701,7 @@ fn notification_preview_masks_fullwidth_and_zero_width_codes(){
 /// 內存實測：模擬長時間聽歌（不斷出現新漢字）並瀏覽各頁面，輸出進程內存、字形圖集和貼圖佔用。
 /// 運行：DAOZAI_ATLAS=4096 DAOZAI_PPP=1.5 cargo test --lib memory_profile -- --ignored --nocapture --test-threads=1
 #[test]
-#[ignore="內存實測，按需運行"]
+#[ignore="記憶體實測，按需運行"]
 fn memory_profile_long_listening_session(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let side:usize=std::env::var("DAOZAI_ATLAS").ok().and_then(|s|s.parse().ok()).unwrap_or(4096);
@@ -9722,7 +9722,7 @@ fn memory_profile_long_listening_session(){
     }
     println!("{:<16} {}","測試進程基線",rss());
     let mut h=H::new();h.app.settings.island_lyrics=true;h.app.show_lyrics=true;
-    println!("{:<16} {}","創建界面後",rss());
+    println!("{:<16} {}","建立界面後",rss());
     let mut seed=12345u64;let mut next=||{seed=seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);(seed>>33) as u32};
     let run=|h:&mut H,media:&crate::smtc::NowPlaying|{
         h.t+=1.0/60.0;
@@ -9956,7 +9956,7 @@ fn unavailable_messenger_status_stays_visible_when_the_island_is_collapsed(){
         }).expect("島收起時仍應完整顯示帳號狀態提示");
         assert!(h.app.progress()<0.02,"提示不應展開島體");
         assert!(h.region.contains_rect(bounds),"原生窗口區域應包含提示");
-        assert!(!h.hit.intersects(bounds),"提示不應攔截鼠標");
+        assert!(!h.hit.intersects(bounds),"提示不應攔截滑鼠");
     }
 }
 
@@ -10152,7 +10152,7 @@ fn unread_capsule_stays_full_size_when_crossing_the_gap() {
             assert!(h.app.open,"沿螢幕頂邊移到圖標上方應保持展開");
         }
         h.hover(initial.center(),0.2);
-        assert_eq!(badge(&h),initial,"鼠標移到圖標時應保持原有位置和尺寸");
+        assert_eq!(badge(&h),initial,"滑鼠移到圖標時應保持原有位置和尺寸");
         h.hover(Pos2::new(gap.x,initial.bottom()+80.0),1.0);
         assert!(!h.app.open,"離開膠囊高度範圍後應恢復收起");
     }
@@ -10329,10 +10329,10 @@ fn shelf_menu_last_action_fits_inside_window_and_works(){
     let label=h.shapes.iter().find_map(|s|match &s.shape{
         egui::Shape::Text(t) if t.galley.text()=="從置物架移除"=>Some(Rect::from_min_size(t.pos,t.galley.size())),
         _=>None,
-    }).expect("右鍵菜單應顯示移除操作");
+    }).expect("右鍵選單應顯示移除操作");
     assert!(h.region.contains_rect(h.app.shelf_menu_rect.unwrap() + h.ctx.style().visuals.popup_shadow.margin()));
     assert!(h.app.shelf_menu_rect.unwrap().contains_rect(label));
-    assert!(h.top_bar_notice.is_none(),"置物架菜單不能觸發通知置頂");
+    assert!(h.top_bar_notice.is_none(),"置物架選單不能觸發通知置頂");
     h.hover(label.center(),1.0);
     assert!(h.app.open);
     h.click(label.center());
@@ -11284,7 +11284,7 @@ fn performance_badge_opens_overview_and_drills_into_details() {
     assert_eq!(h.app.settings.performance_view,View::Overview,"島內瀏覽不改設定");
     h.app.performance.view=Some(View::Memory);
     h.hover(Pos2::new(5.0,WIN_H-5.0),2.0);
-    assert!(!h.app.open,"移開鼠標後島收起");
+    assert!(!h.app.open,"移開滑鼠後島收起");
     assert_eq!(h.app.performance.view,Some(View::Memory),"收起後再展開仍停在剛才的詳情");
     h.app.set_page_visible(PERFORMANCE_PAGE,false);
     h.frame(vec![]);

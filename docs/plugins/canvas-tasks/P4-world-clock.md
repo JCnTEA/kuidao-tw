@@ -2,10 +2,10 @@
 
 插件倉分支 `feat/official-world-clock`，插件 ID `daozai.world-clock`。邏輯層現在就能開工，畫面層依賴 A、B、C；投稿依賴 P0。設計稿：「理想版 · 世界時鐘」。共同規則見 [README](README.md)。
 
-## 設置
+## 設定
 
 - `cities`：`list`，最多 10 項。每項包含：
-  - `name`：text，顯示名，默認取城市表裡的中文名；
+  - `name`：text，顯示名，預設取城市表裡的中文名；
   - `zone`：C 新增的 `timezone` 類型。
 - `pinned_city`：choice，從已添加的城市裡選一個常駐。
 - 清單聲明 `timezones: true`。

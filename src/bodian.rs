@@ -460,7 +460,7 @@ fn discovery_without_a_window_hint_falls_back_to_a_slow_check(){
 }
 
 #[test]
-#[ignore="需要本機波點正在播放：連續讀 20 秒，打印每次讀到的歌名、進度和是否找到播放器，用於排查切歌後不顯示"]
+#[ignore="需要本機波點正在播放：連續讀 20 秒，列印每次讀到的歌名、進度和是否找到播放器，用於排查切歌後不顯示"]
 fn live_bodian_trace(){
     let mut reader=Reader::default();
     let started=Instant::now();
@@ -507,7 +507,7 @@ fn song_info_is_taken_from_the_play_log_before_the_library_is_written(){
 }
 
 #[test]
-#[ignore="需要本機波點正在播放：逐步打印播放引擎讀取，定位哪一步失敗"]
+#[ignore="需要本機波點正在播放：逐步列印播放引擎讀取，定位哪一步失敗"]
 fn live_bodian_playback_steps(){
     let target=Target::discover().expect("需要波點");let process=Process::open(target.pid).unwrap();
     let head=process.pointer(target.events+0xa1d8).unwrap();let mut node=process.pointer(head).unwrap();

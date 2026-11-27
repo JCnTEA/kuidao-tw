@@ -1111,7 +1111,7 @@ impl Window {
                     match crate::composition::Backdrop::new() {
                         Ok(backdrop) => {
                             self.apply_capture_to_new_window(backdrop.hwnd(), "島仔毛玻璃底板");
-                            glass_diagnostic("合成引擎模糊底板已創建");
+                            glass_diagnostic("合成引擎模糊底板已建立");
                             self.backdrop = Some(backdrop);
                         }
                         Err(error) => {
@@ -1521,9 +1521,9 @@ mod tests {
                 assert_eq!(GetForegroundWindow(),foreground,"置頂不能搶走輸入焦點");
                 for (x,y,w,h) in [(-10000,-10000,400,140),(-10480,-10000,1920,300),(-10480,-10000,1920,1080),(-10480,-9600,1920,32),(-12400,-10000,1920,32)] {
                     SetWindowPos(cover.0,HWND_TOPMOST,x,y,w,h,flags).unwrap();
-                    assert!(!top_bar_above(display,bounds,None),"普通彈窗、全屏窗口和其他螢幕不觸發頂欄適配");
+                    assert!(!top_bar_above(display,bounds,None),"普通彈出視窗、全屏窗口和其他螢幕不觸發頂欄適配");
                     native.keep_above_top_bar(bounds,None);
-                    assert!(above(cover.0,display),"不應越過無關彈窗爭搶置頂");
+                    assert!(above(cover.0,display),"不應越過無關彈出視窗爭搶置頂");
                 }
                 SetWindowPos(cover.0,HWND_TOPMOST,bounds.left,bounds.top,1920,32,flags).unwrap();
                 let _=ShowWindow(cover.0,SW_HIDE);

@@ -512,7 +512,7 @@ impl Bridge {
             .addr
             .port();
         let token = random_token()?;
-        fs::create_dir_all(&self.dir).map_err(|error| format!("無法創建插件通知目錄：{error}"))?;
+        fs::create_dir_all(&self.dir).map_err(|error| format!("無法建立插件通知目錄：{error}"))?;
         let mut sources = self.sources.clone();
         sources.push(Source {
             id: id.to_owned(),
@@ -992,7 +992,7 @@ mod tests {
     fn status_updates_coalesce_expire_and_invalidate_old_actions() {
         let dir = TestDir::new();
         let mut bridge = Bridge::start(&dir.0, egui::Context::default()).unwrap();
-        bridge.authorize("printer", "打印機").unwrap();
+        bridge.authorize("printer", "列印機").unwrap();
         let printer = descriptor(&bridge, "printer");
         bridge.display(true, true);
         let status = |id, title, ttl_seconds| {
@@ -1003,22 +1003,22 @@ mod tests {
         {
             let mut state = bridge.state.lock().unwrap();
             assert_eq!(
-                request_at(&mut state, &printer, status("one", "打印 42%", 1), now)["error"],
+                request_at(&mut state, &printer, status("one", "列印 42%", 1), now)["error"],
                 "invalid_ttl"
             );
             assert_eq!(
-                request_at(&mut state, &printer, status("one", "打印 42%", 20), now)["ok"],
+                request_at(&mut state, &printer, status("one", "列印 42%", 20), now)["ok"],
                 true
             );
             assert_eq!(
-                request_at(&mut state, &printer, status("one", "打印 43%", 20), now)["error"],
+                request_at(&mut state, &printer, status("one", "列印 43%", 20), now)["error"],
                 "busy"
             );
             assert_eq!(
                 request_at(
                     &mut state,
                     &printer,
-                    status("one", "打印 44%", 20),
+                    status("one", "列印 44%", 20),
                     now + STATUS_INTERVAL
                 )["ok"],
                 true
@@ -1031,7 +1031,7 @@ mod tests {
         else {
             panic!("{events:?}");
         };
-        assert_eq!(first.title.as_deref(), Some("打印 44%"));
+        assert_eq!(first.title.as_deref(), Some("列印 44%"));
         bridge
             .open_session("printer", &first.id, "job-one")
             .unwrap();
