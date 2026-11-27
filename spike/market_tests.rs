@@ -1,6 +1,30 @@
 use super::*;
 
 #[test]
+fn market_localization_keeps_download_identity() -> Result<()> {
+    let mut entry: Entry = serde_json::from_value(json!({
+        "id": "example.localized",
+        "name": "测试插件",
+        "author": "张三",
+        "version": "1.2.3",
+        "size": 1234,
+        "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "presentation": {"description": "这是一个测试插件"}
+    }))?;
+    entry.localize_display();
+    assert_eq!(entry.id, "example.localized");
+    assert_eq!(entry.name, "測試插件");
+    assert_eq!(entry.author, "張三");
+    assert_eq!(entry.presentation.as_ref().unwrap().description.as_deref(), Some("這是一個測試插件"));
+    // 下載仍用作者目錄裡的同一版本、大小、雜湊與檔名。
+    assert_eq!(entry.version, "1.2.3");
+    assert_eq!(entry.size, 1234);
+    assert_eq!(entry.sha256, "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+    assert_eq!(entry.zip_name(), "plugin-example.localized-1.2.3.zip");
+    Ok(())
+}
+
+#[test]
 fn market_package_preserves_declared_data() -> Result<()> {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("spike/examples/holidays/plugin.json");
     let zip = std::env::temp_dir().join(format!("daozai-package-data-{}.zip", std::process::id()));

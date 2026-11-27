@@ -11,6 +11,63 @@ fn settle(host: &mut LocalPlugins, today: &str) {
     }
 }
 
+#[test]
+fn plugin_localization_changes_only_display_text() -> Result<()> {
+    let mut doc: Value = serde_json::from_str(include_str!("examples/countdown/plugin.json"))?;
+    doc["name"] = json!("倒计时");
+    doc["author"] = json!("岛仔");
+    doc["settings"][0]["label"] = json!("名称");
+    doc["settings"][2]["label"] = json!("方向");
+    doc["settings"][2]["choices"][0]["label"] = json!("还有几天");
+    doc["settings"][2]["choices"][1]["label"] = json!("已经几天");
+    doc["settings"].as_array_mut().unwrap().push(json!({
+        "key": "minutes", "label": "等待分钟", "type": "number", "default": "5",
+        "min": 1, "max": 60, "step": 1, "unit": "分钟"
+    }));
+    let manifest = Manifest::decode(&doc.to_string())?;
+    assert_eq!(manifest.name, "倒計時");
+    assert_eq!(manifest.author, "島仔");
+    assert_eq!(manifest.settings[0].label, "名稱");
+    assert_eq!(manifest.settings[2].label, "方向");
+    assert_eq!(manifest.settings[2].choices.as_ref().unwrap()[0].label, "還有幾天");
+    assert_eq!(manifest.settings[2].choices.as_ref().unwrap()[1].label, "已經幾天");
+    assert_eq!(manifest.settings[3].label, "等待分鐘");
+    assert_eq!(manifest.settings[3].unit.as_deref(), Some("分鐘"));
+    // 顯示文字以外一律保持作者原樣。
+    assert_eq!(manifest.settings[2].key, "mode");
+    assert_eq!(manifest.settings[2].default, "until");
+    assert_eq!(manifest.settings[2].choices.as_ref().unwrap()[0].value, "until");
+    assert_eq!(manifest.settings[3].default, "5");
+    assert_eq!(manifest.settings[3].min, Some(1.0));
+    assert_eq!(manifest.settings[3].max, Some(60.0));
+    Ok(())
+}
+
+#[cfg(windows)]
+#[test]
+fn plugin_localization_keeps_the_author_source_and_credentials() -> Result<()> {
+    let mut doc: Value = serde_json::from_str(include_str!("examples/https-repository/plugin.json"))?;
+    doc["name"] = json!("Rust 仓库动态");
+    doc["author"] = json!("岛仔");
+    doc["network"]["credential"] = json!({
+        "label": "访问令牌", "header": "Authorization", "prefix": "Bearer"
+    });
+    doc["attribution"] = json!({"label":"数据来源","url":"https://api.github.com"});
+    let manifest = Manifest::decode(&doc.to_string())?;
+    assert_eq!(manifest.name, "Rust 倉庫動態");
+    assert_eq!(manifest.author, "島仔");
+    let network = manifest.network.as_ref().unwrap();
+    assert_eq!(network.url.as_deref(), Some("https://api.github.com/repos/rust-lang/rust"));
+    assert_eq!(network.credential.as_ref().unwrap().label, "訪問令牌");
+    let network = serde_json::to_value(network)?;
+    assert_eq!(network["url"], "https://api.github.com/repos/rust-lang/rust");
+    assert_eq!(network["credential"]["header"], "Authorization");
+    assert_eq!(network["credential"]["prefix"], "Bearer");
+    assert_eq!(manifest.attribution.as_ref().unwrap().label, "資料來源");
+    assert_eq!(manifest.attribution.as_ref().unwrap().url.as_deref(), Some("https://api.github.com"));
+    Ok(())
+}
+
 fn write_shortcut_package(dir: &Path, id: &str, version: &str, colors: Value) -> Result<PathBuf> {
     fs::create_dir_all(dir)?;
     fs::write(dir.join(COVER_FILE), include_bytes!("examples/payday/cover.png"))?;

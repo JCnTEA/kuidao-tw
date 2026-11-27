@@ -88,6 +88,15 @@ pub(super) struct Entry {
 }
 
 impl Entry {
+    /// 目錄原文只轉顯示文字；id、版本、大小、雜湊與下載檔名都不動。
+    fn localize_display(&mut self) {
+        self.name = crate::zh::to_traditional(&self.name);
+        self.author = crate::zh::to_traditional(&self.author);
+        if let Some(presentation) = &mut self.presentation {
+            presentation.localize_display();
+        }
+    }
+
     fn matches(&self, manifest: &Manifest) -> bool {
         self.id == manifest.id
             && self.version == manifest.version
@@ -140,6 +149,12 @@ pub(super) struct Presentation {
 }
 
 impl Presentation {
+    pub(super) fn localize_display(&mut self) {
+        if let Some(description) = &mut self.description {
+            *description = crate::zh::to_traditional(description);
+        }
+    }
+
     fn valid(&self) -> bool {
         self.description.as_deref().is_none_or(|description| {
             !description.trim().is_empty() && description.chars().count() <= 1000
@@ -219,13 +234,7 @@ impl Catalog {
         }
         // 上游目錄的中文是簡體：只在記憶體裡轉繁體，原檔案照原樣快取，雜湊與下載都不受影響。
         for entry in &mut file.plugins {
-            entry.name = crate::zh::to_traditional(&entry.name);
-            entry.author = crate::zh::to_traditional(&entry.author);
-            if let Some(presentation) = &mut entry.presentation {
-                if let Some(description) = &presentation.description {
-                    presentation.description = Some(crate::zh::to_traditional(description));
-                }
-            }
+            entry.localize_display();
         }
         let mut seen = BTreeSet::new();
         for entry in &file.plugins {

@@ -110,6 +110,27 @@ struct Field {
     #[serde(rename = "maxItems", default, deserialize_with = "present_value", skip_serializing_if = "Option::is_none")]
     max_items: Option<usize>,
 }
+
+impl Field {
+    /// 插件清單原文可能是簡體：只轉顯示文字，key、default、選項 value 與單位數值都不動。
+    fn localize_display(&mut self) {
+        self.label = crate::zh::to_traditional(&self.label);
+        if let Some(unit) = &mut self.unit {
+            *unit = crate::zh::to_traditional(unit);
+        }
+        if let Some(choices) = &mut self.choices {
+            for choice in choices {
+                choice.label = crate::zh::to_traditional(&choice.label);
+            }
+        }
+        if let Some(items) = &mut self.item {
+            for field in items {
+                field.localize_display();
+            }
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Material {
@@ -252,6 +273,17 @@ fn is_false(value: &bool) -> bool {
 }
 
 impl Record {
+    /// 舊版快照可能存著尚未轉繁的清單；載入時只補顯示文字，設定值與封包內容不重寫。
+    fn localize_display(&mut self) {
+        if let Some(package) = &mut self.package {
+            package.manifest.localize_display();
+        }
+        #[cfg(windows)]
+        if let Some(presentation) = &mut self.presentation {
+            presentation.localize_display();
+        }
+    }
+
     fn source_kind(&self) -> Option<SourceKind> {
         self.package.as_ref()?.manifest.source_kind()
     }
@@ -432,6 +464,29 @@ impl Manifest {
         false
     }
 
+    /// 只把作者清單裡的顯示文字轉成繁體；識別碼、版本、鍵值、預設值與資料來源都保持原樣。
+    fn localize_display(&mut self) {
+        self.name = crate::zh::to_traditional(&self.name);
+        self.author = crate::zh::to_traditional(&self.author);
+        if let Some(accent) = &mut self.title_accent {
+            *accent = crate::zh::to_traditional(accent);
+        }
+        for field in &mut self.settings {
+            field.localize_display();
+        }
+        #[cfg(windows)]
+        {
+            if let Some(network) = &mut self.network {
+                if let Some(credential) = &mut network.credential {
+                    credential.label = crate::zh::to_traditional(&credential.label);
+                }
+            }
+            if let Some(attribution) = &mut self.attribution {
+                attribution.label = crate::zh::to_traditional(&attribution.label);
+            }
+        }
+    }
+
     fn decode(contents: &str) -> Result<Self> {
         #[derive(Deserialize)]
         struct ApiHeader {
@@ -445,15 +500,8 @@ impl Manifest {
             )));
         }
         let mut manifest: Self = serde_json::from_str(contents)?;
-        // 上游清單的中文是簡體；顯示層一律轉成繁體（台灣字形），不改 id、版本與結構。
-        manifest.name = crate::zh::to_traditional(&manifest.name);
-        manifest.author = crate::zh::to_traditional(&manifest.author);
-        if let Some(accent) = &manifest.title_accent {
-            manifest.title_accent = Some(crate::zh::to_traditional(accent));
-        }
-        for field in &mut manifest.settings {
-            field.label = crate::zh::to_traditional(&field.label);
-        }
+        // 上游清單的中文是簡體；顯示層一律轉成繁體（台灣字形），不改 id、版本、設定值與結構。
+        manifest.localize_display();
         manifest.validate()?;
         if manifest.cover.is_none() {
             return Err(fail("請在插件清單中聲明 cover: \"cover.png\""));
@@ -1172,7 +1220,8 @@ impl LocalPlugins {
                 let parsed = bounded(&p, font_assets::SNAPSHOT_LIMIT)
                     .ok()
                     .and_then(|v| {
-                        let record = serde_json::from_str::<Record>(&v).ok()?;
+                        let mut record = serde_json::from_str::<Record>(&v).ok()?;
+                        record.localize_display();
                         (v.len() <= 4 * 1024 * 1024 || record.package.as_ref().is_some_and(|package| {
                             package.manifest.has_capability("appearance.font")
                         })).then_some(record)
