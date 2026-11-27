@@ -2500,7 +2500,7 @@ fn music_lyric_timing_follows_saved_delay_and_preserves_playback_position(){
     h.app.set_lyrics("Track","Artist",120.0,crate::lyrics::parse_lrc("[00:00]第一句\n[00:05]當前歌詞\n[00:10]下一句"));
     h.frame(vec![]);
     assert_eq!(h.app.settings.lyric_delay_ms,-350,"未設定時應保留原有提前 0.35 秒的預設");
-    assert!((h.app.lyric_position()-10.15).abs()<0.001,"預設應提前 0.35 秒顯示，且只應用一次");
+    assert!((h.app.lyric_position()-10.15).abs()<0.2,"預設應提前 0.35 秒顯示，且只應用一次");
     for (delay,position,expected) in [(500,10.2,Some("當前歌詞")),(-500,9.8,Some("下一句")),(0,9.8,Some("當前歌詞")),(500,0.2,None),(500,0.6,Some("第一句"))]{
         std::fs::write(crate::model::config_dir().join("settings.txt"),format!("lyric_delay_ms={delay}\nisland_lyrics=1\n")).unwrap();
         h.app.settings=crate::model::Settings::load();

@@ -4768,8 +4768,12 @@ impl App {
         // 網易雲的 song_id 只來自本機日誌，SMTC 那一路沒有；None 與 Some 之間來回不是換歌，不能每次都清空歌詞重查。
         let other_song=matches!((self.media.song_id,np.song_id),(Some(old),Some(new)) if old!=new);
         // 切視窗時播放卡可能短暫換一個等價的來源字串（例如瀏覽器分頁的 AppUserModelId），
-        // 那不是換歌，不能因此清掉歌詞、重新查詢而讓進度跳回開頭。
-        if other_song { self.ly=LyricsState::default(); }
+        // 那不是換歌，不能因此清掉歌詞、重新查詢而讓進度跳回開頭；真正換播放程式才重選歌詞來源。
+        let source_change=self.media.source!=np.source;
+        let browser_alias=source_change
+            && crate::smtc::is_browser_source(&self.media.source)
+            && crate::smtc::is_browser_source(&np.source);
+        if (source_change && !browser_alias) || other_song { self.ly=LyricsState::default(); }
         crate::lyric_sync::tick(&np.title,&np.artist,np.position,np.playing);
         self.media = np;
         // 歌詞時鐘只認歌名／歌手：切視窗、採樣變慢或播放器回報暫時落後時，
