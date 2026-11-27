@@ -1232,6 +1232,7 @@ fn switching_music_source_discards_previous_lyrics() {
 fn browser_source_alias_keeps_the_current_lyrics(){
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
+    h.app.settings.island_lyrics=true;
     h.media=crate::smtc::NowPlaying{source:"chrome.exe".into(),title:"Track".into(),artist:"Artist".into(),position:5.0,playing:true,duration:120.0,..Default::default()};
     h.frame(vec![]);
     h.app.set_lyrics("Track","Artist",120.0,crate::lyrics::parse_lrc("[00:05]當前歌詞"));
