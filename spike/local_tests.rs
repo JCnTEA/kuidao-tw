@@ -31,15 +31,25 @@ fn plugin_localization_changes_only_display_text() -> Result<()> {
     assert_eq!(manifest.settings[2].label, "方向");
     assert_eq!(manifest.settings[2].choices.as_ref().unwrap()[0].label, "還有幾天");
     assert_eq!(manifest.settings[2].choices.as_ref().unwrap()[1].label, "已經幾天");
-    assert_eq!(manifest.settings[3].label, "等待分鐘");
-    assert_eq!(manifest.settings[3].unit.as_deref(), Some("分鐘"));
+    let added = manifest.settings.len() - 1;
+    assert_eq!(manifest.settings[added].label, "等待分鐘");
+    assert_eq!(manifest.settings[added].unit.as_deref(), Some("分鐘"));
     // 顯示文字以外一律保持作者原樣。
     assert_eq!(manifest.settings[2].key, "mode");
     assert_eq!(manifest.settings[2].default, "until");
     assert_eq!(manifest.settings[2].choices.as_ref().unwrap()[0].value, "until");
-    assert_eq!(manifest.settings[3].default, "5");
-    assert_eq!(manifest.settings[3].min, Some(1.0));
-    assert_eq!(manifest.settings[3].max, Some(60.0));
+    assert_eq!(manifest.settings[added].default, "5");
+    assert_eq!(manifest.settings[added].min, Some(1.0));
+    assert_eq!(manifest.settings[added].max, Some(60.0));
+
+    // 巢狀欄位只轉標籤，清單預設值與鍵值仍是作者原文。
+    let mut clock: Value = serde_json::from_str(include_str!("examples/world-clock/plugin.json"))?;
+    clock["settings"][0]["item"][0]["label"] = json!("显示名称");
+    let clock = Manifest::decode(&clock.to_string())?;
+    let nested = clock.settings[0].item.as_ref().unwrap();
+    assert_eq!(nested[0].label, "顯示名稱");
+    assert_eq!(nested[0].key, "label");
+    assert_eq!(nested[0].default, "北京時間");
     Ok(())
 }
 
@@ -52,7 +62,7 @@ fn plugin_localization_keeps_the_author_source_and_credentials() -> Result<()> {
     doc["network"]["credential"] = json!({
         "label": "访问令牌", "header": "Authorization", "prefix": "Bearer"
     });
-    doc["attribution"] = json!({"label":"数据来源","url":"https://api.github.com"});
+    doc["attribution"] = json!({"label":"资料来源","url":"https://api.github.com"});
     let manifest = Manifest::decode(&doc.to_string())?;
     assert_eq!(manifest.name, "Rust 倉庫動態");
     assert_eq!(manifest.author, "島仔");
