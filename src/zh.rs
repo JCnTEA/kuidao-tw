@@ -45,6 +45,10 @@ pub fn to_traditional(text:&str)->String{
         let mid=st.get(&c).copied().unwrap_or(c);
         out.push(tw.get(&mid).copied().unwrap_or(mid));
     }
+    // 「钟」是一對多：字表取「鍾」，但時間單位與鐘錶、鐘聲在台灣都用「鐘」。
+    for (from,to) in [("分鍾","分鐘"),("鍾頭","鐘頭"),("時鍾","時鐘"),("鍾表","鐘錶"),("鍾聲","鐘聲")] {
+        out=out.replace(from,to);
+    }
     out
 }
 
@@ -57,6 +61,8 @@ mod tests {
         assert_eq!(to_traditional("我们在这里等你"),"我們在這裡等你");
         assert_eq!(to_traditional("说好的幸福呢"),"說好的幸福呢");
         assert_eq!(to_traditional("时间都去哪儿了"),"時間都去哪兒了");
+        assert_eq!(to_traditional("等待分钟"),"等待分鐘");
+        assert_eq!(to_traditional("时钟声"),"時鐘聲");
     }
 
     #[test]
