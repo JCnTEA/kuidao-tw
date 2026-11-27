@@ -73,7 +73,7 @@ fn requires_forced_update(current: [u64; 3], latest: [u64; 3]) -> bool {
 fn local_version(install_dir: &Path) -> Option<String> {
     ["dev-version.txt", "installed-version.txt"]
         .iter()
-        .filter(|name| is_dev() || *name == "installed-version.txt")
+        .filter(|name| is_dev() || **name == "installed-version.txt")
         .find_map(|name| {
             std::fs::read_to_string(install_dir.join(name))
                 .ok()
