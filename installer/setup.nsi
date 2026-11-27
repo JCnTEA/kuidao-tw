@@ -341,9 +341,12 @@ Function un.onInit
 FunctionEnd
 
 Section "Uninstall"
+  nsExec::ExecToLog 'schtasks /Delete /TN "KuidaoMidnightUpdate" /F'
   Call un.CheckClosed
   Delete "$INSTDIR\kuidao.exe"
   Delete "$INSTDIR\kuidao-bootstrap.exe"
+  Delete "$INSTDIR\installed-version.txt"
+  Delete "$INSTDIR\midnight-update-task.txt"
   Delete "$INSTDIR\kuidao-previous.exe"
   Delete "$INSTDIR\kuidao-v0.2-backup.exe"
   Delete "$INSTDIR\LICENSE"

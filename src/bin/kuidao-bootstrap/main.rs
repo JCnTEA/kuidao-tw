@@ -39,6 +39,56 @@ fn channel_title() -> &'static str {
     }
 }
 
+/// 啟動器每天凌晨檢查更新的工作名稱；開發版與正式版各自獨立。
+fn midnight_task_name() -> &'static str {
+    if is_dev() {
+        "KuidaoDevMidnightUpdate"
+    } else {
+        "KuidaoMidnightUpdate"
+    }
+}
+
+fn version(value: &str) -> Option<[u64; 3]> {
+    let mut parts = value.strip_prefix('v').unwrap_or(value).split('.');
+    let mut numbers = [0; 3];
+    for number in &mut numbers {
+        let part = parts.next()?;
+        let digits: String = part.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if digits.is_empty() {
+            return None;
+        }
+        *number = digits.parse().ok()?;
+    }
+    parts.next().is_none().then_some(numbers)
+}
+
+/// 只差一個修訂號時不自動重啟；超過一個或跨次版本／主版本才強制更新。
+fn requires_forced_update(current: [u64; 3], latest: [u64; 3]) -> bool {
+    latest > current
+        && (latest[0] != current[0]
+            || latest[1] != current[1]
+            || latest[2].saturating_sub(current[2]) > 1)
+}
+
+fn local_version(install_dir: &Path) -> Option<String> {
+    ["dev-version.txt", "installed-version.txt"]
+        .iter()
+        .filter(|name| is_dev() || *name == "installed-version.txt")
+        .find_map(|name| {
+            std::fs::read_to_string(install_dir.join(name))
+                .ok()
+                .map(|text| text.trim().to_owned())
+                .filter(|text| !text.is_empty())
+        })
+}
+
+fn release_is_newer(install_dir: &Path, release: &Release) -> bool {
+    let Some(local) = local_version(install_dir).and_then(|value| version(&value)) else {
+        return true;
+    };
+    version(&release.version).is_some_and(|latest| latest > local)
+}
+
 static PERCENT: AtomicU32 = AtomicU32::new(0);
 static QUIT: AtomicBool = AtomicBool::new(false);
 static STATUS: Mutex<String> = Mutex::new(String::new());
@@ -438,19 +488,33 @@ fn main() {
 #[cfg(windows)]
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    let midnight = args.iter().any(|arg| arg == "--midnight");
     let force_update = args
         .iter()
-        .any(|arg| arg == "--update" || arg == "--repair");
+        .any(|arg| arg == "--update" || arg == "--repair" || arg == "--midnight");
     let no_launch = args.iter().any(|arg| arg == "--no-launch");
     let forwarded: Vec<String> = args
         .into_iter()
-        .filter(|arg| !matches!(arg.as_str(), "--update" | "--repair" | "--no-launch"))
+        .filter(|arg| !matches!(arg.as_str(), "--update" | "--repair" | "--no-launch" | "--midnight"))
         .collect();
     let install_dir = std::env::current_exe()
         .ok()
         .and_then(|path| path.parent().map(Path::to_path_buf))
         .unwrap_or_else(|| PathBuf::from("."));
     let app = install_dir.join(app_name());
+    ensure_midnight_task();
+
+    // 凌晨排程：先確認線上真的比較新，沒有更新就安靜結束，不重新開啟程式。
+    let mut preloaded = None;
+    if midnight && app.is_file() {
+        match fetch_release() {
+            Ok(release) if release_is_newer(&install_dir, &release) => {
+                preloaded = Some(release);
+                close_running_app();
+            }
+            _ => return,
+        }
+    }
 
     if app.is_file() && !force_update {
         // 正式版：主程式存在就直接開，日常開啟不經過網路。
@@ -465,6 +529,10 @@ fn main() {
         // 開發版要換整包檔案前，先把自己正在跑的舊開發版關掉，避免 exe 被佔用換不掉。
         close_running_app();
     }
+    // 手動修復、開機強制更新或凌晨排程都要先關閉主程式，否則檔案會被鎖住。
+    if force_update && app.is_file() {
+        close_running_app();
+    }
 
     let Some(hwnd) = gui::create() else {
         return;
@@ -476,8 +544,9 @@ fn main() {
         0,
     );
     gui::run_loop(|| {
+        let mut pending = preloaded;
         loop {
-            match update(&install_dir, &app) {
+            match update(&install_dir, &app, pending.take()) {
                 Ok(()) => {
                     set_status("下載完成", "正在開啟鬼島…", 100);
                     gui::repaint();
@@ -538,9 +607,12 @@ fn launch(app: &Path, install_dir: &Path, args: &[String]) {
     let _ = command.spawn();
 }
 
-fn update(install_dir: &Path, app: &Path) -> Result<(), String> {
+fn update(install_dir: &Path, app: &Path, preloaded: Option<Release>) -> Result<(), String> {
     set_status("正在查詢最新版本", "連線 GitHub Release…", 1);
-    let release = fetch_release()?;
+    let release = match preloaded {
+        Some(release) => release,
+        None => fetch_release()?,
+    };
     if QUIT.load(Ordering::Relaxed) {
         return Err("已取消".into());
     }
@@ -570,6 +642,7 @@ fn update(install_dir: &Path, app: &Path) -> Result<(), String> {
             return Err("安裝後仍找不到主程式，請重新安裝".into());
         }
         set_status("安裝完成", "正在開啟鬼島…", 100);
+        let _ = std::fs::write(install_dir.join("installed-version.txt"), &release.version);
         if is_dev() {
             let _ = std::fs::write(install_dir.join("dev-version.txt"), &release.version);
         }
@@ -802,18 +875,52 @@ fn close_running_app() {
 
 /// 開發版版本記在這台電腦的安裝資料夾；跟線上最新開發版不同就換新版。
 fn dev_update_needed(install_dir: &Path) -> bool {
-    let install_dir_ref = install_dir.to_path_buf();
-    let local = std::fs::read_to_string(install_dir_ref.join("dev-version.txt"))
-        .ok()
-        .map(|text| text.trim().to_owned())
-        .unwrap_or_default();
-    if local.is_empty() {
+    let Some(local) = local_version(install_dir).and_then(|value| version(&value)) else {
         return true;
-    }
+    };
     match fetch_dev_release() {
-        Ok(release) => release.version != local,
+        // 開機只處理差距超過一個修訂號的版本；只差一版時照常開啟，交給程式內更新按鈕。
+        Ok(release) => version(&release.version)
+            .is_some_and(|latest| requires_forced_update(local, latest)),
         // 離線或服務掛掉時照常開目前版本，不要卡在啟動器。
         Err(_) => false,
+    }
+}
+
+/// 安裝後建立每天 00:00 的更新排程；已存在就不重複寫入。
+fn ensure_midnight_task() {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let Ok(exe) = std::env::current_exe() else { return };
+        let task = midnight_task_name();
+        let marker = exe.parent().unwrap_or(Path::new(".")).join("midnight-update-task.txt");
+        let recorded = std::fs::read_to_string(&marker).ok().map(|text| text.trim().to_owned());
+        let exists = std::process::Command::new("schtasks")
+            .args(["/Query", "/TN", task])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success());
+        let expected = exe.display().to_string();
+        if exists && recorded.as_deref() == Some(expected.as_str()) {
+            return;
+        }
+        let action = format!("\"{expected}\" --midnight");
+        if std::process::Command::new("schtasks")
+            .args([
+                "/Create", "/TN", task, "/TR", &action, "/SC", "DAILY", "/ST", "00:00", "/F",
+            ])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success())
+        {
+            let _ = std::fs::write(marker, expected);
+        }
     }
 }
 
@@ -1116,6 +1223,23 @@ fn repaint() {}
 mod tests {
     use super::*;
     use std::process::Command;
+
+    #[test]
+    fn launcher_only_forces_when_the_gap_exceeds_one_revision() {
+        for (current, latest, forced) in [
+            ("0.7.5", "0.7.6", false),
+            ("0.7.6", "0.7.7", false),
+            ("0.7.5", "0.7.7", true),
+            ("0.7.5", "0.8.0", true),
+            ("0.6.99", "0.7.0", true),
+            ("0.7.6", "0.7.6", false),
+            ("0.7.7", "0.7.6", false),
+        ] {
+            let current = version(current).unwrap();
+            let latest = version(latest).unwrap();
+            assert_eq!(requires_forced_update(current, latest), forced);
+        }
+    }
 
     #[test]
     fn bootstrap_extracts_unicode_zip_without_tar() {

@@ -137,14 +137,18 @@ impl State {
                         else if new_notice && !self.dialog_open { Duration::ZERO }
                         else { CHECK_INTERVAL };
                     self.remember_check(delay);
-                    let automatic_package = match &result {
-                        Ok(Some(release)) if automatic && release.package.is_some() => Some(release.clone()),
+                    // 自動檢查只在版本差距過大時直接重啟更新；只差一個修訂號仍留給使用者按「立即更新」。
+                    let forced_package = match &result {
+                        Ok(Some(release)) if automatic && release.package.is_some()
+                            && requires_forced_update(env!("CARGO_PKG_VERSION"), &release.version) => Some(release.clone()),
                         _ => None,
                     };
                     self.result = Some(result); self.rx = None;
                     self.refresh_latest_notes();
-                    if let Some(release) = automatic_package {
+                    if let Some(release) = forced_package {
                         if !cfg!(test) {
+                            self.dialog_open = true;
+                            self.focus_requested = true;
                             self.start_download(ctx, release);
                         }
                     }
@@ -180,7 +184,10 @@ impl State {
 
     pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
         let wait = self.manual_wait();
-        if ui.add_enabled(self.rx.is_none() && wait.is_zero(), egui::Button::new("檢查更新")).clicked() {
+        if ui.add_enabled(self.rx.is_none() && wait.is_zero(), egui::Button::new("檢查更新"))
+            .on_hover_text("只差一版時會開啟更新視窗；差距超過一個修訂號或跨版時，下載後會自動重啟。啟動器每天 00:00 也會檢查。")
+            .clicked()
+        {
             // 按下去就是一條龍：檢查 → 有新版本就下載安裝包 → 安裝後自動重啟。
             self.auto_download = true;
             self.begin_check(ui.ctx(), None, check);
@@ -319,10 +326,16 @@ impl State {
                                 if ui.button("取消").clicked() { self.cancel.as_ref().unwrap().store(true,Ordering::Relaxed); }
                             });
                         } else {
+                            let forced = requires_forced_update(env!("CARGO_PKG_VERSION"), &release.version);
+                            ui.label(egui::RichText::new(if forced {
+                                "版本差距超過一個修訂號：下載完成後會自動關閉並重新啟動。"
+                            } else {
+                                "只差一個修訂號：按下「立即更新並重啟」才會下載；啟動器每天 00:00 仍會檢查。"
+                            }).size(11.0).color(theme::DIM));
                             ui.add_space(4.0);
                             ui.horizontal(|ui| {
                                 if ui.add_enabled(!installing,egui::Button::new("稍後").fill(theme::BTN).min_size(egui::vec2(110.0,40.0))).clicked() { self.dismiss(); }
-                                let install = egui::Button::new(egui::RichText::new(if installing{"正在準備重啟…"}else{"立即更新"}).color(theme::WHITE))
+                                let install = egui::Button::new(egui::RichText::new(if installing{"正在準備重啟…"}else{"立即更新並重啟"}).color(theme::WHITE))
                                     .fill(theme::BLUE).min_size(egui::vec2(ui.available_width(),40.0));
                                 if ui.add_enabled(release.package.is_some() && self.rx.is_none(),install).clicked() {
                                     self.start_download(ui.ctx(), release.clone());
@@ -669,6 +682,14 @@ fn version(value: &str) -> Option<[u64; 3]> {
     parts.next().is_none().then_some(numbers)
 }
 
+/// 版本差距超過一個修訂號，或跨到新的次版本／主版本時，自動檢查就直接下載並重啟。
+fn requires_forced_update(current: &str, latest: &str) -> bool {
+    let Some(current) = version(current) else { return false };
+    let Some(latest) = version(latest) else { return false };
+    latest > current && (latest[0] != current[0] || latest[1] != current[1]
+        || latest[2].saturating_sub(current[2]) > 1)
+}
+
 fn parse_release(value: &serde_json::Value, current: &str) -> Result<Option<String>, String> {
     let invalid = || "更新資訊格式異常，請稍後重試".to_owned();
     if value["draft"].as_bool() != Some(false) || value["prerelease"].as_bool() != Some(false) {
@@ -903,6 +924,20 @@ mod tests {
     fn release(tag: &str) -> serde_json::Value {
         serde_json::json!({"tag_name":tag,"draft":false,"prerelease":false})
     }
+    #[test]
+    fn only_a_large_version_gap_forces_an_automatic_restart() {
+        for (current, latest, forced) in [
+            ("0.7.5", "0.7.6", false),
+            ("0.7.6", "0.7.7", false),
+            ("0.7.5", "0.7.7", true),
+            ("0.7.5", "0.8.0", true),
+            ("0.6.99", "0.7.0", true),
+            ("0.7.6", "0.7.6", false),
+        ] {
+            assert_eq!(requires_forced_update(current, latest), forced, "{current} → {latest}");
+        }
+    }
+
     #[test]
     fn compares_versions_numerically_and_never_downgrades() {
         for tag in ["v0.6.40", "0.10.0", "v1.0.0"] {

@@ -46,7 +46,7 @@ VIAddVersionKey /LANG=1028 "LegalCopyright" "鬼島貢獻者"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_TITLE "開發版啟動器已安裝"
-!define MUI_FINISHPAGE_TEXT "啟動器會下載最新的開發版（程式與素材），下載完成便會開啟鬼島開發版。之後每次開啟都會自動確認並更新。"
+!define MUI_FINISHPAGE_TEXT "啟動器會下載最新的開發版（程式與素材），下載完成便會開啟鬼島開發版。版本只差一版時會開更新視窗；差距更大會自動重啟更新。每天 00:00 也會檢查，電腦關機後開機同樣會處理。"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${LAUNCHER_NAME}"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "--update"
 !define MUI_FINISHPAGE_RUN_TEXT "下載並開啟開發版"
@@ -118,11 +118,14 @@ Section "Install"
 SectionEnd
 
 Section "Uninstall"
+  nsExec::ExecToLog 'schtasks /Delete /TN "KuidaoDevMidnightUpdate" /F'
   nsExec::ExecToLog 'taskkill /F /T /IM "${APP_NAME}.exe" /IM ${LAUNCHER_NAME}'
   Sleep 300
   Delete "$INSTDIR\${LAUNCHER_NAME}"
   Delete "$INSTDIR\${APP_NAME}.exe"
   Delete "$INSTDIR\dev-version.txt"
+  Delete "$INSTDIR\installed-version.txt"
+  Delete "$INSTDIR\midnight-update-task.txt"
   Delete "$INSTDIR\LICENSE"
   Delete "$INSTDIR\THIRD_PARTY_NOTICES.txt"
   RMDir /r "$INSTDIR\assets"
