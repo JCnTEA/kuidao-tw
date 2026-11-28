@@ -3042,6 +3042,8 @@ fn social_unread_stack_keeps_service_icons_visible() {
         },
         _=>None,
     }).collect();
+    eprintln!("probe active={} total={} shapes={} textures={}",h.app.social.active().len(),h.app.social.total(),h.shapes.len(),icons.len());
+    for r in &icons{eprintln!("probe texture rect {:?}",r);}
     assert!(h.ctx.read_response(egui::Id::new(("social","line"))).is_some(),"LINE 應有可點擊區");
     assert!(h.ctx.read_response(egui::Id::new(("social","facebook"))).is_some(),"Facebook 應有可點擊區");
     assert!(icons.iter().any(|r|(r.center().x-16.0).abs()<6.0 && (r.center().y-14.0).abs()<6.0),"LINE 圖示應出現在第一個未讀格");
