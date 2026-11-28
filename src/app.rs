@@ -3196,7 +3196,7 @@ impl App {
         if self.unread_count()>=3 {((height-4.0-UNREAD_CLEAR_H)/3.0).max(26.0)} else {UNREAD_SLOT}
     }
     fn unread_count(&self)->usize {
-        let count=self.pending_messengers.len()+self.health_badges().len();
+        let count=self.pending_messengers.len()+self.social.active().len()+self.health_badges().len();
         #[cfg(windows)]
         let count=count+self.plugin_notice_ui.item_count();
         count
