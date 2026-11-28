@@ -1,4 +1,4 @@
-//! 外观资源包的校验、选择和宿主读取接口。
+//! 外觀資源包的校驗、選擇和宿主讀取接口。
 use super::{bounded, fail, font_assets, LocalPlugins, Manifest, Result};
 use crate::model::Skin;
 use crate::skin_paint::{Palette, CLASSIC, CREAM, GLASS_DARK, GLASS_LIGHT};
@@ -49,10 +49,10 @@ impl Kind {
 
     pub(super) fn label(self) -> &'static str {
         match self {
-            Self::Skin => "皮肤",
-            Self::Icon => "功能图标",
+            Self::Skin => "皮膚",
+            Self::Icon => "功能圖標",
             Self::Pet => "吉祥物表情",
-            Self::Font => "画布字体",
+            Self::Font => "畫布字體",
         }
     }
 
@@ -77,7 +77,7 @@ pub(super) enum Pack {
 impl Pack {
     pub(super) fn decode(kind: Kind, source: &str) -> Result<Self> {
         if source.len() as u64 > kind.limit() {
-            return Err(fail("外观资源入口文件过大"));
+            return Err(fail("外觀資源入口文件過大"));
         }
         Ok(match kind {
             Kind::Skin => Self::Skin(SkinPack::decode(source)?),
@@ -134,10 +134,10 @@ impl SkinPack {
         };
         let SkinColors { paper, ink, accent } = entry.colors;
         if paper.is_none() && ink.is_none() && accent.is_none() {
-            return Err(fail("皮肤包至少需要一个颜色令牌"));
+            return Err(fail("皮膚包至少需要一個顏色令牌"));
         }
         if !matches!(base, Skin::Classic | Skin::Cream) && (paper.is_some() || ink.is_some()) {
-            return Err(fail("毛玻璃和悬浮云皮肤只开放 accent 配色"));
+            return Err(fail("毛玻璃和懸浮雲皮膚只開放 accent 配色"));
         }
         if let Some(paper) = paper {
             palette.paper = rgb(&paper)?;
@@ -156,7 +156,7 @@ fn rgb(value: &str) -> Result<[u8; 3]> {
     let hex = value
         .strip_prefix('#')
         .filter(|hex| hex.len() == 6 && hex.bytes().all(|byte| byte.is_ascii_hexdigit()))
-        .ok_or_else(|| fail("皮肤颜色须为 #RRGGBB"))?;
+        .ok_or_else(|| fail("皮膚顏色須為 #RRGGBB"))?;
     let [_, red, green, blue] = u32::from_str_radix(hex, 16)?.to_be_bytes();
     Ok([red, green, blue])
 }
@@ -179,7 +179,7 @@ fn parse_icons(source: &str) -> Result<BTreeMap<String, Icon>> {
             .keys()
             .all(|key| crate::app::PAGE_SHORTCUT_KEYS.contains(&key.as_str()))
     {
-        return Err(fail("图标包需要至少一个已开放的功能页图标"));
+        return Err(fail("圖標包需要至少一個已開放的功能頁圖標"));
     }
     icons
         .into_iter()
@@ -210,7 +210,7 @@ fn validate_svg(svg: &str) -> Result<()> {
 pub(super) fn load_static_svg(svg: &str, bytes: usize, side: u32) -> Result<eframe::egui::ColorImage> {
     const SVG_NS: &str = "http://www.w3.org/2000/svg";
     if svg.len() > bytes {
-        return Err(fail("SVG 超过大小限制"));
+        return Err(fail("SVG 超過大小限制"));
     }
     let doc = roxmltree::Document::parse(svg)?;
     let root = doc.root_element();
@@ -228,11 +228,11 @@ pub(super) fn load_static_svg(svg: &str, bytes: usize, side: u32) -> Result<efra
         || view_box[2] < 1.0
         || view_box[3] < 1.0
     {
-        return Err(fail("SVG 功能图标需要有效的 viewBox"));
+        return Err(fail("SVG 功能圖標需要有效的 viewBox"));
     }
     for node in doc.descendants() {
         if node.is_pi() || node.is_text() && !node.text().unwrap_or_default().trim().is_empty() {
-            return Err(fail("SVG 功能图标只接受静态矢量图形"));
+            return Err(fail("SVG 功能圖標只接受靜態矢量圖形"));
         }
         if !node.is_element() {
             continue;
@@ -244,7 +244,7 @@ pub(super) fn load_static_svg(svg: &str, bytes: usize, side: u32) -> Result<efra
                     "g" | "path" | "rect" | "circle" | "ellipse" | "line" | "polyline" | "polygon"
                 )
         {
-            return Err(fail("SVG 功能图标只接受静态矢量图形"));
+            return Err(fail("SVG 功能圖標只接受靜態矢量圖形"));
         }
         for attr in node.attributes() {
             let value = attr.value();
@@ -272,11 +272,11 @@ pub(super) fn load_static_svg(svg: &str, bytes: usize, side: u32) -> Result<efra
                 _ => false,
             };
             if attr.namespace().is_some() || !allowed {
-                return Err(fail("SVG 功能图标包含不支持的属性或资源引用"));
+                return Err(fail("SVG 功能圖標包含不支持的屬性或資源引用"));
             }
         }
     }
-    // 用宿主实际的 SVG 解码器验证作者提供的尺寸和画布。
+    // 用宿主實際的 SVG 解碼器驗證作者提供的尺寸和畫布。
     egui_extras::image::load_svg_bytes(svg.as_bytes()).map_err(|e| fail(&e))
 }
 
@@ -293,21 +293,21 @@ fn parse_expressions(source: &str) -> Result<crate::pet_expressions::ExpressionS
     }
     let Entry { mut expressions } = serde_json::from_str(source)?;
     if expressions.is_empty() {
-        return Err(fail("表情包需要至少一个表情序列"));
+        return Err(fail("表情包需要至少一個表情序列"));
     }
     let mut sheets = crate::pet_expressions::ExpressionSheets::default();
     for expression in Expression::ALL {
         if let Some(encoded) = expressions.remove(expression.key()) {
-            let limit: usize = 64 * 1024;
+            let limit: usize = 128 * 1024;
             if encoded.len() > limit.div_ceil(3) * 4 {
-                return Err(fail("每个表情的 PNG 序列图最多 64 KiB"));
+                return Err(fail("每個表情的 PNG 序列圖最多 128 KiB"));
             }
             let bytes = STANDARD.decode(encoded)?;
             if bytes.len() > limit {
-                return Err(fail("每个表情的 PNG 序列图最多 64 KiB"));
+                return Err(fail("每個表情的 PNG 序列圖最多 128 KiB"));
             }
             if !bytes.ends_with(b"\0\0\0\0IEND\xaeB`\x82") {
-                return Err(fail("表情序列必须是完整的 PNG 图片"));
+                return Err(fail("表情序列必須是完整的 PNG 圖片"));
             }
             let mut limits = image::Limits::default();
             limits.max_image_width = Some(144);
@@ -315,14 +315,14 @@ fn parse_expressions(source: &str) -> Result<crate::pet_expressions::ExpressionS
             limits.max_alloc = Some(4 * 1024 * 1024);
             let decoder = image::codecs::png::PngDecoder::with_limits(Cursor::new(&bytes), limits)?;
             if decoder.is_apng()? || decoder.dimensions() != (144, 1440) {
-                return Err(fail("表情须为 144×1440 的单张 PNG 序列图"));
+                return Err(fail("表情須為 144×1440 的單張 PNG 序列圖"));
             }
             image::DynamicImage::from_decoder(decoder)?;
             sheets[expression as usize] = Some(bytes);
         }
     }
     if !expressions.is_empty() {
-        return Err(fail("表情包包含未知的表情名称"));
+        return Err(fail("表情包包含未知的表情名稱"));
     }
     Ok(sheets)
 }
@@ -419,10 +419,10 @@ impl LocalPlugins {
 
     pub(crate) fn select_appearance(&mut self, kind: Kind, id: Option<&str>) -> Result<()> {
         if id.is_some_and(|id| self.appearance_package(id, kind).is_none()) {
-            return Err(fail("所选外观资源包未安装或未启用"));
+            return Err(fail("所選外觀資源包未安裝或未啟用"));
         }
         let mut selection = self.appearance.clone();
-        let slot = selection.get(kind).ok_or_else(|| fail("画布字体随字体包启用"))?;
+        let slot = selection.get(kind).ok_or_else(|| fail("畫布字體隨字體包啟用"))?;
         if slot.as_deref() == id {
             return Ok(());
         }
@@ -487,7 +487,7 @@ impl LocalPlugins {
         let title = current
             .and_then(|id| self.appearance_package(id, kind))
             .map_or_else(
-                || built_in.map_or("内置", Skin::label),
+                || built_in.map_or("內置", Skin::label),
                 |pkg| pkg.manifest.name.as_str(),
             );
         let initial = current.map_or(Choice::BuiltIn(built_in), |id| Choice::Plugin(id.into()));
@@ -509,7 +509,7 @@ impl LocalPlugins {
                                 );
                             }
                         } else {
-                            ui.selectable_value(&mut selection, Choice::BuiltIn(None), "内置");
+                            ui.selectable_value(&mut selection, Choice::BuiltIn(None), "內置");
                         }
                         ui.separator();
                         for (id, name) in choices {

@@ -2,17 +2,17 @@ function refresh() {
     return {
         status: {
             state: "succeeded",
-            label: "画布图元",
-            summary: "这行是与画布混排的标准状态组件。"
+            label: "畫布圖元",
+            summary: "這行是與畫布混排的標準狀態組件。"
         },
         canvas: {
             height: 172,
             nodes: [
-                { text: "趋势与进度", at: [0, 24], size: 20, weight: 700, font: "站酷快乐体", fill: "$text" },
+                { text: "趨勢與進度", at: [0, 24], size: 20, weight: 700, font: "站酷快樂體", fill: "$text" },
                 { image: "badge.svg", rect: [348, 0, 34, 30], fit: "contain" },
                 { rect: [0, 38, 226, 129], r: [12, 12, 8, 8], fill: "$card", shadow: "sm" },
                 { rect: [236, 38, 151, 129], r: 12, fill: "$card" },
-                { text: "面积与折线", at: [12, 60], size: 12, fill: "$muted" },
+                { text: "面積與折線", at: [12, 60], size: 12, fill: "$muted" },
                 {
                     translate: [12, 72],
                     clip: [0, 0, 202, 79],
@@ -29,7 +29,7 @@ function refresh() {
                         { circle: [198, 9, 3], fill: "$accent", glow: true }
                     ]
                 },
-                { text: "圆弧与路径", at: [248, 60], size: 12, fill: "$muted" },
+                { text: "圓弧與路徑", at: [248, 60], size: 12, fill: "$muted" },
                 {
                     circle: [311, 110, 42],
                     fill: { radial: [[311, 110], 42], stops: [[0, "#46BA8D32"], [1, "#46BA8D00"]] }

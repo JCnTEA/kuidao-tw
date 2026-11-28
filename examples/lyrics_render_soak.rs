@@ -1,4 +1,4 @@
-//! 隔离数据目录下持续绘制七分钟：前六分钟反复伸缩，最后一分钟稳定歌词。
+//! 隔離數據目錄下持續繪製七分鐘：前六分鐘反覆伸縮，最後一分鐘穩定歌詞。
 #[cfg(windows)]
 fn main()->eframe::Result<()> {
     use daozai::app::{App,Env,Options,WIN_W,WIN_H};
@@ -12,29 +12,29 @@ fn main()->eframe::Result<()> {
             let t=self.start.elapsed().as_secs_f64();self.frames+=1;
             self.app.settings.island_lyrics=t>=360.0 || (t*2.0) as u64%2==0;
             let env=Env{t,clock:"00:49:00".into(),today:"2026-11-04".into(),battery:Some(80),charging:true,
-                media:daozai::smtc::NowPlaying{source:"QQMusic.exe".into(),title:"性能检查".into(),artist:"测试".into(),duration:450.0,position:t,playing:true,playback_type:daozai::smtc::MediaKind::Music,..Default::default()},..Default::default()};
+                media:daozai::smtc::NowPlaying{source:"QQMusic.exe".into(),title:"性能檢查".into(),artist:"測試".into(),duration:450.0,position:t,playing:true,playback_type:daozai::smtc::MediaKind::Music,..Default::default()},..Default::default()};
             egui::CentralPanel::default().frame(egui::Frame::NONE).show(ctx,|ui|{
                 let out=self.app.frame(ui,egui::Rect::from_min_size(ui.max_rect().min,egui::vec2(WIN_W,WIN_H)),&env);
                 self.min_width=self.min_width.min(out.hit.width());self.max_width=self.max_width.max(out.hit.width());
                 let r=|r:egui::Rect|(r.min.x,r.min.y,r.width(),r.height());
                 self.native.update(r(out.region),r(out.hit),out.notice_hit.map(r),out.file_drop_zone.map(r),out.glass.as_deref(),out.blur,ctx.pixels_per_point(),false,out.expanded,out.resident_clip.as_deref());
             });
-            // 首帧建立媒体来源后再注入歌词，避免被当成上一播放器的结果清空。
-            if self.frames==1 {self.app.set_lyrics("性能检查","测试",450.0,daozai::lyrics::parse_lrc("[00:00]灰色的夜\n[06:00]还在眼前"));}
+            // 首幀建立媒體來源後再注入歌詞，避免被當成上一播放器的結果清空。
+            if self.frames==1 {self.app.set_lyrics("性能檢查","測試",450.0,daozai::lyrics::parse_lrc("[00:00]灰色的夜\n[06:00]還在眼前"));}
             let textures=ctx.tex_manager().read().num_allocated();
             if t>=10.0 && self.textures.is_none(){self.textures=Some(textures);}
             if t>=420.0 {
                 println!("seconds={t:.1} frames={} textures_before={} textures_after={textures}",self.frames,self.textures.unwrap());
-                assert_eq!(textures,self.textures.unwrap(),"反复伸缩不能持续增加纹理");
-                assert!(self.max_width-self.min_width>50.0,"检查期间必须实际发生岛体伸缩");
+                assert_eq!(textures,self.textures.unwrap(),"反覆伸縮不能持續增加紋理");
+                assert!(self.max_width-self.min_width>50.0,"檢查期間必須實際發生島體伸縮");
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
             ctx.request_repaint_after(std::time::Duration::from_millis(16));
         }
     }
     std::env::set_var("DAOZAI_DATA_DIR",std::env::temp_dir().join(format!("daozai-render-soak-{}",std::process::id())));
-    let options=eframe::NativeOptions{vsync:false,viewport:egui::ViewportBuilder::default().with_title("岛仔性能检查").with_inner_size([daozai::app::CANVAS_W,WIN_H]).with_position([100.0,100.0]).with_decorations(false).with_transparent(true).with_active(false),..Default::default()};
-    eframe::run_native("岛仔性能检查",options,Box::new(|cc|{
+    let options=eframe::NativeOptions{vsync:false,viewport:egui::ViewportBuilder::default().with_title("島仔性能檢查").with_inner_size([daozai::app::CANVAS_W,WIN_H]).with_position([100.0,100.0]).with_decorations(false).with_transparent(true).with_active(false),..Default::default()};
+    eframe::run_native("島仔性能檢查",options,Box::new(|cc|{
         cc.egui_ctx.set_pixels_per_point(1.0);
         if let Some(gl)=&cc.gl{use eframe::glow::HasContext;println!("renderer={}",unsafe{gl.get_parameter_string(eframe::glow::RENDERER)});}
         let app=App::new(&cc.egui_ctx,Options{fetch_lyrics:false,pet_idle:1e9});

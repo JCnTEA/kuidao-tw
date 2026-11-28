@@ -16,9 +16,9 @@ function refresh({ settings, today, tz }) {
         if (!since && date < current) date = target(year + 1);
     }
     const remaining = (date - current) / day;
-    const card = remaining > 0 ? `距离${settings.title}还有 ${remaining} 天`
+    const card = remaining > 0 ? `距離${settings.title}還有 ${remaining} 天`
         : remaining === 0 ? `今天是${settings.title}`
-        : since ? `${settings.title}已过 ${-remaining} 天` : `${settings.title}已到期`;
+        : since ? `${settings.title}已過 ${-remaining} 天` : `${settings.title}已到期`;
     return {
         card,
         marker: remaining === 0 && settings.mark === "true" ? settings.title : "",

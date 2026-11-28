@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>开放方案 · 自绘画布</title>
+<title>開放方案 · 自繪畫布</title>
 
 </head>
 <body>
@@ -27,29 +27,29 @@ td{padding:7px 8px;font-size:12.5px;border-bottom:1px solid #EEEEE9;vertical-ali
 <div style="width: 1440px; height: 1000px; box-sizing: border-box; padding: 40px 52px; background: #F4F4F1; font-family: 'Noto Sans SC', 'Inter', sans-serif; color: #17171A; display: flex; flex-direction: column; gap: 18px">
   <div style="display: flex; flex-direction: column; gap: 4px">
     <div class="k">理想版 · 0 · 第二稿</div>
-    <h1 style="margin: 0; font-size: 34px">开放方案：标准组件 + 自绘画布</h1>
-    <p class="muted" style="margin: 0; font-size: 14px">不再给每种设计补一个组件。开放一个「自绘画布」：插件描述要画的图形，岛仔负责画、缩放、主题、帧率和安全。五个官方插件都用它来做，顺便当样例。</p>
+    <h1 style="margin: 0; font-size: 34px">開放方案：標準組件 + 自繪畫布</h1>
+    <p class="muted" style="margin: 0; font-size: 14px">不再給每種設計補一個組件。開放一個「自繪畫布」：插件描述要畫的圖形，島仔負責畫、縮放、主題、幀率和安全。五個官方插件都用它來做，順便當樣例。</p>
   </div>
 
   <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; flex: 1; min-height: 0">
     <div style="display: flex; flex-direction: column; gap: 12px">
-      <div class="k">三层结构</div>
-      <div class="lay" style="background: #E3F5E9"><b style="font-size: 14px; color: #1F7A3D">标准组件（已有，保留）</b><span class="muted" style="font-size: 12.5px; line-height: 1.6">状态行、指标、列表、折线、计数、时钟、倒计时、按钮、输入框。零设计也好看，适合工具型插件。</span></div>
-      <div class="lay" style="background: #EEE8FF"><b style="font-size: 14px; color: #5B3FD1">自绘画布（新增）</b><span class="muted" style="font-size: 12.5px; line-height: 1.6">矩形、圆角、圆、弧、线、路径、文字、包内图片、分组、渐变、阴影、发光、裁剪。可以和标准组件混排，也可以整页都是画布。</span></div>
-      <div class="lay" style="background: #E6F0FF"><b style="font-size: 14px; color: #1F5FBF">宿主实时值（两边共用）</b><span class="muted" style="font-size: 12.5px; line-height: 1.6">现在时间、计数器、倒计时、城市时钟、某段时间的进度。画布里写「绑定」，岛仔每帧算，脚本不用每秒跑。</span></div>
+      <div class="k">三層結構</div>
+      <div class="lay" style="background: #E3F5E9"><b style="font-size: 14px; color: #1F7A3D">標準組件（已有，保留）</b><span class="muted" style="font-size: 12.5px; line-height: 1.6">狀態行、指標、列表、折線、計數、時鐘、倒計時、按鈕、輸入框。零設計也好看，適合工具型插件。</span></div>
+      <div class="lay" style="background: #EEE8FF"><b style="font-size: 14px; color: #5B3FD1">自繪畫布（新增）</b><span class="muted" style="font-size: 12.5px; line-height: 1.6">矩形、圓角、圓、弧、線、路徑、文字、包內圖片、分組、漸變、陰影、發光、裁剪。可以和標準組件混排，也可以整頁都是畫布。</span></div>
+      <div class="lay" style="background: #E6F0FF"><b style="font-size: 14px; color: #1F5FBF">宿主實時值（兩邊共用）</b><span class="muted" style="font-size: 12.5px; line-height: 1.6">現在時間、計數器、倒計時、城市時鐘、某段時間的進度。畫布裡寫「綁定」，島仔每幀算，腳本不用每秒跑。</span></div>
       <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
-        <div class="k">为什么这样比逐个补组件好</div>
+        <div class="k">為什麼這樣比逐個補組件好</div>
         <ul class="muted" style="margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.65">
-          <li>做一次渲染器，所有插件都受益；新设计不需要我们再写代码。</li>
-          <li>作者的上限由他的审美决定，不由我们的组件清单决定。</li>
-          <li>仍然是数据不是代码：不能联网取图、不能读文件，岛仔能检查和限流。</li>
+          <li>做一次渲染器，所有插件都受益；新設計不需要我們再寫代碼。</li>
+          <li>作者的上限由他的審美決定，不由我們的組件清單決定。</li>
+          <li>仍然是數據不是代碼：不能聯網取圖、不能讀文件，島仔能檢查和限流。</li>
         </ul>
       </div>
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 12px">
-      <div class="k">插件返回什么（以「日子」的日历页为例）</div>
-<pre><span class="c1">// refresh() 返回，和 status 同级</span>
+      <div class="k">插件返回什麼（以「日子」的日曆頁為例）</div>
+<pre><span class="c1">// refresh() 返回，和 status 同級</span>
 <span class="c2">canvas</span>: { <span class="c3">height</span>: 196, <span class="c3">nodes</span>: [
   { <span class="c3">rect</span>: [0, 0, 150, 196], <span class="c3">r</span>: 10, <span class="c3">fill</span>: <span class="c4">"#FBF8F1"</span>, <span class="c3">shadow</span>: <span class="c4">"lg"</span> },
   { <span class="c3">rect</span>: [0, 0, 150, 30], <span class="c3">r</span>: [10,10,0,0], <span class="c3">fill</span>: <span class="c4">"$accent"</span> },
@@ -61,16 +61,16 @@ td{padding:7px 8px;font-size:12.5px;border-bottom:1px solid #EEEEE9;vertical-ali
     <span class="c3">stroke</span>: <span class="c4">"$accent"</span>, <span class="c3">width</span>: 4, <span class="c3">glow</span>: <span class="c2">true</span> },
   { <span class="c3">hit</span>: [0, 0, 150, 196], <span class="c3">action</span>: <span class="c4">"open-calendar"</span>, <span class="c3">hover</span>: { <span class="c3">lift</span>: 2 } }
 ]}
-<span class="c1">// 常驻条：同样的格式，限高 22、宽 156</span>
+<span class="c1">// 常駐條：同樣的格式，限高 22、寬 156</span>
 <span class="c2">pinned</span>: { <span class="c3">canvas</span>: { <span class="c3">nodes</span>: [ … ] } }</pre>
       <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
-        <div class="k">护栏</div>
+        <div class="k">護欄</div>
         <ul class="muted" style="margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.65">
-          <li>字体默认用岛仔自带的；用户装了「字体包」插件后，画布可按名字引用（缺字时回退到岛仔字体）。颜色可写 $accent、$text、$muted、$card，换皮肤自动跟随。</li>
-          <li>每页最多 1500 个图元，图片只能来自插件包（合计 512 KiB）。</li>
-          <li>动画只能声明（数值变化时过渡、有限次的循环），不能让脚本每帧跑。</li>
-          <li>绘制超时自动降级为静态画面，并在开发调试里提示作者。</li>
-          <li>隐私交给用户：插件不强制打码，用户可用岛仔已有的「截图和录屏中隐藏」等设置。</li>
+          <li>字體預設用島仔自帶的；使用者裝了「字體包」插件後，畫布可按名字引用（缺字時回退到島仔字體）。顏色可寫 $accent、$text、$muted、$card，換皮膚自動跟隨。</li>
+          <li>每頁最多 1500 個圖元，圖片只能來自插件包（合計 512 KiB）。</li>
+          <li>動畫只能聲明（數值變化時過渡、有限次的循環），不能讓腳本每幀跑。</li>
+          <li>繪製超時自動降級為靜態畫面，並在開發調試裡提示作者。</li>
+          <li>隱私交給使用者：插件不強制打碼，使用者可用島仔已有的「截圖和錄屏中隱藏」等設定。</li>
         </ul>
       </div>
     </div>
@@ -79,29 +79,29 @@ td{padding:7px 8px;font-size:12.5px;border-bottom:1px solid #EEEEE9;vertical-ali
       <div class="k">要做的事（分三批）</div>
       <div class="card" style="padding: 4px 12px">
         <table style="width: 100%; border-collapse: collapse">
-          <thead><tr><th style="width: 60px">批次</th><th>内容</th></tr></thead>
+          <thead><tr><th style="width: 60px">批次</th><th>內容</th></tr></thead>
           <tbody>
-            <tr><td><span class="b1">一</span></td><td>静态图元、文字、渐变阴影发光、主题色令牌、实时值绑定、点按区域、和标准组件混排。<br><span class="muted">做完：五个插件八成样子能出来。</span></td></tr>
-            <tr><td><span class="b2">二</span></td><td>悬停样式、可滚动区、数值过渡和撕页这类动画、常驻小画布。<br><span class="muted">做完：五张理想稿完整还原。</span></td></tr>
-            <tr><td><span class="b3">三</span></td><td>作者工具里的实时预览、尺寸和对比度检查、集市审核时的截图比对。<br><span class="muted">做完：社区作者能放心做好看的插件。</span></td></tr>
+            <tr><td><span class="b1">一</span></td><td>靜態圖元、文字、漸變陰影發光、主題色令牌、實時值綁定、點按區域、和標準組件混排。<br><span class="muted">做完：五個插件八成樣子能出來。</span></td></tr>
+            <tr><td><span class="b2">二</span></td><td>懸停樣式、可滾動區、數值過渡和撕頁這類動畫、常駐小畫布。<br><span class="muted">做完：五張理想稿完整還原。</span></td></tr>
+            <tr><td><span class="b3">三</span></td><td>作者工具裡的實時預覽、尺寸和對比度檢查、集市審核時的截圖比對。<br><span class="muted">做完：社區作者能放心做好看的插件。</span></td></tr>
           </tbody>
         </table>
       </div>
       <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
         <div class="k">已有的照常保留</div>
         <ul class="muted" style="margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.65">
-          <li>状态页标准组件、设置类型、联网取数、提醒、事件、存储都不变。</li>
-          <li>老插件不用改；想变好看的插件只需多返回一个 canvas。</li>
+          <li>狀態頁標準組件、設定類型、聯網取數、提醒、事件、存儲都不變。</li>
+          <li>老插件不用改；想變好看的插件只需多返回一個 canvas。</li>
         </ul>
       </div>
       <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
-        <div class="k">还需要补的小项</div>
+        <div class="k">還需要補的小項</div>
         <ul class="muted" style="margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.65">
-          <li>设置类型 timezone：中文城市搜索并带出时区（世界时钟）。</li>
-          <li>多行文本输入（便签）。</li>
-          <li>插件私有存储导出（便签不限条数时用）。</li>
-          <li>list 设置的子项支持 icon、color（日子选图标和颜色）。</li>
-          <li>字体包：新的外观资源包类型 appearance.font。</li>
+          <li>設定類型 timezone：中文城市搜索並帶出時區（世界時鐘）。</li>
+          <li>多行文本輸入（便籤）。</li>
+          <li>插件私有存儲導出（便籤不限條數時用）。</li>
+          <li>list 設定的子項支援 icon、color（日子選圖標和顏色）。</li>
+          <li>字體包：新的外觀資源包類型 appearance.font。</li>
         </ul>
       </div>
     </div>

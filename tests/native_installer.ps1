@@ -5,7 +5,7 @@ $id = 'DaozaiSetupTest' + [Guid]::NewGuid().ToString('N')
 $name = '岛仔安装测试-' + $id.Substring(15,8)
 $root = Join-Path $project ('target\' + $id)
 $installed = Join-Path $root 'installed files'
-$key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\' + $id
+$key = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\' + $id
 $data = Join-Path $env:APPDATA $id
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 $sentinel = Join-Path $data 'settings.txt'
@@ -15,7 +15,7 @@ $fixture = Join-Path $root 'fixture.exe'
 & (Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe') /nologo /target:winexe "/out:$fixture" $source
 if ($LASTEXITCODE -ne 0) { throw '测试程序编译失败' }
 $setup = Join-Path $root 'Daozai-TestInstaller.exe'
-& $NsisCompiler /V2 /WX "/DAPP_ID=$id" "/DAPP_NAME=$name" /DAPP_VERSION=9.8.7 "/DPROJECT_DIR=$project" "/DSOURCE_EXE=$fixture" "/DOUTPUT_FILE=$setup" (Join-Path $project 'installer\setup.nsi')
+& $NsisCompiler /V2 /WX "/DAPP_ID=$id" "/DAPP_NAME=$name" /DDISPLAY_VERSION=9.8.7 /DDISPLAY_VERSION_NUM=9.8.7.0 "/DPROJECT_DIR=$project" "/DBOOTSTRAP_EXE=$fixture" "/DOUTPUT_FILE=$setup" (Join-Path $project 'installer\setup.nsi')
 if ($LASTEXITCODE -ne 0) { throw '测试安装器编译失败' }
 New-Item -ItemType Directory -Path $data -Force | Out-Null
 Set-Content -LiteralPath $sentinel -Value 'keep-user-data'
@@ -32,11 +32,11 @@ function Assert-Installed {
     if ($entry.InstallLocation -ne $installed -or $entry.DisplayVersion -ne '9.8.7') { throw '安装注册信息不正确' }
     if ($entry.UninstallString -ne ('"' + (Join-Path $installed 'Uninstall.exe') + '"')) { throw '卸载命令不正确' }
     if (-not ($entry.EstimatedSize -gt 0 -and $entry.EstimatedSize -lt 100000)) { throw "登记大小不正确：$($entry.EstimatedSize) KB" }
-    if ((Get-FileHash (Join-Path $installed 'daozai.exe')).Hash -ne (Get-FileHash $fixture).Hash) { throw '程序复制不正确' }
+    if ((Get-FileHash (Join-Path $installed 'kuidao-bootstrap.exe')).Hash -ne (Get-FileHash $fixture).Hash) { throw '啟動器复制不正确' }
     $shell = New-Object -ComObject WScript.Shell
-    $desktopLink = Join-Path $shell.SpecialFolders.Item('Desktop') "$name.lnk"
+    $desktopLink = Join-Path $env:PUBLIC "Desktop\$name.lnk"
     if ((Test-Path -LiteralPath $desktopLink) -ne $Desktop) { throw '桌面快捷方式选项未生效' }
-    $paths = @((Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\$name.lnk"))
+    $paths = @((Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\$name.lnk"))
     if ($Desktop) { $paths += $desktopLink }
     foreach ($path in $paths) {
         if (-not (Test-Path -LiteralPath $path)) { throw "快捷方式不存在：$path" }
@@ -44,22 +44,25 @@ function Assert-Installed {
         $probe = Join-Path $root 'shortcut-probe.lnk'
         Copy-Item -LiteralPath $path -Destination $probe -Force
         $actual = $shell.CreateShortcut($probe).TargetPath
-        $expected = Join-Path $installed 'daozai.exe'
+        $expected = Join-Path $installed 'kuidao-bootstrap.exe'
         if (-not (Test-Path -LiteralPath $actual) -or (Get-Item -LiteralPath $actual).FullName -ne (Get-Item -LiteralPath $expected).FullName) { throw "快捷方式目标不正确：$actual；预期：$expected" }
     }
     $run = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -ErrorAction SilentlyContinue).$id
     if ($AutoStart) {
-        if ($run -ne ('"' + (Join-Path $installed 'daozai.exe') + '"')) { throw '开机自启选项或路径不正确' }
+        if ($run -ne ('"' + (Join-Path $installed 'kuidao.exe') + '"')) { throw '开机自启选项或路径不正确' }
     } elseif ($run) { throw '未勾选自启却设置了开机启动' }
     if ((Get-Content -LiteralPath $sentinel -Raw).Trim() -ne 'keep-user-data') { throw '用户数据被修改' }
 }
 try {
     Run-Setup
     Assert-Installed
+    # 安裝包本體不含主程式；模擬啟動器已完成下載。
+    Set-Content -LiteralPath (Join-Path $installed 'kuidao.exe') -Value 'downloaded-main-program'
     Write-Output '通过：首次安装、含空格路径、快捷方式和卸载注册'
-    Set-Content -LiteralPath (Join-Path $installed 'daozai.exe') -Value 'previous-version'
+    Set-Content -LiteralPath (Join-Path $installed 'kuidao.exe') -Value 'previous-version'
     Set-Content -LiteralPath (Join-Path $installed 'uninstall.ps1') -Value 'previous-uninstaller'
-    Set-ItemProperty -LiteralPath $key -Name UninstallString -Value 'powershell.exe legacy-uninstall.ps1'
+    try { Set-ItemProperty -LiteralPath $key -Name UninstallString -Value 'powershell.exe legacy-uninstall.ps1' }
+    catch { Write-Output '略過：目前帳號不能直接改 HKLM，改用安裝器自身覆寫路徑驗證' }
     Run-Setup
     Assert-Installed
     if (Test-Path -LiteralPath (Join-Path $installed 'uninstall.ps1')) { throw '旧卸载脚本未移除' }
@@ -86,7 +89,7 @@ try {
     # 使用原安装路径运行原生卸载器，只操作本测试的独立产品标识。
     $process = Start-Process -FilePath (Join-Path $installed 'Uninstall.exe') -ArgumentList @('/S',"_?=$installed") -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(30000) -or $process.ExitCode -ne 0) { throw '卸载失败或超时' }
-    if ((Test-Path -LiteralPath $key) -or (Test-Path -LiteralPath (Join-Path $installed 'daozai.exe'))) { throw '卸载残留程序或注册信息' }
+    if ((Test-Path -LiteralPath $key) -or (Test-Path -LiteralPath (Join-Path $installed 'kuidao.exe')) -or (Test-Path -LiteralPath (Join-Path $installed 'kuidao-bootstrap.exe'))) { throw '卸载残留程序或注册信息' }
     if ((Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -ErrorAction SilentlyContinue).$id) { throw '卸载残留自启项' }
     if (-not (Test-Path -LiteralPath (Join-Path $installed 'user-file.txt'))) { throw '卸载误删额外文件' }
     if ((Get-Content -LiteralPath $sentinel -Raw).Trim() -ne 'keep-user-data') { throw '卸载误删用户数据' }
@@ -100,7 +103,7 @@ try {
     $process = Start-Process -FilePath $setup -ArgumentList @('/S',"/D=$shared") -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(30000) -or $process.ExitCode -ne 0) { throw '共享文件夹安装失败或超时' }
     Assert-Installed
-    if (Test-Path -LiteralPath (Join-Path $shared 'daozai.exe')) { throw '程序被直接装进了共享文件夹' }
+    if (Test-Path -LiteralPath (Join-Path $shared 'kuidao-bootstrap.exe')) { throw '程序被直接装进了共享文件夹' }
     if ((Get-ItemProperty -LiteralPath $key).EstimatedSize -ge 40000) { throw '登记大小把共享文件夹里的其他软件算了进去' }
     Write-Output '通过：共享文件夹自动建立专用子文件夹、登记大小只算岛仔'
     Run-Setup -UseRegisteredPath

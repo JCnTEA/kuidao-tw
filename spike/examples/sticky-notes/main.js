@@ -10,8 +10,8 @@ function notes(input, add, remove) {
     return {
         status: {
             state: items.length ? "running" : "idle",
-            label: "便签 " + items.length + " / 8",
-            fields: [{key: "note", label: "新便签", max: 80}],
+            label: "便籤 " + items.length + " / 8",
+            fields: [{key: "note", label: "新便籤", max: 80}],
             actions: [{id: "add", label: "添加"}],
             items: items.map(item => {
                 const chars = [...item.text];
@@ -25,7 +25,7 @@ function notes(input, add, remove) {
         },
         storage: {items, nextId},
         notice: filled
-            ? {id: "notes-full", title: "便签已满", body: "已记录 8 条便签。"}
+            ? {id: "notes-full", title: "便籤已滿", body: "已記錄 8 條便籤。"}
             : null
     };
 }
@@ -41,5 +41,5 @@ function action(input) {
 }
 
 function event(input) {
-    return notes(input, input.event.name === "focus.finished" ? "完成一次专注" : undefined);
+    return notes(input, input.event.name === "focus.finished" ? "完成一次專注" : undefined);
 }

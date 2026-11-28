@@ -1,4 +1,4 @@
-//! 用真实 Windows 媒体会话验证连续切歌、反复开关和诊断记录。
+//! 用真實 Windows 媒體會話驗證連續切歌、反覆開關和診斷記錄。
 #[cfg(windows)]
 fn main(){
     use std::{time::{Duration,Instant},collections::HashSet,sync::atomic::Ordering};
@@ -22,7 +22,7 @@ fn main(){
     }
     drop(poller);let until=Instant::now()+Duration::from_secs(5);
     while resources::POLLER.active()>0 && Instant::now()<until{std::thread::sleep(Duration::from_millis(10));}
-    assert_eq!(resources::POLLER.active(),0);assert!(tracks.len()>10 && covers>20,"必须经过真实的媒体与封面路径");
+    assert_eq!(resources::POLLER.active(),0);assert!(tracks.len()>10 && covers>20,"必須經過真實的媒體與封面路徑");
     assert!(std::fs::metadata(directory.join("resources.log")).unwrap().len()>100);
     drop(monitor);println!("completed tracks={} covers={covers} diagnostics={}",tracks.len(),directory.display());
 }

@@ -98,7 +98,7 @@ impl LocalPlugins {
                 self.cancel_market(&entry.id);
                 self.refresh_page_shortcuts();
                 self.sync_wireless();
-                self.notice = format!("插件已停用，无法保存撤回状态：{error}");
+                self.notice = format!("插件已停用，無法保存撤回狀態：{error}");
             }
         }
     }
@@ -135,7 +135,7 @@ impl LocalPlugins {
     fn save_favorites(&mut self, favorites: BTreeMap<String, String>) -> Result<()> {
         let contents = serde_json::to_vec(&favorites)?;
         if contents.len() as u64 > FAVORITES_LIMIT {
-            return Err(fail("已达到本机收藏上限"));
+            return Err(fail("已達到本機收藏上限"));
         }
         crate::model::atomic_write(&self.dir.join(FAVORITES_FILE), &contents)?;
         self.market_favorites = favorites;
@@ -164,7 +164,7 @@ impl LocalPlugins {
 
     pub(super) fn set_market_catalog(&mut self, path: &Path) -> Result<()> {
         if self.market_busy() {
-            return Err(fail("请等待当前集市操作完成"));
+            return Err(fail("請等待當前集市操作完成"));
         }
         let catalog = market::Catalog::open(path)?;
         crate::model::atomic_write(
@@ -178,14 +178,14 @@ impl LocalPlugins {
 
     pub(super) fn refresh_market_catalog(&mut self) -> Result<()> {
         if self.market_busy() {
-            return Err(fail("请等待当前集市操作完成"));
+            return Err(fail("請等待當前集市操作完成"));
         }
         let path = self
             .market_catalog
             .as_ref()
             .map(|catalog| catalog.path.clone())
             .or_else(|| self.saved_market_path())
-            .ok_or_else(|| fail("请先选择测试集市目录"))?;
+            .ok_or_else(|| fail("請先選擇測試集市目錄"))?;
         let catalog = market::Catalog::open(&path)?;
         self.apply_market_revocations(&catalog);
         self.market_catalog = Some(Arc::new(catalog));
@@ -363,30 +363,30 @@ impl LocalPlugins {
 
     pub(super) fn market_action(&mut self, official: bool, id: &str) -> Result<()> {
         if self.market_busy() {
-            return Err(fail("请等待当前集市操作完成"));
+            return Err(fail("請等待當前集市操作完成"));
         }
         let catalog = self
             .market_catalog(official)
-            .ok_or_else(|| fail("集市目录尚未加载"))?;
+            .ok_or_else(|| fail("集市目錄尚未加載"))?;
         let entry = catalog
             .entries
             .iter()
             .find(|entry| entry.id == id)
-            .ok_or_else(|| fail("集市没有这个插件"))?;
+            .ok_or_else(|| fail("集市沒有這個插件"))?;
         let update = match self.market_status(&catalog, entry) {
             MarketStatus::Install => false,
             MarketStatus::Update => true,
             MarketStatus::Installed | MarketStatus::Unavailable => {
-                return Err(fail("集市没有更高版本"));
+                return Err(fail("集市沒有更高版本"));
             }
-            MarketStatus::OtherSource => return Err(fail("请从原来源管理这个插件")),
+            MarketStatus::OtherSource => return Err(fail("請從原來源管理這個插件")),
             MarketStatus::Revoked => return Err(fail("此插件版本已撤回")),
         };
         let record = if let Some(record) = self.records.get(id) {
             record.clone()
         } else {
             if self.path(id).exists() && !self.invalid.contains(id) {
-                return Err(fail("已有无法读取的插件记录"));
+                return Err(fail("已有無法讀取的插件記錄"));
             }
             Record {
                 origin: catalog.path.clone(),
@@ -402,7 +402,6 @@ impl LocalPlugins {
                 source_refresh_seconds: None,
                 market_revoked: false,
                 status_page_disabled: false,
-                status_page_settings_hidden: false,
                 notice_history: NoticeHistory::default(),
             }
         };
@@ -442,12 +441,12 @@ impl LocalPlugins {
         let (verified_version, result) = job
             .result
             .join()
-            .unwrap_or_else(|_| (None, Err("集市校验线程退出".into())));
+            .unwrap_or_else(|_| (None, Err("集市校驗線程退出".into())));
         if let Some(version) = verified_version {
             self.market_metrics.record_download(&job.id, version);
         }
         if job.cancelled {
-            self.notice = "插件状态已变化，请重新操作".into();
+            self.notice = "插件狀態已變化，請重新操作".into();
             return;
         }
         let result = result.and_then(|mut record| {
@@ -459,7 +458,7 @@ impl LocalPlugins {
             }) {
                 return Err("此插件版本已撤回".into());
             }
-            // 撤回后更新时，等待用户重新启用材质。
+            // 撤回後更新時，等待用戶重新啟用材質。
             #[cfg(feature = "sdk-material")]
             if self.selected_material.as_deref() == Some(job.id.as_str())
                 && self.records.get(&job.id).is_some_and(|current| current.market_revoked)
@@ -468,7 +467,7 @@ impl LocalPlugins {
             }
             record.market_revoked = false;
             let mut previous_secret = None;
-            // 校验期间，旧插件可能完成一次后台刷新，保留该次已保存的数据。
+            // 校驗期間，舊插件可能完成一次後台刷新，保留該次已保存的數據。
             if let Some(current) = self.records.get(&job.id) {
                 record.storage = current.storage.clone();
                 record.notice_history = current.notice_history.clone();
@@ -500,10 +499,10 @@ impl LocalPlugins {
             Ok(())
         });
         self.notice = match result {
-            Ok(()) if job.update => "已更新，设置和数据已保留".into(),
-            Ok(()) => "已安装。启用后开始运行".into(),
-            Err(error) if job.update => format!("更新失败，原版本仍可用。{error}"),
-            Err(error) => format!("安装失败。{error}"),
+            Ok(()) if job.update => "已更新，設置和數據已保留".into(),
+            Ok(()) => "已安裝。啟用後開始運行".into(),
+            Err(error) if job.update => format!("更新失敗，原版本仍可用。{error}"),
+            Err(error) => format!("安裝失敗。{error}"),
         };
     }
 
@@ -518,7 +517,7 @@ impl LocalPlugins {
             let job = official.sync_job.take().unwrap();
             match job
                 .join()
-                .unwrap_or_else(|_| Err("同步集市时出现错误".into()))
+                .unwrap_or_else(|_| Err("同步集市時出現錯誤".into()))
             {
                 Ok(catalog) => {
                     official.images.retain(|key, _| catalog.has_image(key));
@@ -568,7 +567,7 @@ fn prepare_record(mut record: Record, package: Package) -> Result<Record> {
                 .iter()
                 .any(|capability| !manifest.capabilities.contains(capability))
         {
-            return Err(fail("新版本与已安装版本的能力、权限或数据格式不兼容"));
+            return Err(fail("新版本與已安裝版本的能力、權限或數據格式不兼容"));
         }
         if !old.settings.iter().all(|previous| {
             manifest
@@ -576,7 +575,7 @@ fn prepare_record(mut record: Record, package: Package) -> Result<Record> {
                 .iter()
                 .any(|field| field.key == previous.key && field.kind == previous.kind)
         }) {
-            return Err(fail("新版本删除或更改了已设置的字段类型"));
+            return Err(fail("新版本刪除或更改了已設置的字段類型"));
         }
     }
     let values = package.settings_values(&record.values);
@@ -585,7 +584,7 @@ fn prepare_record(mut record: Record, package: Package) -> Result<Record> {
         .iter()
         .any(|(key, value)| values.get(key) != Some(value))
     {
-        return Err(fail("新版本与已保存的设置不兼容"));
+        return Err(fail("新版本與已保存的設置不兼容"));
     }
     if manifest.runtime == "js" {
         package.render(

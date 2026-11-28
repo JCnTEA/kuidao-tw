@@ -1,7 +1,7 @@
 {
   "id": "example.canvas-pinned-demo",
-  "name": "画布常驻",
-  "author": "岛仔",
+  "name": "畫布常駐",
+  "author": "島仔",
   "version": "1.0.0",
   "api": 1,
   "runtime": "js",

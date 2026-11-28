@@ -1,7 +1,7 @@
 {
   "id": "example.trip",
-  "name": "旅行倒计时",
-  "author": "岛仔",
+  "name": "旅行倒計時",
+  "author": "島仔",
   "version": "1.0.0",
   "api": 1,
   "runtime": "js",
@@ -20,13 +20,13 @@
   "settings": [
     {
       "key": "title",
-      "label": "倒计时名称",
+      "label": "倒計時名稱",
       "type": "text",
       "default": "旅行"
     },
     {
       "key": "target",
-      "label": "目标日期",
+      "label": "目標日期",
       "type": "date",
       "default": "2027-01-01"
     }

@@ -2,10 +2,7 @@
 use super::market_state::MarketStatus;
 use super::*;
 use crate::{
-    extras::{
-        page_visibility_action, settings_apply_style, settings_card, settings_control_row,
-        settings_hint, settings_label, PAGE_VISIBILITY_ACTION_WIDTH, SETTINGS_SWITCH_W,
-    },
+    extras::{settings_apply_style, settings_card, settings_control_row, settings_hint, settings_label},
     paint::{self, Card, H},
     settings_theme::color,
     theme::{self, W},
@@ -55,8 +52,8 @@ fn forget_covers(ui: &egui::Ui) {
     ui.data_mut(|data| data.remove::<CoverCache>(egui::Id::new(COVERS)));
 }
 
-/// 插件封面，按 16:9 居中裁切。`muted` 用于已停用的插件：去色后淡化到 45%，
-/// 不同风格的封面停用后都会往卡片底色靠，看起来是同一种褪掉的样子。
+/// 插件封面，按 16:9 居中裁切。`muted` 用於已停用的插件：去色後淡化到 45%，
+/// 不同風格的封面停用後都會往卡片底色靠，看起來是同一種褪掉的樣子。
 fn plugin_cover(
     ui: &mut egui::Ui,
     key: egui::Id,
@@ -162,7 +159,7 @@ fn plugin_cover(
             rect.center(),
             egui::Align2::CENTER_CENTER,
             if pending {
-                "正在加载封面…"
+                "正在加載封面…"
             } else {
                 placeholder
             },
@@ -214,13 +211,13 @@ fn ok_color(ui: &egui::Ui) -> Color32 {
     )
 }
 
-/// 插件提供的设置项，不论落在哪个设置页（待办、日程、外观材质……），标题旁都用它标出来源。
-/// 新增插件设置入口时也调用这里，不单独画。
+/// 插件提供的設置項，不論落在哪個設置頁（待辦、日程、外觀材質……），標題旁都用它標出來源。
+/// 新增插件設置入口時也調用這裡，不單獨畫。
 pub(crate) fn plugin_tag(ui: &mut egui::Ui) {
     small_tag(ui, "插件");
 }
 
-/// 名称旁的小标签，例如「官方」「验收样例」「插件」。高度贴着文字，不撑高标题行。
+/// 名稱旁的小標籤，例如「官方」「驗收樣例」「插件」。高度貼著文字，不撐高標題行。
 fn small_tag(ui: &mut egui::Ui, label: &str) {
     let ctx = ui.ctx().clone();
     let fg = color(&ctx, Color32::from_rgb(215, 201, 252), Color32::from_rgb(91, 80, 140));
@@ -236,7 +233,7 @@ fn small_tag(ui: &mut egui::Ui, label: &str) {
     ui.painter().galley(pos + egui::vec2(0.3, 0.0), galley, fg);
 }
 
-/// 最多显示 `rows` 行的说明文字，固定占满这些行的高度，同一排卡片底部对齐。
+/// 最多顯示 `rows` 行的說明文字，固定佔滿這些行的高度，同一排卡片底部對齊。
 #[cfg(windows)]
 fn clamped_text(ui: &mut egui::Ui, text: &str, size: f32, rows: usize, tint: Color32) {
     let width = ui.available_width();
@@ -259,7 +256,7 @@ fn clamped_text(ui: &mut egui::Ui, text: &str, size: f32, rows: usize, tint: Col
     }
 }
 
-/// 两段或多段的切换条。返回被点中的序号。`dots` 为真的一段右上角带一个紫点。
+/// 兩段或多段的切換條。返回被點中的序號。`dots` 為真的一段右上角帶一個紫點。
 fn segmented(
     ui: &mut egui::Ui,
     id: &str,
@@ -271,7 +268,7 @@ fn segmented(
     segmented_counts(ui, id, options, &[], selected, dots, size)
 }
 
-/// 切换条，`counts` 里的数字用小一号的弱化颜色跟在名字后面。
+/// 切換條，`counts` 裡的數字用小一號的弱化顏色跟在名字後面。
 fn segmented_counts(
     ui: &mut egui::Ui,
     id: &str,
@@ -291,7 +288,7 @@ fn segmented_counts(
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 2.0;
-                // 放在右对齐的标题行时，egui 会从右往左排；倒着画，保证第一项始终在左边。
+                // 放在右對齊的標題行時，egui 會從右往左排；倒著畫，保證第一項始終在左邊。
                 let mut order: Vec<_> = options.iter().enumerate().collect();
                 if ui.layout().prefer_right_to_left() {
                     order.reverse();
@@ -354,7 +351,7 @@ fn segmented_counts(
                     }
                     let text_pos = egui::pos2(rect.left() + pad, rect.center().y - galley.size().y / 2.0);
                     if on {
-                        // 选中项加粗：同一行文字叠一像素绘制，宽度不跳动。
+                        // 選中項加粗：同一行文字疊一像素繪製，寬度不跳動。
                         ui.painter().galley(text_pos + egui::vec2(0.35, 0.0), galley.clone(), text_color);
                     }
                     let text_w = galley.size().x;
@@ -382,7 +379,7 @@ fn segmented_counts(
     chosen.filter(|&index| index != selected)
 }
 
-/// 筛选用的圆角小标签。
+/// 篩選用的圓角小標籤。
 #[cfg(windows)]
 fn chip(ui: &mut egui::Ui, text: &str, on: bool) -> egui::Response {
     let ctx = ui.ctx().clone();
@@ -402,14 +399,9 @@ fn chip(ui: &mut egui::Ui, text: &str, on: bool) -> egui::Response {
 
 const PLUGIN_SWITCH_WIDTH: f32 = 38.0;
 
-/// 插件开关统一用紫色表示开启、灰色表示关闭。
+/// 插件開關統一用紫色表示開啟、灰色表示關閉。
 fn plugin_switch(ui: &mut egui::Ui, id: &str, on: bool, label: &str) -> bool {
-    plugin_switch_sized(ui, id, on, label, egui::vec2(PLUGIN_SWITCH_WIDTH, 22.0))
-}
-
-fn plugin_switch_sized(ui: &mut egui::Ui, id: &str, on: bool, label: &str, size: egui::Vec2) -> bool {
-    let (_, rect) = ui.allocate_space(size);
-    let radius = size.y / 2.0;
+    let (_, rect) = ui.allocate_space(egui::vec2(PLUGIN_SWITCH_WIDTH, 22.0));
     let response = ui.interact(
         rect,
         egui::Id::new(("settings-plugin-switch", id)),
@@ -426,18 +418,18 @@ fn plugin_switch_sized(ui: &mut egui::Ui, id: &str, on: bool, label: &str, size:
         Color32::from_rgb(203, 207, 214),
     );
     ui.painter()
-        .rect_filled(rect, radius, paint::mix(off, plugin_accent(ui), t));
+        .rect_filled(rect, 11.0, paint::mix(off, plugin_accent(ui), t));
     if response.has_focus() {
         ui.painter().rect_stroke(
             rect.expand(2.0),
-            radius + 2.0,
+            13.0,
             egui::Stroke::new(1.0, plugin_accent(ui)),
             egui::StrokeKind::Outside,
         );
     }
-    let x = egui::lerp((rect.left() + radius)..=(rect.right() - radius), t);
+    let x = egui::lerp((rect.left() + 11.0)..=(rect.right() - 11.0), t);
     ui.painter()
-        .circle_filled(egui::pos2(x, rect.center().y), radius - 3.0, Color32::WHITE);
+        .circle_filled(egui::pos2(x, rect.center().y), 8.0, Color32::WHITE);
     response.on_hover_text(label).clicked()
 }
 
@@ -473,7 +465,7 @@ fn plugin_setting_switch_row(
     .inner
 }
 
-/// 已安装列表里的「路径」：显示设置归属，点一下就是前往设置。
+/// 已安裝列表裡的「路徑」：顯示設置歸屬，點一下就是前往設置。
 fn path_button(ui: &mut egui::Ui, text: &str, warn: bool, tip: &str) -> bool {
     let base = if warn { warn_color(ui) } else { muted_color(ui) };
     let id = ui.id().with(("plugin-path", text));
@@ -506,7 +498,7 @@ fn market_button(ui: &egui::Ui, text: &str) -> egui::Button<'static> {
         .corner_radius(6.0)
 }
 
-/// 弹窗里的大号选项：粗体标题加一行后果说明，整块可点。
+/// 彈窗裡的大號選項：粗體標題加一行後果說明，整塊可點。
 fn option_card(ui: &mut egui::Ui, title: &str, detail: &str, danger: bool) -> bool {
     let ctx = ui.ctx().clone();
     let id = ui.id().with(("plugin-option", title));
@@ -552,10 +544,10 @@ enum PluginPage {
     TestMarket,
 }
 
-/// 「开发者工具」入口：代码图标加正常字色，悬停变紫并出现下划线，一看就能点。
+/// 「開發者工具」入口：代碼圖標加正常字色，懸停變紫並出現下劃線，一看就能點。
 #[cfg(windows)]
 fn developer_link(ui: &mut egui::Ui) -> bool {
-    let text = "开发者工具";
+    let text = "開發者工具";
     let id = egui::Id::new("plugin-developer-link");
     let hovered = ui.ctx().read_response(id).is_some_and(|r| r.hovered());
     let tint = if hovered {
@@ -592,16 +584,15 @@ fn developer_link(ui: &mut egui::Ui) -> bool {
     response.clicked()
 }
 
-/// 设置归属在界面上的名字，顺序与设置侧栏一致。
-const OWNERS: [(&str, &str); 8] = [
-    ("appearance", "外观"),
-    ("pages", "页面管理"),
-    ("status", "独立功能"),
+/// 設置歸屬在界面上的名字，順序與設置側欄一致。
+const OWNERS: [(&str, &str); 7] = [
+    ("appearance", "外觀"),
+    ("pages", "頁面管理"),
+    ("status", "獨立功能"),
     ("calendar", "日程"),
-    ("tasks", "待办与置物"),
-    ("quota", "AI 额度"),
-    ("wireless", "无线设备"),
-    ("mail", "邮箱"),
+    ("tasks", "待辦與置物"),
+    ("quota", "AI 額度"),
+    ("wireless", "無線設備"),
 ];
 
 fn owner_label(owner: &str) -> Option<&'static str> {
@@ -615,7 +606,6 @@ fn owner_settings_tab(owner: &str) -> usize {
     match owner {
         "calendar" => crate::app::PAGE_SETTINGS_TABS[crate::app::CALENDAR_PAGE],
         "quota" => crate::app::PAGE_SETTINGS_TABS[crate::app::QUOTA_PAGE],
-        "mail" => crate::app::PAGE_SETTINGS_TABS[crate::app::MAIL_PAGE],
         "pages" | "status" => crate::extras::SETTINGS_TAB_PAGES,
         "wireless" => crate::extras::SETTINGS_TAB_WIRELESS,
         "appearance" => crate::extras::SETTINGS_TAB_APPEARANCE,
@@ -629,25 +619,25 @@ fn standalone_settings_page(manifest: &Manifest) -> bool {
             || manifest.source_kind().is_some())
 }
 
-// 官方面板按实际用途分组。其他清单字段保持原来的显示顺序。
+// 官方面板按實際用途分組。其他清單字段保持原來的顯示順序。
 fn settings_section(id: &str, key: &str) -> (u8, &'static str) {
     match (id, key) {
-        ("daozai.gold", "unit" | "range" | "up_color") => (1, "报价"),
-        ("daozai.gold", "alert_usd" | "alert_cny") => (2, "价格提醒"),
-        ("daozai.live-pay", "salary" | "days" | "start" | "end") => (1, "薪资与班次"),
-        ("daozai.live-pay", "breaks") => (2, "休息时段"),
+        ("daozai.gold", "unit" | "range" | "up_color") => (1, "報價"),
+        ("daozai.gold", "alert_usd" | "alert_cny") => (2, "價格提醒"),
+        ("daozai.live-pay", "salary" | "days" | "start" | "end") => (1, "薪資與班次"),
+        ("daozai.live-pay", "breaks") => (2, "休息時段"),
         ("daozai.world-clock", "cities") => (1, "城市"),
         ("daozai.days", "days") => (1, "我的日子"),
-        ("daozai.days", "show_holidays") => (2, "显示"),
+        ("daozai.days", "show_holidays") => (2, "顯示"),
         ("daozai.notes", "pin_mode")
         | ("daozai.live-pay", "pinned_show")
         | ("daozai.world-clock", "pinned_city")
-        | ("daozai.days", "pinned_day") => (3, "常驻内容"),
-        _ => (0, "设置"),
+        | ("daozai.days", "pinned_day") => (3, "常駐內容"),
+        _ => (0, "設置"),
     }
 }
 
-/// 已安装分组的小标题，例如「外观 · 每类外观同时选用一个」。
+/// 已安裝分組的小標題，例如「外觀 · 每類外觀同時選用一個」。
 fn group_header(ui: &mut egui::Ui, title: &str, note: &str) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
@@ -659,7 +649,7 @@ fn group_header(ui: &mut egui::Ui, title: &str, note: &str) {
     ui.add_space(2.0);
 }
 
-/// 一组插件共用一张卡片，行与行之间用细线分开。
+/// 一組插件共用一張卡片，行與行之間用細線分開。
 fn plugin_list(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
     egui::Frame::new()
         .fill(card_color(ui))
@@ -682,7 +672,7 @@ fn row_separator(ui: &mut egui::Ui) {
 }
 
 #[cfg(all(windows, feature = "sdk-material"))]
-const CAPTURE_PERMISSION: &str = "读取岛体背后一小块屏幕画面，只在本机用于绘制材质，不保存、不上传；插件本身没有网络和文件权限。";
+const CAPTURE_PERMISSION: &str = "讀取島體背後一小塊屏幕畫面，只在本機用於繪製材質，不保存、不上傳；插件本身沒有網絡和文件權限。";
 
 #[cfg(all(windows, feature = "sdk-material"))]
 fn material_name(ui: &egui::Ui, name: &str, selected: bool, active: bool) -> egui::RichText {
@@ -750,46 +740,26 @@ fn material_error(ui: &mut egui::Ui) {
 }
 
 impl LocalPlugins {
-    pub(crate) fn page_shortcut_settings(&self, ui: &mut egui::Ui, show: &mut bool, hide_arrows: &mut bool) -> bool {
+    pub(crate) fn page_shortcut_settings(&self, ui: &mut egui::Ui, show: &mut bool) -> bool {
         if self.active_page_shortcut_colors().is_none() {
             return false;
         }
-        let display_changed = plugin_setting_switch_row(
+        if plugin_setting_switch_row(
             ui,
             "page-shortcuts-display",
-            "快捷切换图标",
-            "在岛仔展开后的底部与页码点同排显示",
+            "快捷切換圖標",
+            "在島仔展開後的底部與頁碼點同排顯示",
             *show,
             true,
-        );
-        if display_changed {
+        ) {
             *show = !*show;
-        }
-        ui.separator();
-        let arrows_changed = plugin_setting_switch_row(
-            ui,
-            "page-shortcuts-hide-arrows",
-            "隐藏左右翻页箭头",
-            "显示快捷切换图标时生效",
-            *hide_arrows,
-            true,
-        );
-        if arrows_changed {
-            *hide_arrows = !*hide_arrows;
-        }
-        if display_changed || arrows_changed {
             ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
         }
         true
     }
 
     #[cfg(windows)]
-    pub(crate) fn wireless_settings(
-        &mut self,
-        ui: &mut egui::Ui,
-        enhancement: &crate::bt::halo_component::Component,
-        wireless_on: bool,
-    ) {
+    pub(crate) fn wireless_settings(&mut self, ui: &mut egui::Ui) {
         let Some(record) = self
             .records
             .get(WIRELESS_PLUGIN_ID)
@@ -803,87 +773,24 @@ impl LocalPlugins {
         let enabled = record.enabled;
         let version = format!("{} v{}", package.manifest.name, package.manifest.version);
         let error_id = ui.id().with("wireless-compat-enable-error");
-        let mut toggle = false;
-        let mut enhancement_toggle = false;
-        let mut enhancement_update = false;
-        let component = enhancement.status();
-        let can_start = enabled && wireless_on;
 
-        crate::extras::settings_label(ui, "设备兼容");
+        crate::extras::settings_label(ui, "設備兼容");
         settings_card(ui, |ui| {
-            toggle = plugin_setting_switch_row(
-                ui, WIRELESS_PLUGIN_ID, "启用兼容包", &version, enabled, true,
-            );
-            ui.add_enabled_ui(can_start || component.enabled, |ui| {
-                enhancement_toggle = plugin_setting_switch_row(
-                    ui, "wireless-battery-component", "电量增强",
-                    if component.busy { "正在准备 HaloBattery 采集组件…" }
-                    else if component.installed { "HaloBattery 采集组件已就绪" }
-                    else { "首次开启时单独下载 HaloBattery 采集组件" },
-                    component.enabled, true,
-                );
-            });
-            if let Some(error) = &component.error {
-                settings_hint(ui, error);
+            if plugin_setting_switch_row(ui, WIRELESS_PLUGIN_ID, "啟用兼容包", &version, enabled, true) {
+                let error = self
+                    .enable(WIRELESS_PLUGIN_ID, !enabled)
+                    .err()
+                    .map(|error| error.to_string());
+                if error.is_none() {
+                    ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
+                }
+                ui.data_mut(|data| data.insert_temp(error_id, error));
             }
-            if can_start && component.enabled && !component.busy {
-                enhancement_update = ui.small_button(
-                    if component.installed { "检查组件更新" } else { "重试下载" }
-                ).clicked();
-            }
-            egui::CollapsingHeader::new(egui::RichText::new("兼容接收器").size(12.5))
-                .id_salt("wireless-compat-receivers")
-                .show(ui, |ui| {
-                    let Ok(table) = package.wireless_table() else {
-                        settings_hint(ui, "无法读取兼容接收器名单");
-                        return;
-                    };
-                    let receivers = table.receivers();
-                    settings_hint(
-                        ui,
-                        &format!("此包补充识别 {} 个 2.4G USB 接收器，可按 USB ID 核对。", receivers.len()),
-                    );
-                    egui::Grid::new("wireless-compat-receiver-list")
-                        .num_columns(2)
-                        .min_row_height(18.0)
-                        .max_col_width((ui.available_width() - 90.0).max(100.0))
-                        .spacing([16.0, 6.0])
-                        .show(ui, |ui| {
-                            for ((vid, pid), name) in receivers {
-                                ui.add(egui::Label::new(egui::RichText::new(name).size(12.5)).wrap());
-                                settings_hint(ui, &format!("{vid:04X}:{pid:04X}"));
-                                ui.end_row();
-                            }
-                        });
-                });
-            ui.hyperlink_to("反馈设备适配", WIRELESS_FEEDBACK_URL);
+            ui.hyperlink_to("反饋設備適配", WIRELESS_FEEDBACK_URL);
             if let Some(error) = ui.data(|data| data.get_temp::<Option<String>>(error_id).flatten()) {
                 settings_hint(ui, &error);
             }
         });
-        if toggle {
-            let error = self
-                .enable(WIRELESS_PLUGIN_ID, !enabled)
-                .err()
-                .map(|error| error.to_string());
-            if error.is_none() {
-                ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
-            }
-            ui.data_mut(|data| data.insert_temp(error_id, error));
-            ui.ctx().request_repaint();
-        }
-        if enhancement_toggle || enhancement_update {
-            let ctx = ui.ctx().clone();
-            let wake = move || ctx.request_repaint();
-            if enhancement_toggle {
-                if let Err(error) = enhancement.set_enabled(!component.enabled, wake) {
-                    ui.data_mut(|data| data.insert_temp(error_id, Some(error)));
-                }
-            } else {
-                enhancement.check_update(wake);
-            }
-            ui.ctx().request_repaint();
-        }
     }
 
     pub fn card(&mut self, c: &Card) -> bool {
@@ -937,7 +844,7 @@ impl LocalPlugins {
                 40.,
                 "local-plugin-next",
             )
-            .on_hover_text("下一张卡片")
+            .on_hover_text("下一張卡片")
             .clicked()
             {
                 self.card_index = (self.card_index + 1) % count;
@@ -946,7 +853,7 @@ impl LocalPlugins {
         if has_settings {
             let response = c
                 .hit(349., 130., 28., 40., "local-plugin-settings")
-                .on_hover_text("打开插件设置");
+                .on_hover_text("打開插件設置");
             let (hover, press) = c.hover_t(&response);
             c.circle(
                 363.,
@@ -990,7 +897,7 @@ impl LocalPlugins {
             })
     }
 
-    /// 标题行右侧的「集市 / 已安装」切换条。已安装后面跟弱化的数量，有可更新的插件时带紫点。
+    /// 標題行右側的「集市 / 已安裝」切換條。已安裝後面跟弱化的數量，有可更新的插件時帶紫點。
     pub fn header_tabs(&mut self, ui: &mut egui::Ui) {
         #[cfg(windows)]
         {
@@ -998,7 +905,7 @@ impl LocalPlugins {
             let key = egui::Id::new("settings-plugins-market");
             let previous = self.current_page(ui, ids.is_empty());
             let updates = ids.iter().filter(|id| self.market_update(id).is_some()).count();
-            let options = ["集市".to_owned(), "已安装".to_owned()];
+            let options = ["集市".to_owned(), "已安裝".to_owned()];
             let counts = [None, Some(ids.len() + self.invalid.len())];
             let selected = usize::from(previous == PluginPage::Mine);
             if let Some(index) = segmented_counts(
@@ -1023,8 +930,8 @@ impl LocalPlugins {
         let _ = ui;
     }
 
-    /// 设置 → 插件。顶部「集市 / 已安装」两段切换；已安装按设置归属分组，
-    /// 每行只有路径（前往设置）、开关和「···」三样。
+    /// 設置 → 插件。頂部「集市 / 已安裝」兩段切換；已安裝按設置歸屬分組，
+    /// 每行只有路徑（前往設置）、開關和「···」三樣。
     pub(crate) fn manage(
         &mut self,
         ui: &mut egui::Ui,
@@ -1077,7 +984,7 @@ impl LocalPlugins {
             if self.market_pending() {
                 ui.ctx().request_repaint_after(Duration::from_millis(32));
             }
-            // 教程里的「从模板创建」「打开开发者工具」在集市页直接弹出，盖在教程上面。
+            // 教程裡的「從模板創建」「打開開發者工具」在集市頁直接彈出，蓋在教程上面。
             self.guide_drawer(ui);
             if self.developer_dialog(ui) {
                 ui.data_mut(|data| data.insert_temp(page_id, PluginPage::TestMarket));
@@ -1087,15 +994,15 @@ impl LocalPlugins {
         }
         if ids.is_empty() && self.invalid.is_empty() {
             settings_card(ui, |ui| {
-                ui.strong("还没有安装插件");
-                settings_hint(ui, "装好后可以在这里管理。");
+                ui.strong("還沒有安裝插件");
+                settings_hint(ui, "裝好後可以在這裡管理。");
                 #[cfg(windows)]
                 if ui.add(market_button(ui, "去插件集市")).clicked() {
                     ui.data_mut(|data| data.insert_temp(page_id, PluginPage::Market));
                 }
             });
         }
-        // 按插件清单写明的设置归属分组，顺序与设置侧栏一致；不认识的归属单独成组，不并进别的组。
+        // 按插件清單寫明的設置歸屬分組，順序與設置側欄一致；不認識的歸屬單獨成組，不併進別的組。
         let owner_of = |id: &String| {
             self.records[id]
                 .package
@@ -1119,7 +1026,7 @@ impl LocalPlugins {
                 continue;
             }
             let title = owner_label(&group_owner).unwrap_or(group_owner.as_str());
-            let note = if group_owner == "appearance" { "每类外观同时选用一个" } else { "" };
+            let note = if group_owner == "appearance" { "每類外觀同時選用一個" } else { "" };
             group_header(ui, title, note);
             plugin_list(ui, |ui| {
                 for (index, id) in group.iter().enumerate() {
@@ -1143,7 +1050,7 @@ impl LocalPlugins {
             ui.add_space(14.0);
         }
         if !self.invalid.is_empty() {
-            group_header(ui, "需要处理", "");
+            group_header(ui, "需要處理", "");
             let invalid: Vec<_> = self.invalid.iter().cloned().collect();
             plugin_list(ui, |ui| {
                 for (index, id) in invalid.iter().enumerate() {
@@ -1173,7 +1080,7 @@ impl LocalPlugins {
                     ui.data_mut(|data| data.insert_temp(egui::Id::new("plugin-developer-tools"), true));
                 }
                 ui.label(
-                    egui::RichText::new("创建、校验与试装插件")
+                    egui::RichText::new("創建、校驗與試裝插件")
                         .size(11.5)
                         .color(muted_color(ui)),
                 );
@@ -1197,7 +1104,7 @@ impl LocalPlugins {
         jump
     }
 
-    /// 已安装列表的一行：缩略图、名称和版本、路径；右侧是更新、开关和「···」。
+    /// 已安裝列表的一行：縮略圖、名稱和版本、路徑；右側是更新、開關和「···」。
     fn installed_row(
         &mut self,
         ui: &mut egui::Ui,
@@ -1223,7 +1130,7 @@ impl LocalPlugins {
             "calendar" => calendar_on,
             "quota" => quota_on,
             "status" => !r.status_page_disabled,
-            "pages" | "wireless" | "appearance" | "mail" => true,
+            "pages" | "wireless" | "appearance" => true,
             _ => tasks_on,
         };
         let has_settings = manifest.has_settings() || manifest.has_surface(Surface::IslandPinned);
@@ -1264,27 +1171,27 @@ impl LocalPlugins {
         let author = market_browse_ui::display_author(&author, official_mark).to_owned();
         let standalone = standalone_settings_page(manifest);
         let paused = !material && !standalone && !module_on;
-        // 路径和跳转都按插件清单写明的设置归属，不写死某一页。
+        // 路徑和跳轉都按插件清單寫明的設置歸屬，不寫死某一頁。
         let owner_key = owner_key.as_str();
         let place = owner_label(owner_key).unwrap_or(owner_key);
         let (path, tip) = if material {
-            ("设置 › 外观 › 材质 ›".to_owned(), "前往外观设置".to_owned())
+            ("設置 › 外觀 › 材質 ›".to_owned(), "前往外觀設置".to_owned())
         } else if let Some(kind) = appearance {
-            (format!("设置 › 外观 › {} ›", kind.label()), "前往外观设置".to_owned())
+            (format!("設置 › 外觀 › {} ›", kind.label()), "前往外觀設置".to_owned())
         } else if standalone {
-            (format!("设置 › {name} ›"), "前往插件设置".to_owned())
+            (format!("設置 › {name} ›"), "前往插件設置".to_owned())
         } else if owner_key == "status" {
             (
-                format!("页面管理 › {place} ›"),
-                "管理这个插件的详情页和数据读取".to_owned(),
+                format!("頁面管理 › {place} ›"),
+                "管理這個插件的詳情頁和數據讀取".to_owned(),
             )
         } else if paused {
             (
-                format!("页面管理 › {place} ›"),
-                format!("「{place}」在页面管理里关着，打开后插件才会运行"),
+                format!("頁面管理 › {place} ›"),
+                format!("「{place}」在頁面管理裡關著，打開後插件才會運行"),
             )
         } else {
-            (format!("设置 › {place} ›"), "前往设置".to_owned())
+            (format!("設置 › {place} ›"), "前往設置".to_owned())
         };
         let row_h = if runtime_error.is_some() { 58.0 } else { 42.0 };
         let row_w = ui.available_width();
@@ -1294,7 +1201,7 @@ impl LocalPlugins {
             |ui| {
             ui.set_min_height(row_h);
             ui.spacing_mut().item_spacing.x = 12.0;
-            plugin_cover(ui, key, 64.0, egui::CornerRadius::same(6), "暂无封面", !on, || {
+            plugin_cover(ui, key, 64.0, egui::CornerRadius::same(6), "暫無封面", !on, || {
                 Some(cover.as_ref().map(|cover| cover.bytes().to_vec()).ok_or(()))
             });
             #[cfg(windows)]
@@ -1338,13 +1245,13 @@ impl LocalPlugins {
                     if retired && !revoked {
                         settings_hint(ui, "已撤回 · 等待更新");
                     } else if !revoked && owner_key == "pages" && !on {
-                        settings_hint(ui, "启用后可在页面管理设置");
+                        settings_hint(ui, "啟用後可在頁面管理設置");
                     } else if !revoked && appearance.is_some() && !on {
-                        settings_hint(ui, "启用后可在外观设置中选用");
+                        settings_hint(ui, "啟用後可在外觀設置中選用");
                     } else if !revoked {
                         let show_path = |ui: &mut egui::Ui| {
                             if owner_key == "status" && !on {
-                                settings_hint(ui, "启用后显示功能页");
+                                settings_hint(ui, "啟用後顯示功能頁");
                                 false
                             } else {
                                 path_button(ui, &path, paused, &tip)
@@ -1353,8 +1260,8 @@ impl LocalPlugins {
                         #[cfg(windows)]
                         let navigate = if has_source {
                             ui.horizontal(|ui| {
-                                let label = if self.source_grant(id).is_some() { "数据源已授权 ›" } else { "授权数据源 ›" };
-                                if path_button(ui, label, false, "管理这个插件可读取的数据源") {
+                                let label = if self.source_grant(id).is_some() { "數據源已授權 ›" } else { "授權數據源 ›" };
+                                if path_button(ui, label, false, "管理這個插件可讀取的數據源") {
                                     self.open_source_dialog(ui, id);
                                 }
                                 (has_settings || owner_key == "status") && show_path(ui)
@@ -1367,14 +1274,14 @@ impl LocalPlugins {
                         #[cfg(windows)]
                         if let Some((label, url, time)) = self.source_attribution(id) {
                             ui.horizontal_wrapped(|ui| {
-                                let label = format!("数据来源 {label}");
+                                let label = format!("數據來源 {label}");
                                 if let Some(url) = url {
                                     ui.hyperlink_to(label, url);
                                 } else {
                                     settings_hint(ui, &label);
                                 }
                                 if let Some(time) = time {
-                                    settings_hint(ui, &format!("最近取数 {}", time.format("%m-%d %H:%M")));
+                                    settings_hint(ui, &format!("最近取數 {}", time.format("%m-%d %H:%M")));
                                 }
                             });
                         }
@@ -1391,7 +1298,7 @@ impl LocalPlugins {
                         }
                     }
                     if let Some(e) = &runtime_error {
-                        settings_hint(ui, &format!("刷新失败 · {e}"));
+                        settings_hint(ui, &format!("刷新失敗 · {e}"));
                     }
                 },
             );
@@ -1401,49 +1308,49 @@ impl LocalPlugins {
                 ui.menu_button(egui::RichText::new("···").color(muted_color(ui)), |ui| {
                     let storage = self.records.get(id).and_then(|record| record.package.as_ref())
                         .is_some_and(|package| package.manifest.has_capability("storage"));
-                    if storage && ui.button("导出数据").clicked() {
-                        match crate::system::pick_folder_for("选择插件备份文件夹") {
+                    if storage && ui.button("導出數據").clicked() {
+                        match crate::system::pick_folder_for("選擇插件備份文件夾") {
                             Ok(Some(folder)) => self.notice = match self.export_storage(id, &folder) {
-                                Ok(path) => format!("数据已导出到 {}", path.display()),
+                                Ok(path) => format!("數據已導出到 {}", path.display()),
                                 Err(error) => error.to_string(),
                             },
                             Ok(None) => {}
-                            Err(_) => self.notice = "无法选择备份文件夹".into(),
+                            Err(_) => self.notice = "無法選擇備份文件夾".into(),
                         }
                         ui.close_menu();
                     }
-                    if storage && ui.button("导入数据").on_hover_text("导入会替换此插件的私有数据").clicked() {
-                        match crate::system::pick_files_for("选择要导入的插件数据备份", false) {
+                    if storage && ui.button("導入數據").on_hover_text("導入會替換此插件的私有數據").clicked() {
+                        match crate::system::pick_files_for("選擇要導入的插件數據備份", false) {
                             Ok(files) => if let Some(path) = files.first() {
                                 self.notice = self.import_storage(id, path).map_or_else(
-                                    |error| error.to_string(), |_| "插件数据已导入".into());
+                                    |error| error.to_string(), |_| "插件數據已導入".into());
                             },
-                            Err(_) => self.notice = "无法选择备份文件".into(),
+                            Err(_) => self.notice = "無法選擇備份文件".into(),
                         }
                         ui.close_menu();
                     }
-                    if has_source && ui.button("管理数据源").clicked() {
+                    if has_source && ui.button("管理數據源").clicked() {
                         self.open_source_dialog(ui, id);
                         ui.close_menu();
                     }
-                    if (listed || runtime_error.is_some()) && ui.button("查看详情").clicked() {
+                    if (listed || runtime_error.is_some()) && ui.button("查看詳情").clicked() {
                         market_browse_ui::select_detail(ui, id);
                         ui.close_menu();
                     }
-                    if ui.button("反馈问题").clicked() {
+                    if ui.button("反饋問題").clicked() {
                         request_plugin_feedback(ui, id, &name, &version);
                         ui.close_menu();
                     }
-                    if ui.button("卸载…").clicked() {
+                    if ui.button("卸載…").clicked() {
                         self.pending = Some(id.to_owned());
                         ui.close_menu();
                     }
                 });
                 #[cfg(not(windows))]
-                if ui.add(egui::Button::new("卸载…").frame(false)).clicked() {
+                if ui.add(egui::Button::new("卸載…").frame(false)).clicked() {
                     self.pending = Some(id.to_owned());
                 }
-                if !revoked && plugin_switch(ui, id, on, if on { "停用插件" } else { "启用插件" }) {
+                if !revoked && plugin_switch(ui, id, on, if on { "停用插件" } else { "啟用插件" }) {
                     if material {
                         #[cfg(all(windows, feature = "sdk-material"))]
                         if self.request_material(ui, (!selected).then_some(id)) && !selected {
@@ -1464,7 +1371,7 @@ impl LocalPlugins {
                 if let Some((official, latest)) = &update {
                     let response = ui
                         .add_enabled(!self.market_busy(), market_button(ui, "更新"))
-                        .on_hover_text(format!("更新到 v{latest}，设置和开关保持原样"));
+                        .on_hover_text(format!("更新到 v{latest}，設置和開關保持原樣"));
                     if response.clicked() {
                         self.notice = self
                             .market_action(*official, id)
@@ -1517,11 +1424,11 @@ impl LocalPlugins {
             .show(&ctx, |ui| {
                 ui.set_width(395.0);
                 settings_apply_style(ui);
-                let mut close = settings_modal_title(ui, "只读数据源");
+                let mut close = settings_modal_title(ui, "只讀數據源");
                 ui.add(egui::Label::new(name).truncate());
-                settings_hint(ui, "仅在插件和所属页面均开启时刷新。");
+                settings_hint(ui, "僅在插件和所屬頁面均開啟時刷新。");
                 if let Some(grant) = grant {
-                    ui.label("已授权读取");
+                    ui.label("已授權讀取");
                     let target = match grant {
                         SourceGrant::File(path) => path.to_string_lossy(),
                         SourceGrant::Loopback(url) | SourceGrant::Https { url } => url.as_str().into(),
@@ -1531,16 +1438,16 @@ impl LocalPlugins {
                 }
                 match kind {
                     SourceKind::File => {
-                        pick = ui.button("选择并授权读取文件…").clicked();
-                        settings_hint(ui, "只读你选中的一个本地 UTF-8 文件。");
+                        pick = ui.button("選擇並授權讀取文件…").clicked();
+                        settings_hint(ui, "只讀你選中的一個本地 UTF-8 文件。");
                     }
                     SourceKind::Loopback => {
                         ui.add(egui::TextEdit::singleline(&mut dialog.url)
                             .char_limit(2048).desired_width(385.0)
                             .hint_text("http://127.0.0.1:8080/status"));
                         approve = ui.add_enabled(!dialog.url.trim().is_empty(),
-                            egui::Button::new("授权读取此地址")).clicked();
-                        settings_hint(ui, "仅向填写的本机地址发送 GET 请求。");
+                            egui::Button::new("授權讀取此地址")).clicked();
+                        settings_hint(ui, "僅向填寫的本機地址發送 GET 請求。");
                     }
                     SourceKind::Https => {
                         let network = network.as_ref().unwrap();
@@ -1549,7 +1456,7 @@ impl LocalPlugins {
                             ui.add(egui::TextEdit::singleline(&mut dialog.url)
                                 .char_limit(2048).desired_width(385.0).hint_text("https://"));
                         }
-                        settings_hint(ui, &format!("允许的域名 · {}", network.hosts.join("、")));
+                        settings_hint(ui, &format!("允許的域名 · {}", network.hosts.join("、")));
                         if let Some(credential) = &network.credential {
                             ui.label(&credential.label);
                             ui.add(egui::TextEdit::singleline(&mut dialog.secret)
@@ -1557,7 +1464,7 @@ impl LocalPlugins {
                         }
                         approve = ui.add_enabled((multiple || !dialog.url.trim().is_empty())
                             && (network.credential.is_none() || !dialog.secret.is_empty()),
-                            egui::Button::new(if multiple { "授权读取这些来源" } else { "授权读取此地址" })).clicked();
+                            egui::Button::new(if multiple { "授權讀取這些來源" } else { "授權讀取此地址" })).clicked();
                     }
                 }
                 if !dialog.error.is_empty() {
@@ -1565,14 +1472,14 @@ impl LocalPlugins {
                 }
                 ui.horizontal(|ui| {
                     if grant.is_some() {
-                        revoke = ui.button("撤销授权").clicked();
+                        revoke = ui.button("撤銷授權").clicked();
                     }
                     close |= ui.button("完成").clicked();
                 });
                 close
             });
         let changed = if pick {
-            match crate::system::pick_files_for("选择要授权读取的本地文件", false) {
+            match crate::system::pick_files_for("選擇要授權讀取的本地文件", false) {
                 Ok(paths) => paths.first().map(|path| source_read::grant_file(path).map(Some)),
                 Err(error) => Some(Err(error.to_string())),
             }
@@ -1613,7 +1520,7 @@ impl LocalPlugins {
         }
     }
 
-    /// 重启检查没通过的记录：插件已暂停运行，可以从集市重装或移除记录。
+    /// 重啟檢查沒通過的記錄：插件已暫停運行，可以從集市重裝或移除記錄。
     fn invalid_row(&mut self, ui: &mut egui::Ui, id: &str) {
         let row_w = ui.available_width();
         ui.allocate_ui_with_layout(
@@ -1627,7 +1534,7 @@ impl LocalPlugins {
                 egui::Id::new(("invalid", id)),
                 64.0,
                 egui::CornerRadius::same(6),
-                "无法读取",
+                "無法讀取",
                 false,
                 || Some(Err(())),
             );
@@ -1639,11 +1546,11 @@ impl LocalPlugins {
                     ui.set_width(info_w);
                     ui.spacing_mut().item_spacing.y = 3.0;
                     ui.add(egui::Label::new(egui::RichText::new(id).size(13.5).strong()).truncate());
-                    settings_hint(ui, "安装记录没有通过检查，已暂停运行");
+                    settings_hint(ui, "安裝記錄沒有通過檢查，已暫停運行");
                 },
             );
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.add(egui::Button::new("移除记录").frame(false)).clicked() {
+                if ui.add(egui::Button::new("移除記錄").frame(false)).clicked() {
                     self.notice = self
                         .remove_invalid(id)
                         .err()
@@ -1657,8 +1564,8 @@ impl LocalPlugins {
                         .is_some_and(|catalog| catalog.entries.iter().any(|entry| entry.id == id));
                     if listed
                         && ui
-                            .add_enabled(!self.market_busy(), market_button(ui, "重新安装"))
-                            .on_hover_text("从插件集市重新安装，原来的设置不会保留")
+                            .add_enabled(!self.market_busy(), market_button(ui, "重新安裝"))
+                            .on_hover_text("從插件集市重新安裝，原來的設置不會保留")
                             .clicked()
                     {
                         self.notice = self
@@ -1673,7 +1580,7 @@ impl LocalPlugins {
         );
     }
 
-    /// 卸载确认：二选一，每项写明后果。
+    /// 卸載確認：二選一，每項寫明後果。
     fn uninstall_dialog(&mut self, ui: &mut egui::Ui) {
         use crate::extras::{settings_modal_frame, settings_modal_title};
         let Some(id) = self.pending.clone() else {
@@ -1697,13 +1604,13 @@ impl LocalPlugins {
             .show(&ctx, |ui| {
                 ui.set_width(360.0);
                 settings_apply_style(ui);
-                close = settings_modal_title(ui, &format!("卸载「{name}」"));
-                settings_hint(ui, "停止运行并移除插件文件。你的设置和数据怎么处理？");
+                close = settings_modal_title(ui, &format!("卸載「{name}」"));
+                settings_hint(ui, "停止運行並移除插件文件。你的設置和數據怎麼處理？");
                 ui.add_space(4.0);
-                if option_card(ui, "保留数据", "以后重新安装，设置和数据都还在", false) {
+                if option_card(ui, "保留數據", "以後重新安裝，設置和數據都還在", false) {
                     choice = Some(true);
                 }
-                if option_card(ui, "删除数据", "一并删除插件保存的设置和数据，不能恢复", true) {
+                if option_card(ui, "刪除數據", "一併刪除插件保存的設置和數據，不能恢復", true) {
                     choice = Some(false);
                 }
                 ui.add_space(4.0);
@@ -1727,7 +1634,7 @@ impl LocalPlugins {
         }
     }
 
-    /// 开发者工具弹窗。导入测试集市目录成功后返回真，界面切到本地测试集市。
+    /// 開發者工具彈窗。導入測試集市目錄成功後返回真，界面切到本地測試集市。
     #[cfg(windows)]
     fn developer_dialog(&mut self, ui: &mut egui::Ui) -> bool {
         use crate::extras::{settings_modal_frame, settings_modal_title};
@@ -1754,30 +1661,30 @@ impl LocalPlugins {
                 ui.set_width(360.0);
                 settings_apply_style(ui);
                 if author.creating() {
-                    close = settings_modal_title(ui, "从模板创建");
+                    close = settings_modal_title(ui, "從模板創建");
                     author_action = author.form(ui);
                     return;
                 }
-                close = settings_modal_title(ui, "开发者工具");
-                settings_hint(ui, "给插件作者自测用。本地安装的插件不经过集市审核。");
+                close = settings_modal_title(ui, "開發者工具");
+                settings_hint(ui, "給插件作者自測用。本地安裝的插件不經過集市審核。");
                 ui.add_space(4.0);
                 author_action = author.menu(ui, &mut watching, &logs);
                 ui.add_space(4.0);
                 local = option_card(
                     ui,
-                    "安装本地插件…",
-                    "选择开发目录里的 plugin.json",
+                    "安裝本地插件…",
+                    "選擇開發目錄裡的 plugin.json",
                     false,
                 );
                 market = option_card(
                     ui,
-                    "导入测试集市目录…",
-                    "选择 catalog.json，导入后集市右上角可以切到「本地测试」",
+                    "導入測試集市目錄…",
+                    "選擇 catalog.json，導入後集市右上角可以切到「本地測試」",
                     false,
                 );
                 ui.add_space(4.0);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    close |= ui.button("关闭").clicked();
+                    close |= ui.button("關閉").clicked();
                 });
             });
         let mut opened = false;
@@ -1794,13 +1701,13 @@ impl LocalPlugins {
             ctx.request_repaint();
         }
         if local {
-            match crate::system::pick_files_for("选择本地插件的 plugin.json", false) {
+            match crate::system::pick_files_for("選擇本地插件的 plugin.json", false) {
                 Ok(paths) => {
                     if let Some(path) = paths.first() {
                         self.notice = match self.install(path) {
                             Ok(()) => {
                                 forget_covers(ui);
-                                "已安装。打开开关后开始运行。".into()
+                                "已安裝。打開開關後開始運行。".into()
                             }
                             Err(e) => e.to_string(),
                         };
@@ -1810,7 +1717,7 @@ impl LocalPlugins {
             }
         }
         if market {
-            match crate::system::pick_files_for("选择测试集市的 catalog.json", false) {
+            match crate::system::pick_files_for("選擇測試集市的 catalog.json", false) {
                 Ok(paths) => {
                     if let Some(path) = paths.first() {
                         match self.set_market_catalog(path) {
@@ -1867,7 +1774,7 @@ impl LocalPlugins {
             .show(ctx, |ui| {
                 ui.set_width(360.0);
                 settings_apply_style(ui);
-                close = settings_modal_title(ui, "允许材质读取屏幕画面？");
+                close = settings_modal_title(ui, "允許材質讀取屏幕畫面？");
                 ui.add(
                     egui::Label::new(egui::RichText::new(&package.manifest.name).strong()).wrap(),
                 );
@@ -1875,7 +1782,7 @@ impl LocalPlugins {
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {
                     close |= ui.button("取消").clicked();
-                    allow = ui.button("允许并启用").clicked();
+                    allow = ui.button("允許並啟用").clicked();
                 });
             });
         if allow || close || modal.should_close() {
@@ -1899,7 +1806,7 @@ impl LocalPlugins {
         let selected = self.selected_material_id().map(str::to_owned);
         let mut choice = selected.clone();
         let title = selected.as_deref().map_or_else(
-            || egui::RichText::new("无"),
+            || egui::RichText::new("無"),
             |id| {
                 material_name(
                     ui,
@@ -1909,13 +1816,13 @@ impl LocalPlugins {
                 )
             },
         );
-        settings_control_row(ui, "材质", 68.0, |ui| {
+        settings_control_row(ui, "材質", 68.0, |ui| {
             let combo = egui::ComboBox::from_id_salt("appearance-material")
                 .selected_text(title)
                 .width(ui.available_width().min(220.0))
                 .truncate()
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut choice, None, "无");
+                    ui.selectable_value(&mut choice, None, "無");
                     for (id, record) in &self.records {
                         if let Some(package) = record.material_package() {
                             ui.selectable_value(
@@ -1945,9 +1852,9 @@ impl LocalPlugins {
         if !compatibility_enabled && active != Some(id.as_str()) {
             crate::extras::settings_hint(
                 ui,
-                "材质需要兼容渲染（Direct3D 12），开启后重启岛仔生效。",
+                "材質需要兼容渲染（Direct3D 12），開啟後重啟島仔生效。",
             );
-            restart = ui.button("开启并重启").clicked();
+            restart = ui.button("開啟並重啟").clicked();
         }
         let record = &self.records[&id];
         let fields = &record.material_package().unwrap().manifest.settings;
@@ -2042,20 +1949,20 @@ impl LocalPlugins {
             return;
         };
         if !record.enabled {
-            settings_hint(ui, "插件已停用，可在「插件 → 已安装」启用");
+            settings_hint(ui, "插件已停用，可在「插件 → 已安裝」啟用");
             return;
         }
         if standalone_settings_page(manifest) {
             let on = !record.status_page_disabled;
             let switch_id = format!("{id}:status-page");
-            let title = format!("启用{}", manifest.name);
+            let title = format!("啟用{}", manifest.name);
             let mut switched = false;
             settings_card(ui, |ui| {
                 switched = plugin_setting_switch_row(
                     ui,
                     &switch_id,
                     &title,
-                    "关闭后隐藏岛上功能页并暂停后台",
+                    "關閉後隱藏島上功能頁並暫停後台",
                     on,
                     false,
                 );
@@ -2071,7 +1978,7 @@ impl LocalPlugins {
                 ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
             }
         } else if record.status_page_disabled {
-            settings_hint(ui, "岛上功能页已关闭，可在「页面管理」开启");
+            settings_hint(ui, "島上功能頁已關閉，可在「頁面管理」開啟");
         }
         ui.push_id(id, |ui| self.settings_form(ui, id));
         if !self.notice.is_empty() {
@@ -2081,83 +1988,81 @@ impl LocalPlugins {
         self.source_dialog(ui);
     }
 
-    pub(crate) fn status_page_settings(&mut self, ui: &mut egui::Ui, id: &str) -> Option<SettingsNavigation> {
-        let (_, name, _, page_on) = self.status_page_preferences()
-            .find(|(plugin, _, enabled, _)| *plugin == id && *enabled)?;
-        let name = name.to_owned();
-        let manifest = &self.records[id].package.as_ref().unwrap().manifest;
-        let status_only = manifest.owner == "status";
-        let standalone = standalone_settings_page(manifest);
-        let configurable = standalone || (!status_only
-            && (manifest.has_settings() || manifest.has_surface(Surface::IslandPinned)));
-        let hidden = self.status_page_settings_hidden(id);
-        let description = if status_only {
-            "关闭后隐藏功能页并暂停后台"
-        } else {
-            "控制这个功能页在岛上显示"
-        };
-        ui.vertical(|ui| {
-            let (switched, visibility_changed, jumped, settings) = ui.horizontal(|ui| {
-                let open_width = 42.0;
-                let settings_width = 58.0;
-                let text_width = ui.available_width() - open_width - SETTINGS_SWITCH_W - PAGE_VISIBILITY_ACTION_WIDTH - settings_width
-                    - 4.0 * ui.spacing().item_spacing.x;
-                let action = |ui: &mut egui::Ui, label: &str, width: f32, shown: bool| {
-                    if !shown {
-                        ui.allocate_space(egui::vec2(width, 26.0));
-                        return false;
-                    }
-                    ui.add_sized([width, 26.0], egui::Button::new(egui::RichText::new(label).size(12.0)).frame(false)).clicked()
-                };
-                ui.vertical(|ui| {
-                    ui.set_width(text_width.max(0.0));
-                    ui.spacing_mut().item_spacing.y = 2.0;
-                    ui.horizontal(|ui| {
-                        ui.scope(|ui| {
-                            let badge_width = if standalone { 0.0 } else { 44.0 };
-                            ui.set_max_width((ui.available_width() - badge_width).max(0.0));
-                            let title = egui::RichText::new(name.as_str()).size(13.0)
-                                .color(color(ui.ctx(), Color32::WHITE, Color32::from_rgb(30, 34, 41)));
-                            ui.add(egui::Label::new(title).truncate()).on_hover_text(name.as_str());
-                        });
-                        if !standalone { plugin_tag(ui); }
-                    });
-                    let hint = egui::RichText::new(description).size(11.5)
-                        .color(color(ui.ctx(), Color32::from_gray(185), Color32::from_gray(82)));
-                    ui.add(egui::Label::new(hint).truncate()).on_hover_text(description);
-                });
-                let jumped = action(ui, "打开", open_width, page_on);
-                let switched = plugin_switch_sized(ui, id, page_on, &name, egui::vec2(SETTINGS_SWITCH_W, 20.0));
-                let visibility_changed = if standalone {
-                    page_visibility_action(ui, page_on, hidden, true)
+    pub(crate) fn status_page_settings(&mut self, ui: &mut egui::Ui) -> Option<SettingsNavigation> {
+        let mut preferences = self.status_page_preferences()
+            .filter(|(_, _, enabled, _)| *enabled)
+            .peekable();
+        preferences.peek()?;
+
+        ui.add_space(12.0);
+        group_header(ui, "插件頁面", "");
+        let mut change = None;
+        let mut navigation = None;
+        plugin_list(ui, |ui| {
+            for (index, (id, name, _, page_on)) in preferences.enumerate() {
+                if index > 0 {
+                    row_separator(ui);
+                }
+                let manifest = &self.records[id].package.as_ref().unwrap().manifest;
+                let status_only = manifest.owner == "status";
+                let configurable = standalone_settings_page(manifest) || (!status_only
+                    && (manifest.has_settings() || manifest.has_surface(Surface::IslandPinned)));
+                let description = if status_only {
+                    "關閉後暫停這個插件的數據讀取"
                 } else {
-                    ui.allocate_space(egui::vec2(PAGE_VISIBILITY_ACTION_WIDTH, 26.0));
-                    false
+                    "控制這個功能頁在島上顯示"
                 };
-                let settings = action(ui, "设置 ›", settings_width, configurable);
-                (switched, visibility_changed, jumped, settings)
-            }).inner;
-            let change = if switched { Some((!page_on, false)) }
-                else if visibility_changed { Some((false, !hidden)) }
-                else { None };
-            let error_id = ui.make_persistent_id(("status-page-preference-error", id));
-            if let Some((on, hidden)) = change {
-                let error = self.set_status_page_display(id, on, hidden)
-                    .err().map(|e| e.to_string()).unwrap_or_default();
-                ui.data_mut(|data| data.insert_temp(error_id, error));
-                ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
+                let row = ui.push_id(("status-page-preference", id), |ui| {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.set_max_width((ui.available_width() - 144.0).max(70.0));
+                            ui.horizontal(|ui| {
+                                ui.scope(|ui| {
+                                    ui.set_max_width((ui.available_width() - 44.0).max(20.0));
+                                    ui.add(egui::Label::new(name).truncate()).on_hover_text(name);
+                                });
+                                plugin_tag(ui);
+                            });
+                            settings_hint(ui, description);
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let switched = plugin_switch(ui, id, page_on, name);
+                            let settings = configurable && ui.button("設置").clicked();
+                            let jumped = page_on && ui.button("打開").clicked();
+                            (switched, jumped, settings)
+                        })
+                        .inner
+                    })
+                    .inner
+                });
+                if row.inner.0 {
+                    change = Some((id.to_owned(), !page_on));
+                }
+                if row.inner.1 {
+                    navigation = Some(SettingsNavigation::OpenStatus(id.to_owned()));
+                }
+                if row.inner.2 {
+                    navigation = Some(SettingsNavigation::Plugin(id.to_owned()));
+                }
             }
-            if let Some(error) = ui.data(|data| data.get_temp::<String>(error_id)).filter(|s| !s.is_empty()) {
-                settings_hint(ui, &error);
-            }
-            if settings { Some(SettingsNavigation::Plugin(id.to_owned())) }
-            else if jumped { Some(SettingsNavigation::OpenStatus(id.to_owned())) }
-            else { None }
-        }).inner
+        });
+        let error_id = ui.make_persistent_id("status-page-preference-error");
+        if let Some((id, on)) = change {
+            let error = self.set_status_page_enabled(&id, on)
+                .err()
+                .map(|e| e.to_string())
+                .unwrap_or_default();
+            ui.data_mut(|data| data.insert_temp(error_id, error));
+            ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
+        }
+        if let Some(error) = ui.data(|data| data.get_temp::<String>(error_id)).filter(|s| !s.is_empty()) {
+            settings_hint(ui, &error);
+        }
+        navigation
     }
 
-    /// 插件设置显示在所属设置页，标题旁带「插件」小标。从「已安装」点路径过来时，
-    /// 滚到这张卡并用描边闪一下。
+    /// 插件設置顯示在所屬設置頁，標題旁帶「插件」小標。從「已安裝」點路徑過來時，
+    /// 滾到這張卡並用描邊閃一下。
     pub fn settings(&mut self, ui: &mut egui::Ui, owner: &str, module_on: bool) {
         if !module_on {
             return;
@@ -2250,17 +2155,17 @@ impl LocalPlugins {
                     submit |= script_settings_ui::field_row(ui, id, field, value);
                 }
                 match (id, heading) {
-                    ("daozai.gold", "价格提醒") => settings_hint(ui, "提醒价填 0 时关闭该提醒"),
-                    ("daozai.live-pay", "薪资与班次") => settings_hint(ui, "月薪填 0 表示未设置"),
+                    ("daozai.gold", "價格提醒") => settings_hint(ui, "提醒價填 0 時關閉該提醒"),
+                    ("daozai.live-pay", "薪資與班次") => settings_hint(ui, "月薪填 0 表示未設置"),
                     _ => {}
                 }
             });
         }
         #[cfg(windows)]
         if record.source_kind().is_some() {
-            settings_label(ui, "数据来源");
+            settings_label(ui, "數據來源");
             settings_card(ui, |ui| {
-                let label = manifest.attribution.as_ref().map_or("只读数据源", |source| source.label.as_str());
+                let label = manifest.attribution.as_ref().map_or("只讀數據源", |source| source.label.as_str());
                 ui.horizontal(|ui| {
                     if let Some(url) = manifest.attribution.as_ref().and_then(|source| source.url.as_deref()) {
                         ui.hyperlink_to(label, url);
@@ -2268,13 +2173,13 @@ impl LocalPlugins {
                         ui.label(label);
                     }
                     if record.source_grant().is_some() {
-                        settings_hint(ui, "已授权");
+                        settings_hint(ui, "已授權");
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         authorize = ui.button(if record.source_grant().is_some() {
-                            "管理授权"
+                            "管理授權"
                         } else {
-                            "授权数据源"
+                            "授權數據源"
                         }).clicked();
                     });
                 });
@@ -2283,7 +2188,7 @@ impl LocalPlugins {
                     let draft = drafts.entry(source_https::REFRESH_FIELD.into())
                         .or_insert_with(|| record.refresh_interval().as_secs().to_string());
                     let mut seconds = draft.parse::<u32>().unwrap_or(min);
-                    settings_control_row(ui, "刷新间隔", 80., |ui| {
+                    settings_control_row(ui, "刷新間隔", 80., |ui| {
                         ui.add_sized([105.0, 27.0], egui::DragValue::new(&mut seconds)
                             .range(min..=source_https::MAX_REFRESH_SECONDS).suffix(" 秒"))
                     });
@@ -2296,7 +2201,7 @@ impl LocalPlugins {
             self.open_source_dialog(ui, id);
         }
         if supports_pinned {
-            settings_label(ui, "岛上常驻");
+            settings_label(ui, "島上常駐");
             settings_card(ui, |ui| self.pinned_toggle(ui, id, !standalone));
         }
         if has_settings {
@@ -2304,7 +2209,7 @@ impl LocalPlugins {
             let notice_id = ui.make_persistent_id("plugin-save-result");
             let save = ui.horizontal(|ui| {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let save = ui.add(egui::Button::new(egui::RichText::new("保存设置").color(Color32::WHITE))
+                    let save = ui.add(egui::Button::new(egui::RichText::new("保存設置").color(Color32::WHITE))
                         .fill(plugin_accent(ui)).min_size(egui::vec2(86.0, 30.0)));
                     if let Some(notice) = ui.data(|data| data.get_temp::<String>(notice_id)) {
                         settings_hint(ui, &notice);
@@ -2317,7 +2222,7 @@ impl LocalPlugins {
                 let notice = match self.save(id, values) {
                     Ok(()) => {
                         ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
-                        "设置已保存".to_owned()
+                        "設置已保存".to_owned()
                     }
                     Err(error) => error.to_string(),
                 };
@@ -2328,7 +2233,7 @@ impl LocalPlugins {
 
     fn pinned_toggle(&mut self, ui: &mut egui::Ui, id: &str, tagged: bool) {
         let enabled = self.pinned.order.iter().any(|item| item == id);
-        if plugin_setting_switch_row(ui, &format!("{id}:pinned"), "在岛上常驻显示", "岛收起时显示", enabled, tagged) {
+        if plugin_setting_switch_row(ui, &format!("{id}:pinned"), "在島上常駐顯示", "島收起時顯示", enabled, tagged) {
             if let Err(error) = self.set_pinned(id, !enabled) { self.notice = error.to_string(); }
             ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
         }
@@ -2337,7 +2242,7 @@ impl LocalPlugins {
     pub(crate) fn pinned_order_settings(&mut self, ui: &mut egui::Ui) {
         if self.pinned.order.is_empty() { return; }
         ui.add_space(8.0);
-        ui.horizontal(|ui| { ui.strong("岛上常驻插件"); plugin_tag(ui); });
+        ui.horizontal(|ui| { ui.strong("島上常駐插件"); plugin_tag(ui); });
         let order = self.pinned.order.clone();
         for (index, id) in order.iter().enumerate() {
             ui.push_id(id, |ui| ui.horizontal(|ui| {

@@ -1,4 +1,4 @@
-//! 插件集市的目录读取、作者工具与包校验。
+//! 插件集市的目錄讀取、作者工具與包校驗。
 
 use super::{
     bounded,
@@ -45,12 +45,20 @@ pub(super) fn official_index_url() -> Result<Url> {
     ))?)
 }
 
-fn allows_market_material(index: Option<&Url>, preview_build: bool) -> bool {
-    let channel = if preview_build { "preview" } else { "stable" };
+fn allows_market_material(index: Option<&Url>, preview_build: bool, entry: &Entry) -> bool {
     index.is_none_or(|index| {
-        is_https_host(index, "gitee.com")
-            && index.query() == Some("ref=master")
-            && index.path() == official_index_path(channel)
+        if !is_https_host(index, "gitee.com") || index.query() != Some("ref=master") {
+            return false;
+        }
+        if preview_build {
+            return index.path() == official_index_path("preview");
+        }
+        // 正式集市只接受驗收過的液態玻璃包。下載後仍須校驗實際文件的大小與哈希。
+        index.path() == official_index_path("stable")
+            && entry.id == "cayww.liquid-glass"
+            && entry.version == "1.0.2"
+            && entry.size == 180301
+            && entry.sha256 == "01619b45b3ba6cf0a71c8d952c8a2aada5fad25379ced21e481784d561d197d8"
     })
 }
 
@@ -70,7 +78,7 @@ pub(super) struct Entry {
     pub(super) version: String,
     pub(super) size: u64,
     pub(super) sha256: String,
-    /// 设置归属，打包投稿时从清单的 owner 带入。早期条目没有这一项。
+    /// 設置歸屬，打包投稿時從清單的 owner 帶入。早期條目沒有這一項。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) owner: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -80,6 +88,15 @@ pub(super) struct Entry {
 }
 
 impl Entry {
+    /// 目錄原文只轉顯示文字；id、版本、大小、雜湊與下載檔名都不動。
+    fn localize_display(&mut self) {
+        self.name = crate::zh::to_traditional(&self.name);
+        self.author = crate::zh::to_traditional(&self.author);
+        if let Some(presentation) = &mut self.presentation {
+            presentation.localize_display();
+        }
+    }
+
     fn matches(&self, manifest: &Manifest) -> bool {
         self.id == manifest.id
             && self.version == manifest.version
@@ -88,7 +105,7 @@ impl Entry {
             && self.owner.as_deref().is_none_or(|owner| owner == manifest.owner)
     }
 
-    /// 目录写明的设置归属。早期条目没有这一项，界面不猜测。
+    /// 目錄寫明的設置歸屬。早期條目沒有這一項，界面不猜測。
     pub(super) fn owner(&self) -> Option<&str> {
         self.owner.as_deref()
     }
@@ -132,6 +149,12 @@ pub(super) struct Presentation {
 }
 
 impl Presentation {
+    pub(super) fn localize_display(&mut self) {
+        if let Some(description) = &mut self.description {
+            *description = crate::zh::to_traditional(description);
+        }
+    }
+
     fn valid(&self) -> bool {
         self.description.as_deref().is_none_or(|description| {
             !description.trim().is_empty() && description.chars().count() <= 1000
@@ -199,15 +222,19 @@ impl Catalog {
         self.official_index.is_some()
     }
 
-    pub(super) fn allows_material(&self) -> bool {
-        allows_market_material(self.official_index.as_ref(), IS_PREVIEW_BUILD)
+    pub(super) fn allows_material(&self, entry: &Entry) -> bool {
+        allows_market_material(self.official_index.as_ref(), IS_PREVIEW_BUILD, entry)
     }
 
     fn parse(path: PathBuf, official_index: Option<Url>, bytes: &[u8]) -> Result<Self> {
-        let file: CatalogFile = serde_json::from_slice(bytes)
-            .map_err(|error| fail(&format!("集市目录格式无效：{error}")))?;
+        let mut file: CatalogFile = serde_json::from_slice(bytes)
+            .map_err(|error| fail(&format!("集市目錄格式無效：{error}")))?;
         if file.format != CATALOG_FORMAT {
-            return Err(fail("当前岛仔不支持此集市目录版本"));
+            return Err(fail("當前島仔不支持此集市目錄版本"));
+        }
+        // 上游目錄的中文是簡體：只在記憶體裡轉繁體，原檔案照原樣快取，雜湊與下載都不受影響。
+        for entry in &mut file.plugins {
+            entry.localize_display();
         }
         let mut seen = BTreeSet::new();
         for entry in &file.plugins {
@@ -230,7 +257,7 @@ impl Catalog {
                     .is_some_and(|presentation| !presentation.valid())
                 || !seen.insert(&entry.id)
             {
-                return Err(fail("集市目录包含无效或重复的插件条目"));
+                return Err(fail("集市目錄包含無效或重複的插件條目"));
             }
         }
         Ok(Self {
@@ -249,11 +276,11 @@ impl Catalog {
             None => read_catalog_zip(&entry.path_in(&self.path))?,
         };
         if raw.len() as u64 != entry.size || sha256(&raw) != entry.sha256 {
-            return Err(fail("插件包大小或 SHA-256 与集市目录不一致"));
+            return Err(fail("插件包大小或 SHA-256 與集市目錄不一致"));
         }
-        let package = decode_zip(&raw, self.allows_material())?;
+        let package = decode_zip(&raw, self.allows_material(entry))?;
         if !entry.matches(&package.manifest) {
-            return Err(fail("插件清单与集市目录不一致"));
+            return Err(fail("插件清單與集市目錄不一致"));
         }
         Ok(package)
     }
@@ -310,7 +337,7 @@ fn sha256(raw: &[u8]) -> String {
     let mut hex = String::with_capacity(64);
     for byte in digest(&SHA256, raw).as_ref() {
         use std::fmt::Write as _;
-        write!(&mut hex, "{byte:02x}").expect("写入字符串不会失败");
+        write!(&mut hex, "{byte:02x}").expect("寫入字符串不會失敗");
     }
     hex
 }
@@ -319,7 +346,7 @@ fn read_limited(reader: impl Read, limit: u64) -> Result<Vec<u8>> {
     let mut bytes = Vec::new();
     reader.take(limit + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > limit {
-        return Err(fail("集市文件超过大小限制"));
+        return Err(fail("集市文件超過大小限制"));
     }
     Ok(bytes)
 }
@@ -328,7 +355,7 @@ fn download(url: &Url, limit: u64) -> Result<Vec<u8>> {
     let (_, path) = url
         .path()
         .split_once("/contents/")
-        .ok_or_else(|| fail("集市下载地址无效"))?;
+        .ok_or_else(|| fail("集市下載地址無效"))?;
     let agent = ureq::AgentBuilder::new()
         .try_proxy_from_env(url.scheme() == "https")
         .redirects(0)
@@ -343,15 +370,15 @@ fn download(url: &Url, limit: u64) -> Result<Vec<u8>> {
                     return download_gitee_raw(&agent, &raw, limit);
                 }
             }
-            return Err(fail(&format!("集市服务返回 HTTP {status}")));
+            return Err(fail(&format!("集市服務返回 HTTP {status}")));
         }
-        Err(_) => return Err(fail("无法连接集市，请检查网络后重试")),
+        Err(_) => return Err(fail("無法連接集市，請檢查網絡後重試")),
     };
     if response.status() != 200 {
-        return Err(fail("集市下载地址发生非预期跳转"));
+        return Err(fail("集市下載地址發生非預期跳轉"));
     }
     let encoded_limit = limit.div_ceil(3) * 4;
-    // 为 JSON 元数据和 Base64 换行留出空间，读取前仍有固定上限。
+    // 為 JSON 元數據和 Base64 換行留出空間，讀取前仍有固定上限。
     let body = read_limited(
         response.into_reader(),
         encoded_limit + encoded_limit / 8 + 16 * 1024,
@@ -385,7 +412,7 @@ fn is_https_host(url: &Url, host: &str) -> bool {
 }
 
 fn read_local_avatar(path: &Path) -> Result<Vec<u8>> {
-    let file = open_plain_file(path, "插件头像必须是测试集市同目录中的普通文件")?;
+    let file = open_plain_file(path, "插件頭像必須是測試集市同目錄中的普通文件")?;
     read_limited(file, AVATAR_LIMIT)
 }
 
@@ -396,13 +423,13 @@ fn github_avatar_url(profile: &[u8], username: &str) -> Result<Url> {
         avatar_url: String,
     }
     let Profile { login, avatar_url } = serde_json::from_slice(profile)
-        .map_err(|_| fail("GitHub 未返回有效的作者头像信息"))?;
+        .map_err(|_| fail("GitHub 未返回有效的作者頭像信息"))?;
     let mut avatar_url = Url::parse(&avatar_url)
-        .map_err(|_| fail("GitHub 返回的头像地址无效"))?;
+        .map_err(|_| fail("GitHub 返回的頭像地址無效"))?;
     if !login.eq_ignore_ascii_case(username)
         || !is_https_host(&avatar_url, "avatars.githubusercontent.com")
     {
-        return Err(fail("GitHub 返回的账号或头像地址与请求不符"));
+        return Err(fail("GitHub 返回的帳號或頭像地址與請求不符"));
     }
     avatar_url.set_query(Some("s=64"));
     Ok(avatar_url)
@@ -415,21 +442,21 @@ fn github_file(agent: &ureq::Agent, url: &Url, accept: &str, limit: u64) -> Resu
             if status == 429
                 || (status == 403 && response.header("X-RateLimit-Remaining") == Some("0"))
             {
-                return Err(fail("GitHub 请求次数已达上限，请稍后重试"));
+                return Err(fail("GitHub 請求次數已達上限，請稍後重試"));
             }
             return Err(fail(&format!("GitHub 返回 HTTP {status}")));
         }
-        Err(_) => return Err(fail("无法连接 GitHub，请检查网络后重试")),
+        Err(_) => return Err(fail("無法連接 GitHub，請檢查網絡後重試")),
     };
     if response.status() != 200 {
-        return Err(fail("GitHub 头像请求发生非预期跳转"));
+        return Err(fail("GitHub 頭像請求發生非預期跳轉"));
     }
     read_limited(response.into_reader(), limit)
 }
 
 fn sync_author_avatar(path: &Path, id: &str, username: &str) -> Result<()> {
     if !valid_id(id) || !valid_github_login(username) {
-        return Err(fail("请填写有效的插件 ID 和 GitHub 用户名"));
+        return Err(fail("請填寫有效的插件 ID 和 GitHub 用戶名"));
     }
     let agent = ureq::AgentBuilder::new()
         .try_proxy_from_env(true)
@@ -493,8 +520,8 @@ fn download_gitee_raw(agent: &ureq::Agent, raw: &Url, limit: u64) -> Result<Vec<
         market_request(agent, url, "*/*")
             .call()
             .map_err(|error| match error {
-                ureq::Error::Status(status, _) => fail(&format!("集市镜像返回 HTTP {status}")),
-                _ => fail("无法连接集市，请检查网络后重试"),
+                ureq::Error::Status(status, _) => fail(&format!("集市鏡像返回 HTTP {status}")),
+                _ => fail("無法連接集市，請檢查網絡後重試"),
             })
     };
     let response = request(raw)?;
@@ -502,13 +529,13 @@ fn download_gitee_raw(agent: &ureq::Agent, raw: &Url, limit: u64) -> Result<Vec<
         let target = response
             .header("Location")
             .and_then(|location| gitee_signed_location(raw, location))
-            .ok_or_else(|| fail("集市下载地址发生非预期跳转"))?;
+            .ok_or_else(|| fail("集市下載地址發生非預期跳轉"))?;
         request(&target)?
     } else {
         response
     };
     if response.status() != 200 {
-        return Err(fail("集市下载地址发生非预期跳转"));
+        return Err(fail("集市下載地址發生非預期跳轉"));
     }
     read_limited(response.into_reader(), limit)
 }
@@ -525,10 +552,10 @@ fn decode_gitee_file(body: &[u8], expected_path: &str, limit: u64) -> Result<Vec
     }
     let file: Content = serde_json::from_slice(body).map_err(|_| fail("集市接口未返回有效文件"))?;
     if file.kind != "file" || file.encoding != "base64" || file.path != expected_path {
-        return Err(fail("集市返回的文件信息与请求不一致"));
+        return Err(fail("集市返回的文件信息與請求不一致"));
     }
     if file.size > limit {
-        return Err(fail("集市文件超过大小限制"));
+        return Err(fail("集市文件超過大小限制"));
     }
     let expected_encoded = (file.size.div_ceil(3) * 4) as usize;
     let encoded: Vec<_> = file
@@ -542,7 +569,7 @@ fn decode_gitee_file(body: &[u8], expected_path: &str, limit: u64) -> Result<Vec
     }
     let bytes = STANDARD
         .decode(encoded)
-        .map_err(|_| fail("集市返回的文件编码无效"))?;
+        .map_err(|_| fail("集市返回的文件編碼無效"))?;
     if bytes.len() as u64 != file.size {
         return Err(fail("集市返回的文件大小不一致"));
     }
@@ -551,46 +578,46 @@ fn decode_gitee_file(body: &[u8], expected_path: &str, limit: u64) -> Result<Vec
 
 fn read_catalog_zip(path: &Path) -> Result<Vec<u8>> {
     if !fs::symlink_metadata(path)?.is_file() || path.canonicalize()?.parent() != path.parent() {
-        return Err(fail("测试集市插件包必须是同目录的普通文件"));
+        return Err(fail("測試集市插件包必須是同目錄的普通文件"));
     }
     read_limited(File::open(path)?, FONT_ZIP_LIMIT)
 }
 
 fn supported(manifest: &Manifest, allow_material: bool) -> Result<()> {
     let material = manifest.is_material() && allow_material;
-    if (manifest.runtime != "js" && !manifest.is_page_shortcuts() && !manifest.is_wireless() && !manifest.is_mail_view()
+    if (manifest.runtime != "js" && !manifest.is_page_shortcuts() && !manifest.is_wireless()
         && manifest.appearance_kind().is_none() && !material)
         || manifest.entry.contains('/')
     {
-        return Err(fail("集市支持入口在包根目录的脚本插件、外观资源包、快捷切换插件、邮箱视图和无线设备兼容包"));
+        return Err(fail("集市支持入口在包根目錄的腳本插件、外觀資源包、快捷切換插件和無線設備兼容包"));
     }
     Ok(())
 }
 
 fn decode_zip(raw: &[u8], allow_material: bool) -> Result<Package> {
     if raw.len() as u64 > FONT_ZIP_LIMIT {
-        return Err(fail("插件 ZIP 超过大小限制"));
+        return Err(fail("插件 ZIP 超過大小限制"));
     }
     let mut zip = ZipArchive::new(Cursor::new(raw))
-        .map_err(|error| fail(&format!("插件 ZIP 格式无效：{error}")))?;
+        .map_err(|error| fail(&format!("插件 ZIP 格式無效：{error}")))?;
     if zip.has_duplicate_names()
         || zip.offset() != 0
         || zip.has_overlapping_entries()?
     {
-        return Err(fail("插件 ZIP 包含重复或无效文件"));
+        return Err(fail("插件 ZIP 包含重複或無效文件"));
     }
     let manifest = Manifest::decode(&zip_text(&mut zip, "plugin.json", MANIFEST_LIMIT)?)?;
     supported(&manifest, allow_material)?;
     let canvas = manifest.has_capability("status.canvas");
     let font = manifest.has_capability("appearance.font");
     if canvas && raw.len() as u64 > CANVAS_ZIP_LIMIT {
-        return Err(fail("画布插件 ZIP 超过大小限制"));
+        return Err(fail("畫布插件 ZIP 超過大小限制"));
     }
     if !canvas && !font && raw.len() as u64 > ZIP_LIMIT {
-        return Err(fail("插件 ZIP 超过 832 KiB"));
+        return Err(fail("插件 ZIP 超過 832 KiB"));
     }
     if !canvas && !font && zip.len() != 3 + manifest.data.len() {
-        return Err(fail("插件 ZIP 只能包含清单、入口、封面和声明的数据文件"));
+        return Err(fail("插件 ZIP 只能包含清單、入口、封面和聲明的數據文件"));
     }
     let mut images = Vec::new();
     if canvas {
@@ -617,7 +644,7 @@ fn decode_zip(raw: &[u8], allow_material: bool) -> Result<Package> {
         let licenses: Vec<_> = super::font_assets::LICENSES.into_iter()
             .filter(|name| zip.by_name(name).is_ok()).collect();
         if zip.len() != 3 + package.data.len() + entry.files().count() + licenses.len() {
-            return Err(fail("字体 ZIP 包含未声明的文件"));
+            return Err(fail("字體 ZIP 包含未聲明的文件"));
         }
         package.font_assets = super::font_assets::read(entry, licenses.into_iter(), package.font_base_size()?, |name, limit| {
             zip_bytes(&mut zip, name, limit)
@@ -632,14 +659,14 @@ fn validate_material(package: &Package) -> Result<()> {
         #[cfg(all(windows, feature = "sdk-material"))]
         crate::material::validate_plugin_shader(&package.source).map_err(|error| fail(&error))?;
         #[cfg(not(all(windows, feature = "sdk-material")))]
-        return Err(fail("当前版本未启用 GPU 材质支持"));
+        return Err(fail("當前版本未啟用 GPU 材質支持"));
     }
     Ok(())
 }
 
 fn zip_text(zip: &mut ZipArchive<Cursor<&[u8]>>, name: &str, limit: u64) -> Result<String> {
     String::from_utf8(zip_bytes(zip, name, limit)?)
-        .map_err(|_| fail(&format!("插件 ZIP 中的 {name} 必须使用 UTF-8")))
+        .map_err(|_| fail(&format!("插件 ZIP 中的 {name} 必須使用 UTF-8")))
 }
 
 fn zip_bytes(zip: &mut ZipArchive<Cursor<&[u8]>>, name: &str, limit: u64) -> Result<Vec<u8>> {
@@ -654,7 +681,7 @@ fn zip_bytes(zip: &mut ZipArchive<Cursor<&[u8]>>, name: &str, limit: u64) -> Res
         || file.size() > limit
     {
         return Err(fail(&format!(
-            "插件 ZIP 中的 {name} 必须是大小合规的普通文件"
+            "插件 ZIP 中的 {name} 必須是大小合規的普通文件"
         )));
     }
     read_limited(file, limit)
@@ -675,7 +702,7 @@ fn smoke(package: &Package) -> Result<()> {
         .render(&values, &Value::Null, &today)
         .map_err(|error| {
             fail(&format!(
-                "入口 {} 的 refresh 自检失败：{error}",
+                "入口 {} 的 refresh 自檢失敗：{error}",
                 package.manifest.entry
             ))
         })?;
@@ -684,7 +711,7 @@ fn smoke(package: &Package) -> Result<()> {
 
 fn checked_project(path: &Path) -> Result<Package> {
     if path.file_name().and_then(|name| name.to_str()) != Some("plugin.json") {
-        return Err(fail("请指定插件根目录的 plugin.json"));
+        return Err(fail("請指定插件根目錄的 plugin.json"));
     }
     let package =
         Package::read(path).map_err(|error| fail(&format!("{}：{error}", path.display())))?;
@@ -697,24 +724,24 @@ pub(super) fn validate_project(path: &Path) -> Result<String> {
     let package = checked_project(path)?;
     validate_material(&package)?;
     Ok(format!(
-        "{} v{} 校验通过",
+        "{} v{} 校驗通過",
         package.manifest.id, package.manifest.version
     ))
 }
 
 pub(super) fn test_project(path: &Path, mock_path: Option<&Path>) -> Result<String> {
     if path.file_name().and_then(|name| name.to_str()) != Some("plugin.json") {
-        return Err(fail("请指定插件根目录的 plugin.json"));
+        return Err(fail("請指定插件根目錄的 plugin.json"));
     }
     let manifest: Value = serde_json::from_str(&bounded(path, MANIFEST_LIMIT)?)?;
     let report = devtools::capability_report(&manifest);
     let package = Package::read(path)
         .map_err(|error| fail(&format!("{}：{error}\n{report}", path.display())))?;
     let manifest = &package.manifest;
-    let heading = format!("{} v{} 校验通过\n{report}", manifest.id, manifest.version);
+    let heading = format!("{} v{} 校驗通過\n{report}", manifest.id, manifest.version);
     if manifest.runtime != "js" {
         if mock_path.is_some() {
-            return Err(fail("模拟输入只适用于 JavaScript 插件"));
+            return Err(fail("模擬輸入只適用於 JavaScript 插件"));
         }
         validate_material(&package)
             .map_err(|error| fail(&format!("{}：{error}\n{report}", path.display())))?;
@@ -722,13 +749,13 @@ pub(super) fn test_project(path: &Path, mock_path: Option<&Path>) -> Result<Stri
     }
     let mut mock = mock_path
         .map(|path| serde_json::from_str::<devtools::MockInput>(&bounded(path, 2 * 1024 * 1024)?)
-            .map_err(|error| fail(&format!("模拟输入 {} 无效：{error}", path.display()))))
+            .map_err(|error| fail(&format!("模擬輸入 {} 無效：{error}", path.display()))))
         .transpose()?
         .unwrap_or_default();
     let values = package.settings_values(mock.settings.as_ref().unwrap_or(&Values::new()));
     let clock = match mock.now {
         Some(now) => chrono::DateTime::from_timestamp_millis(now)
-            .ok_or_else(|| fail("模拟输入 now 超出 Unix 毫秒时间戳的范围"))?
+            .ok_or_else(|| fail("模擬輸入 now 超出 Unix 毫秒時間戳的範圍"))?
             .with_timezone(&chrono::Local),
         None => chrono::Local::now(),
     };
@@ -742,10 +769,10 @@ pub(super) fn test_project(path: &Path, mock_path: Option<&Path>) -> Result<Stri
     );
     let elapsed = started.elapsed().as_secs_f64() * 1000.0;
     let logs = if lines.is_empty() { String::new() } else {
-        format!("\n脚本日志\n{}", lines.join("\n"))
+        format!("\n腳本日誌\n{}", lines.join("\n"))
     };
     let (_, raw) = run.map_err(|error| fail(&format!("{error}\n{report}{logs}")))?;
-    Ok(format!("{heading}\nrefresh 用时 {elapsed:.2} ms\n{raw}{logs}"))
+    Ok(format!("{heading}\nrefresh 用時 {elapsed:.2} ms\n{raw}{logs}"))
 }
 
 pub(super) fn create_template(
@@ -756,13 +783,13 @@ pub(super) fn create_template(
 ) -> Result<PathBuf> {
     let (id, name, author) = (id.trim(), name.trim(), author.trim());
     if !valid_id(id) {
-        return Err(fail("插件 ID 格式应类似 xiaoming.payday，最多 64 个字符"));
+        return Err(fail("插件 ID 格式應類似 xiaoming.payday，最多 64 個字符"));
     }
     if name.is_empty() || name.chars().count() > 80 {
-        return Err(fail("插件名称需要 1 到 80 个字符"));
+        return Err(fail("插件名稱需要 1 到 80 個字符"));
     }
     if author.is_empty() || author.chars().count() > 80 {
-        return Err(fail("作者名称需要 1 到 80 个字符"));
+        return Err(fail("作者名稱需要 1 到 80 個字符"));
     }
 
     let mut manifest = Manifest::decode(include_str!("examples/payday/plugin.json"))?;
@@ -780,7 +807,7 @@ pub(super) fn create_template(
     let project = parent.join(id);
     let path = target_path(&project)?;
     if fs::symlink_metadata(&path).is_ok() {
-        return Err(fail("同名文件或目录已存在，请更换插件 ID 或保存位置"));
+        return Err(fail("同名文件或目錄已存在，請更換插件 ID 或保存位置"));
     }
     let tmp = loop {
         let tmp = temporary_sibling(&path);
@@ -790,7 +817,7 @@ pub(super) fn create_template(
             Err(error) => return Err(error.into()),
         }
     };
-    // 文件全部写好后再移入目标路径，已有目录始终保留。
+    // 文件全部寫好後再移入目標路徑，已有目錄始終保留。
     let result = files
         .iter()
         .try_for_each(|(name, contents)| fs::write(tmp.join(name), contents))
@@ -801,7 +828,7 @@ pub(super) fn create_template(
         }
         let _ = fs::remove_dir(&tmp);
         return Err(fail(&format!(
-            "无法创建插件目录 {}：{error}",
+            "無法創建插件目錄 {}：{error}",
             project.display()
         )));
     }
@@ -811,7 +838,7 @@ pub(super) fn create_template(
 fn target_path(path: &Path) -> io::Result<PathBuf> {
     let filename = path
         .file_name()
-        .ok_or_else(|| io::Error::other("缺少目标文件名"))?;
+        .ok_or_else(|| io::Error::other("缺少目標文件名"))?;
     let directory = path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -883,7 +910,7 @@ fn write_new(path: &Path, bytes: &[u8]) -> io::Result<()> {
         }
     };
 
-    // 版本文件只在完整写盘后出现，移动时保留已存在的目标。
+    // 版本文件只在完整寫盤後出現，移動時保留已存在的目標。
     let result = file.write_all(bytes).and_then(|_| file.sync_all());
     drop(file);
     let result = result.and_then(|_| move_new(&tmp, &path));
@@ -895,18 +922,18 @@ fn write_new(path: &Path, bytes: &[u8]) -> io::Result<()> {
 
 fn set_author_avatar(path: &Path, id: &str, raw: &[u8]) -> Result<()> {
     if raw.len() as u64 > AVATAR_LIMIT {
-        return Err(fail("作者头像不能超过 64 KiB"));
+        return Err(fail("作者頭像不能超過 64 KiB"));
     }
-    CoverPng::decode(raw.to_vec()).map_err(|_| fail("作者头像必须是完整的 PNG 图片"))?;
+    CoverPng::decode(raw.to_vec()).map_err(|_| fail("作者頭像必須是完整的 PNG 圖片"))?;
     let path = target_path(path)?;
     let _lock = lock_catalog(&path)?;
-    let file = open_plain_file(&path, "测试集市目录必须是普通文件")?;
+    let file = open_plain_file(&path, "測試集市目錄必須是普通文件")?;
     let mut catalog = Catalog::parse(path.clone(), None, &read_limited(file, CATALOG_LIMIT)?)?;
     let entry = catalog
         .entries
         .iter_mut()
         .find(|entry| entry.id == id)
-        .ok_or_else(|| fail("测试集市没有这个插件"))?;
+        .ok_or_else(|| fail("測試集市沒有這個插件"))?;
     let name = format!("avatar-{}.png", sha256(raw));
     let avatar_path = path.with_file_name(&name);
     entry.presentation.get_or_insert_with(Presentation::default).author_avatar = Some(name);
@@ -915,7 +942,7 @@ fn set_author_avatar(path: &Path, id: &str, raw: &[u8]) -> Result<()> {
         plugins: catalog.entries,
     })?;
     if updated.len() as u64 > CATALOG_LIMIT {
-        return Err(fail("测试集市目录超过大小限制"));
+        return Err(fail("測試集市目錄超過大小限制"));
     }
     let created = match write_new(&avatar_path, raw) {
         Ok(()) => true,
@@ -925,13 +952,13 @@ fn set_author_avatar(path: &Path, id: &str, raw: &[u8]) -> Result<()> {
         {
             false
         }
-        Err(error) => return Err(fail(&format!("无法保存作者头像：{error}"))),
+        Err(error) => return Err(fail(&format!("無法保存作者頭像：{error}"))),
     };
     if let Err(error) = crate::model::atomic_write(&path, &updated) {
         if created {
             let _ = fs::remove_file(&avatar_path);
         }
-        return Err(fail(&format!("测试集市目录更新失败：{error}")));
+        return Err(fail(&format!("測試集市目錄更新失敗：{error}")));
     }
     Ok(())
 }
@@ -964,7 +991,7 @@ pub(super) fn pack(manifest_path: &Path, output: &Path) -> Result<()> {
     let raw = zip.finish()?.into_inner();
     decode_zip(&raw, true)?;
     write_new(output, &raw)
-        .map_err(|error| fail(&format!("无法创建 ZIP {}：{error}", output.display())))?;
+        .map_err(|error| fail(&format!("無法創建 ZIP {}：{error}", output.display())))?;
     Ok(())
 }
 
@@ -989,18 +1016,18 @@ pub(super) fn submit(input: &Path, path: &Path) -> Result<()> {
         revoked: BTreeSet::new(),
     };
     let path = target_path(path)?;
-    // 操作系统在作者进程退出时释放锁，目录里的版本更新串行提交。
+    // 操作系統在作者進程退出時釋放鎖，目錄裡的版本更新串行提交。
     let _lock = lock_catalog(&path)?;
     let mut plugins = match fs::symlink_metadata(&path) {
         Ok(metadata) if metadata.is_file() => Catalog::open(&path)?.entries,
-        Ok(_) => return Err(fail("测试集市目录必须是普通文件")),
+        Ok(_) => return Err(fail("測試集市目錄必須是普通文件")),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Vec::new(),
         Err(error) => return Err(error.into()),
     };
     let zip_path = entry.path_in(&path);
     if let Some(old) = plugins.iter_mut().find(|old| old.id == entry.id) {
         if compare_versions(&entry.version, &old.version) != Some(Ordering::Greater) {
-            return Err(fail("提交版本必须高于测试集市已有版本"));
+            return Err(fail("提交版本必須高於測試集市已有版本"));
         }
         if old.revokes(&entry.version) {
             return Err(fail("此插件版本已撤回"));
@@ -1020,7 +1047,7 @@ pub(super) fn submit(input: &Path, path: &Path) -> Result<()> {
         plugins,
     })?;
     if catalog.len() as u64 > CATALOG_LIMIT {
-        return Err(fail("测试集市目录超过大小限制"));
+        return Err(fail("測試集市目錄超過大小限制"));
     }
     let created = match write_new(&zip_path, &raw) {
         Ok(()) => true,
@@ -1028,16 +1055,16 @@ pub(super) fn submit(input: &Path, path: &Path) -> Result<()> {
             if error.kind() == io::ErrorKind::AlreadyExists
                 && read_catalog_zip(&zip_path).is_ok_and(|existing| existing == raw) =>
         {
-            // 上次在写入目录前退出，可继续提交字节完全相同的版本包。
+            // 上次在寫入目錄前退出，可繼續提交字節完全相同的版本包。
             false
         }
-        Err(error) => return Err(fail(&format!("无法保存不可覆盖的版本 ZIP：{error}"))),
+        Err(error) => return Err(fail(&format!("無法保存不可覆蓋的版本 ZIP：{error}"))),
     };
     if let Err(error) = crate::model::atomic_write(&path, &catalog) {
         if created {
             let _ = fs::remove_file(&zip_path);
         }
-        return Err(fail(&format!("测试集市目录提交失败：{error}")));
+        return Err(fail(&format!("測試集市目錄提交失敗：{error}")));
     }
     Ok(())
 }
@@ -1055,7 +1082,7 @@ pub(in crate::sdk_spike) fn author_command(args: &[OsString]) -> Option<ExitCode
     extern "system" {
         fn AttachConsole(process_id: u32) -> i32;
     }
-    // Windows 图形程序的显式作者命令与父终端共用控制台。
+    // Windows 圖形程序的顯式作者命令與父終端共用控制檯。
     unsafe { AttachConsole(u32::MAX) };
     let result = match (operation, &args[2..]) {
         ("--plugin-test", [manifest]) => test_project(Path::new(manifest), None),
@@ -1065,17 +1092,17 @@ pub(in crate::sdk_spike) fn author_command(args: &[OsString]) -> Option<ExitCode
         ("--plugin-pack", [manifest, output]) => pack(Path::new(manifest), Path::new(output))
             .map(|_| format!("已生成插件包 {}", Path::new(output).display())),
         ("--plugin-submit", [zip, catalog]) => submit(Path::new(zip), Path::new(catalog))
-            .map(|_| format!("已提交到测试集市 {}", Path::new(catalog).display())),
+            .map(|_| format!("已提交到測試集市 {}", Path::new(catalog).display())),
         ("--plugin-avatar", [catalog, id, username]) => sync_author_avatar(
             Path::new(catalog),
             id.to_str().unwrap_or_default(),
             username.to_str().unwrap_or_default(),
         )
-        .map(|_| "已更新测试集市作者头像".into()),
+        .map(|_| "已更新測試集市作者頭像".into()),
         _ => Err(fail(match operation {
             "--plugin-test" => "用法：--plugin-test <plugin.json> [--input <mock.json>]",
-            "--plugin-pack" => "用法：--plugin-pack <plugin.json> <输出 ZIP>",
-            "--plugin-avatar" => "用法：--plugin-avatar <catalog.json> <插件 ID> <GitHub 用户名>",
+            "--plugin-pack" => "用法：--plugin-pack <plugin.json> <輸出 ZIP>",
+            "--plugin-avatar" => "用法：--plugin-avatar <catalog.json> <插件 ID> <GitHub 用戶名>",
             _ => "用法：--plugin-submit <插件 ZIP> <catalog.json>",
         })),
     };

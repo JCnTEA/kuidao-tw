@@ -1,7 +1,7 @@
 {
   "id": "example.sticky-notes",
-  "name": "便签",
-  "author": "岛仔",
+  "name": "便籤",
+  "author": "島仔",
   "version": "1.0.0",
   "api": 1,
   "runtime": "js",

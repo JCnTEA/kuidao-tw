@@ -1,208 +1,208 @@
-# GPU 材质能力：分阶段任务
+# GPU 材質能力：分階段任務
 
-设计见 [gpu-material.md](gpu-material.md)。各阶段按顺序做，每个阶段开一个新对话，上一阶段审查通过后再开下一阶段。开新对话时直接发：
+設計見 [gpu-material.md](gpu-material.md)。各階段按順序做，每個階段開一個新對話，上一階段審查通過後再開下一階段。開新對話時直接發：
 
-> 按 `D:\A-TangHao\REA\Windows小工具\01-专项工程\GPU材质\docs\plugins\gpu-material-tasks.md` 做第 N 阶段。
+> 按 `D:\A-TangHao\REA\Windows小工具\01-專項工程\GPU材質\docs\plugins\gpu-material-tasks.md` 做第 N 階段。
 
-## 所有阶段通用
+## 所有階段通用
 
-- 工作树：`D:\A-TangHao\REA\Windows小工具\01-专项工程\GPU材质`，分支 `feat/gpu-material`。只在这个工作树里改，不碰 `main` 和其他工作树。
-- PR #235 原始代码在分支 `test/pr235-liquid-glass`，用 `git show test/pr235-liquid-glass:<路径>` 阅读，或打开只读参考工作树 `D:\daozai-build\tmp\pr235-preview`。不要在参考工作树里改代码或提交。
-- 编译和测试遵守工作区根目录 `AGENTS.md`。release 编译需要 `RUST_MIN_STACK=67108864`。
-- 插件相关代码受 `sdk-js` 特性控制，检查和测试都加 `--features sdk-js`。材质相关新代码放在新的 `sdk-material` 特性后面，测试时两个特性一起开。
-- 设计稿里的接口（清单字段、`Frame` 布局、prelude 函数）是实验接口，本轮按现有内容实现。需要改动时先在回报里说明原因，不要自行改设计稿。
-- 每个阶段结束：跑完相关测试并提交。在最后一条回复里列出提交号、改动文件、测试命令和结果、没做完或有疑问的地方，交给审查。
-- 是否出包按各阶段说明，不按 AGENTS.md 的默认出包。
+- 工作樹：`D:\A-TangHao\REA\Windows小工具\01-專項工程\GPU材質`，分支 `feat/gpu-material`。只在這個工作樹裡改，不碰 `main` 和其他工作樹。
+- PR #235 原始代碼在分支 `test/pr235-liquid-glass`，用 `git show test/pr235-liquid-glass:<路徑>` 閱讀，或打開只讀參考工作樹 `D:\daozai-build\tmp\pr235-preview`。不要在參考工作樹裡改代碼或提交。
+- 編譯、測試遵守根目錄 AGENTS.md：持 `Local\Daozai.Cargo` 鎖排隊，`CARGO_BUILD_JOBS=1`。release 編譯需要 `RUST_MIN_STACK=67108864`。
+- 插件相關代碼受 `sdk-js` 特性控制，檢查和測試都加 `--features sdk-js`。材質相關新代碼放在新的 `sdk-material` 特性後面，測試時兩個特性一起開。
+- 設計稿裡的接口（清單字段、`Frame` 佈局、prelude 函數）是實驗接口，本輪按現有內容實現。需要改動時先在回報裡說明原因，不要自行改設計稿。
+- 每個階段結束：跑完相關測試並提交。在最後一條回覆裡列出提交號、改動文件、測試命令和結果、沒做完或有疑問的地方，交給審查。
+- 是否出包按各階段說明，不按 AGENTS.md 的預設出包。
 
-## 第 1 阶段：同步 main，移植透明交换链和抓屏底座
+## 第 1 階段：同步 main，移植透明交換鏈和抓屏底座
 
-目标：本体具备抓取岛体背后底片和透明交换链的能力，没有材质时完全不运行，外观和行为与 `main` 一致。
+目標：本體具備抓取島體背後底片和透明交換鏈的能力，沒有材質時完全不運行，外觀和行為與 `main` 一致。
 
-1. 把 `main` 合进 `feat/gpu-material`。插件分支和 main 的冲突，参考 `test/acceptance` 上提交 `a3f5c8d` 的解决方式：插件设置页用 `SETTINGS_TAB_PLUGINS = 17`，`render_page` 和 `set_page_visible` 两边都保留。
-2. 移植 vendor 补丁，从 `test/pr235-liquid-glass` 取：
-   - `vendor/wgpu-hal`（整个目录，与上游 24.0.4 只差 `auxil/dxgi/conv.rs`、`dx12/adapter.rs`、`dx12/mod.rs`）；
-   - `vendor/egui-winit`（与上游 0.31.1 只差 `src/lib.rs` 的无重定向位图那几行）；
-   - `vendor/egui-wgpu/src/winit.rs`、`src/lib.rs`、`Cargo.toml` 的 DirectComposition 改动，以及 `vendor/eframe/src/native/run.rs`；
-   - 根 `Cargo.toml` 里对应的 `[patch]`、路径依赖和 windows 特性。
+1. 把 `main` 合進 `feat/gpu-material`。插件分支和 main 的衝突，參考 `test/acceptance` 上提交 `a3f5c8d` 的解決方式：插件設定頁用 `SETTINGS_TAB_PLUGINS = 17`，`render_page` 和 `set_page_visible` 兩邊都保留。
+2. 移植 vendor 補丁，從 `test/pr235-liquid-glass` 取：
+   - `vendor/wgpu-hal`（整個目錄，與上游 24.0.4 只差 `auxil/dxgi/conv.rs`、`dx12/adapter.rs`、`dx12/mod.rs`）；
+   - `vendor/egui-winit`（與上游 0.31.1 只差 `src/lib.rs` 的無重定向位圖那幾行）；
+   - `vendor/egui-wgpu/src/winit.rs`、`src/lib.rs`、`Cargo.toml` 的 DirectComposition 改動，以及 `vendor/eframe/src/native/run.rs`；
+   - 根 `Cargo.toml` 裡對應的 `[patch]`、路徑依賴和 windows 特性。
 
-   main 上可能有 #246 相关的 eframe 改动，合并时保留 main 的版本，再叠加 PR 的改动。
-3. 新建 `src/material/backdrop.rs`：移植 PR 的 `src/wgc.rs` 和 `src/gpu_glass.rs` 里的抓屏部分（`capture`、`grab_raw`、干净底片 `CleanPlate`、`compose_with_plate`、背景亮度、捕获排除），整理成 `Backdrop` 对外接口。去掉 `DAOZAI_LIQUID_*` 调试环境变量，诊断日志写到 `diagnostics/material.log`。
-4. 透明交换链只在材质生效时启用。PR 里用 `DAOZAI_DCOMP` 环境变量控制，改成由 `material` 模块在启动时根据「兼容渲染已开且有生效的材质」决定。没有材质时不设无重定向位图，走原来的路径。
-5. 测试：
-   - 现有测试全部通过（`cargo test --lib --features sdk-js`，以及加上 `sdk-material` 再跑一遍）；
-   - 给底片几何换算、尺寸变化不复用旧纹理、失败后退回这几处补单元测试。
+   main 上可能有 #246 相關的 eframe 改動，合併時保留 main 的版本，再疊加 PR 的改動。
+3. 新建 `src/material/backdrop.rs`：移植 PR 的 `src/wgc.rs` 和 `src/gpu_glass.rs` 裡的抓屏部分（`capture`、`grab_raw`、乾淨底片 `CleanPlate`、`compose_with_plate`、背景亮度、捕獲排除），整理成 `Backdrop` 對外接口。去掉 `DAOZAI_LIQUID_*` 調試環境變量，診斷日誌寫到 `diagnostics/material.log`。
+4. 透明交換鏈只在材質生效時啟用。PR 裡用 `DAOZAI_DCOMP` 環境變量控制，改成由 `material` 模塊在啟動時根據「兼容渲染已開且有生效的材質」決定。沒有材質時不設無重定向位圖，走原來的路徑。
+5. 測試：
+   - 現有測試全部通過（`cargo test --lib --features sdk-js`，以及加上 `sdk-material` 再跑一遍）；
+   - 給底片幾何換算、尺寸變化不復用舊紋理、失敗後退回這幾處補單元測試。
 6. 不出包。
 
-## 第 2 阶段：通用材质管线和控件登记
+## 第 2 階段：通用材質管線和控件登記
 
-目标：本体能加载一段符合接口的 WGSL，叠加在任何皮肤上绘制。用内置调试材质验证。
+目標：本體能載入一段符合接口的 WGSL，疊加在任何皮膚上繪製。用內置調試材質驗證。
 
-1. 新建 `src/material/prelude.wgsl`：按设计稿定义 `Frame`、绑定和 `param`、`rr_sdf`、`notch_sdf`、`body_sdf`、`sample_backdrop`。函数体从 PR 着色器搬，计算保持一致。
+1. 新建 `src/material/prelude.wgsl`：按設計稿定義 `Frame`、綁定和 `param`、`rr_sdf`、`notch_sdf`、`body_sdf`、`sample_backdrop`。函數體從 PR 著色器搬，計算保持一致。
 2. 新建 `src/material/pipeline.rs`：
-   - 拼接 prelude 和插件代码，在 `push_error_scope` 里编译；
-   - 建绑定组、打包 `Frame`（`#[repr(C)]`，每项 16 字节对齐，和 WGSL 布局逐项对应，补一个布局大小的单元测试）；
-   - 挂 egui paint callback，预乘 alpha 混合方式与 PR 相同。
+   - 拼接 prelude 和插件代碼，在 `push_error_scope` 裡編譯；
+   - 建綁定組、打包 `Frame`（`#[repr(C)]`，每項 16 字節對齊，和 WGSL 佈局逐項對應，補一個佈局大小的單元測試）；
+   - 掛 egui paint callback，預乘 alpha 混合方式與 PR 相同。
 3. 新建 `src/material/controls.rs`：
-   - 页面绘制时调用 `material::control(id, rect, radius)` 登记控件玻璃；
-   - 宿主按清单的刚度和阻尼算弹簧位移、悬停和按下状态。
+   - 頁面繪製時調用 `material::control(id, rect, radius)` 登記控件玻璃；
+   - 宿主按清單的剛度和阻尼算彈簧位移、懸停和按下狀態。
    
-   PR 在 `app.rs` 的 `Ctl` 枚举里列出的 13 个控件（播放、切歌、音量、歌词、齿轮、翻页箭头、进度圆钮、添加账号、邮箱去添加、日程编辑等），逐个在对应页面的绘制代码里登记。
+   PR 在 `app.rs` 的 `Ctl` 枚舉裡列出的 13 個控件（播放、切歌、音量、歌詞、齒輪、翻頁箭頭、進度圓鈕、添加帳號、信箱去添加、日程編輯等），逐個在對應頁面的繪製代碼裡登記。
 4. `src/material/mod.rs`：
-   - 当前材质的加载、启停、每帧入口；
-   - 静止 15 Hz、2 分钟后 1 Hz 深休眠；
-   - 连续 120 帧材质通道超过 4 ms 自动停用；
-   - 任一步失败永久退回普通绘制并记日志。
-5. 内置调试材质 `src/material/debug.wgsl`：玻璃内原样输出底片，控件区域描一圈边，用来检查抓屏对齐和控件位置。只能通过测试或 `DAOZAI_MATERIAL_DEBUG=1` 启用，不出现在设置里。
-6. 测试：
-   - 着色器拼接后能通过 naga 校验（单元测试里用 wgpu 的 naga 解析 prelude 加调试材质）；
-   - 写错的着色器被拒绝且不崩溃；
-   - 关闭材质时渲染结果与 main 相同（沿用现有 UI 截图测试）。
-7. 出包：合进 `test/acceptance`，编测试版替换桌面测试版。回报里写明怎样用 `DAOZAI_MATERIAL_DEBUG=1` 打开调试材质查看对齐效果。
+   - 當前材質的載入、啟停、每幀入口；
+   - 靜止 15 Hz、2 分鐘後 1 Hz 深休眠；
+   - 連續 120 幀材質通道超過 4 ms 自動停用；
+   - 任一步失敗永久退回普通繪製並記日誌。
+5. 內置調試材質 `src/material/debug.wgsl`：玻璃內原樣輸出底片，控件區域描一圈邊，用來檢查抓屏對齊和控件位置。只能通過測試或 `DAOZAI_MATERIAL_DEBUG=1` 啟用，不出現在設定裡。
+6. 測試：
+   - 著色器拼接後能通過 naga 校驗（單元測試裡用 wgpu 的 naga 解析 prelude 加調試材質）；
+   - 寫錯的著色器被拒絕且不崩潰；
+   - 關閉材質時渲染結果與 main 相同（沿用現有 UI 截圖測試）。
+7. 出包：合進 `test/acceptance`，編測試版替換桌面測試版。回報裡寫明怎樣用 `DAOZAI_MATERIAL_DEBUG=1` 打開調試材質查看對齊效果。
 
-## 第 3 阶段：接入插件 SDK
+## 第 3 階段：接入插件 SDK
 
-目标：材质能作为插件安装、启用、调参和停用。
+目標：材質能作為插件安裝、啟用、調參和停用。
 
-0. 第 2 阶段审查遗留：停靠方向目前用 `@binding(3)` 的 `DaozaiHost` 传入，插件着色器也能读到它，等于多了一个未写进接口的字段。改为放进 `Frame.count.y`（0 顶部、1 左侧、2 右侧），删除 `binding(3)` 和 `DaozaiHost`，`Frame` 仍为 1024 字节。同步更新设计稿 `Frame` 注释，`prelude.wgsl` 里 `body_sdf` 改读 `frame.count.y`，补一条单元测试确认插件声明 `binding(3)` 也会被拒绝。
+0. 第 2 階段審查遺留：停靠方向目前用 `@binding(3)` 的 `DaozaiHost` 傳入，插件著色器也能讀到它，等於多了一個未寫進接口的字段。改為放進 `Frame.count.y`（0 頂部、1 左側、2 右側），刪除 `binding(3)` 和 `DaozaiHost`，`Frame` 仍為 1024 字節。同步更新設計稿 `Frame` 註釋，`prelude.wgsl` 裡 `body_sdf` 改讀 `frame.count.y`，補一條單元測試確認插件聲明 `binding(3)` 也會被拒絕。
 
-1. 清单：
-   - `spike/local.rs` 的校验接受 `runtime: "material"`、`owner: "appearance"`、`capabilities` 含 `appearance.material`；
-   - 新增 `material` 字段（`controls`、`spring`）和 `number` 设置类型（`min`、`max`、`step`，最多 32 个）；
-   - 包内只允许 `plugin.json`、一个 `.wgsl` 入口（≤ 64 KB）和说明文件。
+1. 清單：
+   - `spike/local.rs` 的校驗接受 `runtime: "material"`、`owner: "appearance"`、`capabilities` 含 `appearance.material`；
+   - 新增 `material` 字段（`controls`、`spring`）和 `number` 設定類型（`min`、`max`、`step`，最多 32 個）；
+   - 包內只允許 `plugin.json`、一個 `.wgsl` 入口（≤ 64 KB）和說明文件。
    
    同步更新 `docs/plugins/sdk-v1.schema.json` 和 `docs/plugins/sdk-v1-design.md` 的能力表。
-2. 启用流程：
-   - 首次启用时确认 `screen.backdrop` 权限，说明文字见设计稿；
-   - 兼容渲染没开时提示开启并重启，期间插件显示为等待状态，基础皮肤不变；
-   - 同一时间只启用一个材质，启用新的会停用旧的。
-3. 设置：
-   - 「设置 → 外观」里在基础皮肤下面加「材质」一项，列出已安装的材质插件和「无」；
-   - 选中后按清单生成参数滑块，改动实时生效；
-   - 「我的插件」页同样显示材质插件。
-   - 遵守 AGENTS.md 和用户偏好：不删现有设置项和说明，状态用颜色和动效表示，不加文字标签。
-4. 截图排除：`material/backdrop.rs` 的 `CaptureExclusion` 目前直接调用 `SetWindowDisplayAffinity`，和 `native.rs` 里 #197 的 `capture::Exclusion` 管的是同一个窗口标记。改为统一经由 `capture::Exclusion`，避免两处互相覆盖。材质生效期间强制排除捕获，「截图和录屏隐藏岛仔」开关显示为已开启并附说明，停用后恢复用户原来的选择。这一条是设计稿「待确认的决策」第 1 条的建议方案，回报时单独列出实现方式供审查。
-5. 测试：
-   - 清单校验（合法、缺字段、超范围、非 number 设置、包内多余文件）；
-   - 启停后设置恢复；
-   - 权限未确认时不启用；
-   - 兼容渲染关闭时不启用；
-   - 截图排除的恢复。
-6. 不出包，第 4 阶段一起出。
+2. 啟用流程：
+   - 首次啟用時確認 `screen.backdrop` 權限，說明文字見設計稿；
+   - 兼容渲染沒開時提示開啟並重啟，期間插件顯示為等待狀態，基礎皮膚不變；
+   - 同一時間只啟用一個材質，啟用新的會停用舊的。
+3. 設定：
+   - 「設定 → 外觀」裡在基礎皮膚下面加「材質」一項，列出已安裝的材質插件和「無」；
+   - 選取後按清單生成參數滑塊，改動實時生效；
+   - 「我的插件」頁同樣顯示材質插件。
+   - 遵守 AGENTS.md 和使用者偏好：不刪現有設定項和說明，狀態用顏色和動效表示，不加文字標籤。
+4. 截圖排除：`material/backdrop.rs` 的 `CaptureExclusion` 目前直接調用 `SetWindowDisplayAffinity`，和 `native.rs` 裡 #197 的 `capture::Exclusion` 管的是同一個窗口標記。改為統一經由 `capture::Exclusion`，避免兩處互相覆蓋。材質生效期間強制排除捕獲，「截圖和錄屏隱藏島仔」開關顯示為已開啟並附說明，停用後恢復使用者原來的選擇。這一條是設計稿「待確認的決策」第 1 條的建議方案，回報時單獨列出實現方式供審查。
+5. 測試：
+   - 清單校驗（合法、缺字段、超範圍、非 number 設定、包內多餘文件）；
+   - 啟停後設定恢復；
+   - 權限未確認時不啟用；
+   - 兼容渲染關閉時不啟用；
+   - 截圖排除的恢復。
+6. 不出包，第 4 階段一起出。
 
-## 第 4 阶段：液态玻璃插件包和效果对比
+## 第 4 階段：液態玻璃插件包和效果對比
 
-目标：液态玻璃作为第一个材质插件，效果与 PR #235 预览版一致。
+目標：液態玻璃作為第一個材質插件，效果與 PR #235 預覽版一致。
 
 1. 新建 `spike/examples/liquid-glass/`：
-   - `plugin.json`：作者「轻九九九（@cayww）」，参数和默认值取自 PR #235 `model.rs` 的 `liquid_*` 默认值：
+   - `plugin.json`：作者「輕九九九（@cayww）」，參數和預設值取自 PR #235 `model.rs` 的 `liquid_*` 預設值：
 
-     | 参数 | 默认值 |
+     | 參數 | 預設值 |
      |---|---|
      | 折射 | 48 |
      | 色散 | 8 |
-     | 内部模糊 | 1.5 |
-     | 折射带宽 | 87 |
-     | 白边宽度 | 1.5 |
-     | 白边不透明度 | 0.9 |
-     | 形变 | 1.0 |
+     | 內部模糊 | 1.5 |
+     | 折射頻寬 | 87 |
+     | 白邊寬度 | 1.5 |
+     | 白邊不透明度 | 0.9 |
+     | 形變 | 1.0 |
 
-     弹簧刚度 1.0、阻尼 0.5。
-   - `material.wgsl`：从 PR 的 `gpu_glass.rs` 着色器移植 `fs` 及其辅助函数，改为 `material()` 入口，专用 uniform 改从 `param()` 读取，几何和底片改用 prelude 提供的函数。
-2. 效果对比：
-   - 同一壁纸、同一页面、同一参数下，分别用参考工作树里的预览版（`D:\daozai-build\tmp\打开液态玻璃预览.cmd`）和测试版截图；
-   - 至少覆盖音乐页展开、收起胶囊、控件按下三种状态；
-   - 差异明显时先修正移植，并在回报里附对比图路径。
-3. 测试：
-   - 插件包通过清单校验并能安装、启用、停用；
-   - 着色器通过 naga 校验；
-   - 关闭插件后外观回到原皮肤。
-4. 出包：合进 `test/acceptance`，编测试版替换桌面测试版。在回报里写明安装插件包的步骤，让用户在测试版里试用。插件包只用于本机验收，不发布到插件市场。
-5. 接口反馈：回报里单列「接口问题」一节，作为定插件技术规范的依据。写明移植中遇到的不够用或别扭的地方，例如：
-   - 控件 16 块、参数 32 个是否够用；
-   - `Frame` 缺少或多余的字段；
-   - prelude 函数是否需要增减；
-   - 弹簧参数放在清单里是否合适；
-   - 参数滑块的类型和范围表达是否够用。
+     彈簧剛度 1.0、阻尼 0.5。
+   - `material.wgsl`：從 PR 的 `gpu_glass.rs` 著色器移植 `fs` 及其輔助函數，改為 `material()` 入口，專用 uniform 改從 `param()` 讀取，幾何和底片改用 prelude 提供的函數。
+2. 效果對比：
+   - 同一壁紙、同一頁面、同一參數下，分別用參考工作樹裡的預覽版（`D:\daozai-build\tmp\打開液態玻璃預覽.cmd`）和測試版截圖；
+   - 至少覆蓋音樂頁展開、收起膠囊、控件按下三種狀態；
+   - 差異明顯時先修正移植，並在回報裡附對比圖路徑。
+3. 測試：
+   - 插件包通過清單校驗並能安裝、啟用、停用；
+   - 著色器通過 naga 校驗；
+   - 關閉插件後外觀回到原皮膚。
+4. 出包：合進 `test/acceptance`，編測試版替換桌面測試版。在回報裡寫明安裝插件包的步驟，讓使用者在測試版裡試用。插件包只用於本機驗收，不發佈到插件市場。
+5. 接口回饋：回報裡單列「接口問題」一節，作為定插件技術規範的依據。寫明移植中遇到的不夠用或彆扭的地方，例如：
+   - 控件 16 塊、參數 32 個是否夠用；
+   - `Frame` 缺少或多餘的字段；
+   - prelude 函數是否需要增減；
+   - 彈簧參數放在清單裡是否合適；
+   - 參數滑塊的類型和範圍表達是否夠用。
    
-   每条写现状、问题和建议，不在本阶段自行改接口。
+   每條寫現狀、問題和建議，不在本階段自行改接口。
 
-## 第 5 阶段：补齐与预览版的效果差距
+## 第 5 階段：補齊與預覽版的效果差距
 
-目标：液态玻璃插件与 PR #235 预览版在投影、按钮和文字样式、动态形变、明暗切换、各控件透镜倍率上一致。设计稿已补充 `material.shadow`、`material.foreground`、`Frame.motion` 和控件角色，本阶段按设计稿实现。
+目標：液態玻璃插件與 PR #235 預覽版在投影、按鈕和文字樣式、動態形變、明暗切換、各控件透鏡倍率上一致。設計稿已補充 `material.shadow`、`material.foreground`、`Frame.motion` 和控件角色，本階段按設計稿實現。
 
-1. 先把 `main` 合进 `feat/gpu-material`。`main` 新增了底部停靠，按 `test/acceptance` 上合并 `41e8b6f` 之后的 `prelude.wgsl` 补齐底部停靠的轮廓换算，让功能分支和验收分支一致。
+1. 先把 `main` 合進 `feat/gpu-material`。`main` 新增了底部停靠，按 `test/acceptance` 上合併 `41e8b6f` 之後的 `prelude.wgsl` 補齊底部停靠的輪廓換算，讓功能分支和驗收分支一致。
 2. 投影：
-   - 清单校验接受 `material.shadow`（0 至 1.5）；
-   - 宿主绘制岛体投影时，有材质且声明了投影强度就用它，否则沿用基础皮肤。参照 PR `app.rs` 中 `skin_shadow` 和 `shadow_k` 的算法，PR 液态皮肤的系数是 1.0；
-   - 液态玻璃清单写 `"shadow": 1.0`。
-3. 前景样式：
-   - 清单校验接受 `material.foreground`（`"skin"` 或 `"glass"`）；
-   - `"glass"` 时：
-     - 宿主不画基础皮肤底色；
-     - 页面按钮、卡片走玻璃画法。把 PR 中 `glassy()` 为真时各页面的分支（`pages.rs` 约 12 处、`paint.rs` 的 `glass_chip` 等）移植为宿主的通用前景样式，判断条件改为「当前材质声明了 `foreground: "glass"`」，不出现 `Liquid` 字样；
-     - 文字和图标的调色板随 `motion.y` 在 `GLASS_DARK` 和 `GLASS_LIGHT_READABLE` 之间切换，对应 PR 的 `skin_palette`；
-   - 显示器拓扑刚变化、抓屏处于稳定期时，按 PR `paint_body` 的做法临时画纯色玻璃底；
-   - 液态玻璃清单写 `"foreground": "glass"`。
+   - 清單校驗接受 `material.shadow`（0 至 1.5）；
+   - 宿主繪製島體投影時，有材質且聲明瞭投影強度就用它，否則沿用基礎皮膚。參照 PR `app.rs` 中 `skin_shadow` 和 `shadow_k` 的算法，PR 液態皮膚的係數是 1.0；
+   - 液態玻璃清單寫 `"shadow": 1.0`。
+3. 前景樣式：
+   - 清單校驗接受 `material.foreground`（`"skin"` 或 `"glass"`）；
+   - `"glass"` 時：
+     - 宿主不畫基礎皮膚底色；
+     - 頁面按鈕、卡片走玻璃畫法。把 PR 中 `glassy()` 為真時各頁面的分支（`pages.rs` 約 12 處、`paint.rs` 的 `glass_chip` 等）移植為宿主的通用前景樣式，判斷條件改為「當前材質聲明瞭 `foreground: "glass"`」，不出現 `Liquid` 字樣；
+     - 文字和圖標的調色板隨 `motion.y` 在 `GLASS_DARK` 和 `GLASS_LIGHT_READABLE` 之間切換，對應 PR 的 `skin_palette`；
+   - 顯示器拓撲剛變化、抓屏處於穩定期時，按 PR `paint_body` 的做法臨時畫純色玻璃底；
+   - 液態玻璃清單寫 `"foreground": "glass"`。
 4. `Frame.motion`：
-   - 末尾追加 `motion`，`Frame` 改为 1040 字节，更新布局测试；
-   - `motion.x` 由宿主根据展开程度逐帧求导得出；
-   - `motion.y` 用 PR `liquid_k` 的滞回和平滑算法计算。原 `liquid_k` 是 `App` 字段，改为材质模块持有。
+   - 末尾追加 `motion`，`Frame` 改為 1040 字節，更新佈局測試；
+   - `motion.x` 由宿主根據展開程度逐幀求導得出；
+   - `motion.y` 用 PR `liquid_k` 的滯回和平滑算法計算。原 `liquid_k` 是 `App` 字段，改為材質模塊持有。
 5. 控件角色：
-   - 在 `material/controls.rs` 定义角色编号，至少覆盖 PR `Ctl` 枚举的 13 个控件，写入 `ctl_spring.w`；
-   - 控件超过 16 块时按设计稿的优先级保留；
-   - 把编号表作为附录追加到设计稿末尾。
-6. 着色器：按 PR `gpu_glass.rs` 补回第 4 阶段近似处理的部分：
-   - 展开速度驱动的形变（读 `motion.x`）；
-   - 按控件角色区分的透镜放大倍率和折射倍率，取值照 PR `glass_controls` 里各控件的 `mag`、`refract`；
-   - 背景明暗相关的材质深浅（读 `motion.y`）。
+   - 在 `material/controls.rs` 定義角色編號，至少覆蓋 PR `Ctl` 枚舉的 13 個控件，寫入 `ctl_spring.w`；
+   - 控件超過 16 塊時按設計稿的優先級保留；
+   - 把編號表作為附錄追加到設計稿末尾。
+6. 著色器：按 PR `gpu_glass.rs` 補回第 4 階段近似處理的部分：
+   - 展開速度驅動的形變（讀 `motion.x`）；
+   - 按控件角色區分的透鏡放大倍率和折射倍率，取值照 PR `glass_controls` 裡各控件的 `mag`、`refract`；
+   - 背景明暗相關的材質深淺（讀 `motion.y`）。
    
-   着色器仍不超过 64 KB。
-7. 效果对比：
-   - 重做第 4 阶段的三态对比（音乐页展开、收起胶囊、按住齿轮），另加两组：
-     - 展开动画中途一帧；
-     - 浅色壁纸下的音乐页，检查文字转为深色。
-   - 对比时基础皮肤任选。`foreground: "glass"` 生效后，结果不应再受基础皮肤影响。
-   - 在回报里附对比图路径，逐项说明是否一致。仍有差异的写明原因。
-8. 测试：
-   - 清单校验覆盖 `shadow`、`foreground` 的合法值和非法值；
-   - `Frame` 布局 1040 字节；
-   - 明暗滞回不在阈值附近来回跳；
-   - 控件超过 16 块时的保留顺序；
-   - 停用材质后前景样式、投影、底色全部回到基础皮肤，沿用第 4 阶段的停用对比；
-   - 完整回归通过。
-9. 出包：合进 `test/acceptance`，编测试版替换桌面测试版。回报里写明液态玻璃插件包需要重新安装（清单有变化）。
+   著色器仍不超過 64 KB。
+7. 效果對比：
+   - 重做第 4 階段的三態對比（音樂頁展開、收起膠囊、按住齒輪），另加兩組：
+     - 展開動畫中途一幀；
+     - 淺色壁紙下的音樂頁，檢查文字轉為深色。
+   - 對比時基礎皮膚任選。`foreground: "glass"` 生效後，結果不應再受基礎皮膚影響。
+   - 在回報裡附對比圖路徑，逐項說明是否一致。仍有差異的寫明原因。
+8. 測試：
+   - 清單校驗覆蓋 `shadow`、`foreground` 的合法值和非法值；
+   - `Frame` 佈局 1040 字節；
+   - 明暗滯回不在閾值附近來回跳；
+   - 控件超過 16 塊時的保留順序；
+   - 停用材質後前景樣式、投影、底色全部回到基礎皮膚，沿用第 4 階段的停用對比；
+   - 完整迴歸通過。
+9. 出包：合進 `test/acceptance`，編測試版替換桌面測試版。回報裡寫明液態玻璃插件包需要重新安裝（清單有變化）。
 
-## 第 6 阶段：落地 v1 定稿新增项
+## 第 6 階段：落地 v1 定稿新增項
 
-目标：设计稿已改为《GPU 材质接口规范 v1》定稿。本阶段实现定稿时新增或明确的几项，让代码与规范逐条一致。规范是本阶段的唯一依据，实现中发现规范写不通时，先在回报里说明，不自行改规范。
+目標：設計稿已改為《GPU 材質接口規範 v1》定稿。本階段實現定稿時新增或明確的幾項，讓代碼與規範逐條一致。規範是本階段的唯一依據，實現中發現規範寫不通時，先在回報裡說明，不自行改規範。
 
-1. 先把 `main` 合进 `feat/gpu-material`。
-2. 清单：
-   - `settings[]` 支持可选的 `unit`（最多 4 个字符）和 `precision`（0 至 3）；
-   - 设置页滑块按 `precision` 显示小数位，不写时按 `step` 的小数位，数值后显示 `unit`；
-   - 插件 `api` 大于宿主支持的版本时，拒绝安装并提示「需要更新岛仔」，与其他校验失败的提示区分开。
-3. 着色器：
-   - `prelude.wgsl` 增加 `body_sdf_exact`（不收缩的轮廓），覆盖刘海、展开和四个停靠方向；
-   - 插件代码声明 `@vertex`、`@fragment`、`@compute` 入口或任何绑定时拒绝加载；
-   - `Frame` 的保留位恒为 0。
+1. 先把 `main` 合進 `feat/gpu-material`。
+2. 清單：
+   - `settings[]` 支援可選的 `unit`（最多 4 個字符）和 `precision`（0 至 3）；
+   - 設定頁滑塊按 `precision` 顯示小數位，不寫時按 `step` 的小數位，數值後顯示 `unit`；
+   - 插件 `api` 大於宿主支援的版本時，拒絕安裝並提示「需要更新島仔」，與其他校驗失敗的提示區分開。
+3. 著色器：
+   - `prelude.wgsl` 增加 `body_sdf_exact`（不收縮的輪廓），覆蓋劉海、展開和四個停靠方向；
+   - 插件代碼聲明 `@vertex`、`@fragment`、`@compute` 入口或任何綁定時拒絕載入；
+   - `Frame` 的保留位恆為 0。
 4. `motion.z`：
-   - 按 PR #235 原版对形变速度的逐帧衰减方式计算平滑展开速度，写入 `motion.z`；
-   - 液态玻璃的展开形变改读 `motion.z`，补上第 5 阶段回报里「收尾节奏仍有差异」的部分。
-5. 边缘：
-   - 检查液态玻璃在 `body_sdf_exact > 2 px` 的区域输出透明，不符合就修正着色器；
-   - 补一个 Direct3D 12 离屏测试：轮廓外 2 px 以外 alpha 为 0。
-6. 液态玻璃插件升到 `1.0.2`：
-   - 参数补 `unit` 和 `precision`。像素类参数（折射、色散、内部模糊、折射带宽、白边宽度）写 `"px"`，系数类参数（白边不透明度、形变）不写单位；
-   - 显示精度按各自 `step`。
-7. 文档：同步更新 `docs/plugins/sdk-v1.schema.json` 和 `docs/plugins/sdk-v1-design.md` 中与材质相关的字段说明。
-8. 测试：
-   - 清单校验（`unit`、`precision` 的合法值和非法值，`api: 2` 的提示）；
-   - 着色器校验（多余入口、多余绑定）；
-   - `body_sdf_exact` 在四个停靠方向上与窗口可见边缘一致；
-   - 保留位为 0；
-   - 边缘透明的离屏测试；
-   - 完整回归通过。
-9. 效果对比：重做第 5 阶段的「展开中途」一组，附收起动画连续几帧的对比，说明收尾节奏是否与预览版一致。
-10. 出包：合进 `test/acceptance`，编测试版替换桌面测试版。回报里写明液态玻璃需要重新安装 1.0.2。
+   - 按 PR #235 原版對形變速度的逐幀衰減方式計算平滑展開速度，寫入 `motion.z`；
+   - 液態玻璃的展開形變改讀 `motion.z`，補上第 5 階段回報裡「收尾節奏仍有差異」的部分。
+5. 邊緣：
+   - 檢查液態玻璃在 `body_sdf_exact > 2 px` 的區域輸出透明，不符合就修正著色器；
+   - 補一個 Direct3D 12 離屏測試：輪廓外 2 px 以外 alpha 為 0。
+6. 液態玻璃插件升到 `1.0.2`：
+   - 參數補 `unit` 和 `precision`。像素類參數（折射、色散、內部模糊、折射頻寬、白邊寬度）寫 `"px"`，係數類參數（白邊不透明度、形變）不寫單位；
+   - 顯示精度按各自 `step`。
+7. 文檔：同步更新 `docs/plugins/sdk-v1.schema.json` 和 `docs/plugins/sdk-v1-design.md` 中與材質相關的字段說明。
+8. 測試：
+   - 清單校驗（`unit`、`precision` 的合法值和非法值，`api: 2` 的提示）；
+   - 著色器校驗（多餘入口、多餘綁定）；
+   - `body_sdf_exact` 在四個停靠方向上與窗口可見邊緣一致；
+   - 保留位為 0；
+   - 邊緣透明的離屏測試；
+   - 完整迴歸通過。
+9. 效果對比：重做第 5 階段的「展開中途」一組，附收起動畫連續幾幀的對比，說明收尾節奏是否與預覽版一致。
+10. 出包：合進 `test/acceptance`，編測試版替換桌面測試版。回報裡寫明液態玻璃需要重新安裝 1.0.2。
 
-第 6 阶段之后，功能代码完成。合进 `main` 前，还需要用户完成规范文末「合进 main 前的补测」三项。
+第 6 階段之後，功能代碼完成。合進 `main` 前，還需要使用者完成規範文末「合進 main 前的補測」三項。
