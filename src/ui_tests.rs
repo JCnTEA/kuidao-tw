@@ -3036,7 +3036,7 @@ fn social_unread_stack_keeps_service_icons_visible() {
     h.cursor=Some(H::local(200.0,50.0));
     for _ in 0..80 { h.frame(vec![]); }
     let icons:Vec<_>=h.shapes.iter().filter_map(|s|match &s.shape{
-        egui::Shape::Rect(r) if r.brush.fill_texture_id!=egui::TextureId::default()=>Some(r.rect),
+        egui::Shape::Rect(r) if r.brush.as_ref().is_some_and(|b|b.fill_texture_id!=egui::TextureId::default())=>Some(r.rect),
         _=>None,
     }).collect();
     assert!(icons.iter().any(|r|(r.center().x-16.0).abs()<6.0 && (r.center().y-14.0).abs()<6.0),"LINE 圖示應出現在第一個未讀格");
