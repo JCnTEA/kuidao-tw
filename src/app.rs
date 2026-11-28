@@ -3321,8 +3321,17 @@ impl App {
             let button=inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,self.unread_id(i)).on_hover_text(format!("檢視{name}"));
             if button.clicked(){cmds.push(Cmd::ViewMessenger(u));}
         }
+        let social_offset=self.pending_messengers.len();
+        for (i,(source,n)) in socials.iter().enumerate() {
+            let cy=2.0+slot*((social_offset+i) as f32+0.5)-self.messenger_scroll;
+            if cy< -slot || cy>list_h+slot {continue;}
+            source.paint(&inner,x,cy);
+            inner.circle(x+10.0,cy-9.0,2.6,Color32::from_rgb(255,72,72));
+            let button=inner.hit(0.0,cy-slot/2.0,UNREAD_W,slot,("social",source.key())).on_hover_text(format!("{} · {} 則訊息，點選開啟",source.name(),n));
+            if button.clicked(){let target=self.social.target(*source);let launch=self.social.launch(*source);self.social.clear(*source);self.social.persist();cmds.push(Cmd::OpenSocial(*source,target,launch));}
+        }
         let health=self.health_badges();
-        let health_offset=self.pending_messengers.len();
+        let health_offset=social_offset+socials.len();
         #[cfg(windows)]
         self.draw_plugin_notice_capsule(&inner, health_offset+health.len(), slot, height, self.messenger_scroll, UNREAD_W, cmds);
         for (i,kind) in health.into_iter().enumerate() {
