@@ -1,4 +1,4 @@
-//! 用戶授權的單一數據源。路徑、地址和 I/O 始終由宿主管理。
+//! 用户授权的单一数据源。路径、地址和 I/O 始终由宿主管理。
 use serde::{Deserialize, Serialize};
 use std::{
     io::{self, Read},
@@ -11,8 +11,8 @@ use url::{Host, Url};
 
 const MAX_BYTES: u64 = 128 * 1024;
 const HTTP_TIMEOUT: Duration = Duration::from_secs(2);
-const FILE_ERROR: &str = "請選擇普通的本地文件。網絡路徑和重解析點不受支持";
-const URL_ERROR: &str = "請輸入 http://127.0.0.1、http://[::1] 或 http://localhost 的完整接口地址";
+const FILE_ERROR: &str = "请选择普通的本地文件。网络路径和重解析点不受支持";
+const URL_ERROR: &str = "请输入 http://127.0.0.1、http://[::1] 或 http://localhost 的完整接口地址";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum SourceKind {
@@ -48,7 +48,7 @@ impl SourceGrant {
             Self::File(path) => read_file(path, cancelled),
             Self::Loopback(address) => read_http(address, cancelled),
             #[cfg(windows)]
-            Self::Https { .. } | Self::HttpsSources { .. } => Err(io::Error::other("HTTPS 數據源缺少網絡配置")),
+            Self::Https { .. } | Self::HttpsSources { .. } => Err(io::Error::other("HTTPS 数据源缺少网络配置")),
         }
     }
 }
@@ -111,16 +111,16 @@ fn read_http(raw: &str, cancelled: &AtomicBool) -> io::Result<String> {
         .set("Accept", "application/json, text/plain")
         .set("Accept-Encoding", "identity")
         .call()
-        .map_err(|_| io::Error::other("本機數據源無法讀取"))?;
+        .map_err(|_| io::Error::other("本机数据源无法读取"))?;
     if !(200..300).contains(&response.status()) {
-        return Err(io::Error::other("本機數據源沒有直接返回數據"));
+        return Err(io::Error::other("本机数据源没有直接返回数据"));
     }
     read_text(response.into_reader(), cancelled, MAX_BYTES)
 }
 
 pub(super) fn check_cancelled(cancelled: &AtomicBool) -> io::Result<()> {
     if cancelled.load(Ordering::Acquire) {
-        return Err(io::Error::new(io::ErrorKind::Interrupted, "讀取已取消"));
+        return Err(io::Error::new(io::ErrorKind::Interrupted, "读取已取消"));
     }
     Ok(())
 }
@@ -138,10 +138,10 @@ pub(super) fn read_text(reader: impl Read, cancelled: &AtomicBool, limit: u64) -
         bytes.extend_from_slice(&buf[..count]);
     }
     if bytes.len() as u64 > limit {
-        return Err(io::Error::other(format!("數據源超過 {} KiB", limit / 1024)));
+        return Err(io::Error::other(format!("数据源超过 {} KiB", limit / 1024)));
     }
     let mut text =
-        String::from_utf8(bytes).map_err(|_| io::Error::other("數據源必須使用 UTF-8"))?;
+        String::from_utf8(bytes).map_err(|_| io::Error::other("数据源必须使用 UTF-8"))?;
     if text.starts_with('\u{feff}') {
         text.drain(..'\u{feff}'.len_utf8());
     }
@@ -201,7 +201,7 @@ fn read_file(path: &Path, cancelled: &AtomicBool) -> io::Result<String> {
     ) {
         return Err(invalid());
     }
-    // 先檢查目錄組件，避免沿常見的重解析點訪問遠程位置。
+    // 先检查目录组件，避免沿常见的重解析点访问远程位置。
     let components: Vec<_> = path.ancestors().collect();
     for part in components.iter().rev().skip(1) {
         check_cancelled(cancelled)?;
@@ -223,7 +223,7 @@ fn read_file(path: &Path, cancelled: &AtomicBool) -> io::Result<String> {
     {
         return Err(invalid());
     }
-    // 校驗已打開的句柄，文件必須對應用戶批准的路徑。
+    // 校验已打开的句柄，文件必须对应用户批准的路径。
     let mut resolved = vec![0; 32768];
     let count =
         unsafe { GetFinalPathNameByHandleW(handle, &mut resolved, VOLUME_NAME_DOS) } as usize;
@@ -317,7 +317,7 @@ mod tests {
         });
         let result = grant.read(&AtomicBool::new(false));
         responder.join().unwrap();
-        assert_eq!(result.unwrap_err().to_string(), "本機數據源沒有直接返回數據");
+        assert_eq!(result.unwrap_err().to_string(), "本机数据源没有直接返回数据");
         assert!(
             matches!(redirected.accept(), Err(error) if error.kind() == io::ErrorKind::WouldBlock)
         );

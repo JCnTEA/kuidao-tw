@@ -54,7 +54,7 @@ impl Fixture {
         fs::write(
             &path,
             serde_json::to_vec(&json!({
-                "id": id, "name": id, "author": "驗收", "version": "1.0.0",
+                "id": id, "name": id, "author": "验收", "version": "1.0.0",
                 "api": 1, "runtime": "js", "entry": "main.js", "owner": owner, "cover": COVER_FILE,
                 "capabilities": capabilities, "dataVersion": 1, "permissions": permissions, "settings": []
             }))?,
@@ -72,7 +72,7 @@ impl Drop for Fixture {
 fn wait(mut until: impl FnMut() -> bool) {
     let deadline = Instant::now() + Duration::from_secs(6);
     while !until() {
-        assert!(Instant::now() < deadline, "等待結構化狀態刷新超時");
+        assert!(Instant::now() < deadline, "等待结构化状态刷新超时");
         thread::sleep(Duration::from_millis(2));
     }
 }
@@ -85,14 +85,14 @@ fn settle(host: &mut LocalPlugins, tasks_on: bool) {
 }
 
 fn status(host: &LocalPlugins, id: &str) -> (Option<f64>, StatusHealth) {
-    let (_, snapshot, health) = host.status_page(id).expect("已啟用的狀態頁應仍可打開");
+    let (_, snapshot, health) = host.status_page(id).expect("已启用的状态页应仍可打开");
     (snapshot.and_then(|snapshot| snapshot.progress_pct), health)
 }
 
 fn snapshot(progress: u8) -> String {
     json!({"status":{
         "state":"running", "label":"打印中", "progress_pct":progress,
-        "metrics":[{"label":"噴嘴溫度","value":"220 °C"},{"label":"層數","value":"74 / 180"}]
+        "metrics":[{"label":"喷嘴温度","value":"220 °C"},{"label":"层数","value":"74 / 180"}]
     }})
     .to_string()
 }
@@ -102,11 +102,11 @@ fn canvas_title_accent_must_be_a_proper_status_page_suffix() -> Result<()> {
     let mut manifest: Value = serde_json::from_str(include_str!("examples/canvas-demo/plugin.json"))?;
     let decode = |manifest: &Value| Manifest::decode(&manifest.to_string());
     assert!(decode(&manifest).is_ok());
-    for invalid in [json!("畫布"), json!("畫布圖元"), json!(""), json!(null)] {
+    for invalid in [json!("画布"), json!("画布图元"), json!(""), json!(null)] {
         manifest["titleAccent"] = invalid;
         assert!(decode(&manifest).is_err());
     }
-    manifest["titleAccent"] = json!("圖元");
+    manifest["titleAccent"] = json!("图元");
     manifest["owner"] = json!("tasks");
     manifest["capabilities"] = json!(["card"]);
     manifest.as_object_mut().unwrap().remove("statusLayout");
@@ -231,7 +231,7 @@ fn structured_status_layout_rejects_out_of_contract_manifests() -> Result<()> {
         json!({"components":[]}),
         json!({"components":vec![json!({"type":"alert"}); 7]}),
         json!({"components":[{"type":"progress","variant":"ring"},{"type":"progress","variant":"bar"}]}),
-        json!({"components":[{"type":"state","text":"越權字段"}]}),
+        json!({"components":[{"type":"state","text":"越权字段"}]}),
         json!({"components":[{"type":"progress","style":"ring"}]}),
         json!({"components":[{"type":"progress","variant":"dial"}]}),
         json!({"components":[{"type":"metrics","columns":3}]}),
@@ -240,14 +240,14 @@ fn structured_status_layout_rejects_out_of_contract_manifests() -> Result<()> {
         json!({"components":[{"type":"summary"}],"style":{"accent":"#12+345"}}),
         json!({"components":[{"type":"summary"}],"style":{"accent":null}}),
         json!({"components":[{"type":"summary"}],"style":{"surface":"custom"}}),
-        json!({"components":[{"type":"summary"}],"style":{"font":"自定字體"}}),
+        json!({"components":[{"type":"summary"}],"style":{"font":"自定字体"}}),
         json!({"components":[{"type":"summary"}],"style":null}),
         json!({"components":[{"type":"summary"}],"width":300}),
     ] {
         manifest["statusLayout"] = invalid;
         assert!(
             Manifest::decode(&manifest.to_string()).is_err(),
-            "誤接受：{}",
+            "误接受：{}",
             manifest["statusLayout"]
         );
     }
@@ -294,11 +294,11 @@ fn structured_status_file_disconnect_and_revoke_are_isolated() -> Result<()> {
         "tasks",
         &["card"],
         json!({}),
-        "function refresh() {return {card:'原有待辦卡片'};}",
+        "function refresh() {return {card:'原有待办卡片'};}",
     )?)?;
     host.enable(TASKS, true)?;
-    let printer = fixture.0.join("模擬打印機.json");
-    let other = fixture.0.join("其他來源.json");
+    let printer = fixture.0.join("模拟打印机.json");
+    let other = fixture.0.join("其他来源.json");
     fs::write(&printer, snapshot(42))?;
     fs::write(&other, snapshot(25))?;
     host.set_source_grant(PRINTER, Some(source_read::grant_file(&printer)?))?;
@@ -306,7 +306,7 @@ fn structured_status_file_disconnect_and_revoke_are_isolated() -> Result<()> {
     settle(&mut host, true);
     assert_eq!(status(&host, PRINTER), (Some(42.0), StatusHealth::Ready));
     assert_eq!(status(&host, OTHER), (Some(25.0), StatusHealth::Ready));
-    assert_eq!(host.cards[TASKS], "原有待辦卡片");
+    assert_eq!(host.cards[TASKS], "原有待办卡片");
 
     fs::remove_file(&printer)?;
     fs::write(&other, snapshot(63))?;
@@ -315,7 +315,7 @@ fn structured_status_file_disconnect_and_revoke_are_isolated() -> Result<()> {
     settle(&mut host, true);
     assert_eq!(status(&host, PRINTER), (None, StatusHealth::Offline));
     assert_eq!(status(&host, OTHER), (Some(63.0), StatusHealth::Ready));
-    assert_eq!(host.cards[TASKS], "原有待辦卡片");
+    assert_eq!(host.cards[TASKS], "原有待办卡片");
 
     fs::write(&printer, snapshot(58))?;
     host.next.remove(PRINTER);
@@ -346,7 +346,7 @@ fn stopping_only_the_status_page_cancels_an_in_flight_read_and_persists() -> Res
         "status",
         &["status.page"],
         json!({}),
-        "function refresh() {return {status:{state:'idle',label:'另一個插件',progress_pct:17}};}",
+        "function refresh() {return {status:{state:'idle',label:'另一个插件',progress_pct:17}};}",
     )?)?;
     host.enable(PRINTER, true)?;
     host.enable(OTHER, true)?;
@@ -381,7 +381,7 @@ fn stopping_only_the_status_page_cancels_an_in_flight_read_and_persists() -> Res
         hold.recv_timeout(Duration::from_secs(5))
             .map_err(std::io::Error::other)?;
         let payload = json!({
-            "status":{"state":"succeeded","label":"遲到的更新","progress_pct":100},
+            "status":{"state":"succeeded","label":"迟到的更新","progress_pct":100},
             "storage":{"should_not_persist":true}
         })
         .to_string();
@@ -401,7 +401,7 @@ fn stopping_only_the_status_page_cancels_an_in_flight_read_and_persists() -> Res
     assert!(host.records[PRINTER].enabled);
     assert_eq!(host.status_pages().collect::<Vec<_>>(), [(OTHER, OTHER)]);
     resume.send(())?;
-    let listener = server.join().map_err(|_| fail("測試迴環服務退出"))??;
+    let listener = server.join().map_err(|_| fail("测试回环服务退出"))??;
     settle(&mut host, false);
     assert!(host.records[PRINTER].storage.is_null());
     assert!(!host.status.contains_key(PRINTER));
@@ -441,10 +441,10 @@ fn structured_status_discards_old_data_and_rejects_other_owners() -> Result<()> 
         json!({"source.read":"file"}),
         SOURCE_STATUS,
     )?)?;
-    let file = fixture.0.join("模擬打印機.json");
+    let file = fixture.0.join("模拟打印机.json");
     fs::write(
         &file,
-        r#"{"status":{"state":"idle","label":"舊數據","expires_at":1}}"#,
+        r#"{"status":{"state":"idle","label":"旧数据","expires_at":1}}"#,
     )?;
     host.enable(PRINTER, true)?;
     host.set_source_grant(PRINTER, Some(source_read::grant_file(&file)?))?;
@@ -469,7 +469,7 @@ fn structured_status_discards_old_data_and_rejects_other_owners() -> Result<()> 
         "tasks",
         &["card"],
         json!({}),
-        "function refresh(){return {card:'原有卡片',status:{state:'idle',label:'偽造狀態'}};}",
+        "function refresh(){return {card:'原有卡片',status:{state:'idle',label:'伪造状态'}};}",
     )?;
     assert!(Package::read(&foreign)?
         .render(&Values::new(), &Value::Null, TODAY)
@@ -479,7 +479,7 @@ fn structured_status_discards_old_data_and_rejects_other_owners() -> Result<()> 
         "status",
         &["card"],
         json!({}),
-        "function refresh(){return {card:'狀態'};}",
+        "function refresh(){return {card:'状态'};}",
     )?;
     assert!(Package::read(&unauthorized).is_err());
     Ok(())
@@ -524,7 +524,7 @@ fn realtime_examples_install_and_return_bounded_host_values() -> Result<()> {
     settle(&mut host, false);
 
     let pin = host.pinned_displays(false).0.into_iter().next()
-        .expect("工資樣例應提供常駐倒計時");
+        .expect("工资样例应提供常驻倒计时");
     let (_, snapshot, health) = host.status_page("example.live-pay").unwrap();
     assert_eq!(health, StatusHealth::Ready);
     let salary = snapshot.unwrap();
@@ -610,7 +610,7 @@ fn realtime_pay_uses_local_work_hours_and_schedules_non_sensitive_pins() -> Resu
     let result = run_realtime_sample(&package, input)?;
     assert_eq!(
         result.status.unwrap().summary.as_deref(),
-        Some("請先選擇工作日")
+        Some("请先选择工作日")
     );
     assert!(result.pinned.is_none() && result.next_refresh_at.is_none());
     Ok(())
@@ -622,7 +622,7 @@ fn world_clock_uses_ordered_city_settings_and_host_daylight_saving() -> Result<(
     let package = Package::read(&path)?;
     let settings = package.settings_values(&Values::from([(
         "cities".into(),
-        r#"[{"label":"紐約","zone":"America/New_York"},{"label":"北京","zone":"Asia/Shanghai"},{"label":"待檢查","zone":"Example/Unknown"}]"#.into(),
+        r#"[{"label":"纽约","zone":"America/New_York"},{"label":"北京","zone":"Asia/Shanghai"},{"label":"待检查","zone":"Example/Unknown"}]"#.into(),
     )]));
     for (iso, new_york) in [
         ("2026-01-10T12:00:00Z", "07:00:00"),
@@ -639,7 +639,7 @@ fn world_clock_uses_ordered_city_settings_and_host_daylight_saving() -> Result<(
         );
         let status = run_realtime_sample(&package, input)?.status.unwrap();
         assert_eq!(status.clock.len(), 2);
-        assert_eq!(status.clock[0].label, "紐約");
+        assert_eq!(status.clock[0].label, "纽约");
         assert_eq!(status.clock[0].value_at(now.timestamp()), new_york);
         assert_eq!(status.clock[1].label, "北京");
         assert_eq!(status.clock[1].value_at(now.timestamp()), "20:00:00");
@@ -647,7 +647,7 @@ fn world_clock_uses_ordered_city_settings_and_host_daylight_saving() -> Result<(
             .summary
             .as_deref()
             .unwrap()
-            .contains("1 個時區無法識別"));
+            .contains("1 个时区无法识别"));
     }
     Ok(())
 }

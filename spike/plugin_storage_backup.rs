@@ -1,4 +1,4 @@
-//! 插件私有存儲的本地備份。
+//! 插件私有存储的本地备份。
 use super::*;
 use std::io::Write;
 
@@ -12,10 +12,10 @@ struct Backup {
 
 impl LocalPlugins {
     fn storage_backup(&self, id: &str) -> Result<Backup> {
-        let record = self.records.get(id).ok_or_else(|| fail("插件未安裝"))?;
+        let record = self.records.get(id).ok_or_else(|| fail("插件未安装"))?;
         let manifest = &record.package.as_ref()
             .filter(|package| package.manifest.has_capability("storage"))
-            .ok_or_else(|| fail("此插件沒有私有存儲"))?.manifest;
+            .ok_or_else(|| fail("此插件没有私有存储"))?.manifest;
         Ok(Backup { id: id.to_owned(), data_version: manifest.data_version, storage: record.storage.clone() })
     }
 
@@ -36,10 +36,10 @@ impl LocalPlugins {
         let current = self.storage_backup(id)?;
         let backup: Backup = serde_json::from_str(&bounded(path, 1024 * 1024)?)?;
         if backup.id != current.id || backup.data_version != current.data_version {
-            return Err(fail("備份的插件 ID 或數據版本不匹配"));
+            return Err(fail("备份的插件 ID 或数据版本不匹配"));
         }
         if !script_settings::valid_storage(&backup.storage) {
-            return Err(fail("備份的私有存儲超過 256 KiB"));
+            return Err(fail("备份的私有存储超过 256 KiB"));
         }
         let mut record = self.installed(id)?;
         record.storage = backup.storage;
@@ -68,7 +68,7 @@ mod tests {
                 assert!(host.import_storage(id, &path).is_err());
                 assert!(host.records[id].storage.is_null());
             }
-            let storage = json!({"items":[{"text":"兩行\n便籤"}]});
+            let storage = json!({"items":[{"text":"两行\n便签"}]});
             fs::write(&path, json!({"id":id,"dataVersion":1,"storage":storage}).to_string())?;
             host.import_storage(id, &path)?;
             assert_eq!(host.records[id].storage, storage);

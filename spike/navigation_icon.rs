@@ -1,4 +1,4 @@
-//! 獨立功能插件在設置側欄與島上快捷導航共用的靜態矢量圖標。
+//! 独立功能插件在设置侧栏与岛上快捷导航共用的静态矢量图标。
 use crate::plugin_canvas::{parse_path, PathCommand};
 use serde::{Deserialize, Serialize};
 
@@ -28,15 +28,15 @@ impl TryFrom<NavigationIconSpec> for NavigationIcon {
         let hex = background
             .strip_prefix('#')
             .filter(|hex| hex.len() == 6 && hex.bytes().all(|byte| byte.is_ascii_hexdigit()))
-            .ok_or("navigationIcon.background 須為 #RRGGBB")?;
+            .ok_or("navigationIcon.background 须为 #RRGGBB")?;
         let [_, red, green, blue] = u32::from_str_radix(hex, 16)
-            .map_err(|_| "navigationIcon.background 須為 #RRGGBB")?
+            .map_err(|_| "navigationIcon.background 须为 #RRGGBB")?
             .to_be_bytes();
         if path.len() > 1024 || !path.is_ascii() {
-            return Err("navigationIcon.path 最多 1024 個 ASCII 字節");
+            return Err("navigationIcon.path 最多 1024 个 ASCII 字节");
         }
         let commands = parse_path(&path, 64)
-            .map_err(|_| "navigationIcon.path 只支持 M、L、H、V、Q、C、Z，最多 64 條命令")?;
+            .map_err(|_| "navigationIcon.path 只支持 M、L、H、V、Q、C、Z，最多 64 条命令")?;
         let mut draws = false;
         let inside = |point: &[f32; 2]| point.iter().all(|value| (0.0..=24.0).contains(value));
         for command in &commands {
@@ -48,12 +48,12 @@ impl TryFrom<NavigationIconSpec> for NavigationIcon {
                 PathCommand::Close => true,
             };
             if !valid {
-                return Err("navigationIcon.path 座標須在 0 到 24 之間");
+                return Err("navigationIcon.path 坐标须在 0 到 24 之间");
             }
             draws |= !matches!(command, PathCommand::Move(_) | PathCommand::Close);
         }
         if !draws {
-            return Err("navigationIcon.path 至少需要一條直線或曲線");
+            return Err("navigationIcon.path 至少需要一条直线或曲线");
         }
         Ok(Self {
             path,

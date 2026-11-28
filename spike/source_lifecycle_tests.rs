@@ -39,7 +39,7 @@ impl Fixture {
         fs::write(
             &path,
             serde_json::to_vec(&json!({
-                "id": id, "name": "測試卡片", "author": "示例", "version": "1.0.0",
+                "id": id, "name": "测试卡片", "author": "示例", "version": "1.0.0",
                 "api": 1, "runtime": "js", "entry": "main.js", "owner": "tasks", "cover": COVER_FILE,
                 "capabilities": ["card", "timer"], "dataVersion": 1, "permissions": permissions, "settings": []
             }))?,
@@ -57,7 +57,7 @@ impl Drop for Fixture {
 fn wait(mut until: impl FnMut() -> bool) {
     let deadline = Instant::now() + Duration::from_secs(6);
     while !until() {
-        assert!(Instant::now() < deadline, "等待後台插件完成超時");
+        assert!(Instant::now() < deadline, "等待后台插件完成超时");
         thread::sleep(Duration::from_millis(2));
     }
 }
@@ -76,8 +76,8 @@ const SOURCE_CARD: &str =
 fn user_file_grant_reads_only_after_enable_and_is_revoked_on_uninstall() -> Result<()> {
     let fixture = Fixture::new()?;
     let path = fixture.plugin(READ, json!({"source.read":"file"}), SOURCE_CARD)?;
-    let file = fixture.0.join("數據.txt");
-    fs::write(&file, "\u{feff}文件已讀")?;
+    let file = fixture.0.join("数据.txt");
+    fs::write(&file, "\u{feff}文件已读")?;
     let mut host = fixture.host();
     host.install(&path)?;
     host.enable(READ, true)?;
@@ -99,7 +99,7 @@ fn user_file_grant_reads_only_after_enable_and_is_revoked_on_uninstall() -> Resu
     let mut host = fixture.host();
     host.enable(READ, true)?;
     settle(&mut host, true);
-    assert_eq!(host.cards[READ], "文件已讀");
+    assert_eq!(host.cards[READ], "文件已读");
     fs::rename(&file, fixture.0.join("已移走.txt"))?;
     host.next.remove(READ);
     settle(&mut host, true);
@@ -205,7 +205,7 @@ fn https_manifest_combination_and_public_sample() -> Result<()> {
     let input = SourceInput::Ready { text: r#"{"stargazers_count":123}"#.into() };
     assert_eq!(
         package.render_input(&Values::new(), &Value::Null, TODAY, input, Call::Refresh)?.card,
-        "Rust · 123 星標"
+        "Rust · 123 星标"
     );
     let original: Value = serde_json::from_str(manifest)?;
     let mut wrong = original.clone();
@@ -255,7 +255,7 @@ fn gold_example_charts_fresh_prices_and_notifies_once_per_crossing() -> Result<(
     assert_eq!(rising.storage["points"].as_array().unwrap().len(), 48);
     assert!(rising.notice.is_some());
     assert!(rising.pinned.is_some());
-    assert_eq!(status.alert.as_deref(), Some("金價達到 750 元/克"));
+    assert_eq!(status.alert.as_deref(), Some("金价达到 750 元/克"));
     let repeated = run(&quote, &rising.storage)?;
     assert_eq!(repeated.storage, rising.storage);
     assert!(repeated.notice.is_none());
@@ -267,7 +267,7 @@ fn gold_example_charts_fresh_prices_and_notifies_once_per_crossing() -> Result<(
     let falling = run(&quote, &rising.storage)?;
     assert!(falling.notice.is_some());
     assert!(falling.pinned.is_some());
-    assert_eq!(falling.status.as_ref().unwrap().alert.as_deref(), Some("金價跌至 750 元/克"));
+    assert_eq!(falling.status.as_ref().unwrap().alert.as_deref(), Some("金价跌至 750 元/克"));
     quote["data_state"]["status"] = json!("stale");
     let stale = run(&quote, &falling.storage)?;
     assert_eq!(stale.storage, falling.storage);
@@ -322,7 +322,7 @@ fn https_credential_is_external_and_revoke_stops_reads() -> Result<()> {
     let mut manifest: Value = serde_json::from_slice(&fs::read(&path)?)?;
     manifest["network"] = json!({
         "hosts": ["example.com"], "url": "https://example.com/data",
-        "credential": {"label":"測試密鑰", "header":"X-Test-Key", "prefix":"Bearer "}
+        "credential": {"label":"测试密钥", "header":"X-Test-Key", "prefix":"Bearer "}
     });
     fs::write(&path, serde_json::to_vec(&manifest)?)?;
     struct Cleanup<'a>(&'a str);

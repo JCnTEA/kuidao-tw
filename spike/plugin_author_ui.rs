@@ -1,4 +1,4 @@
-//! 插件開發者工具中的模板、校驗與指南。
+//! 插件开发者工具中的模板、校验与指南。
 
 use super::{market, option_card, settings_control_row, settings_hint};
 use eframe::egui;
@@ -32,8 +32,16 @@ pub(super) enum Action {
     Validate,
 }
 
+fn template_id_error(id: &str) -> Option<&'static str> {
+    if id.bytes().any(|byte| byte.is_ascii_uppercase()) {
+        Some("请将插件 ID 中的大写字母改成小写。")
+    } else {
+        (!super::super::valid_id(id)).then_some("请按上方格式填写插件 ID。")
+    }
+}
+
 impl AuthorTools {
-    /// 直接進入「從模板創建」表單，教程裡的按鈕用。
+    /// 直接进入「从模板创建」表单，教程里的按钮用。
     pub(super) fn template() -> Self {
         Self {
             draft: Some(TemplateDraft::default()),
@@ -41,7 +49,7 @@ impl AuthorTools {
         }
     }
 
-    /// 剛創建好的插件文件夾。
+    /// 刚创建好的插件文件夹。
     pub(super) fn created_dir(&self) -> Option<&std::path::Path> {
         match self.notice.as_ref() {
             Some(Notice::Created(manifest)) => manifest.parent(),
@@ -61,8 +69,8 @@ impl AuthorTools {
     ) -> Option<Action> {
         if option_card(
             ui,
-            "從模板創建",
-            "生成可編輯的發薪倒計時插件、封面和許可證",
+            "从模板创建",
+            "生成可编辑的发薪倒计时插件、封面和许可证",
             false,
         ) {
             self.draft = Some(TemplateDraft::default());
@@ -72,8 +80,8 @@ impl AuthorTools {
         let mut action = None;
         ui.horizontal_wrapped(|ui| {
             if ui
-                .button("本地校驗")
-                .on_hover_text("選擇 plugin.json，檢查清單、入口和封面並試跑卡片")
+                .button("本地校验")
+                .on_hover_text("选择 plugin.json，检查清单、入口和封面并试跑卡片")
                 .clicked()
             {
                 action = Some(Action::Validate);
@@ -82,12 +90,12 @@ impl AuthorTools {
                 ui.ctx().open_url(egui::OpenUrl::new_tab(GUIDE));
             }
         });
-        ui.checkbox(watching, "監視文件變化");
-        ui.collapsing("腳本日誌", |ui| {
+        ui.checkbox(watching, "监视文件变化");
+        ui.collapsing("脚本日志", |ui| {
             ui.ctx()
                 .request_repaint_after(std::time::Duration::from_millis(500));
             if logs.is_empty() {
-                settings_hint(ui, "本地插件運行後，日誌顯示在這裡。");
+                settings_hint(ui, "本地插件运行后，日志显示在这里。");
             }
             egui::ScrollArea::vertical()
                 .max_height(145.0)
@@ -103,11 +111,7 @@ impl AuthorTools {
 
     pub(super) fn form(&mut self, ui: &mut egui::Ui) -> Option<Action> {
         let draft = self.draft.as_mut()?;
-        for (label, value, hint, limit) in [
-            ("插件 ID", &mut draft.id, "例如 xiaoming.payday", 64),
-            ("插件名稱", &mut draft.name, "例如 我的發薪倒計時", 80),
-            ("作者名稱", &mut draft.author, "你的名字或暱稱", 80),
-        ] {
+        let input = |ui: &mut egui::Ui, label: &str, value: &mut String, hint: &str, limit| {
             settings_control_row(ui, label, 90.0, |ui| {
                 ui.add_sized(
                     [ui.available_width(), 26.0],
@@ -116,16 +120,27 @@ impl AuthorTools {
                         .char_limit(limit),
                 )
             });
+        };
+        input(ui, "插件 ID", &mut draft.id, "例如 xiaoming.payday", 64);
+        settings_hint(
+            ui,
+            "用英文句点分隔，每段以小写英文字母开头，只能用小写字母、数字和连字符，最多 64 个字符。",
+        );
+        let id = draft.id.trim();
+        let id_error = template_id_error(id);
+        if let Some(message) = id_error.filter(|_| !id.is_empty()) {
+            ui.colored_label(ui.visuals().error_fg_color, message);
         }
-        let ready = [&draft.id, &draft.name, &draft.author]
-            .iter()
-            .all(|value| !value.trim().is_empty());
+        input(ui, "插件名称", &mut draft.name, "例如 我的发薪倒计时", 80);
+        input(ui, "作者名称", &mut draft.author, "你的名字或昵称", 80);
+        let ready =
+            id_error.is_none() && !draft.name.trim().is_empty() && !draft.author.trim().is_empty();
         self.show_notice(ui);
         let (back, create) = ui
             .horizontal_wrapped(|ui| {
                 let back = ui.button("返回").clicked();
                 let create = ui
-                    .add_enabled(ready, egui::Button::new("選擇位置並創建…"))
+                    .add_enabled(ready, egui::Button::new("选择位置并创建…"))
                     .clicked();
                 (back, create)
             })
@@ -144,13 +159,11 @@ impl AuthorTools {
                 let Some(draft) = self.draft.as_ref() else {
                     return;
                 };
-                if !super::super::valid_id(draft.id.trim()) {
-                    self.notice = Some(Notice::Error(
-                        "請輸入有效的插件 ID，例如 xiaoming.payday".into(),
-                    ));
+                if let Some(message) = template_id_error(draft.id.trim()) {
+                    self.notice = Some(Notice::Error(message.into()));
                     return;
                 }
-                match crate::system::pick_folder_for("選擇插件模板的保存位置") {
+                match crate::system::pick_folder_for("选择插件模板的保存位置") {
                     Ok(Some(parent)) => match market::create_template(
                         &parent,
                         draft.id.trim(),
@@ -168,12 +181,12 @@ impl AuthorTools {
                 }
             }
             Action::Validate => {
-                match crate::system::pick_files_for("選擇要校驗的 plugin.json", false) {
+                match crate::system::pick_files_for("选择要校验的 plugin.json", false) {
                     Ok(files) => {
                         if let Some(path) = files.first() {
                             self.notice = Some(match market::validate_project(path) {
                                 Ok(message) => Notice::Valid(message),
-                                Err(error) => Notice::Error(format!("校驗失敗：{error}")),
+                                Err(error) => Notice::Error(format!("校验失败：{error}")),
                             });
                         }
                     }
@@ -186,14 +199,14 @@ impl AuthorTools {
     fn show_notice(&mut self, ui: &mut egui::Ui) {
         match self.notice.as_ref() {
             Some(Notice::Created(manifest)) => {
-                ui.label("已創建插件模板");
+                ui.label("已创建插件模板");
                 settings_hint(ui, &manifest.display().to_string());
                 if let Some(directory) = manifest.parent() {
-                    if ui.button("打開目錄").clicked() {
+                    if ui.button("打开目录").clicked() {
                         let mut explorer = std::process::Command::new("explorer.exe");
                         explorer.arg(directory);
                         if let Err(error) = crate::child_process::spawn(&mut explorer) {
-                            self.notice = Some(Notice::Error(format!("無法打開目錄：{error}")));
+                            self.notice = Some(Notice::Error(format!("无法打开目录：{error}")));
                         }
                     }
                 }

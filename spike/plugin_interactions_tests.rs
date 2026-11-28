@@ -54,7 +54,7 @@ fn settle(host: &mut LocalPlugins) {
         if host.jobs.is_empty() {
             break;
         }
-        assert!(Instant::now() < until, "等待插件刷新超時");
+        assert!(Instant::now() < until, "等待插件刷新超时");
         std::thread::sleep(Duration::from_millis(1));
     }
 }
@@ -146,30 +146,30 @@ fn invalid_manifest_combinations_and_interaction_fields_are_rejected() -> Result
             "actions",
             json!([{"id":"add","label":"加"},{"id":"add","label":"增加"}]),
         ),
-        ("fields", json!([{"key":"note","label":"備註","max":201}])),
+        ("fields", json!([{"key":"note","label":"备注","max":201}])),
         (
             "fields",
-            json!([{"key":"note","label":"備註","max":3,"value":"換行\n"}]),
+            json!([{"key":"note","label":"备注","max":3,"value":"换行\n"}]),
         ),
         (
             "fields",
-            json!([{"key":"note","label":"備註","max":1,"value":"兩字"}]),
+            json!([{"key":"note","label":"备注","max":1,"value":"两字"}]),
         ),
         (
             "fields",
-            json!(vec![json!({"key":"note","label":"備註","max":3}); 4]),
+            json!(vec![json!({"key":"note","label":"备注","max":3}); 4]),
         ),
         (
             "actions",
-            json!([{"id":"copy","label":"複製","copy":"測".repeat(2001)}]),
+            json!([{"id":"copy","label":"复制","copy":"测".repeat(2001)}]),
         ),
-        ("items", json!([{"label":"項目","copy":"測".repeat(2001)}])),
+        ("items", json!([{"label":"项目","copy":"测".repeat(2001)}])),
         (
             "items",
-            json!([{"label":"項目","open":"https://example.com","copy":"文字"}]),
+            json!([{"label":"项目","open":"https://example.com","copy":"文字"}]),
         ),
     ] {
-        let mut output = json!({"state":"idle","label":"就緒"});
+        let mut output = json!({"state":"idle","label":"就绪"});
         output[field] = value;
         assert!(!serde_json::from_value::<PluginStatus>(output)?.valid());
     }
@@ -181,14 +181,14 @@ fn stale_buttons_and_late_results_are_discarded() -> Result<()> {
     let fixture = Fixture::new()?;
     let mut host = fixture.host()?;
     let old = revision(&host);
-    assert!(queue_note(&mut host, old, "初始便籤"));
-    assert!(!queue_note(&mut host, old, "重複點擊"));
+    assert!(queue_note(&mut host, old, "初始便签"));
+    assert!(!queue_note(&mut host, old, "重复点击"));
     settle(&mut host);
-    assert_eq!(shown(&host), "便籤 1 / 8");
-    assert!(!queue_note(&mut host, old, "舊輸出"));
+    assert_eq!(shown(&host), "便签 1 / 8");
+    assert!(!queue_note(&mut host, old, "旧输出"));
 
     let current = revision(&host);
-    assert!(queue_note(&mut host, current, "停用前點擊"));
+    assert!(queue_note(&mut host, current, "停用前点击"));
     host.tick(true, true, TODAY);
     assert!(host.jobs.contains_key(ID));
     host.enable(ID, false)?;
@@ -200,10 +200,10 @@ fn stale_buttons_and_late_results_are_discarded() -> Result<()> {
     );
     host.enable(ID, true)?;
     settle(&mut host);
-    assert!(!queue_note(&mut host, current, "停用前輸出"));
+    assert!(!queue_note(&mut host, current, "停用前输出"));
 
     let current = revision(&host);
-    assert!(queue_note(&mut host, current, "設置修改前點擊"));
+    assert!(queue_note(&mut host, current, "设置修改前点击"));
     host.tick(true, true, TODAY);
     host.save(ID, Values::new())?;
     settle(&mut host);
@@ -211,7 +211,7 @@ fn stale_buttons_and_late_results_are_discarded() -> Result<()> {
         host.records[ID].storage["items"].as_array().unwrap().len(),
         1
     );
-    assert!(!queue_note(&mut host, current, "設置修改前輸出"));
+    assert!(!queue_note(&mut host, current, "设置修改前输出"));
     Ok(())
 }
 
@@ -225,8 +225,8 @@ fn duplicate_focus_event_is_discarded_and_disabled_plugins_do_not_replay_it() ->
     settle(&mut host);
     host.queue_event(finished, true, true, false);
     settle(&mut host);
-    assert_eq!(shown(&host), "便籤 1 / 8");
-    assert_eq!(host.records[ID].storage["items"][0]["text"], "完成一次專注");
+    assert_eq!(shown(&host), "便签 1 / 8");
+    assert_eq!(host.records[ID].storage["items"][0]["text"], "完成一次专注");
 
     host.set_status_page_enabled(ID, false)?;
     let paused = FocusFinished::new(1_700_001_500, 25);
@@ -234,14 +234,14 @@ fn duplicate_focus_event_is_discarded_and_disabled_plugins_do_not_replay_it() ->
     host.set_status_page_enabled(ID, true)?;
     host.queue_event(paused, true, true, false);
     settle(&mut host);
-    assert_eq!(shown(&host), "便籤 1 / 8");
+    assert_eq!(shown(&host), "便签 1 / 8");
 
     let current = revision(&host);
-    assert!(queue_note(&mut host, current, "測試便籤"));
+    assert!(queue_note(&mut host, current, "测试便签"));
     host.tick(true, true, TODAY);
     host.queue_event(FocusFinished::new(1_700_003_000, 25), true, true, false);
     settle(&mut host);
-    assert_eq!(shown(&host), "便籤 3 / 8");
+    assert_eq!(shown(&host), "便签 3 / 8");
     Ok(())
 }
 
@@ -255,7 +255,7 @@ fn notices_respect_disable_deduplication_cooldown_and_restart() -> Result<()> {
         host.interactions.notices.insert(
             ID.into(),
             serde_json::from_value(json!({
-                "id": id, "title": "便籤已滿", "body": "已記錄 8 條便籤。",
+                "id": id, "title": "便签已满", "body": "已记录 8 条便签。",
             }))?,
         );
         Ok(())
@@ -264,12 +264,12 @@ fn notices_respect_disable_deduplication_cooldown_and_restart() -> Result<()> {
     assert!(host.take_script_notices(false, 0).is_empty());
     for index in 1..=8 {
         let current = revision(&host);
-        assert!(queue_note(&mut host, current, &format!("便籤 {index}")));
+        assert!(queue_note(&mut host, current, &format!("便签 {index}")));
         settle(&mut host);
     }
     let first = host.take_script_notices(true, 0);
     assert!(
-        matches!(&first[..], [Event::Completed(notice)] if notice.title.as_deref() == Some("便籤已滿"))
+        matches!(&first[..], [Event::Completed(notice)] if notice.title.as_deref() == Some("便签已满"))
     );
     give(&mut host, "next")?;
     assert!(host.take_script_notices(true, 59_999).is_empty());
@@ -304,7 +304,7 @@ fn status_page_egui_button_submits_form_and_updates_output() -> Result<()> {
         );
     };
     let before = frame(&ctx, vec![], &mut draw);
-    assert!(has_text(&before, "便籤 0 / 8"));
+    assert!(has_text(&before, "便签 0 / 8"));
     let note_id = egui::Id::new(("plugin-field", ID, current, "note", true)).with("value");
     let pos = ctx.read_response(note_id).unwrap().rect.center();
     click_at(&ctx, pos, &mut draw);
@@ -326,9 +326,9 @@ fn status_page_egui_button_submits_form_and_updates_output() -> Result<()> {
             false,
         );
     });
-    assert!(has_text(&after, "便籤 1 / 8"));
+    assert!(has_text(&after, "便签 1 / 8"));
     assert!(has_text(&after, "今天整理素材"));
-    assert!(has_text(&after, "複製"));
+    assert!(has_text(&after, "复制"));
     assert_eq!(host.records[ID].storage["items"][0]["text"], "今天整理素材");
     let record: Record = serde_json::from_str(&fs::read_to_string(host.path(ID))?)?;
     assert_eq!(record.storage["items"][0]["text"], "今天整理素材");
@@ -342,7 +342,7 @@ fn status_page_egui_button_submits_form_and_updates_output() -> Result<()> {
         );
     });
     settle(&mut host);
-    assert_eq!(shown(&host), "便籤 0 / 8");
+    assert_eq!(shown(&host), "便签 0 / 8");
     assert_eq!(host.records[ID].storage["items"], json!([]));
     Ok(())
 }
@@ -359,8 +359,8 @@ fn canvas_fields_stay_in_the_canvas_and_submit_the_focused_draft() -> Result<()>
         "components": [{"type": "canvas"}, {"type": "fields"}, {"type": "actions"}],
         "style": {"surface": "plain"},
         "canvasFields": [
-            {"key": "note", "rect": [4, 207, 130, 22], "placeholder": "記一筆…", "action": "add"},
-            {"key": "search", "rect": [202, 7, 182, 24], "placeholder": "搜索便籤", "action": "search"}
+            {"key": "note", "rect": [4, 207, 130, 22], "placeholder": "记一笔…", "action": "add"},
+            {"key": "search", "rect": [202, 7, 182, 24], "placeholder": "搜索便签", "action": "search"}
         ]
     });
     fs::write(&fixture.manifest, manifest.to_string())?;
@@ -369,8 +369,8 @@ function refresh({storage}) {
     return {canvas: {height: 230, nodes: [{rect:[0,0,387,230],fill:"$card"}]},
         storage,
         status: {
-            state:"idle",label:"便籤",
-            fields: [{key:"note",label:"新便籤",max:80}, {key:"search",label:"搜索便籤",max:80}],
+            state:"idle",label:"便签",
+            fields: [{key:"note",label:"新便签",max:80}, {key:"search",label:"搜索便签",max:80}],
             actions: [{id:"add",label:"添加"}, {id:"search",label:"搜索"}]
         }
     };
@@ -392,8 +392,8 @@ function action({action}) {
         );
     };
     let page = frame(&ctx, vec![], &mut draw);
-    for label in ["新便籤", "添加", "搜索"] {
-        assert!(!has_text(&page, label), "{label} 不應在畫布以外重複顯示");
+    for label in ["新便签", "添加", "搜索"] {
+        assert!(!has_text(&page, label), "{label} 不应在画布以外重复显示");
     }
     let rect = |key| {
         let id = egui::Id::new(("plugin-field", ID, current, key, true)).with("value");
@@ -424,13 +424,13 @@ fn host_actions_validate_links_and_dispatch_without_running_script() -> Result<(
     let fixture = Fixture::new()?;
     let mut host = fixture.host()?;
     let current = revision(&host);
-    assert!(queue_note(&mut host, current, "記得整理素材"));
+    assert!(queue_note(&mut host, current, "记得整理素材"));
     settle(&mut host);
 
     let status: PluginStatus = serde_json::from_value(json!({
-        "state": "idle", "label": "就緒",
-        "actions": [{"id": "web", "label": "打開", "open": "https://example.com/help#tips"}],
-        "items": [{"label": "便籤", "action": "note-1", "copy": "記得整理素材"}]
+        "state": "idle", "label": "就绪",
+        "actions": [{"id": "web", "label": "打开", "open": "https://example.com/help#tips"}],
+        "items": [{"label": "便签", "action": "note-1", "copy": "记得整理素材"}]
     }))?;
     assert!(status.valid());
     let mut manifest: Value = serde_json::from_str(MANIFEST)?;
@@ -471,7 +471,7 @@ fn host_actions_validate_links_and_dispatch_without_running_script() -> Result<(
         matches!(command, egui::OutputCommand::OpenUrl(url) if url.url == "https://example.com/help#tips")
     }));
     assert!(out.platform_output.commands.iter().any(|command| {
-        matches!(command, egui::OutputCommand::CopyText(text) if text == "記得整理素材")
+        matches!(command, egui::OutputCommand::CopyText(text) if text == "记得整理素材")
     }));
     assert!(host.submit_action(&ctx, ID, current, ClickTarget::Item(0)));
     settle(&mut host);

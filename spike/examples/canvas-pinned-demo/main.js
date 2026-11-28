@@ -4,13 +4,13 @@ function refresh(input) {
         canvas: {
             height: 128,
             nodes: [
-                {text: "島上的一小格", at: [0, 26], size: 23, weight: 700, font: "站酷快樂體"},
+                {text: "岛上的一小格", at: [0, 26], size: 23, weight: 700, font: "站酷快乐体"},
                 {rect: [0, 46, 387, 78], r: 12, fill: "$card"},
                 {icon: "coin", rect: [14, 63, 22, 22], stroke: "$accent", width: 1.5},
-                {text: "金額與進度", at: [42, 80], size: 13, fill: "$text"},
+                {text: "金额与进度", at: [42, 80], size: 13, fill: "$text"},
                 {icon: "calendar", rect: [194, 63, 22, 22], stroke: "$accent", width: 1.5},
-                {text: "時鐘與便籤", at: [222, 80], size: 13, fill: "$text"},
-                {text: "常駐內容每 8 秒輪換", at: [15, 109], size: 12, fill: "$muted"}
+                {text: "时钟与便签", at: [222, 80], size: 13, fill: "$text"},
+                {text: "常驻内容每 8 秒轮换", at: [15, 109], size: 12, fill: "$muted"}
             ]
         },
         pinned: {
@@ -33,7 +33,7 @@ function refresh(input) {
                     nodes: [
                         {rect: [1, 5, 3, 12], r: 1, fill: "#4C96FF"},
                         {group: [
-                            {id: "time", text: "{time}  便籤", at: [10, 15], size: 11, max_width: 96,
+                            {id: "time", text: "{time}  便签", at: [10, 15], size: 11, max_width: 96,
                                 loop: {kind: "flow", period_ms: 4800}}
                         ], clip: [10, 0, 99, 22]}
                     ]

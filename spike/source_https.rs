@@ -1,4 +1,4 @@
-//! HTTPS 數據源的授權校驗和受控讀取。腳本只接收響應正文。
+//! HTTPS 数据源的授权校验和受控读取。脚本只接收响应正文。
 use super::{
     source_read::{check_cancelled, read_text, SourceGrant},
     SourceInput, Values,
@@ -18,7 +18,7 @@ use url::{Host, Url};
 
 const LIMIT: u64 = 256 * 1024;
 const TIMEOUT: Duration = Duration::from_secs(10);
-const ADDRESS_ERROR: &str = "請輸入白名單域名下的 HTTPS 地址，端口使用 443";
+const ADDRESS_ERROR: &str = "请输入白名单域名下的 HTTPS 地址，端口使用 443";
 const SERVICE: &str = "daozai.plugin-https-source";
 pub(super) const MIN_REFRESH_SECONDS: u32 = 60;
 pub(super) const MAX_REFRESH_SECONDS: u32 = 86400;
@@ -199,7 +199,7 @@ impl Network {
         let secret = match &self.credential {
             Some(config) => {
                 let secret =
-                    load_secret(id)?.ok_or_else(|| io::Error::other("請重新授權數據源密鑰"))?;
+                    load_secret(id)?.ok_or_else(|| io::Error::other("请重新授权数据源密钥"))?;
                 let value = config.header_value(&secret)?;
                 Some((config, secret, value))
             }
@@ -225,13 +225,13 @@ impl Network {
         check_cancelled(cancelled)?;
         let response = request
             .call()
-            .map_err(|_| io::Error::other("HTTPS 數據源無法讀取"))?;
+            .map_err(|_| io::Error::other("HTTPS 数据源无法读取"))?;
         let text = response_text(response, cancelled)?;
         if secret
             .as_ref()
             .is_some_and(|(_, secret, _)| text.contains(secret))
         {
-            return Err(io::Error::other("HTTPS 數據源返回了憑據"));
+            return Err(io::Error::other("HTTPS 数据源返回了凭据"));
         }
         Ok(text)
     }
@@ -259,7 +259,7 @@ fn expand_url(raw: &str, settings: &Values) -> Option<String> {
         url.push_str(literal);
         let (key, rest) = placeholder.strip_prefix("{settings.")?.split_once('}')?;
         let value = settings.get(key)?;
-        // 對路徑和查詢串中的設置值逐字節編碼。
+        // 对路径和查询串中的设置值逐字节编码。
         for byte in value.bytes() {
             if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'~') {
                 url.push(char::from(byte));
@@ -376,7 +376,7 @@ impl Credential {
             || secret.trim() != secret
             || !secret.bytes().all(|b| matches!(b, b' '..=b'~'))
         {
-            return Err(io::Error::other("密鑰須為 1–2048 個可打印 ASCII 字符"));
+            return Err(io::Error::other("密钥须为 1–2048 个可打印 ASCII 字符"));
         }
         Ok(format!(
             "{}{secret}",
@@ -448,7 +448,7 @@ fn public_ip(ip: IpAddr) -> bool {
         IpAddr::V6(ip) => ip.to_ipv4_mapped().map_or_else(
             || {
                 let [a, b, ..] = ip.segments();
-                // 僅接受全球單播地址，排除 Teredo、6to4 及文檔地址。
+                // 仅接受全球单播地址，排除 Teredo、6to4 及文档地址。
                 (0x2000..=0x3fff).contains(&a)
                     && !matches!((a, b), (0x2001, 0 | 0xdb8) | (0x2002 | 0x3fff, _))
             },
@@ -460,13 +460,13 @@ fn public_ip(ip: IpAddr) -> bool {
 fn public_addresses(addresses: impl Iterator<Item = SocketAddr>) -> io::Result<Vec<SocketAddr>> {
     let addresses: Vec<_> = addresses.filter(|addr| public_ip(addr.ip())).collect();
     if addresses.is_empty() {
-        return Err(io::Error::other("HTTPS 域名未解析到公網地址"));
+        return Err(io::Error::other("HTTPS 域名未解析到公网地址"));
     }
     Ok(addresses)
 }
 
 fn resolve_public(address: &str, deadline: Instant, gold: bool) -> io::Result<Vec<SocketAddr>> {
-    // 系統 DNS 是同步調用。最多保留一個查詢線程，請求超時後立即結束等待。
+    // 系统 DNS 是同步调用。最多保留一个查询线程，请求超时后立即结束等待。
     static RESOLVING: AtomicBool = AtomicBool::new(false);
     let (host, port) = address
         .rsplit_once(':')
@@ -476,7 +476,7 @@ fn resolve_public(address: &str, deadline: Instant, gold: bool) -> io::Result<Ve
     }
     let target = format!("{host}.:443");
     if RESOLVING.swap(true, Ordering::AcqRel) {
-        return Err(io::Error::other("系統 DNS 正在查詢"));
+        return Err(io::Error::other("系统 DNS 正在查询"));
     }
     let (send, receive) = mpsc::sync_channel(1);
     if let Err(error) = std::thread::Builder::new()
@@ -492,19 +492,19 @@ fn resolve_public(address: &str, deadline: Instant, gold: bool) -> io::Result<Ve
     }
     let addresses = receive
         .recv_timeout(deadline.saturating_duration_since(Instant::now()))
-        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "HTTPS 域名解析超時"))??;
+        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "HTTPS 域名解析超时"))??;
     if gold && host == "xaus.com" && !addresses.iter().any(|addr| public_ip(addr.ip()))
         && addresses.iter().any(|addr| matches!(addr.ip(), IpAddr::V4(ip)
             if matches!(ip.octets(), [198, 18 | 19, _, _])))
     {
-        // 代理的虛擬地址無法通過公網校驗。官方固定報價源可改查真實公網地址。
+        // 代理的虚拟地址无法通过公网校验。官方固定报价源可改查真实公网地址。
         let remaining = deadline.saturating_duration_since(Instant::now());
         let response = ureq::AgentBuilder::new().try_proxy_from_env(false).redirects(0).build()
             .get("https://1.1.1.1/dns-query?name=xaus.com&type=A")
             .timeout(remaining).set("Accept", "application/dns-json")
-            .call().map_err(|_| io::Error::other("無法查詢金價源公網地址"))?;
+            .call().map_err(|_| io::Error::other("无法查询金价源公网地址"))?;
         if response.status() != 200 {
-            return Err(io::Error::other("無法查詢金價源公網地址"));
+            return Err(io::Error::other("无法查询金价源公网地址"));
         }
         return gold_dns_answers(response.into_reader());
     }
@@ -515,7 +515,7 @@ fn gold_dns_answers(reader: impl Read) -> io::Result<Vec<SocketAddr>> {
     let reply: serde_json::Value = serde_json::from_reader(reader.take(4096))?;
     let answers = reply.get("Answer").and_then(serde_json::Value::as_array)
         .filter(|_| reply["Status"].as_u64() == Some(0))
-        .ok_or_else(|| io::Error::other("無法查詢金價源公網地址"))?;
+        .ok_or_else(|| io::Error::other("无法查询金价源公网地址"))?;
     public_addresses(answers.iter().filter_map(|answer| {
         if answer["type"].as_u64() != Some(1) { return None; }
         let ip: Ipv4Addr = answer["data"].as_str()?.parse().ok()?;
@@ -525,33 +525,33 @@ fn gold_dns_answers(reader: impl Read) -> io::Result<Vec<SocketAddr>> {
 
 fn response_text(response: ureq::Response, cancelled: &AtomicBool) -> io::Result<String> {
     if !(200..300).contains(&response.status()) {
-        return Err(io::Error::other("HTTPS 數據源沒有直接返回數據"));
+        return Err(io::Error::other("HTTPS 数据源没有直接返回数据"));
     }
     read_text(response.into_reader(), cancelled, LIMIT)
 }
 
 fn keyring_entry(id: &str) -> io::Result<keyring::Entry> {
-    keyring::Entry::new(SERVICE, id).map_err(|_| io::Error::other("無法訪問 Windows 憑據管理器"))
+    keyring::Entry::new(SERVICE, id).map_err(|_| io::Error::other("无法访问 Windows 凭据管理器"))
 }
 
 pub(super) fn load_secret(id: &str) -> io::Result<Option<String>> {
     match keyring_entry(id)?.get_password() {
         Ok(value) => Ok(Some(value)),
         Err(keyring::Error::NoEntry) => Ok(None),
-        Err(_) => Err(io::Error::other("無法讀取數據源密鑰")),
+        Err(_) => Err(io::Error::other("无法读取数据源密钥")),
     }
 }
 
 pub(super) fn save_secret(id: &str, secret: &str) -> io::Result<()> {
     keyring_entry(id)?
         .set_password(secret)
-        .map_err(|_| io::Error::other("無法保存數據源密鑰"))
+        .map_err(|_| io::Error::other("无法保存数据源密钥"))
 }
 
 pub(super) fn delete_secret(id: &str) -> io::Result<()> {
     match keyring_entry(id)?.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(_) => Err(io::Error::other("無法刪除數據源密鑰")),
+        Err(_) => Err(io::Error::other("无法删除数据源密钥")),
     }
 }
 
@@ -768,7 +768,7 @@ mod tests {
     #[test]
     fn credential_headers_are_validated_and_redacted() {
         let mut config = Credential {
-            label: "密鑰".into(),
+            label: "密钥".into(),
             header: "X-Service-Key".into(),
             prefix: Some("Bearer ".into()),
         };

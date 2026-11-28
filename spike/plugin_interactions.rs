@@ -1,4 +1,4 @@
-//! 腳本按鈕、專注事件和提醒共用插件的串行執行隊列。
+//! 脚本按钮、专注事件和提醒共用插件的串行执行队列。
 
 use super::*;
 use crate::{
@@ -161,7 +161,7 @@ impl Manifest {
     }
 
     fn open_action_url(&self, raw: &str) -> Option<Url> {
-        // 打開鏈接沿用聯網取數的域名白名單；只聲明 hosts 的清單也可以用。
+        // 打开链接沿用联网取数的域名白名单；只声明 hosts 的清单也可以用。
         #[cfg(windows)]
         let network = self.network.as_ref()?;
         #[cfg(not(windows))]
@@ -192,7 +192,7 @@ impl Manifest {
             .chain(status.items.iter().filter_map(|item| item.open.as_deref()));
         for link in links {
             if self.open_action_url(link).is_none() {
-                return Err(fail("動作鏈接須為清單 network.hosts 中的 HTTPS 地址"));
+                return Err(fail("动作链接须为清单 network.hosts 中的 HTTPS 地址"));
             }
         }
         Ok(())
@@ -202,11 +202,11 @@ impl Manifest {
         for node in nodes {
             if let Some(hit) = &node.hit {
                 if !self.has_capability("action") {
-                    return Err(fail("畫布的點擊區域需要聲明 action"));
+                    return Err(fail("画布的点击区域需要声明 action"));
                 }
                 if let Hit::Open(url) = hit {
                     if self.open_action_url(url).is_none() {
-                        return Err(fail("動作鏈接須為清單 network.hosts 中的 HTTPS 地址"));
+                        return Err(fail("动作链接须为清单 network.hosts 中的 HTTPS 地址"));
                     }
                 }
             }
@@ -335,8 +335,8 @@ impl LocalPlugins {
                 allow_action: enabled,
                 interactive: card.live,
             };
-            live = crate::plugin_canvas_ui::draw_live_with_pet(card, id, canvas, area, theme, options, pet_sheets.clone(), |name| {
-                package.canvas_images.get(name)?.texture(ctx, name)
+            live = crate::plugin_canvas_ui::draw_live_with_pet(card, id, canvas, area, theme, options, pet_sheets.clone(), |name, pixels, fit| {
+                package.canvas_images.get(name)?.texture(ctx, name, pixels, fit)
             });
             if live.timed_out && !record.from_market {
                 let key = egui::Id::new(("plugin-canvas-budget-log", id));
@@ -346,7 +346,7 @@ impl LocalPlugins {
                     !reported
                 });
                 if report {
-                    logs.append(id, vec!["畫布繪製超過 4 毫秒，已回退到緩存幀".to_owned()]);
+                    logs.append(id, vec!["画布绘制超过 4 毫秒，已回退到缓存帧".to_owned()]);
                 }
             }
         };
@@ -491,7 +491,7 @@ impl LocalPlugins {
                 }
                 let name = record.package.as_ref()?.manifest.name.clone();
                 let data = serde_json::to_vec(&record).ok()?;
-                // 提醒回執和私有數據共用可重啟讀取的原子快照。
+                // 提醒回执和私有数据共用可重启读取的原子快照。
                 if data.len() > 2 * 1024 * 1024
                     || crate::model::atomic_write(&self.path(&id), &data).is_err()
                 {

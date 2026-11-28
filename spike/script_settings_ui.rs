@@ -35,15 +35,15 @@ pub(super) fn field_row(ui: &mut egui::Ui, plugin: &str, field: &Field, value: &
 
 fn field_label<'a>(plugin: &str, field: &'a Field) -> &'a str {
     match (plugin, field.key.as_str()) {
-        ("daozai.gold", "alert_usd") => "美元提醒價",
-        ("daozai.gold", "alert_cny") => "人民幣提醒價",
+        ("daozai.gold", "alert_usd") => "美元提醒价",
+        ("daozai.gold", "alert_cny") => "人民币提醒价",
         ("daozai.live-pay", "salary") => "月薪",
-        ("daozai.live-pay", "paid") => "照常計薪",
-        ("daozai.live-pay", "pinned_show") => "顯示內容",
-        ("daozai.world-clock", "name") => "城市名稱",
-        ("daozai.days", "name") => "名稱",
-        ("daozai.days", "pinned_text") => "常駐文字",
-        ("daozai.days", "pinned_day") => "常駐日子",
+        ("daozai.live-pay", "paid") => "照常计薪",
+        ("daozai.live-pay", "pinned_show") => "显示内容",
+        ("daozai.world-clock", "name") => "城市名称",
+        ("daozai.days", "name") => "名称",
+        ("daozai.days", "pinned_text") => "常驻文字",
+        ("daozai.days", "pinned_day") => "常驻日子",
         _ => &field.label,
     }
 }
@@ -62,11 +62,11 @@ fn editor(ui: &mut egui::Ui, plugin: &str, field: &Field, value: &mut String) {
                 .iter()
                 .map(|choice| {
                     let label = match (plugin, field.key.as_str(), choice.value.as_str()) {
-                        ("daozai.live-pay", "pinned_show", "amount") => "今日金額",
-                        ("daozai.live-pay", "pinned_show", "countdown") => "倒計時",
-                        ("daozai.live-pay", "pinned_show", "alternate") => "輪換",
+                        ("daozai.live-pay", "pinned_show", "amount") => "今日金额",
+                        ("daozai.live-pay", "pinned_show", "countdown") => "倒计时",
+                        ("daozai.live-pay", "pinned_show", "alternate") => "轮换",
                         ("daozai.world-clock", "pinned_city", "first") => "列表第一城",
-                        ("daozai.world-clock", "pinned_city", "selected") => "頁面選中",
+                        ("daozai.world-clock", "pinned_city", "selected") => "页面选中",
                         _ => choice.label.as_str(),
                     };
                     (choice.value.as_str(), label)
@@ -196,10 +196,10 @@ fn editor(ui: &mut egui::Ui, plugin: &str, field: &Field, value: &mut String) {
 
 fn text_editor(ui: &mut egui::Ui, plugin: &str, field: &Field, value: &mut String) {
     let (hint, limit, empty_default) = match (plugin, field.key.as_str()) {
-        ("daozai.world-clock", "name") => ("留空使用時區默認名", 80, true),
+        ("daozai.world-clock", "name") => ("留空使用时区默认名", 80, true),
         ("daozai.days", "name") => ("最多 12 字", 12, false),
-        ("daozai.days", "pinned_day") => ("最近的那一天，或填寫名稱", 80, true),
-        ("daozai.days", "pinned_text") => ("留空使用默認文字", 24, true),
+        ("daozai.days", "pinned_day") => ("最近的那一天，或填写名称", 80, true),
+        ("daozai.days", "pinned_text") => ("留空使用默认文字", 24, true),
         _ => {
             ui.text_edit_singleline(value);
             return;
@@ -211,7 +211,7 @@ fn text_editor(ui: &mut egui::Ui, plugin: &str, field: &Field, value: &mut Strin
         .char_limit(limit).desired_width(width);
     let response = ui.add(input);
     let response = if plugin == "daozai.days" && field.key == "pinned_text" {
-        response.on_hover_text("可插入 {名稱}、{天數}、{日期}、{星期}")
+        response.on_hover_text("可插入 {名称}、{天数}、{日期}、{星期}")
     } else {
         response
     };
@@ -227,17 +227,17 @@ fn date_editor(ui: &mut egui::Ui, value: &mut String) {
         if ui.add(input).changed() {
             ui.data_mut(|data| data.remove::<NaiveDate>(id));
         }
-        ui.menu_button("選擇日期", |ui| {
+        ui.menu_button("选择日期", |ui| {
             let selected = NaiveDate::parse_from_str(value, "%Y-%m-%d").ok();
             let mut month = ui.data(|data| data.get_temp::<NaiveDate>(id))
                 .unwrap_or_else(|| selected.unwrap_or_else(|| Local::now().date_naive()));
             month = month.with_day(1).unwrap_or(month);
             ui.horizontal(|ui| {
-                if ui.button("‹").on_hover_text("上個月").clicked() {
+                if ui.button("‹").on_hover_text("上个月").clicked() {
                     month = month.checked_sub_months(Months::new(1)).unwrap_or(month);
                 }
                 ui.label(format!("{}年{}月", month.year(), month.month()));
-                if ui.button("›").on_hover_text("下個月").clicked() {
+                if ui.button("›").on_hover_text("下个月").clicked() {
                     month = month.checked_add_months(Months::new(1)).unwrap_or(month);
                 }
             });
@@ -277,13 +277,13 @@ fn timezone_picker(ui: &mut egui::Ui, key: &str, value: &mut String) {
         .show_ui(ui, |ui| {
             let mut query = ui.data(|data| data.get_temp::<String>(search_id)).unwrap_or_default();
             if ui.add(egui::TextEdit::singleline(&mut query)
-                .hint_text("搜索城市、國家或時區")
+                .hint_text("搜索城市、国家或时区")
                 .desired_width(220.0)).changed() {
                 ui.data_mut(|data| data.insert_temp(search_id, query.clone()));
             }
             let matches: Vec<_> = timezone_cities(&query).collect();
             if matches.is_empty() {
-                ui.weak("沒有符合條件的時區");
+                ui.weak("没有符合条件的时区");
             }
             let row_height = ui.spacing().interact_size.y
                 .max(ui.text_style_height(&egui::TextStyle::Body) + ui.spacing().button_padding.y * 2.0);
@@ -323,7 +323,7 @@ fn multiline_text(ui: &mut egui::Ui, value: &mut String) -> bool {
 
 fn list_add_label(plugin: &str, key: &str) -> Option<&'static str> {
     match (plugin, key) {
-        ("daozai.live-pay", "breaks") => Some("添加休息時段"),
+        ("daozai.live-pay", "breaks") => Some("添加休息时段"),
         ("daozai.world-clock", "cities") => Some("添加城市"),
         ("daozai.days", "days") => Some("添加日子"),
         _ => None,
@@ -334,20 +334,20 @@ fn list_item_title(plugin: &str, row: &Values) -> String {
     let get = |key| row.get(key).map(String::as_str).unwrap_or("");
     match plugin {
         "daozai.live-pay" => {
-            let paid = if get("paid") == "true" { "計薪" } else { "不計薪" };
+            let paid = if get("paid") == "true" { "计薪" } else { "不计薪" };
             format!("{}–{} · {paid}", get("from"), get("to"))
         }
         "daozai.world-clock" => {
             let zone = get("zone");
             let name = get("name");
-            let name = if name.is_empty() { "時區默認名" } else { name };
+            let name = if name.is_empty() { "时区默认名" } else { name };
             format!("{name} · {zone}")
         }
         _ => {
             let kind = match get("kind") {
-                "anniversary" => "紀念日",
+                "anniversary" => "纪念日",
                 "birthday" => "生日",
-                _ => "倒數",
+                _ => "倒数",
             };
             format!("{} · {kind} · {}", get("name"), get("date"))
         }
@@ -402,7 +402,7 @@ fn list_field(ui: &mut egui::Ui, plugin: &str, field: &Field, value: &mut String
                     {
                         edit = Some((i, Some(i + 1)));
                     }
-                    if ui.button("刪除").clicked() {
+                    if ui.button("删除").clicked() {
                         edit = Some((i, None));
                     }
                 });
@@ -444,13 +444,13 @@ mod tests {
         let title = |plugin, row| list_item_title(plugin, &serde_json::from_value(row).unwrap());
         assert_eq!(title("daozai.live-pay", serde_json::json!({
             "from":"12:00", "to":"13:30", "paid":"false"
-        })), "12:00–13:30 · 不計薪");
+        })), "12:00–13:30 · 不计薪");
         assert_eq!(title("daozai.world-clock", serde_json::json!({
             "name":"北京", "zone":"Asia/Shanghai"
         })), "北京 · Asia/Shanghai");
         assert_eq!(title("daozai.days", serde_json::json!({
             "name":"旅行", "kind":"countdown", "date":"2026-12-24"
-        })), "旅行 · 倒數 · 2026-12-24");
+        })), "旅行 · 倒数 · 2026-12-24");
     }
 
     #[test]

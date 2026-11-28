@@ -1,7 +1,7 @@
 {
   "id": "example.payday",
-  "name": "發薪倒計時",
-  "author": "島仔",
+  "name": "发薪倒计时",
+  "author": "岛仔",
   "version": "1.0.0",
   "api": 1,
   "runtime": "js",
@@ -20,13 +20,13 @@
   "settings": [
     {
       "key": "title",
-      "label": "倒計時名稱",
+      "label": "倒计时名称",
       "type": "text",
-      "default": "發薪"
+      "default": "发薪"
     },
     {
       "key": "target",
-      "label": "目標日期",
+      "label": "目标日期",
       "type": "date",
       "default": "2026-12-25"
     }

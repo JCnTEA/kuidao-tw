@@ -1,7 +1,7 @@
 {
   "id": "example.countdown",
-  "name": "通用倒計時",
-  "author": "島仔",
+  "name": "通用倒计时",
+  "author": "岛仔",
   "version": "1.0.0",
   "api": 1,
   "runtime": "js",
@@ -20,9 +20,9 @@
   "settings": [
     {
       "key": "title",
-      "label": "名稱",
+      "label": "名称",
       "type": "text",
-      "default": "紀念日"
+      "default": "纪念日"
     },
     {
       "key": "target",
@@ -37,24 +37,24 @@
       "default": "until",
       "choices": [
         {
-          "label": "還有幾天",
+          "label": "还有几天",
           "value": "until"
         },
         {
-          "label": "已經幾天",
+          "label": "已经几天",
           "value": "since"
         }
       ]
     },
     {
       "key": "yearly",
-      "label": "每年重複",
+      "label": "每年重复",
       "type": "switch",
       "default": "false"
     },
     {
       "key": "mark",
-      "label": "日曆標註",
+      "label": "日历标注",
       "type": "switch",
       "default": "true"
     }

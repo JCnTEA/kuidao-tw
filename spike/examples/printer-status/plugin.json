@@ -1,7 +1,7 @@
 {
   "id": "example.printer-status",
-  "name": "打印機狀態（模擬）",
-  "author": "島仔",
+  "name": "打印机状态（模拟）",
+  "author": "岛仔",
   "version": "1.0.0",
   "api": 1,
   "runtime": "js",

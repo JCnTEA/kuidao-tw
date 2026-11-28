@@ -1,4 +1,4 @@
-//! 在屏幕外測量調節大小前後的翻頁渲染，覆蓋設置同時打開與關閉的情況。
+//! 在屏幕外测量调节大小前后的翻页渲染，覆盖设置同时打开与关闭的情况。
 use daozai::app::{App,Env,Options,CANVAS_W,WIN_W,WIN_H};
 use eframe::egui;
 use std::time::Instant;
@@ -21,7 +21,7 @@ impl eframe::App for Probe {
         }
         if offset>=30{self.intervals.push(interval);}
         if offset%45==0{self.app.show_page((offset/45)%4);}
-        let env=Env{t:self.frame as f64/60.0,clock:"09:41:00".into(),today:"2026-11-06".into(),date:"11月6日 週五".into(),cursor:Some(egui::pos2(WIN_W/2.0,60.0)),..Default::default()};
+        let env=Env{t:self.frame as f64/60.0,clock:"09:41:00".into(),today:"2026-11-06".into(),date:"11月6日 周五".into(),cursor:Some(egui::pos2(WIN_W/2.0,60.0)),..Default::default()};
         egui::CentralPanel::default().frame(egui::Frame::NONE).show(ctx,|ui|{
             let win=egui::Rect::from_min_size(ui.max_rect().min,egui::vec2(WIN_W,WIN_H));
             self.app.frame(ui,win,&env);
@@ -44,15 +44,15 @@ impl eframe::App for Probe {
 
 fn main()->eframe::Result<()> {
     let wgpu=std::env::args().any(|arg|arg=="--wgpu");
-    let mut options=eframe::NativeOptions{vsync:false,viewport:egui::ViewportBuilder::default().with_title("島仔縮放渲染檢查").with_inner_size([CANVAS_W,WIN_H]).with_position([-10000.0,-10000.0]).with_active(false).with_taskbar(false),..Default::default()};
+    let mut options=eframe::NativeOptions{vsync:false,viewport:egui::ViewportBuilder::default().with_title("岛仔缩放渲染检查").with_inner_size([CANVAS_W,WIN_H]).with_position([-10000.0,-10000.0]).with_active(false).with_taskbar(false),..Default::default()};
     if wgpu{
         options.renderer=eframe::Renderer::Wgpu;
         if let eframe::egui_wgpu::WgpuSetup::CreateNew(setup)=&mut options.wgpu_options.wgpu_setup{
             setup.instance_descriptor.backends=eframe::wgpu::Backends::DX12;
         }
     }
-    eframe::run_native("縮放渲染檢查",options,Box::new(|cc|{
-        cc.egui_ctx.on_begin_pass("檢查窗口保持屏幕外",std::sync::Arc::new(|ctx|{
+    eframe::run_native("缩放渲染检查",options,Box::new(|cc|{
+        cc.egui_ctx.on_begin_pass("检查窗口保持屏幕外",std::sync::Arc::new(|ctx|{
             if ctx.viewport_id()!=egui::ViewportId::ROOT{ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(-10000.0,-10000.0)));}
         }));
         let app=App::new(&cc.egui_ctx,Options{fetch_lyrics:false,pet_idle:1e9});

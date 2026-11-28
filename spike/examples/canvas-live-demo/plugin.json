@@ -1,7 +1,7 @@
 {
   "id": "example.canvas-live-demo",
-  "name": "實時畫布",
-  "author": "島仔",
+  "name": "实时画布",
+  "author": "岛仔",
   "version": "1.0.0",
   "api": 1,
   "runtime": "js",

@@ -1,9 +1,9 @@
 [package]
 name = "kuidao"
-version = "0.7.9"
+version = "0.6.71"
 edition = "2021"
 license = "MIT"
-description = "鬼島：Windows 桌面夥伴與資訊島"
+description = "鬼島：Windows 顶部的桌面伙伴与信息岛"
 repository = "https://github.com/Renly1994/xiaotang-daozai"
 default-run = "kuidao"
 
@@ -14,11 +14,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "kuidao"
 path = "src/main.rs"
-
-# 極小安裝啟動器：安裝包不含主程式，第一次開啟才下載 Release 內容。
-[[bin]]
-name = "kuidao-bootstrap"
-path = "src/bin/kuidao-bootstrap/main.rs"
 
 # 无窗口演示录制器：脚本驱动 + 软件光栅化，输出 RGBA 帧流给 ffmpeg。
 [[bin]]
@@ -50,9 +45,6 @@ wgpu-hal = { path = "vendor/wgpu-hal" }
 ureq = { path = "vendor/ureq" }
 
 [dependencies]
-chfft = "0.3"
-byteorder = "1"
-crc32fast = "1"
 ab_glyph = { version = "0.2", optional = true }
 eframe = { version = "0.31", default-features = false, features = ["glow", "wgpu", "default_fonts"] }
 egui_extras = { version = "0.31", default-features = false, features = ["svg", "image"] }
@@ -61,6 +53,7 @@ ureq = { version = "2.12", default-features = false, features = ["tls", "gzip"] 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
+digest_auth = "0.3.1"
 flate2 = "1"
 zstd = { version = "0.13.3", default-features = false }
 ring = "0.17"
@@ -110,6 +103,7 @@ windows = { version = "0.58", features = [
   "Win32_System_Registry",
   "Win32_System_SystemInformation",
   "Win32_System_Threading",
+  "Win32_System_IO",
   "Win32_System_JobObjects",
   "Win32_System_Pipes",
   "Win32_System_RemoteDesktop",
@@ -135,6 +129,7 @@ windows = { version = "0.58", features = [
   "UI_Notifications", "ApplicationModel",
   "Win32_System_Ole", "Win32_UI_Shell_Common", "Networking_Connectivity",
   "Win32_Devices_DeviceAndDriverInstallation",
+  "Win32_Devices_HumanInterfaceDevice",
   "Win32_Devices_Properties",
   "Win32_Devices_Bluetooth",
   "Devices_Bluetooth", "Devices_Enumeration", "Devices_Bluetooth_GenericAttributeProfile",
@@ -146,11 +141,12 @@ imap-proto = "0.10.2"
 native-tls = "0.2"
 keyring = { version = "3", features = ["windows-native"] }
 
+[target.'cfg(windows)'.dev-dependencies]
+egui-wgpu = { version = "0.31", default-features = false, features = ["surface-test"] }
+
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
 strip = true
 panic = "abort"
-
-

@@ -1,4 +1,4 @@
-//! 獨立驗證入口；僅在顯式打開運行環境 feature 時編譯。
+//! 独立验证入口；仅在显式打开运行环境 feature 时编译。
 mod engines;
 #[cfg(feature="sdk-js")] pub(crate) mod local;
 #[cfg(all(windows, feature="sdk-js", feature="sdk-material"))]
@@ -42,7 +42,7 @@ fn plugin_bytes(kind: &str) -> Result<Vec<u8>> {
     fs::File::open(plugins().join(match kind {
         "js" => "countdown.js",
         "wasm" => "countdown.wasm",
-        _ => return Err(fail("未知運行環境")),
+        _ => return Err(fail("未知运行环境")),
     }))?
     .take(256 * 1024 + 1)
     .read_to_end(&mut bytes)?;
@@ -96,7 +96,7 @@ impl Session {
             .bridge
             .pending
             .take()
-            .ok_or_else(|| fail("插件沒有提交天數"))?;
+            .ok_or_else(|| fail("插件没有提交天数"))?;
         if value != self.bridge.previous.get() {
             crate::model::atomic_write(
                 &self.dir.join("last-days.json"),
@@ -110,7 +110,7 @@ impl Session {
     }
     fn save(&mut self, title: String, target: String) -> Result<()> {
         if title.trim().is_empty() || title.chars().count() > 32 {
-            return Err(fail("標題需為 1–32 字"));
+            return Err(fail("标题需为 1–32 字"));
         }
         NaiveDate::parse_from_str(&target, "%Y-%m-%d")?;
         let bytes = serde_json::to_vec(&(&title, &target))?;
@@ -124,11 +124,11 @@ impl Session {
 fn fault_report(s: &mut Session, kind: &str) -> Result<serde_json::Value> {
     let mut probes = Vec::new();
     for (id, name) in [
-        (1, "死循環"),
-        (2, "異常"),
-        (3, "內存上限"),
-        (4, "未聲明聯網"),
-        (6, "已聲明模擬傳輸"),
+        (1, "死循环"),
+        (2, "异常"),
+        (3, "内存上限"),
+        (4, "未声明联网"),
+        (6, "已声明模拟传输"),
     ] {
         let before = s.bridge.dispatched.get();
         let start = Instant::now();
@@ -148,7 +148,7 @@ fn fault_report(s: &mut Session, kind: &str) -> Result<serde_json::Value> {
     let bad = if kind == "js" {
         b"require('fs').readFileSync('sample.txt')".to_vec()
     } else {
-        // 一個合法模塊，只導入 WASI 文件函數；鏈接應在執行前被拒絕。
+        // 一个合法模块，只导入 WASI 文件函数；链接应在执行前被拒绝。
         let mut b = b"\0asm\x01\0\0\0\x01\x04\x01\x60\0\0".to_vec();
         let mut imports = vec![1, 22];
         imports.extend(b"wasi_snapshot_preview1");
@@ -161,8 +161,8 @@ fn fault_report(s: &mut Session, kind: &str) -> Result<serde_json::Value> {
     };
     let result = Engine::load(kind, &bad, s.bridge.clone())
         .err()
-        .ok_or_else(|| fail("意外允許文件接口"))?;
-    probes.push(json!({"probe":"直接文件訪問","observed":result.to_string(),"pass":true}));
+        .ok_or_else(|| fail("意外允许文件接口"))?;
+    probes.push(json!({"probe":"直接文件访问","observed":result.to_string(),"pass":true}));
     Ok(json!(probes))
 }
 
@@ -176,7 +176,7 @@ fn execute(args: &[String]) -> Result<()> {
             return ui::window(
                 kind,
                 Some(PathBuf::from(
-                    args.get(4).ok_or_else(|| fail("缺少圖片路徑"))?,
+                    args.get(4).ok_or_else(|| fail("缺少图片路径"))?,
                 )),
             )
         }
@@ -219,10 +219,10 @@ fn execute(args: &[String]) -> Result<()> {
             }
             json!({"title":s.settings.title,"target":s.settings.target,"days":s.days,"previous":s.previous})
         }
-        _ => return Err(fail("未知驗證模式")),
+        _ => return Err(fail("未知验证模式")),
     };
     fs::write(
-        Path::new(args.get(4).ok_or_else(|| fail("缺少報告路徑"))?),
+        Path::new(args.get(4).ok_or_else(|| fail("缺少报告路径"))?),
         serde_json::to_vec_pretty(&report)?,
     )?;
     Ok(())

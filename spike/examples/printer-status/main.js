@@ -5,20 +5,20 @@ function refresh({ storage }) {
     return {
         status: {
             state: "running",
-            label: "正在打印 · 桌面理線夾",
+            label: "正在打印 · 桌面理线夹",
             progress_pct: progress,
             metrics: [
-                { label: "噴嘴", value: temperatures[step + 4] + " °C" },
-                { label: "熱床", value: "60 °C" }
+                { label: "喷嘴", value: temperatures[step + 4] + " °C" },
+                { label: "热床", value: "60 °C" }
             ],
             series: temperatures.slice(step, step + 5),
             items: [
-                { label: "當前任務", detail: "桌面理線夾", state: "running" },
-                { label: "下一任務", detail: "收納盒", state: "paused" }
+                { label: "当前任务", detail: "桌面理线夹", state: "running" },
+                { label: "下一任务", detail: "收纳盒", state: "paused" }
             ],
-            note: "折線記錄噴嘴溫度。\n讀數每分鐘模擬刷新。",
-            tags: ["PLA", "0.20 mm", "模擬數據"],
-            alert: "耗材餘量偏低"
+            note: "折线记录喷嘴温度。\n读数每分钟模拟刷新。",
+            tags: ["PLA", "0.20 mm", "模拟数据"],
+            alert: "耗材余量偏低"
         },
         storage: { step }
     };

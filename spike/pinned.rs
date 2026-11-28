@@ -11,6 +11,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[path = "pinned_payroll.rs"]
+mod payroll;
+
 const ORDER_LIMIT: u64 = 64 * 1024;
 const ROTATION: Duration = Duration::from_secs(8);
 const MASKED_VALUE: &str = "••••";
@@ -40,7 +43,7 @@ impl<'de> Deserialize<'de> for Slide {
         let mut value = serde_json::Value::deserialize(input)?;
         let fit_width = value.as_object_mut()
             .and_then(|fields| fields.remove("fit_width"))
-            .map(|value| value.as_bool().ok_or_else(|| Error::custom("常駐畫布 fit_width 須為布爾值")))
+            .map(|value| value.as_bool().ok_or_else(|| Error::custom("常驻画布 fit_width 须为布尔值")))
             .transpose()?
             .unwrap_or(false);
         let (width, canvas) = Canvas::parse_pinned(value).map_err(Error::custom)?;
@@ -112,7 +115,7 @@ impl Pinned {
     pub(super) fn validate_canvas(&self, package: &super::Package) -> Result<()> {
         if let Some(slides) = &self.canvas {
             if !package.manifest.has_capability("status.canvas") {
-                return Err(fail("常駐畫布需要聲明 status.canvas"));
+                return Err(fail("常驻画布需要声明 status.canvas"));
             }
             for slide in slides.all() {
                 slide.canvas.validate_images(|name| package.canvas_images.contains_key(name))
@@ -130,7 +133,7 @@ impl Pinned {
                 return declared;
             }
             return slides.iter().map(|slide| {
-                // 綁定值可在插件輸出不變時繼續增長。
+                // 绑定值可在插件输出不变时继续增长。
                 if slide.canvas.binds.is_empty() {
                     plugin_canvas_ui::pinned_content_width(ui, &slide.canvas, slide.width)
                 } else {
@@ -220,7 +223,10 @@ pub(crate) struct PinnedDisplay {
 
 impl PinnedDisplay {
     pub(crate) fn measure_width(&mut self, ui: &eframe::egui::Ui) {
-        if let Some(slide) = &self.slide {
+        let now = chrono::Utc::now();
+        if let Some(counter) = self.payroll_counter(now) {
+            self.slide_width = Some(payroll::width(ui, counter, now));
+        } else if let Some(slide) = &self.slide {
             if slide.fit_width {
                 self.slide_width = Some(plugin_canvas_ui::pinned_content_width(ui, &slide.canvas, slide.width));
             }
@@ -244,6 +250,22 @@ impl PinnedDisplay {
         )
     }
 
+    fn payroll_counter(&self, now: chrono::DateTime<chrono::Utc>) -> Option<&crate::plugin_canvas::live::Counter> {
+        use crate::plugin_canvas::{live::Binding, Kind};
+        if self.plugin != "daozai.live-pay" {
+            return None;
+        }
+        let canvas = &self.slide.as_ref()?.canvas;
+        let Binding::Counter { counter } = canvas.binds.get("cash")? else {
+            return None;
+        };
+        (counter.decimals == 2
+            && (0.0..=10_000_000.0).contains(&counter.sample(now.timestamp()).0)
+            && canvas.nodes.iter().any(|node| {
+                node.roll && matches!(&node.kind, Kind::Text { text, .. } if text == "{cash}")
+            })).then_some(counter)
+    }
+
     pub(crate) fn draw(
         &self,
         card: &crate::paint::Card,
@@ -252,25 +274,45 @@ impl PinnedDisplay {
         width: f32,
         vertical: bool,
         theme: CanvasTheme,
-    ) -> bool {
+    ) -> (bool, Option<Duration>, bool) {
+        self.draw_at(card, x, y, width, vertical, theme, chrono::Utc::now())
+    }
+
+    fn draw_at(
+        &self,
+        card: &crate::paint::Card,
+        x: f32,
+        y: f32,
+        width: f32,
+        vertical: bool,
+        theme: CanvasTheme,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> (bool, Option<Duration>, bool) {
         use crate::{
             app,
             paint::{self, H},
             theme::{self, W},
         };
-        if width <= 0.0 { return false; }
-        let click = card.hit(x - width / 2.0, y - 11.0, width, 22.0,
+        if width <= 0.0 { return (false, None, false); }
+        let payroll = self.payroll_counter(now);
+        let height = if vertical && payroll.is_some() { 42.0 } else { 22.0 };
+        let click = card.hit(x - width / 2.0, y - height / 2.0, width, height,
             ("plugin-pinned", self.plugin.as_str())).clicked();
+        if let Some(counter) = payroll {
+            let (repaint, animating) = payroll::draw(card, x, y, width, vertical, theme, counter, now);
+            return (click, repaint, animating);
+        }
         if let Some(slide) = &self.slide {
             let natural = if slide.fit_width { self.slide_width.unwrap_or(slide.width) } else { slide.width };
             let scrolling = slide.fit_width && plugin_canvas_ui::has_pinned_text_flow(&slide.canvas.nodes);
             let canvas_width = if !vertical || scrolling { natural.min(width) } else { natural };
             let card = if vertical { card.scaled(x, y, (width / canvas_width).min(1.0)) } else { card.clone() };
             let area = card.rect(x - canvas_width / 2.0, y - 11.0, canvas_width, 22.0);
-            plugin_canvas_ui::draw_pinned(&card, &format!("{}:pinned", self.plugin), &slide.canvas, area, theme, self.elapsed, |name| {
-                self.images.get(name)?.texture(card.ui.ctx(), name)
-            });
-            return click;
+            let (repaint, animating) =
+                plugin_canvas_ui::draw_pinned(&card, &format!("{}:pinned", self.plugin), &slide.canvas, area, theme, self.elapsed, |name, pixels, fit| {
+                    self.images.get(name)?.texture(card.ui.ctx(), name, pixels, fit)
+                });
+            return (click, repaint, animating);
         }
         let icon = self.icon.map(|icon| match icon {
             PinnedIcon::Clock => app::FOCUS_PAGE,
@@ -341,7 +383,7 @@ impl PinnedDisplay {
                 H::Left,
             );
         }
-        click
+        (click, None, false)
     }
 }
 
@@ -374,7 +416,7 @@ impl PinnedState {
     fn save(&mut self, dir: &Path, order: Vec<String>) -> Result<()> {
         let encoded = serde_json::to_vec(&order)?;
         if encoded.len() as u64 > ORDER_LIMIT {
-            return Err(fail("島上常駐順序文件超出大小限制"));
+            return Err(fail("岛上常驻顺序文件超出大小限制"));
         }
         crate::model::atomic_write(&dir.join(ORDER_FILE), &encoded)?;
         self.order = order;
@@ -482,7 +524,7 @@ impl LocalPlugins {
         let mut order = self.pinned.order.clone();
         if enabled {
             if self.pinned_name(id).is_none() {
-                return Err(fail("此插件未聲明島上常駐位"));
+                return Err(fail("此插件未声明岛上常驻位"));
             }
             if order.iter().any(|item| item == id) {
                 return Ok(());
@@ -540,11 +582,11 @@ mod tests {
         state.order.push("test.canvas".into());
         state.output.insert("test.canvas".into(), pinned);
         state.order.push("test.other".into());
-        state.output.insert("test.other".into(), serde_json::from_value(json!({"text":"在旁顯示"})).unwrap());
+        state.output.insert("test.other".into(), serde_json::from_value(json!({"text":"在旁显示"})).unwrap());
         let instant = Instant::now();
         let now = chrono::Utc::now();
         let (mut first, next) = state.displays(false, instant, now);
-        assert_eq!(first[1].text, "在旁顯示");
+        assert_eq!(first[1].text, "在旁显示");
         let first = first.remove(0);
         assert_eq!(first.width(156.0), 80.0);
         assert_eq!(first.slide.unwrap().width, 70.0);
@@ -573,7 +615,7 @@ mod tests {
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 let short = width(ui, canvas("假期", true));
-                let long = width(ui, canvas("下週還有一個假期", true));
+                let long = width(ui, canvas("下周还有一个假期", true));
                 assert!((35.0..58.0).contains(&short), "{short}");
                 assert!(long > short + 30.0 && long < 150.0, "{long}");
                 assert_eq!(width(ui, canvas("假期", false)), 150.0);
@@ -610,7 +652,7 @@ mod tests {
     #[test]
     fn horizontal_pinned_canvas_keeps_font_size_when_the_slot_is_narrow() {
         let pinned: Pinned = serde_json::from_value(json!({"canvas":{
-            "width":140,"nodes":[{"text":"常駐字號","at":[6,15],"size":12}]
+            "width":140,"nodes":[{"text":"常驻字号","at":[6,15],"size":12}]
         }})).unwrap();
         let display = pinned.display(chrono::Utc::now()).0;
         let ctx = egui::Context::default();
@@ -627,14 +669,14 @@ mod tests {
                     });
                 });
                 found = out.shapes.iter().find_map(|shape| match &shape.shape {
-                    egui::Shape::Text(t) if t.galley.text() == "常駐字號" => {
+                    egui::Shape::Text(t) if t.galley.text() == "常驻字号" => {
                         Some((t.galley.job.sections[0].format.font_id.size, shape.clip_rect))
                     }
                     _ => None,
                 });
                 if found.is_some() { break; }
             }
-            found.expect("常駐字號樣例已繪製")
+            found.expect("常驻字号样例已绘制")
         };
         let (wide_size, _) = size(140.0);
         let (narrow_size, clip) = size(72.0);
@@ -659,7 +701,7 @@ mod tests {
             if let Some(display) = host.pinned_displays(false).0.into_iter().next() {
                 break display;
             }
-            assert!(Instant::now() < deadline, "等待常駐畫布超時：{:?}", host.errors.get(id));
+            assert!(Instant::now() < deadline, "等待常驻画布超时：{:?}", host.errors.get(id));
             std::thread::sleep(Duration::from_millis(2));
         };
         for (skin, palette) in [("cream", CREAM), ("glass-dark", GLASS_DARK)] {
@@ -719,13 +761,13 @@ mod tests {
             fs::copy(sample, package.join("cover.png"))?;
             let manifest = package.join("plugin.json");
             fs::write(&manifest, json!({
-                "id":id,"name":id,"author":"島仔","version":"1.0.0","api":1,"runtime":"js",
+                "id":id,"name":id,"author":"岛仔","version":"1.0.0","api":1,"runtime":"js",
                 "entry":"main.js","cover":"cover.png","owner":"tasks","capabilities":["card","island.pinned"],
                 "dataVersion":1,"permissions":{},"settings":[],
             }).to_string())?;
             fs::write(
                 package.join("main.js"),
-                "function refresh() { return {pinned:{text:'常駐示例',value:'25',icon:'clock'}}; }",
+                "function refresh() { return {pinned:{text:'常驻示例',value:'25',icon:'clock'}}; }",
             )?;
             plugins.install(&manifest)?;
             plugins.enable(id, true)
@@ -791,7 +833,7 @@ mod tests {
         let counter =
             json!({"start_value":100,"per_second":2,"start_at":100,"until":102,"decimals":0});
         let pinned: Pinned =
-            serde_json::from_value(json!({"text":"工資","value":{"counter":counter}}))?;
+            serde_json::from_value(json!({"text":"工资","value":{"counter":counter}}))?;
         assert_eq!(pinned.display(now).0.value.as_deref(), Some("100"));
         assert_eq!(pinned.display(now).1, Some(Duration::from_millis(750)));
         let done = now + chrono::TimeDelta::seconds(2);
@@ -800,12 +842,12 @@ mod tests {
         let mut counter = counter;
         counter["sensitive"] = json!(true);
         let hidden: Pinned =
-            serde_json::from_value(json!({"text":"工資","value":{"counter":counter}}))?;
+            serde_json::from_value(json!({"text":"工资","value":{"counter":counter}}))?;
         assert_eq!(hidden.display(now).0.value.as_deref(), Some(MASKED_VALUE));
         assert!(hidden.display(now).1.is_none());
         let countdown: Pinned =
             serde_json::from_value(json!({"text":"下班","value":{"countdown":{
-                "label":"距離下班","target_at":102,"format":"HH:mm:ss","done_label":"已下班"
+                "label":"距离下班","target_at":102,"format":"HH:mm:ss","done_label":"已下班"
             }}}))?;
         assert_eq!(countdown.display(now).0.value.as_deref(), Some("00:00:02"));
         assert_eq!(countdown.display(now).1, Some(Duration::from_millis(750)));
@@ -837,7 +879,7 @@ mod tests {
         assert_eq!(plugins.pinned.order, ["pinned.five", "pinned.two", "pinned.three", "pinned.one"]);
         plugins.pinned.output.insert(
             "pinned.one".into(),
-            serde_json::from_value(json!({"text":"第一個插件"}))?,
+            serde_json::from_value(json!({"text":"第一个插件"}))?,
         );
         assert_eq!(plugins.pinned_displays(false).0.len(), 1);
         plugins.enable("pinned.one", false)?;
@@ -862,7 +904,7 @@ mod tests {
         app.settings.pet = false;
         app.settings.skin = crate::model::Skin::Classic;
         let wide: Pinned = serde_json::from_value(json!({
-            "text": "常駐寬組件", "value": "文字".repeat(12)
+            "text": "常驻宽组件", "value": "文字".repeat(12)
         }))?;
         for id in ["pinned.one", "pinned.two", "pinned.three", "pinned.four", "pinned.five"] {
             app.plugins.pinned.order.push(id.into());
@@ -909,7 +951,7 @@ mod tests {
         assert!(requested > WIN_W);
         let allocated = (requested / 64.0).ceil() * 64.0;
 
-        // 鼠標繼續留在島外，跨過離開等待後按首個可見常駐幀核對寬檔。
+        // 鼠标继续留在岛外，跨过离开等待后按首个可见常驻帧核对宽档。
         frame(&mut app, 0.14, allocated);
         assert!(!app.open);
         frame(&mut app, 0.16, allocated);
@@ -919,7 +961,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "常駐畫布標題改版待校正"]
     fn pinned_plugins_render_together_in_the_collapsed_island() -> Result<()> {
         let _lock = crate::ui_tests::ENV_LOCK.lock().unwrap_or_else(|err| err.into_inner());
         let fixture = Fixture::new()?;
@@ -955,7 +996,7 @@ mod tests {
                     }).inner);
                 captions = frame.shapes.iter().filter(|shape| {
                     matches!(&shape.shape, egui::Shape::Text(text)
-                        if text.galley.text().starts_with("常駐"))
+                        if text.galley.text().starts_with("常驻"))
                 }).count();
                 if captions == 5 { break; }
                 std::thread::sleep(Duration::from_millis(5));
@@ -1049,7 +1090,7 @@ mod tests {
         };
         let has_pinned = |output: egui::FullOutput| {
             output.shapes.iter().any(|shape| {
-            matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text().contains("常駐示例"))
+            matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text().contains("常驻示例"))
         })
         };
         let mut shown = false;
@@ -1060,10 +1101,10 @@ mod tests {
             }
             std::thread::sleep(Duration::from_millis(5));
         }
-        assert!(shown, "收起的島顯示常駐內容");
+        assert!(shown, "收起的岛显示常驻内容");
         app.notice = Some(crate::extras::Alert {
             source: crate::extras::AlertSource::Internal,
-            title: "測試彈窗".into(),
+            title: "测试弹窗".into(),
             body: String::new(),
             page: TODO_PAGE,
             at: 1.0,
@@ -1072,13 +1113,15 @@ mod tests {
             meeting: None,
             unread: None,
         });
-        assert!(!has_pinned(frame(&mut app, 1.1)), "通知彈窗優先顯示");
+        assert!(!has_pinned(frame(&mut app, 1.1)), "通知弹窗优先显示");
         assert!(app.notice.is_some());
         app.notice = None;
         let restored = (1..90).any(|index| has_pinned(frame(&mut app, 1.1 + index as f64 / 60.0)));
-        assert!(restored, "彈窗退場後恢復常駐");
+        assert!(restored, "弹窗退场后恢复常驻");
         app.settings.visible_pages[TODO_PAGE] = false;
         assert!(!has_pinned(frame(&mut app, 3.0)));
         Ok(())
     }
+
+    include!("pinned_payroll_tests.rs");
 }

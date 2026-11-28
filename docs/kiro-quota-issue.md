@@ -1,47 +1,47 @@
-# Kiro 額度適配
+# Kiro 额度适配
 
-通過本機 Kiro 登錄緩存查詢 GetUsageLimits。只讀登錄文件，不儲存令牌副本，不回寫，不使用 refreshToken 自動續期。
+通过本机 Kiro 登录缓存查询 GetUsageLimits。只读登录文件，不保存令牌副本，不回写，不使用 refreshToken 自动续期。
 
-## 登錄與身份
+## 登录与身份
 
-預設路徑為 `%USERPROFILE%\.aws\sso\cache\kiro-auth-token.json`，也可選擇其他登錄 JSON。連接與重連在後台核驗成功、配置儲存成功後生效。取消或關閉窗口後，晚到結果不會儲存帳號。
+默认路径为 `%USERPROFILE%\.aws\sso\cache\kiro-auth-token.json`，也可选择其他登录 JSON。连接与重连在后台核验成功、配置保存成功后生效。取消或关闭窗口后，晚到结果不会保存账号。
 
-- `accessToken`：Bearer 憑據，僅發往下列固定官方端點。
-- `profileArn`：有值時隨請求發送；缺少時允許空請求體，兼容企業 IdC 登錄。
-- `region`：與 ARN 區域一致時使用；缺少時從 ARN 提取，兩者都缺少時使用美國東部區域。
-- `expiresAt`：RFC3339 格式的客戶端續期時間，登錄失效以服務端 401 / 403 為準。
-- `userInfo.userId`：使用響應中的使用者標識綁定帳號，配置和緩存僅儲存其 SHA-256 摘要。缺少可核驗使用者標識時不顯示額度。
+- `accessToken`：Bearer 凭据，仅发往下列固定官方端点。
+- `profileArn`：有值时随请求发送；缺少时允许空请求体，兼容企业 IdC 登录。
+- `region`：与 ARN 区域一致时使用；缺少时从 ARN 提取，两者都缺少时使用美国东部区域。
+- `expiresAt`：RFC3339 格式的客户端续期时间，登录失效以服务端 401 / 403 为准。
+- `userInfo.userId`：使用响应中的用户标识绑定账号，配置和缓存仅保存其 SHA-256 摘要。缺少可核验用户标识时不显示额度。
 
-客戶端註冊 `clientIdHash`、profile ARN 和訪問令牌均不作為使用者身份。原版本尚未核驗的身份需要重新連接；已經核驗的帳號重連時必須仍是原使用者。重連保留帳號 ID、備註、配色及常駐設定。
+客户端注册 `clientIdHash`、profile ARN 和访问令牌均不作为用户身份。原版本尚未核验的身份需要重新连接；已经核验的账号重连时必须仍是原用户。重连保留账号 ID、备注、配色及常驻设置。
 
-## 請求邊界
+## 请求边界
 
-| 區域 | 固定端點 |
+| 区域 | 固定端点 |
 | --- | --- |
 | us-east-1 | https://codewhisperer.us-east-1.amazonaws.com/ |
 | eu-central-1 | https://q.eu-central-1.amazonaws.com/ |
 
-其他區域暫不支援，不根據登錄文件拼接任意主機。請求使用 POST、`application/x-amz-json-1.0` 和 `X-Amz-Target: AmazonCodeWhispererService.GetUsageLimits`。禁用重定向，使用既有代理與請求超時；解壓後響應上限為 1 MiB。
+其他区域暂不支持，不根据登录文件拼接任意主机。请求使用 POST、`application/x-amz-json-1.0` 和 `X-Amz-Target: AmazonCodeWhispererService.GetUsageLimits`。禁用重定向，使用既有代理与请求超时；解压后响应上限为 1 MiB。
 
-401 / 403 提示重新登錄；429 保留服務端 Retry-After 並按帳號退避。查詢期間登錄文件發生變化時丟棄結果。Kiro 請求獨立執行，避免阻塞其他額度服務。
+401 / 403 提示重新登录；429 保留服务端 Retry-After 并按账号退避。查询期间登录文件发生变化时丢弃结果。Kiro 请求独立执行，避免阻塞其他额度服务。
 
-## 點數與時間
+## 点数与时间
 
-從 `usageBreakdownList` 的 CREDIT 項讀取套餐用量。優先精度字段，缺少精度字段時兼容對應整數；負數、非有限值及損壞字段不按零處理。
+从 `usageBreakdownList` 的 CREDIT 项读取套餐用量。优先精度字段，缺少精度字段时兼容对应整数；负数、非有限值及损坏字段不按零处理。
 
-- 月度套餐：總額減去套餐內消耗。套餐內消耗使用總用量減超額用量，不因贈送列表是否非空切換公式。
-- 試用：僅計入 ACTIVE 且未過期的 `freeTrialInfo`。
-- 贈送 / 加購：僅計入 ACTIVE 且未過期的 `bonuses`，兼容單個對象和數組，逐項保留名稱及到期時間。
-- 可用點數：套餐、有效試用和有效贈送 / 加購的剩餘量合計。
-- 超額上限餘量：啟用超額且 CREDIT 項返回明確點數上限時單獨顯示，不加進可用點數；不把 `capForWorkloadUsage` 等金額字段換算成點數。
+- 月度套餐：总额减去套餐内消耗。套餐内消耗使用总用量减超额用量，不因赠送列表是否非空切换公式。
+- 试用：仅计入 ACTIVE 且未过期的 `freeTrialInfo`。
+- 赠送 / 加购：仅计入 ACTIVE 且未过期的 `bonuses`，兼容单个对象和数组，逐项保留名称及到期时间。
+- 可用点数：套餐、有效试用和有效赠送 / 加购的剩余量合计。
+- 超额上限余量：启用超额且 CREDIT 项返回明确点数上限时单独显示，不加进可用点数；不把 `capForWorkloadUsage` 等金额字段换算成点数。
 
-月度重置與試用、贈送的到期時間分別顯示。秒與毫秒時間戳均做範圍校驗。額度環中心顯示 Kiro 標識，剩餘點數顯示在卡片右側及常駐欄圖標右側；設定頁保留各積分池明細。舊的其他供應商緩存可以繼續讀取。
+月度重置与试用、赠送的到期时间分别显示。秒与毫秒时间戳均做范围校验。额度环中心显示 Kiro 标识，剩余点数显示在卡片右侧及常驻栏图标右侧；设置页保留各积分池明细。旧的其他供应商缓存可以继续读取。
 
-## 參考
+## 参考
 
-- [Kiro 計費與試用](https://kiro.dev/docs/billing/)
-- [Kiro 加購點數](https://kiro.dev/docs/billing/add-on-credits/)
-- [AWS 官方 GetUsageLimits 響應模型](https://github.com/aws/amazon-q-developer-cli/blob/15cc8f3cd18c4272925ce1c7053268eedff1ea0a/crates/amzn-codewhisperer-client/src/operation/get_usage_limits/_get_usage_limits_output.rs)
+- [Kiro 计费与试用](https://kiro.dev/docs/billing/)
+- [Kiro 加购点数](https://kiro.dev/docs/billing/add-on-credits/)
+- [AWS 官方 GetUsageLimits 响应模型](https://github.com/aws/amazon-q-developer-cli/blob/15cc8f3cd18c4272925ce1c7053268eedff1ea0a/crates/amzn-codewhisperer-client/src/operation/get_usage_limits/_get_usage_limits_output.rs)
 - [AWS 官方用量字段模型](https://github.com/aws/amazon-q-developer-cli/blob/15cc8f3cd18c4272925ce1c7053268eedff1ea0a/crates/amzn-codewhisperer-client/src/types/_usage_breakdown.rs)
 
-真實帳號還需核對 Kiro 客戶端中的點數、使用者身份、區域及到期時間。合成測試不代表所有登錄形態均已完成真機驗收。
+真实账号还需核对 Kiro 客户端中的点数、用户身份、区域及到期时间。合成测试不代表所有登录形态均已完成真机验收。

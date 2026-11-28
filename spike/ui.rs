@@ -46,7 +46,7 @@ impl View {
         c.text(
             28.,
             57.,
-            &format!("倒計時 · {}", self.kind),
+            &format!("倒计时 · {}", self.kind),
             13.,
             W::Semibold,
             theme::CYAN,
@@ -55,7 +55,7 @@ impl View {
         c.text(
             28.,
             83.,
-            &format!("距離{}還有 {} 天", s.settings.title, s.days),
+            &format!("距离{}还有 {} 天", s.settings.title, s.days),
             19.,
             W::Bold,
             theme::WHITE,
@@ -64,11 +64,11 @@ impl View {
         let last = s
             .previous
             .map(|d| format!("{d} 天"))
-            .unwrap_or_else(|| "首次顯示".into());
+            .unwrap_or_else(|| "首次显示".into());
         c.text(
             28.,
             103.,
-            &format!("目標 {}　上次顯示 {last}", s.settings.target),
+            &format!("目标 {}　上次显示 {last}", s.settings.target),
             12.,
             W::Regular,
             theme::GRAY,
@@ -77,13 +77,13 @@ impl View {
     }
     fn settings(&mut self, ui: &mut egui::Ui) {
         crate::extras::settings_card(ui, |ui| {
-            crate::extras::settings_control_row(ui, "標題", 64., |ui| {
+            crate::extras::settings_control_row(ui, "标题", 64., |ui| {
                 ui.text_edit_singleline(&mut self.title)
             });
-            crate::extras::settings_control_row(ui, "目標日期", 64., |ui| {
+            crate::extras::settings_control_row(ui, "目标日期", 64., |ui| {
                 ui.text_edit_singleline(&mut self.date)
             });
-            if ui.button("保存設置").clicked() {
+            if ui.button("保存设置").clicked() {
                 self.error = self
                     .session
                     .save(self.title.clone(), self.date.clone())
@@ -131,12 +131,12 @@ struct Preview {
 impl eframe::App for Preview {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("島仔 · 待辦與置物");
+            ui.heading("岛仔 · 待办与置物");
             let (rect, _) = ui.allocate_exact_size(egui::vec2(419., 125.), egui::Sense::hover());
             ui.painter().rect_filled(rect, 15., egui::Color32::BLACK);
             let card = Card::new(ui, rect.min, rect);
             self.view.draw(&card);
-            ui.label("倒計時設置");
+            ui.label("倒计时设置");
             self.view.settings(ui);
         });
         self.drawn += 1;
@@ -177,7 +177,7 @@ impl eframe::App for Preview {
                     image.size[1] as u32,
                     image::ColorType::Rgba8,
                 )
-                .expect("保存驗證截圖");
+                .expect("保存验证截图");
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
             ctx.request_repaint_after(Duration::from_millis(60));
@@ -188,13 +188,13 @@ pub(super) fn window(kind: &str, path: Option<PathBuf>) -> Result<()> {
     let view = View::load(kind)?;
     let opts = eframe::NativeOptions {
         renderer: eframe::Renderer::Glow,
-        // 與正常島體一致；測量時可顯式恢復舊驗證窗口的垂直同步。
+        // 与正常岛体一致；测量时可显式恢复旧验证窗口的垂直同步。
         vsync: !cfg!(windows) || env::var_os("DAOZAI_SPIKE_LEGACY_VSYNC").is_some(),
         viewport: egui::ViewportBuilder::default().with_inner_size([445., 318.]),
         ..Default::default()
     };
     eframe::run_native(
-        "島仔 SDK 驗證",
+        "岛仔 SDK 验证",
         opts,
         Box::new(move |cc| {
             theme::load_fonts(&cc.egui_ctx);

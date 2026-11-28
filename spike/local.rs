@@ -1,4 +1,4 @@
-//! 本地開發包的安裝、狀態及卡片執行。每次操作原子保存一個插件的快照。
+//! 本地开发包的安装、状态及卡片执行。每次操作原子保存一个插件的快照。
 #[path = "plugin_interactions.rs"]
 mod interactions;
 #[path = "appearance_assets.rs"]
@@ -110,27 +110,6 @@ struct Field {
     #[serde(rename = "maxItems", default, deserialize_with = "present_value", skip_serializing_if = "Option::is_none")]
     max_items: Option<usize>,
 }
-
-impl Field {
-    /// 插件清單原文可能是簡體：只轉顯示文字，key、default、選項 value 與單位數值都不動。
-    fn localize_display(&mut self) {
-        self.label = crate::zh::to_traditional(&self.label);
-        if let Some(unit) = &mut self.unit {
-            *unit = crate::zh::to_traditional(unit);
-        }
-        if let Some(choices) = &mut self.choices {
-            for choice in choices {
-                choice.label = crate::zh::to_traditional(&choice.label);
-            }
-        }
-        if let Some(items) = &mut self.item {
-            for field in items {
-                field.localize_display();
-            }
-        }
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Material {
@@ -217,6 +196,15 @@ struct Manifest {
     #[serde(default, skip_serializing_if = "is_false")]
     timezones: bool,
 }
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct MailViewEntry {
+    version: u32,
+    show_unread: bool,
+    start_date_setting: Option<String>,
+    aliases_setting: Option<String>,
+}
+
 fn default_refresh() -> u32 {
     60
 }
@@ -264,6 +252,8 @@ struct Record {
     market_revoked: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     status_page_disabled: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    status_page_settings_hidden: bool,
     #[serde(default, skip_serializing_if = "NoticeHistory::is_empty")]
     notice_history: NoticeHistory,
 }
@@ -273,17 +263,6 @@ fn is_false(value: &bool) -> bool {
 }
 
 impl Record {
-    /// 舊版快照可能存著尚未轉繁的清單；載入時只補顯示文字，設定值與封包內容不重寫。
-    fn localize_display(&mut self) {
-        if let Some(package) = &mut self.package {
-            package.manifest.localize_display();
-        }
-        #[cfg(windows)]
-        if let Some(presentation) = &mut self.presentation {
-            presentation.localize_display();
-        }
-    }
-
     fn source_kind(&self) -> Option<SourceKind> {
         self.package.as_ref()?.manifest.source_kind()
     }
@@ -317,7 +296,7 @@ impl Record {
     fn read_source(&self, grant: &SourceGrant, cancelled: &AtomicBool) -> std::io::Result<String> {
         #[cfg(windows)]
         if let SourceGrant::Https { url } = grant {
-            let network = self.network().ok_or_else(|| std::io::Error::other("缺少 HTTPS 網絡配置"))?;
+            let network = self.network().ok_or_else(|| std::io::Error::other("缺少 HTTPS 网络配置"))?;
             let id = &self.package.as_ref().unwrap().manifest.id;
             return network.read(id, url, cancelled);
         }
@@ -339,6 +318,7 @@ impl Record {
                 && package_data::valid_snapshot(&manifest.data, &package.data)
                 && (package.canvas_images.is_empty()
                     || manifest.has_capability("status.canvas") && canvas_images::valid_snapshot(&package.canvas_images))
+                && package.validate_mail_view().is_ok()
                 && package.validate_page_shortcut_colors().is_ok()
                 && package.validate_appearance().is_ok()
                 && package.valid_font_assets()
@@ -437,7 +417,7 @@ fn bounded(path: &Path, max: u64) -> Result<String> {
         .take(max + 1)
         .read_to_end(&mut bytes)?;
     if bytes.len() as u64 > max {
-        return Err(fail("文件過大"));
+        return Err(fail("文件过大"));
     }
     Ok(String::from_utf8(bytes)?)
 }
@@ -464,47 +444,22 @@ impl Manifest {
         false
     }
 
-    /// 只把作者清單裡的顯示文字轉成繁體；識別碼、版本、鍵值、預設值與資料來源都保持原樣。
-    fn localize_display(&mut self) {
-        self.name = crate::zh::to_traditional(&self.name);
-        self.author = crate::zh::to_traditional(&self.author);
-        if let Some(accent) = &mut self.title_accent {
-            *accent = crate::zh::to_traditional(accent);
-        }
-        for field in &mut self.settings {
-            field.localize_display();
-        }
-        #[cfg(windows)]
-        {
-            if let Some(network) = &mut self.network {
-                if let Some(credential) = &mut network.credential {
-                    credential.label = crate::zh::to_traditional(&credential.label);
-                }
-            }
-            if let Some(attribution) = &mut self.attribution {
-                attribution.label = crate::zh::to_traditional(&attribution.label);
-            }
-        }
-    }
-
     fn decode(contents: &str) -> Result<Self> {
         #[derive(Deserialize)]
         struct ApiHeader {
             api: u64,
         }
-        // 先檢查版本，使未來清單新增的字段能夠得到明確的升級提示。
+        // 先检查版本，使未来清单新增的字段能够得到明确的升级提示。
         let ApiHeader { api } = serde_json::from_str(contents)?;
         if api > u64::from(API_VERSION) {
             return Err(fail(&format!(
-                "需要更新島仔。此插件需要 API v{api}，當前支持 v{API_VERSION}"
+                "需要更新岛仔。此插件需要 API v{api}，当前支持 v{API_VERSION}"
             )));
         }
-        let mut manifest: Self = serde_json::from_str(contents)?;
-        // 上游清單的中文是簡體；顯示層一律轉成繁體（台灣字形），不改 id、版本、設定值與結構。
-        manifest.localize_display();
+        let manifest: Self = serde_json::from_str(contents)?;
         manifest.validate()?;
         if manifest.cover.is_none() {
-            return Err(fail("請在插件清單中聲明 cover: \"cover.png\""));
+            return Err(fail("请在插件清单中声明 cover: \"cover.png\""));
         }
         Ok(manifest)
     }
@@ -515,6 +470,10 @@ impl Manifest {
 
     fn is_wireless(&self) -> bool {
         self.runtime == "assets" && self.id == WIRELESS_PLUGIN_ID
+    }
+
+    fn is_mail_view(&self) -> bool {
+        self.runtime == "assets" && self.has_capability("mail.view")
     }
 
     fn is_page_shortcuts(&self) -> bool {
@@ -538,7 +497,7 @@ impl Manifest {
         }
     }
 
-    /// 這個插件的輸出落在哪些位置，由能力表從能力和歸屬算出。
+    /// 这个插件的输出落在哪些位置，由能力表从能力和归属算出。
     fn surfaces(&self) -> Vec<Surface> {
         capabilities::check(&self.runtime, &self.owner, &self.capabilities).unwrap_or_default()
     }
@@ -555,7 +514,7 @@ impl Manifest {
         self.has_surface(Surface::StatusPage)
     }
 
-    /// 舊版日程歸屬的插件用 card 返回日曆標註。
+    /// 旧版日程归属的插件用 card 返回日历标注。
     fn legacy_calendar_card(&self) -> bool {
         self.owner == "calendar" && self.capabilities.iter().any(|c| c == "card")
     }
@@ -563,6 +522,8 @@ impl Manifest {
     fn source_limit(&self) -> u64 {
         if self.is_material() {
             MATERIAL_SOURCE_LIMIT
+        } else if self.is_mail_view() {
+            4096
         } else if self.is_page_shortcuts() {
             PAGE_SHORTCUT_SOURCE_LIMIT
         } else if let Some(kind) = self.appearance_kind() {
@@ -592,44 +553,44 @@ impl Manifest {
                 .split('.')
                 .all(|v| v.parse::<u32>().is_ok_and(|n| n.to_string() == v))
         {
-            return Err(fail("請核對插件 ID、作者、版本和 API 版本"));
+            return Err(fail("请核对插件 ID、作者、版本和 API 版本"));
         }
         capabilities::check(&m.runtime, &m.owner, &m.capabilities).map_err(|e| fail(&e))?;
         if m.navigation_icon.is_some() && (m.owner != "status" || !m.has_capability("status.page")) {
-            return Err(fail("navigationIcon 只適用於聲明瞭 status.page 的獨立功能插件"));
+            return Err(fail("navigationIcon 只适用于声明了 status.page 的独立功能插件"));
         }
         if m.title_accent.as_deref().is_some_and(|suffix| {
             !m.has_capability("status.page")
                 || !crate::plugin_status::valid_text(suffix, 80)
                 || !m.name.strip_suffix(suffix).is_some_and(|prefix| !prefix.trim().is_empty())
         }) {
-            return Err(fail("titleAccent 必須是狀態頁插件名稱的一段末尾文字"));
+            return Err(fail("titleAccent 必须是状态页插件名称的一段末尾文字"));
         }
         if m.has_capability("event") != m.events.is_some() {
-            return Err(fail("聲明 event 時須在 events 中訂閱一次 focus.finished"));
+            return Err(fail("声明 event 时须在 events 中订阅一次 focus.finished"));
         }
         if (!m.data.is_empty() || m.timezones) && m.runtime != "js"
             || !package_data::valid_names(&m.data)
         {
-            return Err(fail("只有腳本插件可聲明時區與包根目錄中的 JSON 數據文件"));
+            return Err(fail("只有脚本插件可声明时区与包根目录中的 JSON 数据文件"));
         }
         if let Some(layout) = &m.status_layout {
             if !m.is_status_page() {
-                return Err(fail("statusLayout 只適用於聲明瞭 status.page 的插件"));
+                return Err(fail("statusLayout 只适用于声明了 status.page 的插件"));
             }
             layout.validate().map_err(fail)?;
             if !layout.canvas_fields.is_empty() && !m.has_capability("action") {
-                return Err(fail("畫布輸入框需要聲明 action"));
+                return Err(fail("画布输入框需要声明 action"));
             }
             if !m.has_capability("status.canvas") && layout.components.iter().any(|component| {
                 matches!(component, crate::plugin_status::StatusComponent::Canvas {})
             }) {
-                return Err(fail("畫布佈局組件需要聲明 status.canvas"));
+                return Err(fail("画布布局组件需要声明 status.canvas"));
             }
             if !m.has_capability("action") && layout.components.iter().any(|component| {
                 matches!(component, crate::plugin_status::StatusComponent::Actions {} | crate::plugin_status::StatusComponent::Fields {})
             }) {
-                return Err(fail("狀態頁的按鈕和表單組件需要 action 能力"));
+                return Err(fail("状态页的按钮和表单组件需要 action 能力"));
             }
         }
         #[cfg(windows)]
@@ -641,14 +602,14 @@ impl Manifest {
                     (field.key.clone(), field.default.clone())
                 }).collect();
                 if (!https && !(action && network.only_hosts())) || !network.valid(&defaults) {
-                    return Err(fail("HTTPS 數據源或宿主打開鏈接需要有效的域名白名單和地址"));
+                    return Err(fail("HTTPS 数据源或宿主打开链接需要有效的域名白名单和地址"));
                 }
             } else if https {
-                return Err(fail("HTTPS 數據源需要聲明 network"));
+                return Err(fail("HTTPS 数据源需要声明 network"));
             }
             if let Some(attribution) = &m.attribution {
                 if !https || !m.network.as_ref().is_some_and(|network| attribution.valid(network)) {
-                    return Err(fail("數據來源標註須使用已聲明的 HTTPS 域名和有效名稱"));
+                    return Err(fail("数据来源标注须使用已声明的 HTTPS 域名和有效名称"));
                 }
             }
         }
@@ -662,10 +623,10 @@ impl Manifest {
                 || !m.permissions.is_empty()
                 || !m.settings.is_empty()
             {
-                return Err(fail("請核對無線設備兼容包的清單"));
+                return Err(fail("请核对无线设备兼容包的清单"));
             }
         } else if m.id == WIRELESS_PLUGIN_ID || m.capabilities.iter().any(|c| c == "wireless.receivers") {
-            return Err(fail("此插件 ID 專用於無線設備兼容包"));
+            return Err(fail("此插件 ID 专用于无线设备兼容包"));
         } else if let Some(kind) = m.appearance_kind() {
             if m.capabilities.as_slice() != [kind.capability()]
                 || m.entry != kind.entry()
@@ -674,7 +635,13 @@ impl Manifest {
                 || !m.settings.is_empty()
                 || m.material.is_some()
             {
-                return Err(fail("外觀資源包只接受一項資源能力和無權限的指定入口"));
+                return Err(fail("外观资源包只接受一项资源能力和无权限的指定入口"));
+            }
+        } else if m.is_mail_view() {
+            if m.entry != "mail-view.json" || m.refresh_seconds != default_refresh()
+                || !m.permissions.is_empty() || m.material.is_some()
+            {
+                return Err(fail("邮箱视图只支持无权限的 mail-view.json 资源入口"));
             }
         } else if m.runtime == "assets" {
             if !m.is_page_shortcuts()
@@ -684,7 +651,7 @@ impl Manifest {
                 || !m.settings.is_empty()
                 || m.material.is_some()
             {
-                return Err(fail("快捷切換插件僅接受頁面管理歸屬、單一導航能力和無權限的資源入口"));
+                return Err(fail("快捷切换插件仅接受页面管理归属、单一导航能力和无权限的资源入口"));
             }
         } else if material {
             if m.permissions.len() != 1
@@ -701,19 +668,19 @@ impl Manifest {
                 })
             {
                 return Err(fail(
-                    "請核對材質歸屬、屏幕底片權限、能力、彈簧參數和投影強度",
+                    "请核对材质归属、屏幕底片权限、能力、弹簧参数和投影强度",
                 ));
             }
         } else if m.material.is_some()
             || (!m.permissions.is_empty() && m.source_kind().is_none())
         {
-            return Err(fail("腳本插件只能申請 source.read 一項權限，且不能帶材質參數"));
+            return Err(fail("脚本插件只能申请 source.read 一项权限，且不能带材质参数"));
         }
         if m.settings.len() > 32
             || (!m.settings.is_empty() && !m.capabilities.iter().any(|c| c == "settings"))
             || !valid_fields(&m.settings, material)
         {
-            return Err(fail("設置項名稱、類型、默認值或顯示格式無效"));
+            return Err(fail("设置项名称、类型、默认值或显示格式无效"));
         }
         let entry = Path::new(&m.entry);
         let allowed_name = |s: &str| {
@@ -736,10 +703,10 @@ impl Manifest {
                 .components()
                 .all(|c| matches!(c, Component::Normal(_)))
         {
-            return Err(fail("插件入口文件的類型或路徑不符合清單要求"));
+            return Err(fail("插件入口文件的类型或路径不符合清单要求"));
         }
         if m.cover.as_deref().is_some_and(|cover| cover != COVER_FILE) {
-            return Err(fail("清單 cover 必須是根目錄文件 cover.png"));
+            return Err(fail("清单 cover 必须是根目录文件 cover.png"));
         }
         Ok(())
     }
@@ -748,7 +715,7 @@ impl Manifest {
 fn validate_code_free_files(
     dir: &Path, manifest: &Path, entry: &Path, material: bool, fonts: Option<&font_assets::Entry>,
 ) -> Result<()> {
-    let (package_type, entry_type) = if material { ("材質包", "WGSL") } else { ("外觀資源包", "JSON") };
+    let (package_type, entry_type) = if material { ("材质包", "WGSL") } else { ("外观资源包", "JSON") };
     let mut folders = vec![dir.to_path_buf()];
     while let Some(folder) = folders.pop() {
         for item in fs::read_dir(folder)? {
@@ -756,7 +723,7 @@ fn validate_code_free_files(
             let path = item.path();
             let kind = item.file_type()?;
             if kind.is_symlink() || path.canonicalize()? != path {
-                return Err(fail(&format!("{package_type}內不能包含鏈接或重定向路徑")));
+                return Err(fail(&format!("{package_type}内不能包含链接或重定向路径")));
             }
             if kind.is_dir() {
                 folders.push(path);
@@ -785,7 +752,7 @@ fn validate_code_free_files(
                     && !fonts.is_some_and(|fonts| fonts.files().any(|file| path == dir.join(file))))
             {
                 return Err(fail(&format!(
-                    "{package_type}只能包含 plugin.json、一個 {entry_type} 入口、cover.png 和說明文件",
+                    "{package_type}只能包含 plugin.json、一个 {entry_type} 入口、cover.png 和说明文件",
                 )));
             }
         }
@@ -798,7 +765,7 @@ impl Package {
     fn wireless_table(&self) -> Result<crate::bt::compat::Package> {
         let table = crate::bt::compat::Package::parse(self.source.as_bytes()).map_err(fail)?;
         if table.version() != self.manifest.version {
-            return Err(fail("無線設備兼容數據與插件清單版本不一致"));
+            return Err(fail("无线设备兼容数据与插件清单版本不一致"));
         }
         Ok(table)
     }
@@ -808,12 +775,12 @@ impl Package {
         let entry = Path::new(&manifest.entry);
         let base = path
             .parent()
-            .ok_or_else(|| fail("缺少包目錄"))?
+            .ok_or_else(|| fail("缺少包目录"))?
             .canonicalize()?;
         let cover = CoverPng::read(&base.join(COVER_FILE))?;
         let resolved = base.join(entry).canonicalize()?;
         if !resolved.starts_with(&base) || !resolved.is_file() {
-            return Err(fail("入口越出插件目錄"));
+            return Err(fail("入口越出插件目录"));
         }
         let source = bounded(&resolved, manifest.source_limit())?;
         let data = package_data::read_data(&manifest.data, |name| package_data::read_file(&base, name))?;
@@ -823,9 +790,9 @@ impl Package {
         if manifest.is_material() || manifest.appearance_kind().is_some() {
             if path.file_name().and_then(|name| name.to_str()) != Some("plugin.json") {
                 return Err(fail(if manifest.is_material() {
-                    "材質清單必須命名為 plugin.json"
+                    "材质清单必须命名为 plugin.json"
                 } else {
-                    "外觀資源包清單必須命名為 plugin.json"
+                    "外观资源包清单必须命名为 plugin.json"
                 }));
             }
             validate_code_free_files(&base, &base.join("plugin.json"), &resolved, manifest.is_material(), package.font_entry())?;
@@ -841,7 +808,7 @@ impl Package {
 
     fn from_entry(manifest: Manifest, source: String, cover: CoverPng) -> Result<Self> {
         if source.trim().is_empty() {
-            return Err(fail("插件入口文件為空"));
+            return Err(fail("插件入口文件为空"));
         }
         let package = Self {
             source,
@@ -853,6 +820,7 @@ impl Package {
             page_shortcut_colors: OnceLock::new(),
             appearance: OnceLock::new(),
         };
+        package.validate_mail_view()?;
         package.validate_page_shortcut_colors()?;
         package.validate_appearance()?;
         #[cfg(windows)]
@@ -888,6 +856,55 @@ impl Package {
         }
     }
 
+    fn validate_mail_view(&self) -> Result<()> {
+        if self.manifest.is_mail_view() {
+            self.mail_view(&Values::new())?;
+        }
+        Ok(())
+    }
+
+    fn mail_view(&self, values: &Values) -> Result<crate::mail_manage_ui::MailView> {
+        let layout: MailViewEntry = serde_json::from_str(&self.source)
+            .map_err(|_| fail("无效的邮箱视图入口"))?;
+        if layout.version != 1 {
+            return Err(fail("不支持的邮箱视图版本"));
+        }
+        let mut view = crate::mail_manage_ui::MailView { show_unread: layout.show_unread, ..Default::default() };
+        for (key, field_type) in [(layout.start_date_setting.as_deref(), "date"), (layout.aliases_setting.as_deref(), "list")] {
+            let Some(key) = key else { continue; };
+            let Some(field) = self.manifest.settings.iter().find(|field| field.key == key && field.kind == field_type) else {
+                return Err(fail("邮箱视图引用了不存在或类型不符的设置"));
+            };
+            let value = values.get(key).unwrap_or(&field.default);
+            if !valid_field(field, value) {
+                return Err(fail("邮箱视图设置值无效"));
+            }
+            if field_type == "date" {
+                if field.default != "0001-01-01" {
+                    return Err(fail("邮箱视图起始日期默认必须为 0001-01-01（不限日期）"));
+                }
+                view.start_date = chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()
+                    .filter(|date| *date > chrono::NaiveDate::from_ymd_opt(1, 1, 1).unwrap());
+            } else {
+                let valid = field.default == "[]" && field.item.as_ref().is_some_and(|items| {
+                    items.len() == 2 && ["address", "alias"].iter().all(|key| items.iter().any(|f| f.key == *key && f.kind == "text"))
+                });
+                if !valid {
+                    return Err(fail("邮箱别名必须是 address、alias 两个文本字段，且默认空列表"));
+                }
+                let rows = serde_json::from_str::<Vec<Values>>(value)?;
+                for mut row in rows {
+                    let address = row.remove("address").unwrap_or_default().trim().to_ascii_lowercase();
+                    let alias = row.remove("alias").unwrap_or_default().trim().to_owned();
+                    if !address.is_empty() && !alias.is_empty() && alias.chars().all(|c| !c.is_control()) {
+                        view.aliases.entry(address).or_insert(alias);
+                    }
+                }
+            }
+        }
+        Ok(view)
+    }
+
     fn validate_page_shortcut_colors(&self) -> Result<()> {
         if !self.manifest.is_page_shortcuts() || self.page_shortcut_colors.get().is_some() {
             return Ok(());
@@ -899,20 +916,20 @@ impl Package {
         }
 
         let ShortcutEntry { colors } = serde_json::from_str(&self.source)
-            .map_err(|_| fail("快捷切換入口應包含 colors 對象"))?;
+            .map_err(|_| fail("快捷切换入口应包含 colors 对象"))?;
         if colors.is_empty() {
-            return Err(fail("請為至少一個功能頁提供選中顏色"));
+            return Err(fail("请为至少一个功能页提供选中颜色"));
         }
         let palette = colors
             .into_iter()
             .map(|(page, color)| {
                 if !crate::app::PAGE_SHORTCUT_KEYS.contains(&page.as_str()) {
-                    return Err(fail(&format!("未識別的快捷切換頁面：{page}")));
+                    return Err(fail(&format!("未识别的快捷切换页面：{page}")));
                 }
                 let hex = color
                     .strip_prefix('#')
                     .filter(|hex| hex.len() == 6 && hex.bytes().all(|byte| byte.is_ascii_hexdigit()))
-                    .ok_or_else(|| fail(&format!("{page} 的選中顏色須為 #RRGGBB")))?;
+                    .ok_or_else(|| fail(&format!("{page} 的选中颜色须为 #RRGGBB")))?;
                 let [_, red, green, blue] = u32::from_str_radix(hex, 16)?.to_be_bytes();
                 Ok((page, [red, green, blue]))
             })
@@ -968,7 +985,7 @@ impl Package {
         let mut input = json!({"settings":values,"storage":storage,"today":today});
         let now = match mock.and_then(|mock| mock.now) {
             Some(millis) => chrono::DateTime::from_timestamp_millis(millis)
-                .ok_or_else(|| fail("模擬輸入 now 超出 Unix 毫秒時間戳的範圍"))?,
+                .ok_or_else(|| fail("模拟输入 now 超出 Unix 毫秒时间戳的范围"))?,
             None => chrono::Utc::now(),
         };
         script_settings::time_input(
@@ -1010,7 +1027,7 @@ impl Package {
         let has = |surface| surfaces.contains(&surface);
         if self.manifest.legacy_calendar_card() {
             if !output.marker.is_empty() {
-                return Err(fail("日程歸屬的插件請繼續用 card 返回日曆標註"));
+                return Err(fail("日程归属的插件请继续用 card 返回日历标注"));
             }
             output.marker = std::mem::take(&mut output.card);
             if surfaces.len() == 1 && output.marker.trim().is_empty() {
@@ -1019,27 +1036,27 @@ impl Package {
         }
         if let Some(status) = &output.status {
             if !has(Surface::StatusPage) {
-                return Err(fail("此插件未聲明狀態頁能力"));
+                return Err(fail("此插件未声明状态页能力"));
             }
             if !self.manifest.has_capability("action") && status.has_interactions() {
-                return Err(fail("此插件未聲明狀態頁交互能力"));
+                return Err(fail("此插件未声明状态页交互能力"));
             }
             if !status.valid() {
-                return Err(fail("狀態頁需要返回格式有效的 status 或 null"));
+                return Err(fail("状态页需要返回格式有效的 status 或 null"));
             }
             self.manifest.check_action_links(status)?;
         }
         if let Some(canvas) = output.canvas.take() {
-            let invalid = |reason: &str| fail(&format!("插件畫面有誤：{reason}"));
+            let invalid = |reason: &str| fail(&format!("插件画面有误：{reason}"));
             if !self.manifest.has_capability("status.canvas") {
-                return Err(invalid("插件未聲明 status.canvas"));
+                return Err(invalid("插件未声明 status.canvas"));
             }
             if self.manifest.status_layout.as_ref().is_some_and(|layout| {
                 !layout.components.iter().any(|component| {
                     matches!(component, crate::plugin_status::StatusComponent::Canvas {})
                 })
             }) {
-                return Err(invalid("有自定義佈局時，需要在 statusLayout 中加入 canvas 組件"));
+                return Err(invalid("有自定义布局时，需要在 statusLayout 中加入 canvas 组件"));
             }
             let canvas = Canvas::parse(canvas).map_err(|error| invalid(&error))?;
             canvas.validate_images(|name| self.canvas_images.contains_key(name))
@@ -1055,10 +1072,10 @@ impl Package {
         }
         if let Some(quota) = &output.quota {
             if !has(Surface::Quota) {
-                return Err(fail("此插件未聲明額度來源能力"));
+                return Err(fail("此插件未声明额度来源能力"));
             }
             if !quota.valid() {
-                return Err(fail("額度來源需要返回格式有效的 quota 或 null"));
+                return Err(fail("额度来源需要返回格式有效的 quota 或 null"));
             }
         }
         if output.notice.as_ref().is_some_and(|notice| {
@@ -1067,7 +1084,7 @@ impl Package {
             return Err(fail("插件提醒需要 notice 能力以及格式有效的 id、title 和 body"));
         }
         if output.pinned.as_ref().is_some_and(|pinned| !has(Surface::IslandPinned) || !pinned.valid()) {
-            return Err(fail("常駐位需要聲明 island.pinned 並返回符合格式的 pinned"));
+            return Err(fail("常驻位需要声明 island.pinned 并返回符合格式的 pinned"));
         }
         if let Some(pinned) = &output.pinned {
             pinned.validate_canvas(self)?;
@@ -1078,29 +1095,29 @@ impl Package {
             output.pinned = None;
         }
         if has(Surface::TasksCard) {
-            // 只有卡片一種輸出時必須有字；同時有其他輸出時，空字表示這次不顯示卡片。
+            // 只有卡片一种输出时必须有字；同时有其他输出时，空字表示这次不显示卡片。
             let blank = output.card.trim().is_empty();
             if output.card.chars().count() > 160 || (blank && surfaces.len() == 1) {
                 return Err(fail("卡片文字需要 1 至 160 字"));
             }
         } else if !output.card.is_empty() {
-            return Err(fail("此插件未聲明卡片能力"));
+            return Err(fail("此插件未声明卡片能力"));
         }
         if has(Surface::CalendarMarker) {
             if output.marker.chars().count() > 160 {
-                return Err(fail("日曆標註最多 160 字"));
+                return Err(fail("日历标注最多 160 字"));
             }
         } else if !output.marker.is_empty() {
-            return Err(fail("此插件未聲明日曆標註能力"));
+            return Err(fail("此插件未声明日历标注能力"));
         }
         if !output.storage.is_null() && !self.manifest.capabilities.iter().any(|s| s == "storage") {
-            return Err(fail("未聲明私有存儲"));
+            return Err(fail("未声明私有存储"));
         }
         Ok((output, raw))
     }
 }
 
-// 後台先寫好臨時快照。只有界面仍接受這次結果，才替換正式記錄。
+// 后台先写好临时快照。只有界面仍接受这次结果，才替换正式记录。
 struct Staged(PathBuf);
 impl Drop for Staged {
     fn drop(&mut self) {
@@ -1141,7 +1158,7 @@ pub struct LocalPlugins {
     active_page_shortcuts: Option<String>,
     cards: BTreeMap<String, String>,
     markers: BTreeMap<String, String>,
-    /// 上一輪開著的輸出位置。模塊重新打開時，讓其他歸屬的插件立刻補算這個位置的內容。
+    /// 上一轮开着的输出位置。模块重新打开时，让其他归属的插件立刻补算这个位置的内容。
     live: Vec<Surface>,
     quota: BTreeMap<String, PluginQuota>,
     status: BTreeMap<String, std::result::Result<(u64, PluginStatus), StatusHealth>>,
@@ -1216,12 +1233,11 @@ impl LocalPlugins {
                 if !valid_id(id) {
                     continue;
                 }
-                // 快照中的腳本、包數據和設置字符串在 JSON 中還會轉義。
+                // 快照中的脚本、包数据和设置字符串在 JSON 中还会转义。
                 let parsed = bounded(&p, font_assets::SNAPSHOT_LIMIT)
                     .ok()
                     .and_then(|v| {
-                        let mut record = serde_json::from_str::<Record>(&v).ok()?;
-                        record.localize_display();
+                        let record = serde_json::from_str::<Record>(&v).ok()?;
                         (v.len() <= 4 * 1024 * 1024 || record.package.as_ref().is_some_and(|package| {
                             package.manifest.has_capability("appearance.font")
                         })).then_some(record)
@@ -1270,13 +1286,19 @@ impl LocalPlugins {
         self.dir.join(format!("local-{id}.json"))
     }
     fn put(&mut self, id: &str, r: Record) -> Result<()> {
+        if r.enabled && r.package.as_ref().is_some_and(|p| p.manifest.is_mail_view())
+            && self.records.iter().any(|(other, record)| other != id && record.enabled
+                && record.package.as_ref().is_some_and(|p| p.manifest.is_mail_view()))
+        {
+            return Err(fail("只能启用一个邮箱视图，请先停用当前使用的插件"));
+        }
         let shortcuts_changed = r.is_page_shortcuts()
             || self.records.get(id).is_some_and(Record::is_page_shortcuts);
         if r.enabled
             && r.is_page_shortcuts()
             && self.active_page_shortcuts.as_deref().is_some_and(|active| active != id)
         {
-            return Err(fail("只能啟用一個快捷切換插件，請先停用當前使用的插件"));
+            return Err(fail("只能启用一个快捷切换插件，请先停用当前使用的插件"));
         }
         if !r.enabled || r.package.is_none() {
             self.forget_appearance(id)?;
@@ -1303,6 +1325,12 @@ impl LocalPlugins {
             .iter()
             .find(|(_, record)| record.enabled && record.is_page_shortcuts())
             .map(|(id, _)| id.clone());
+    }
+
+    pub(crate) fn active_mail_view(&self) -> Option<(&str, crate::mail_manage_ui::MailView)> {
+        let (id, record) = self.records.iter().find(|(_, record)| record.enabled
+            && record.package.as_ref().is_some_and(|package| package.manifest.is_mail_view()))?;
+        Some((id.as_str(), record.package.as_ref()?.mail_view(&record.values).ok()?))
     }
 
     pub(crate) fn active_page_shortcut_colors(&self) -> Option<&BTreeMap<String, [u8; 3]>> {
@@ -1356,14 +1384,14 @@ impl LocalPlugins {
             let mut record = self.installed(id)?;
             #[cfg(windows)]
             if record.market_revoked {
-                return Err(fail("當前插件版本已撤回，請更新後啟用"));
+                return Err(fail("当前插件版本已撤回，请更新后启用"));
             }
             if record.material_package().is_none() {
-                return Err(fail("所選插件不提供 GPU 材質"));
+                return Err(fail("所选插件不提供 GPU 材质"));
             }
             if !record.material_granted {
                 if !grant {
-                    return Err(fail("請先確認讀取島體背後屏幕畫面的權限"));
+                    return Err(fail("请先确认读取岛体背后屏幕画面的权限"));
                 }
                 record.material_granted = true;
                 self.put(id, record)?;
@@ -1413,10 +1441,10 @@ impl LocalPlugins {
                     .iter()
                     .find(|field| field.key == key)
             })
-            .ok_or_else(|| fail("找不到該材質參數"))?;
+            .ok_or_else(|| fail("找不到该材质参数"))?;
         let value = value.to_string();
         if !valid_field(field, &value) {
-            return Err(fail("材質參數超出有效範圍"));
+            return Err(fail("材质参数超出有效范围"));
         }
         if record.values.get(key) != Some(&value) {
             record.values.insert(key.to_owned(), value);
@@ -1444,10 +1472,10 @@ impl LocalPlugins {
         let path = path.canonicalize()?;
         let pkg = Package::read(&path)?;
         if pkg.manifest.is_wireless() {
-            return Err(fail("請從插件集市安裝無線設備兼容包"));
+            return Err(fail("请从插件集市安装无线设备兼容包"));
         }
         if !cfg!(all(windows, feature = "sdk-material")) && pkg.manifest.is_material() {
-            return Err(fail("當前版本未啟用 Windows GPU 材質支持"));
+            return Err(fail("当前版本未启用 Windows GPU 材质支持"));
         }
         let id = pkg.manifest.id.clone();
         let mut record = Record {
@@ -1467,20 +1495,21 @@ impl LocalPlugins {
             #[cfg(windows)]
             market_revoked: false,
             status_page_disabled: false,
+            status_page_settings_hidden: false,
             notice_history: NoticeHistory::default(),
         };
         if let Some(old) = self.records.get(&id) {
             if old.package.is_some() {
-                return Err(fail("此插件 ID 已安裝"));
+                return Err(fail("此插件 ID 已安装"));
             }
             if old.origin != path || old.from_market {
-                return Err(fail("保留數據屬於原本地清單，請從原位置重裝"));
+                return Err(fail("保留数据属于原本地清单，请从原位置重装"));
             }
             record.storage = old.storage.clone();
             record.notice_history = old.notice_history.clone();
             record.values = old.values.clone();
         } else if self.path(&id).exists() && !self.invalid.contains(&id) {
-            return Err(fail("已有無法讀取的插件記錄"));
+            return Err(fail("已有无法读取的插件记录"));
         }
         record.values = pkg.settings_values(&record.values);
         record.package = Some(pkg);
@@ -1493,13 +1522,13 @@ impl LocalPlugins {
             .get(id)
             .filter(|r| r.package.is_some())
             .cloned()
-            .ok_or_else(|| fail("插件未安裝"))
+            .ok_or_else(|| fail("插件未安装"))
     }
     pub(crate) fn enable(&mut self, id: &str, on: bool) -> Result<()> {
         let mut r = self.installed(id)?;
         #[cfg(windows)]
         if on && r.market_revoked {
-            return Err(fail("當前插件版本已撤回，請更新後啟用"));
+            return Err(fail("当前插件版本已撤回，请更新后启用"));
         }
         if r.package.as_ref().unwrap().manifest.is_material() {
             #[cfg(feature = "sdk-material")]
@@ -1509,7 +1538,7 @@ impl LocalPlugins {
                 return Ok(());
             }
             #[cfg(not(feature = "sdk-material"))]
-            return Err(fail("當前版本未啟用 GPU 材質支持"));
+            return Err(fail("当前版本未启用 GPU 材质支持"));
         }
         r.enabled = on;
         self.put(id, r)?;
@@ -1518,17 +1547,32 @@ impl LocalPlugins {
     }
 
     pub(crate) fn set_status_page_enabled(&mut self, id: &str, on: bool) -> Result<()> {
+        self.set_status_page_display(id, on, false)
+    }
+
+    pub(crate) fn set_status_page_display(&mut self, id: &str, on: bool, hide_settings: bool) -> Result<()> {
         let mut record = self.installed(id)?;
         if !record.package.as_ref().unwrap().manifest.is_status_page() {
-            return Err(fail("此插件沒有獨立狀態頁"));
+            return Err(fail("此插件没有独立状态页"));
         }
         let disabled = !on;
-        if record.status_page_disabled != disabled {
+        let settings_hidden = disabled && hide_settings;
+        let runtime_changed = record.status_page_disabled != disabled;
+        if runtime_changed || record.status_page_settings_hidden != settings_hidden {
             record.status_page_disabled = disabled;
+            record.status_page_settings_hidden = settings_hidden;
             self.put(id, record)?;
-            self.forget_view(id);
+            if runtime_changed {
+                self.forget_view(id);
+            }
         }
         Ok(())
+    }
+
+    pub(crate) fn status_page_settings_hidden(&self, id: &str) -> bool {
+        self.records.get(id).is_some_and(|record| {
+            record.status_page_disabled && record.status_page_settings_hidden
+        })
     }
 
     #[cfg(windows)]
@@ -1549,17 +1593,17 @@ impl LocalPlugins {
     #[cfg(windows)]
     fn set_source_grant_with_secret(&mut self, id: &str, grant: Option<SourceGrant>, secret: Option<&str>) -> Result<()> {
         let mut record = self.installed(id)?;
-        let kind = record.source_kind().ok_or_else(|| fail("此插件未聲明數據源"))?;
+        let kind = record.source_kind().ok_or_else(|| fail("此插件未声明数据源"))?;
         if grant.as_ref().is_some_and(|grant| grant.kind() != kind) {
-            return Err(fail("數據源類型與插件申請不一致"));
+            return Err(fail("数据源类型与插件申请不一致"));
         }
         let credential = record.network().and_then(|network| network.credential.as_ref());
         let previous_secret = if let Some(grant) = grant.as_ref().filter(|grant| grant.kind() == SourceKind::Https) {
             if !record.network().is_some_and(|network| network.accepts(grant)) {
-                return Err(fail("授權範圍與插件的 HTTPS 數據源聲明不一致"));
+                return Err(fail("授权范围与插件的 HTTPS 数据源声明不一致"));
             }
             if let Some(config) = credential {
-                let secret = secret.ok_or_else(|| fail("請輸入數據源密鑰"))?;
+                let secret = secret.ok_or_else(|| fail("请输入数据源密钥"))?;
                 config.header_value(secret)?;
                 self.forget_view(id);
                 let previous = source_https::load_secret(id)?;
@@ -1596,10 +1640,10 @@ impl LocalPlugins {
             let mut values = v;
             if let Some(seconds) = values.remove(source_https::REFRESH_FIELD) {
                 let min = r.network().and_then(|network| network.min_refresh_seconds)
-                    .ok_or_else(|| fail("此插件未開放刷新間隔設置"))?;
+                    .ok_or_else(|| fail("此插件未开放刷新间隔设置"))?;
                 let seconds = seconds.parse::<u32>().ok()
                     .filter(|value| (min..=source_https::MAX_REFRESH_SECONDS).contains(value))
-                    .ok_or_else(|| fail("刷新間隔超出允許範圍"))?;
+                    .ok_or_else(|| fail("刷新间隔超出允许范围"))?;
                 r.source_refresh_seconds = Some(seconds);
             }
             values
@@ -1613,7 +1657,7 @@ impl LocalPlugins {
             .iter()
             .all(|f| v.get(&f.key).is_some_and(|s| valid_field(f, s)))
         {
-            return Err(fail("請檢查設置格式和取值範圍"));
+            return Err(fail("请检查设置格式和取值范围"));
         }
         r.values = v;
         self.put(id, r)?;
@@ -1637,6 +1681,7 @@ impl LocalPlugins {
             r.material_granted = false;
             r.source_grant = None;
             r.status_page_disabled = false;
+            r.status_page_settings_hidden = false;
             self.put(id, r)?
         } else {
             self.forget_appearance(id)?;
@@ -1657,10 +1702,10 @@ impl LocalPlugins {
         self.restore_pins();
         Ok(())
     }
-    /// 移除重啟檢查沒通過的安裝記錄。插件已經停止運行，這裡只刪掉留下的記錄文件。
+    /// 移除重启检查没通过的安装记录。插件已经停止运行，这里只删掉留下的记录文件。
     fn remove_invalid(&mut self, id: &str) -> Result<()> {
         if !self.invalid.contains(id) {
-            return Err(fail("沒有需要移除的記錄"));
+            return Err(fail("没有需要移除的记录"));
         }
         match fs::remove_file(self.path(id)) {
             Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(error.into()),
@@ -1718,7 +1763,7 @@ impl LocalPlugins {
                 self.live.retain(|live| *live != surface);
             } else if !was_on || (surface == Surface::CalendarMarker && new_day) {
                 if was_on {
-                    // 換日：昨天的標註作廢，日程歸屬的插件也重新計算。
+                    // 换日：昨天的标注作废，日程归属的插件也重新计算。
                     self.pause_owner(owner);
                 }
                 self.recompute_surface(owner, surface);
@@ -1751,7 +1796,7 @@ impl LocalPlugins {
             let result = job
                 .result
                 .join()
-                .unwrap_or_else(|_| Err("插件線程退出".into()))
+                .unwrap_or_else(|_| Err("插件线程退出".into()))
                 .and_then(|rendered| {
                     let Rendered::Output(mut output, staged) = rendered else {
                         return Ok(None);
@@ -1792,7 +1837,7 @@ impl LocalPlugins {
                     }
                     let live = self.live.clone();
                     for surface in manifest.surfaces() {
-                        // 模塊關著時這一位置的結果直接丟掉，重新打開時會補算。
+                        // 模块关着时这一位置的结果直接丢掉，重新打开时会补算。
                         let shown = surface == Surface::StatusPage || live.contains(&surface);
                         match surface {
                             Surface::IslandPinned => self.pinned.set_output(&id, pinned.as_ref()),
@@ -1872,7 +1917,7 @@ impl LocalPlugins {
                 break;
             }
             let reading_source = self.records[&id].source_grant().is_some();
-            // 慢數據源只佔一個後台名額，普通插件仍可刷新。
+            // 慢数据源只占一个后台名额，普通插件仍可刷新。
             if reading_source && self.jobs.values().any(|job| job.reading_source) {
                 continue;
             }
@@ -1918,7 +1963,7 @@ impl LocalPlugins {
                     None => SourceInput::Unconfigured,
                 };
                 if worker_cancelled.load(Ordering::Acquire) {
-                    return Err("讀取已取消".into());
+                    return Err("读取已取消".into());
                 }
                 let package = r.package.as_ref().unwrap();
                 if matches!(&call, Call::Refresh)
@@ -1935,12 +1980,12 @@ impl LocalPlugins {
                 let output = package
                     .render_input_with(&r.values, &r.storage, &today, source, call, None, &mut logs);
                 if worker_cancelled.load(Ordering::Acquire) {
-                    return Err("讀取已取消".into());
+                    return Err("读取已取消".into());
                 }
                 if !r.from_market {
                     if let Err(error) = &output {
                         let detail = error.to_string();
-                        if detail.starts_with("插件畫面有誤") {
+                        if detail.starts_with("插件画面有误") {
                             logs.push(detail);
                         }
                     }
@@ -1973,13 +2018,13 @@ impl LocalPlugins {
                 }
                 Err(_) => {
                     self.status.remove(&id);
-                    self.errors.insert(id, "暫時無法啟動插件刷新，請稍後重試".into());
+                    self.errors.insert(id, "暂时无法启动插件刷新，请稍后重试".into());
                 }
             }
         }
     }
 
-    /// 某個模塊重新打開或換日時，讓帶有這個輸出位置、但歸屬在別處的插件馬上重算。
+    /// 某个模块重新打开或换日时，让带有这个输出位置、但归属在别处的插件马上重算。
     fn recompute_surface(&mut self, owner: &str, surface: Surface) {
         let ids: Vec<_> = self
             .records
@@ -2083,7 +2128,7 @@ impl LocalPlugins {
             None if record.source_kind().is_some() && record.source_grant().is_none() => {
                 (None, StatusHealth::Unconfigured)
             }
-            None if self.errors.get(id).is_some_and(|error| error.starts_with("插件畫面有誤")) => {
+            None if self.errors.get(id).is_some_and(|error| error.starts_with("插件画面有误")) => {
                 (None, StatusHealth::CanvasInvalid)
             }
             None if self.errors.contains_key(id) => (None, StatusHealth::Invalid),

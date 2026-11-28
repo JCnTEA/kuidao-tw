@@ -1,8 +1,8 @@
-// 站點地址：https://api.trae.cn。API Key 填 Cookie 請求頭的值，Access Token 填 Cloud-IDE-JWT 後的令牌。
+// 站点地址：https://api.trae.cn。API Key 填 Cookie 请求头的值，Access Token 填 Cloud-IDE-JWT 后的令牌。
 (() => {
   const cookie = "{{apiKey}}".trim();
   const token = "{{accessToken}}".trim();
-  if (!cookie || !token) throw new Error("請填寫 TRAE 國區的 Cookie 和短期令牌");
+  if (!cookie || !token) throw new Error("请填写 TRAE 国区的 Cookie 和短期令牌");
 
   return {
     request: {
@@ -24,7 +24,7 @@
           !Number.isFinite(total) || total < 0 || !Number.isFinite(used) || used < 0) {
         return { isValid: false };
       }
-      return { planName: "總積分", unit: "積分", remaining: Math.max(0, total - used), total, used };
+      return { planName: "总积分", unit: "积分", remaining: Math.max(0, total - used), total, used };
     }
   };
 })()

@@ -46,7 +46,7 @@ fn detects_two_saves_after_debounce_preserves_state_and_skips_market() -> Result
     plugins.enable(ID, true)?;
     let mut record = plugins.installed(ID)?;
     record.storage = json!({"count": 5});
-    record.values.insert("title".into(), "自定義".into());
+    record.values.insert("title".into(), "自定义".into());
     plugins.put(ID, record)?;
     plugins.set_watch_files(true);
     let initial = Instant::now();
@@ -73,7 +73,7 @@ fn detects_two_saves_after_debounce_preserves_state_and_skips_market() -> Result
     let record = plugins.installed(ID)?;
     assert_eq!(record.package.as_ref().unwrap().source, latest);
     assert_eq!(record.storage, json!({"count": 5}));
-    assert_eq!(record.values["title"], "自定義");
+    assert_eq!(record.values["title"], "自定义");
     assert!(record.enabled && !plugins.next.contains_key(ID));
 
     let mut market = record;
@@ -81,7 +81,7 @@ fn detects_two_saves_after_debounce_preserves_state_and_skips_market() -> Result
     plugins.put(ID, market)?;
     fs::write(
         &script,
-        "function refresh() { return {card: '集市不重載'}; }",
+        "function refresh() { return {card: '集市不重载'}; }",
     )?;
     plugins.poll_local_reloads(initial + POLL * 4);
     plugins.poll_local_reloads(initial + POLL * 5);
@@ -92,11 +92,11 @@ fn detects_two_saves_after_debounce_preserves_state_and_skips_market() -> Result
 
 #[test]
 fn data_monitor_accepts_unicode_root_names_and_rejects_reserved_paths() {
-    assert!(valid_data_name("2026 法定節假日.json"));
+    assert!(valid_data_name("2026 法定节假日.json"));
     for name in [
-        "../節假日.json",
-        "目錄\\節假日.json",
-        "C:節假日.json",
+        "../节假日.json",
+        "目录\\节假日.json",
+        "C:节假日.json",
         "plugin.json",
         "AUX.data.json",
         "COM2.json",
@@ -110,14 +110,14 @@ fn data_monitor_accepts_unicode_root_names_and_rejects_reserved_paths() {
 fn declared_data_and_manifest_changes_are_debounced_together() -> Result<()> {
     let fixture = Fixture::new()?;
     let origin = fixture.0.join("plugin.json");
-    let data = fixture.0.join("2026 法定節假日.json");
+    let data = fixture.0.join("2026 法定节假日.json");
     let unused = fixture.0.join("notes.json");
     fs::write(&data, "{}")?;
     let files = WatchedPackage::files(
         &fixture.0,
         &origin,
         "main.js",
-        &json!({"data": ["2026 法定節假日.json"]}),
+        &json!({"data": ["2026 法定节假日.json"]}),
     );
     assert!(files.contains(&data) && !files.contains(&unused));
     let mut watch = WatchedPackage {
@@ -142,7 +142,7 @@ fn declared_data_and_manifest_changes_are_debounced_together() -> Result<()> {
 fn installed_data_changes_refresh_the_plugin_and_keep_its_state() -> Result<()> {
     let fixture = Fixture::new()?;
     let origin = fixture.0.join("plugin.json");
-    let name = "2026 法定節假日.json";
+    let name = "2026 法定节假日.json";
     let data = fixture.0.join(name);
     let mut manifest: Value = serde_json::from_slice(&fs::read(&origin)?)?;
     manifest["data"] = json!([name]);
@@ -151,7 +151,7 @@ fn installed_data_changes_refresh_the_plugin_and_keep_its_state() -> Result<()> 
     fs::write(
         fixture.0.join("main.js"),
         r#"function refresh(i) {
-            return {card: [i.settings.title, i.storage.count, i.data["2026 法定節假日.json"].day].join("/"), storage: i.storage};
+            return {card: [i.settings.title, i.storage.count, i.data["2026 法定节假日.json"].day].join("/"), storage: i.storage};
         }"#,
     )?;
     let dir = fixture.0.join("installed");
@@ -159,7 +159,7 @@ fn installed_data_changes_refresh_the_plugin_and_keep_its_state() -> Result<()> 
     host.install(&origin)?;
     let mut record = host.installed(ID)?;
     record.storage = json!({"count": 5});
-    record.values.insert("title".into(), "自定義".into());
+    record.values.insert("title".into(), "自定义".into());
     host.put(ID, record)?;
     host.enable(ID, true)?;
     let settle = |host: &mut LocalPlugins| {
@@ -169,32 +169,32 @@ fn installed_data_changes_refresh_the_plugin_and_keep_its_state() -> Result<()> 
             if host.jobs.is_empty() {
                 break;
             }
-            assert!(Instant::now() < deadline, "等待插件刷新超時");
+            assert!(Instant::now() < deadline, "等待插件刷新超时");
             std::thread::sleep(Duration::from_millis(1));
         }
     };
     settle(&mut host);
-    assert_eq!(host.cards[ID], "自定義/5/初版");
+    assert_eq!(host.cards[ID], "自定义/5/初版");
 
     host.set_watch_files(true);
     let start = Instant::now();
-    fs::write(&data, json!({"day": "中間保存"}).to_string())?;
+    fs::write(&data, json!({"day": "中间保存"}).to_string())?;
     host.poll_local_reloads(start + POLL);
-    assert_eq!(host.cards[ID], "自定義/5/初版");
-    fs::write(&data, json!({"day": "最後一次保存"}).to_string())?;
+    assert_eq!(host.cards[ID], "自定义/5/初版");
+    fs::write(&data, json!({"day": "最后一次保存"}).to_string())?;
     host.poll_local_reloads(start + POLL * 2);
-    assert_eq!(host.cards[ID], "自定義/5/初版");
+    assert_eq!(host.cards[ID], "自定义/5/初版");
     host.poll_local_reloads(start + POLL * 3);
     settle(&mut host);
-    assert_eq!(host.cards[ID], "自定義/5/最後一次保存");
+    assert_eq!(host.cards[ID], "自定义/5/最后一次保存");
 
     let host = LocalPlugins::open(dir);
     let record = host.installed(ID)?;
-    assert_eq!(record.values["title"], "自定義");
+    assert_eq!(record.values["title"], "自定义");
     assert_eq!(record.storage, json!({"count": 5}));
     assert!(record.enabled);
     let card = record.package.unwrap().render(&record.values, &record.storage, "2026-11-23")?;
-    assert_eq!(card.card, "自定義/5/最後一次保存");
+    assert_eq!(card.card, "自定义/5/最后一次保存");
     Ok(())
 }
 
@@ -209,7 +209,7 @@ fn changing_https_scope_on_reload_revokes_the_existing_credential() -> Result<()
     manifest["network"] = json!({
         "hosts": ["example.com"],
         "url": "https://example.com/data",
-        "credential": {"label": "測試密鑰", "header": "X-Test-Key", "prefix": "Bearer "}
+        "credential": {"label": "测试密钥", "header": "X-Test-Key", "prefix": "Bearer "}
     });
     fs::write(&origin, manifest.to_string())?;
     struct Cleanup<'a>(&'a str);
@@ -229,7 +229,7 @@ fn changing_https_scope_on_reload_revokes_the_existing_credential() -> Result<()
 
     host.set_watch_files(true);
     let start = Instant::now();
-    fs::write(fixture.0.join("main.js"), "function refresh() { return {card: '更新腳本'}; }")?;
+    fs::write(fixture.0.join("main.js"), "function refresh() { return {card: '更新脚本'}; }")?;
     host.poll_local_reloads(start + POLL);
     host.poll_local_reloads(start + POLL * 2);
     assert_eq!(host.source_grant(&id), Some(&grant));
@@ -273,7 +273,7 @@ fn local_reload_releases_a_removed_pinned_capability() -> Result<()> {
 #[test]
 fn limits_script_logs_and_locates_syntax_and_runtime_errors() -> Result<()> {
     let mut logs = Vec::new();
-    let source = "function refresh() { for (let j = 0; j < 25; ++j) console.log('測'.repeat(220), j); return {}; }";
+    let source = "function refresh() { for (let j = 0; j < 25; ++j) console.log('测'.repeat(220), j); return {}; }";
     assert_eq!(
         run_script(
             source.as_bytes(),
@@ -292,7 +292,7 @@ fn limits_script_logs_and_locates_syntax_and_runtime_errors() -> Result<()> {
     }
     assert_eq!(history.snapshot().len(), 100);
     for source in [
-        "function refresh() {\n\n  throw new Error('運行錯誤');\n}",
+        "function refresh() {\n\n  throw new Error('运行错误');\n}",
         "function refresh() {\n\n  let = ;\n}",
     ] {
         let error = run_script(
@@ -318,7 +318,7 @@ fn plugin_test_runs_one_refresh_with_mock_input_and_reports_capabilities() -> Re
         fixture.0.join("main.js"),
         r#"
 function refresh(i) {
-    console.log("離線試跑", i.sources.gold.status);
+    console.log("离线试跑", i.sources.gold.status);
     return {card: [i.settings.title, i.settings.target, i.storage.last, i.now, i.sources.gold.text].join("/")};
 }
 "#,
@@ -326,7 +326,7 @@ function refresh(i) {
     fs::write(
         &path,
         json!({
-            "settings": {"title": "模擬"},
+            "settings": {"title": "模拟"},
             "storage": {"last": 3},
             "now": 1795380000000i64,
             "sources": {"gold": {"status": "ready", "text": "718"}}
@@ -335,12 +335,12 @@ function refresh(i) {
     )?;
     let report = market::test_project(&manifest, Some(&path))?;
     assert!(
-        report.contains("模擬/2026-12-25/3/1795380000000/718"),
+        report.contains("模拟/2026-12-25/3/1795380000000/718"),
         "{report}"
     );
     assert!(report.contains("card · 可用"), "{report}");
     assert!(
-        report.contains("refresh 用時") && report.contains("離線試跑 ready"),
+        report.contains("refresh 用时") && report.contains("离线试跑 ready"),
         "{report}"
     );
     let mut raw: Value = serde_json::from_str(&fs::read_to_string(&manifest)?)?;
@@ -352,7 +352,7 @@ function refresh(i) {
     assert!(error.contains("unknown.test · 未支持"), "{error}");
     assert!(
         capability_report(&json!({"runtime":"js","capabilities":["status.page"]}))
-            .contains("status.page · 實驗")
+            .contains("status.page · 实验")
     );
     Ok(())
 }
@@ -398,10 +398,10 @@ fn plugin_test_supplies_mock_data_to_legacy_single_source_plugins() -> Result<()
     )?;
     fs::write(
         &mock,
-        json!({"sources": {"default": {"status":"ready","text":"離線"}}}).to_string(),
+        json!({"sources": {"default": {"status":"ready","text":"离线"}}}).to_string(),
     )?;
     let report = market::test_project(&path, Some(&mock))?;
-    assert!(report.contains("ready/離線/number"), "{report}");
+    assert!(report.contains("ready/离线/number"), "{report}");
     fs::write(
         &mock,
         json!({"sources": {"default": {"status":"offline"}}}).to_string(),

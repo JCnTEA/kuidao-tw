@@ -37,7 +37,7 @@ impl Fixture {
         fs::write(
             &path,
             serde_json::to_vec(&json!({
-                "id": id, "name": "模擬額度", "author": "示例", "version": "1.0.0",
+                "id": id, "name": "模拟额度", "author": "示例", "version": "1.0.0",
                 "api": 1, "runtime": "js", "entry": "main.js", "owner": owner, "cover": COVER_FILE,
                 "capabilities": capabilities, "dataVersion": 1, "permissions": permissions, "settings": []
             }))?,
@@ -59,7 +59,7 @@ fn settle(host: &mut LocalPlugins, quota_on: bool) {
         if host.jobs.is_empty() {
             return;
         }
-        assert!(Instant::now() < deadline, "等待額度來源刷新超時");
+        assert!(Instant::now() < deadline, "等待额度来源刷新超时");
         thread::sleep(Duration::from_millis(2));
     }
 }
@@ -80,17 +80,17 @@ fn quota_sources_keep_independent_results_and_follow_the_module_switch() -> Resu
         json!({"source.read":"file"}),
         r#"function refresh(i) {
             if (i.source.status === 'ready') return JSON.parse(i.source.text);
-            return {quota:{windows:[{label:'後備數據',remaining:1,unit:'點'}]}};
+            return {quota:{windows:[{label:'后备数据',remaining:1,unit:'点'}]}};
         }"#,
     )?;
     let other = fixture.plugin(
         OTHER_SOURCE, "quota", &["quota.source", "timer"], json!({}),
-        r#"function refresh() { return {quota:{windows:[{label:'另一來源',remaining:54,unit:'次'}]}}; }"#,
+        r#"function refresh() { return {quota:{windows:[{label:'另一来源',remaining:54,unit:'次'}]}}; }"#,
     )?;
     let file = fixture.0.join("quota.json");
     fs::write(
         &file,
-        r#"{"quota":{"windows":[{"label":"模擬積分","remaining":80,"limit":100,"unit":"點"}]}}"#,
+        r#"{"quota":{"windows":[{"label":"模拟积分","remaining":80,"limit":100,"unit":"点"}]}}"#,
     )?;
     let mut host = LocalPlugins::open(fixture.0.join("installed"));
     host.install(&path)?;
@@ -111,7 +111,7 @@ fn quota_sources_keep_independent_results_and_follow_the_module_switch() -> Resu
     settle(&mut host, true);
     assert_eq!(
         allowance(&host, FILE_SOURCE),
-        Some((Some(80.0), Some("點"))),
+        Some((Some(80.0), Some("点"))),
         "{:?}",
         host.errors
     );
@@ -135,7 +135,7 @@ fn quota_sources_keep_independent_results_and_follow_the_module_switch() -> Resu
     settle(&mut host, true);
     assert_eq!(
         allowance(&host, FILE_SOURCE),
-        Some((Some(80.0), Some("點")))
+        Some((Some(80.0), Some("点")))
     );
 
     host.next.remove(FILE_SOURCE);
@@ -169,14 +169,14 @@ fn quota_sources_reject_invalid_payloads_and_undeclared_outputs() -> Result<()> 
         "quota",
         &["card"],
         json!({}),
-        "function refresh(){return {card:'內容'};}",
+        "function refresh(){return {card:'内容'};}",
     )?;
     assert!(Package::read(&denied).is_err());
 
     let values = Values::new();
     let foreign = fixture.plugin(
         "example.foreign-quota", "tasks", &["card"], json!({}),
-        r#"function refresh(){return {card:'卡片',quota:{windows:[{label:'嵌入額度',remaining_pct:50}]}};}"#,
+        r#"function refresh(){return {card:'卡片',quota:{windows:[{label:'嵌入额度',remaining_pct:50}]}};}"#,
     )?;
     assert!(Package::read(&foreign)?
         .render(&values, &Value::Null, TODAY)
@@ -190,7 +190,7 @@ fn quota_sources_reject_invalid_payloads_and_undeclared_outputs() -> Result<()> 
         ),
         (
             "example.negative-quota",
-            json!({"quota":{"windows":[{"label":"積分","remaining":-1,"limit":100,"unit":"點"}]}}),
+            json!({"quota":{"windows":[{"label":"积分","remaining":-1,"limit":100,"unit":"点"}]}}),
         ),
     ] {
         let path = fixture.plugin(

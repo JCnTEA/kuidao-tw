@@ -26,24 +26,24 @@ function refresh({ settings, storage, sources, now = Date.now() }) {
   const changed = latest && observed > latest.at;
   let alert;
   if (changed && Number.isFinite(threshold) && threshold > 0) {
-    if (latest.price < threshold && price >= threshold) alert = `金價達到 ${threshold} 元/克`;
-    if (latest.price > threshold && price <= threshold) alert = `金價跌至 ${threshold} 元/克`;
+    if (latest.price < threshold && price >= threshold) alert = `金价达到 ${threshold} 元/克`;
+    if (latest.price > threshold && price <= threshold) alert = `金价跌至 ${threshold} 元/克`;
   }
   const history = latest?.at === observed ? points : [...points.slice(-47), { at: observed, price }];
   const value = price.toFixed(2) + " 元/克";
   return {
-    notice: alert ? { id: "gold-" + observed, title: "國際現貨金價", body: alert } : undefined,
+    notice: alert ? { id: "gold-" + observed, title: "国际现货金价", body: alert } : undefined,
     status: {
       state: "succeeded",
-      label: "國際現貨金價",
-      metrics: [{ label: "人民幣每克", value: price.toFixed(2) + " 元" }],
+      label: "国际现货金价",
+      metrics: [{ label: "人民币每克", value: price.toFixed(2) + " 元" }],
       series: history.length >= 2 ? history.map(point => point.price) : undefined,
-      series_label: history.length >= 2 ? "人民幣每克" : undefined,
+      series_label: history.length >= 2 ? "人民币每克" : undefined,
       alert,
       observed_at: Math.floor(observed / 1000),
       expires_at: Math.floor((observed + 15 * 60_000) / 1000)
     },
-    pinned: { text: "金價", value, icon: "coin" },
+    pinned: { text: "金价", value, icon: "coin" },
     storage: { points: history }
   };
 }

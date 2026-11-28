@@ -12,7 +12,7 @@ function page(input, paused) {
     });
     const rows = Array.from({length: 10}, (_, i) => ([
         {rect: [208, 69 + i * 25, 168, 21], r: 6, fill: "$card"},
-        {text: `記錄 ${i + 1}`, at: [221, 84 + i * 25], size: 11, fill: "$muted"}
+        {text: `记录 ${i + 1}`, at: [221, 84 + i * 25], size: 11, fill: "$muted"}
     ])).flat();
     return {
         storage: {paused, start, until},
@@ -27,7 +27,7 @@ function page(input, paused) {
             },
             nodes: [
                 {rect: [0, 0, 193, 219], r: 14, fill: "$card"},
-                {text: "累計金額", at: [16, 30], size: 12, fill: "$muted"},
+                {text: "累计金额", at: [16, 30], size: 12, fill: "$muted"},
                 {id: "amount", text: "¥{amount}", at: [16, 68], size: 31, weight: 800, roll: true},
                 {text: "{time}", at: [96, 103], size: 11, align: "center", fill: "$muted"},
                 {circle: [94, 160, 40], stroke: "$track", width: 4},
@@ -36,9 +36,9 @@ function page(input, paused) {
                 {circle: [94, 160, 3], fill: purple},
                 {id: "switch", rect: [208, 7, 168, 34], r: 9, fill: active ? purple : "$card",
                     hit: {action: active ? "pause" : "resume"}, hover: {lift: 2, opacity: 0.85}, animate: tween},
-                {text: active ? "暫停計數" : "繼續計數", at: [292, 29], size: 12, weight: 700, align: "center",
+                {text: active ? "暂停计数" : "继续计数", at: [292, 29], size: 12, weight: 700, align: "center",
                     fill: active ? "#160D29" : "$text"},
-                {text: "活動記錄", at: [208, 58], size: 11, fill: "$muted"},
+                {text: "活动记录", at: [208, 58], size: 11, fill: "$muted"},
                 {id: "records", group: rows, clip: [206, 67, 173, 150], scroll: {axis: "y", content: 252}}
             ]
         }

@@ -1,4 +1,4 @@
-//! 真實後台採樣持續檢查，不打開窗口或讀取賬號配置。
+//! 真实后台采样持续检查，不打开窗口或读取账号配置。
 #[cfg(windows)]
 fn main(){
     let ctx=eframe::egui::Context::default();
@@ -12,7 +12,7 @@ fn main(){
         while bluetooth.rx.try_recv().is_ok(){}
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
-    println!("持續運行 {} 秒，接收 {} 次系統狀態變化",start.elapsed().as_secs(),samples);
+    println!("持续运行 {} 秒，接收 {} 次系统状态变化",start.elapsed().as_secs(),samples);
 }
 #[cfg(not(windows))]
 fn main(){}

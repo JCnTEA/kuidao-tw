@@ -1,7 +1,7 @@
 {
   "id": "example.gold-price",
-  "name": "國際現貨金價",
-  "author": "島仔",
+  "name": "国际现货金价",
+  "author": "岛仔",
   "version": "1.1.0",
   "api": 1,
   "runtime": "js",
@@ -23,7 +23,7 @@
   "settings": [
     {
       "key": "threshold",
-      "label": "提醒價位（0 為關閉）",
+      "label": "提醒价位（0 为关闭）",
       "type": "number",
       "default": "0",
       "min": 0,

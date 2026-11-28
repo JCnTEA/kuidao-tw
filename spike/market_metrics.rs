@@ -1,4 +1,4 @@
-//! 聯網集市的統計與離線事件隊列。
+//! 联网集市的统计与离线事件队列。
 
 use super::{bounded, valid_id};
 use ring::rand::{SecureRandom, SystemRandom};
@@ -100,7 +100,7 @@ impl MarketMetrics {
             }
         }
         #[cfg(not(test))]
-        let endpoint = Some(Url::parse(METRICS_URL).expect("集市統計地址有效"));
+        let endpoint = Some(Url::parse(METRICS_URL).expect("集市统计地址有效"));
         #[cfg(test)]
         let endpoint = None;
         Self::with_endpoint(dir, endpoint, channel, channel)
@@ -230,7 +230,7 @@ impl MarketMetrics {
         true
     }
 
-    // 返回隊列是否騰出了空間，供尚未入隊的本地收藏再次同步。
+    // 返回队列是否腾出了空间，供尚未入队的本地收藏再次同步。
     pub(super) fn poll(&mut self) -> bool {
         let Some(endpoint) = self.endpoint.clone() else {
             return false;
@@ -433,7 +433,7 @@ pub(super) mod tests {
         let mut metrics =
             MarketMetrics::with_endpoint(&dir.0, Some(endpoint.clone()), "preview", "preview");
         let local = BTreeMap::from([
-            (ID.into(), "發薪倒計時".into()),
+            (ID.into(), "发薪倒计时".into()),
             ("dev.local".into(), "本地插件".into()),
         ]);
         metrics.sync_favorites(&local, [ID].into_iter());
