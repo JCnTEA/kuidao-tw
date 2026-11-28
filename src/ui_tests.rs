@@ -3039,13 +3039,13 @@ fn social_unread_stack_keeps_service_icons_visible() {
         egui::Shape::Rect(r) if r.brush.as_ref().is_some_and(|b|b.fill_texture_id!=egui::TextureId::default())=>Some(r.rect),
         _=>None,
     }).collect();
-    for r in &icons{eprintln!("probe icon rect {:?}",r);}
     let line=egui::Id::new(("card",true,("social","line")));let fb=egui::Id::new(("card",true,("social","facebook")));
-    eprintln!("probe active={} total={} shapes={} icons={} line_hit={} fb_hit={}",h.app.social.active().len(),h.app.social.total(),h.shapes.len(),icons.len(),h.ctx.read_response(line).is_some(),h.ctx.read_response(fb).is_some());
     assert!(h.ctx.read_response(line).is_some(),"LINE 應有可點擊區");
     assert!(h.ctx.read_response(fb).is_some(),"Facebook 應有可點擊區");
-    assert!(icons.iter().any(|r|(r.center().x-16.0).abs()<6.0 && (r.center().y-14.0).abs()<6.0),"LINE 圖示應出現在第一個未讀格");
-    assert!(icons.iter().any(|r|(r.center().x-38.0).abs()<6.0 && (r.center().y-14.0).abs()<6.0),"Facebook 圖示應出現在第二個未讀格");
+    let mut sorted:Vec<Rect>=icons.clone();sorted.sort_by(|a,b|a.center().x.total_cmp(&b.center().x));
+    assert_eq!(sorted.len(),2,"兩個社群來源應各有一顆圖示：{sorted:?}");
+    assert!(sorted.iter().all(|r|(r.width()-20.0).abs()<1.0 && (r.height()-20.0).abs()<1.0 && (r.center().y-14.0).abs()<1.0),"圖示應為並排的 20×20 圓角圖：{sorted:?}");
+    assert!((sorted[1].center().x-sorted[0].center().x-22.0).abs()<1.0,"第二顆圖示應緊接在第一顆右側：{sorted:?}");
 }
 
 #[test]
