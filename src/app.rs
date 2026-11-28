@@ -3209,7 +3209,7 @@ impl App {
     }
     /// 收起時疊放區沿膠囊方向的長度。
     fn unread_stack_len(&self,horizontal:bool)->f32 {
-        let icons=self.unread_sources().len()+self.health_badges().len();
+        let icons=self.unread_sources().len()+self.social.active_ordered(&self.settings.social_order).len()+self.health_badges().len();
         #[cfg(windows)]
         let icons=icons+self.plugin_notice_ui.collapsed_count();
         let icons=icons as f32;
@@ -3357,7 +3357,7 @@ impl App {
         let socials=self.social.active_ordered(&self.settings.social_order);
         let health=self.health_badges();
         let count=self.pending_messengers.len();
-        let icons=sources.len()+health.len();
+        let icons=sources.len()+socials.len()+health.len();
         #[cfg(windows)]
         let icons=icons+self.plugin_notice_ui.collapsed_count();
         let step=unread_step(horizontal);
@@ -3367,9 +3367,10 @@ impl App {
             let scale=sources[k].adapter().collapsed_icon_scale;
             crate::extras::messenger_icon(&c.scaled(x,y,scale),x,y,sources[k]);
         }
-        for (i,kind) in health.iter().enumerate(){let (x,y)=at(sources.len()+i);kind.icon(c,x,y,0.7);}
+        for (i,(source,_)) in socials.iter().enumerate(){let (x,y)=at(sources.len()+i);source.paint(c,x,y);}
+        for (i,kind) in health.iter().enumerate(){let (x,y)=at(sources.len()+socials.len()+i);kind.icon(c,x,y,0.7);}
         // 每個來源圖標右上角一個小紅點，不顯示數字。
-        for k in 0..sources.len()+health.len() {let (x,y)=at(k);c.circle(x+8.0,y-7.0,2.6,Color32::from_rgb(255,59,48));}
+        for k in 0..sources.len()+socials.len()+health.len() {let (x,y)=at(k);c.circle(x+8.0,y-7.0,2.6,Color32::from_rgb(255,59,48));}
         let length=self.unread_stack_len(horizontal);
         let messenger_length=if icons==sources.len(){length}else{sources.len() as f32*step+if horizontal{5.0}else{3.0}};
         let (w,h)=if horizontal {(messenger_length,BAR_H)}else{(32.0,messenger_length)};
@@ -3388,10 +3389,11 @@ impl App {
             if button.clicked(){self.reveal_unread();}
         }
         #[cfg(windows)]
-        self.draw_plugin_notice_stack(c,horizontal,sources.len()+health.len(),step,length,cmds);
-        for (i,(source,n)) in socials.iter().enumerate().filter(|_|icons>1) {
+        self.draw_plugin_notice_stack(c,horizontal,sources.len()+socials.len()+health.len(),step,length,cmds);
+        for (i,(source,n)) in socials.iter().enumerate() {
             let k=sources.len()+i;
             let (x,y)=at(k);
+            source.paint(c,x,y);
             let start=if k==0{0.0}else{(if horizontal{x}else{y})-step/2.0};
             let end=if k+1==icons{length}else{(if horizontal{x}else{y})+step/2.0};
             let button=if horizontal{c.hit(start,0.0,end-start,BAR_H,("social",source.key()))}else{c.hit(0.0,start,32.0,end-start,("social",source.key()))};

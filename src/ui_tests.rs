@@ -3027,6 +3027,23 @@ fn header_date_does_not_jump_when_clock_digits_change() {
 }
 
 #[test]
+fn social_unread_stack_keeps_service_icons_visible() {
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut h=H::new();
+    h.app.settings.read_notifications=true;
+    h.app.social.seed(crate::social::Social::Line,3,Some("line"),None);
+    h.app.social.seed(crate::social::Social::Facebook,2,Some("facebook"),None);
+    h.cursor=Some(H::local(200.0,50.0));
+    for _ in 0..80 { h.frame(vec![]); }
+    let icons:Vec<_>=h.shapes.iter().filter_map(|s|match &s.shape{
+        egui::Shape::Rect(r) if r.brush.fill_texture_id!=egui::TextureId::default()=>Some(r.rect),
+        _=>None,
+    }).collect();
+    assert!(icons.iter().any(|r|(r.center().x-16.0).abs()<6.0 && (r.center().y-14.0).abs()<6.0),"LINE 圖示應出現在第一個未讀格");
+    assert!(icons.iter().any(|r|(r.center().x-38.0).abs()<6.0 && (r.center().y-14.0).abs()<6.0),"Facebook 圖示應出現在第二個未讀格");
+}
+
+#[test]
 fn hold_open_header_controls_do_not_overlap_during_page_transitions() {
     let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
     let mut h=H::new();
