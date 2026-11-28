@@ -4290,6 +4290,7 @@ impl App {
 
     /// 設定齒輪固定畫在內容最上層，避免長歌名、封面或歌詞區在換頁時蓋住它。
     fn page_settings_button(&mut self, c: &Card) {
+        if self.music_volume_open { return; }
         let settings_card=if self.side() {c.edge_control(380.0,4.0,28.0,28.0)} else {Some(c.clone())};
         if let Some(c)=settings_card {
             let settings=c.hit(380.0,4.0,28.0,28.0,"page-settings").on_hover_text(format!("打開{}設定窗口",self.navigation_page_name(self.page)));
