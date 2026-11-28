@@ -16,10 +16,10 @@ Unicode true
   !error "BOOTSTRAP_EXE is required"
 !endif
 !ifndef DISPLAY_VERSION
-  !define DISPLAY_VERSION "0.7.9"
+  !define DISPLAY_VERSION "0.8.0"
 !endif
 !ifndef DISPLAY_VERSION_NUM
-  !define DISPLAY_VERSION_NUM "0.7.9.0"
+  !define DISPLAY_VERSION_NUM "0.8.0.0"
 !endif
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
 Name "${APP_NAME}"

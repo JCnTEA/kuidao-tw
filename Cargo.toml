@@ -1,6 +1,6 @@
 [package]
 name = "kuidao"
-version = "0.7.9"
+version = "0.8.0"
 edition = "2021"
 license = "MIT"
 description = "鬼島：Windows 桌面夥伴與資訊島"
