@@ -73,7 +73,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'installer\收集岛仔诊断.cmd') -Destination $stagingDirectory
     # 台灣版：安裝檔固定用英文檔名，避免郵件與防毒對中文名誤判。
     $setup = Join-Path $outputDirectory "Kuidao-Setup-TW-x64.exe"
-    & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DPROJECT_DIR=$projectRoot" "/DBOOTSTRAP_EXE=$bootstrap" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
+    & $NsisCompiler /V2 /WX "/DAPP_VERSION=$version" "/DDISPLAY_VERSION=$version" "/DDISPLAY_VERSION_NUM=$version.0" "/DPROJECT_DIR=$projectRoot" "/DBOOTSTRAP_EXE=$bootstrap" "/DOUTPUT_FILE=$setup" (Join-Path $projectRoot 'installer\setup.nsi')
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
     # 安裝檔本身再補上一層 Authenticode 簽章（內嵌的啟動器已先簽過）。
     & (Join-Path $PSScriptRoot 'sign.ps1') -FilePath @($setup)

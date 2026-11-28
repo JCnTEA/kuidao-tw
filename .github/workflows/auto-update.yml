@@ -97,7 +97,7 @@ jobs:
           Compress-Archive -Path "dist\*" -DestinationPath $name -Force
           $setup = "Kuidao-Setup-TW-x64.exe"
           $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
-          & $nsis /V2 /WX "/DAPP_VERSION=$ver" "/DPROJECT_DIR=$PWD" "/DBOOTSTRAP_EXE=$(Join-Path $PWD 'target\release\kuidao-bootstrap.exe')" "/DOUTPUT_FILE=$(Join-Path $PWD $setup)" installer\setup.nsi
+          & $nsis /V2 /WX "/DAPP_VERSION=$ver" "/DDISPLAY_VERSION=$ver" "/DDISPLAY_VERSION_NUM=$ver.0" "/DPROJECT_DIR=$PWD" "/DBOOTSTRAP_EXE=$(Join-Path $PWD 'target\release\kuidao-bootstrap.exe')" "/DOUTPUT_FILE=$(Join-Path $PWD $setup)" installer\setup.nsi
           if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
           # 安裝檔本身再補一層簽章。
           ./scripts/sign.ps1 -FilePath @($setup)
