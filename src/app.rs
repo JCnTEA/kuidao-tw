@@ -4048,8 +4048,16 @@ impl App {
         let crowded = matches!(self.page, QUOTA_PAGE | WEATHER_PAGE);
         let date_size = size::DATE * if crowded {HEADER_CROWDED_FONT}else{1.0};
         let clock_size = size::CLOCK * if crowded {HEADER_CROWDED_FONT}else{1.0};
-        let date_w = base.text_w(&env.date, date_size, W::Regular);
-        let clock_w = paint::clock_width(base,&clock,clock_size);
+        // 日期與時鐘用固定字寬版面：每個分鐘的數字寬度不同，若直接量實際文字，
+        // 整組日期時間會隨 09:41、15:12 或 12 小時制的位數左右跳動。
+        let date_w = base.text_w("88月88日 週八", date_size, W::Regular);
+        let clock_slot = match (clock.contains(' '), self.settings.clock_seconds) {
+            (true, true) => "00 00:00:00",
+            (true, false) => "00 00:00",
+            (false, true) => "00:00:00",
+            (false, false) => "00:00",
+        };
+        let clock_w = paint::clock_width(base, clock_slot, clock_size);
         let battery_space=if show_battery {if bt_power.is_some(){34.0}else{24.0}}else{0.0};
         let group = battery_space + date_w + 8.0 + clock_w;
         // 頂欄共用行程「新增」和天氣「重新整理」之間的空間，切頁時日期和時鐘保持原位。
@@ -4280,7 +4288,8 @@ impl App {
         paint::hold_pin(&button.scaled(367.0,18.0,1.0-press*0.1),367.0,18.0,active,fg);
     }
 
-    fn panel_body(&mut self, c: &Card, env: &Env, cmds: &mut Vec<Cmd>) -> bool {
+    /// 設定齒輪固定畫在內容最上層，避免長歌名、封面或歌詞區在換頁時蓋住它。
+    fn page_settings_button(&mut self, c: &Card) {
         let settings_card=if self.side() {c.edge_control(380.0,4.0,28.0,28.0)} else {Some(c.clone())};
         if let Some(c)=settings_card {
             let settings=c.hit(380.0,4.0,28.0,28.0,"page-settings").on_hover_text(format!("打開{}設定窗口",self.navigation_page_name(self.page)));
@@ -4301,6 +4310,21 @@ impl App {
             }
             if settings.clicked(){self.open_page_settings(self.page);}
         }
+    }
+
+    /// 音樂頁的聲波與返回熱區固定畫在最上層，歌詞和封面換行時不會被蓋掉。
+    fn overlay_music_button(&mut self, c: &Card) {
+        if self.page != 0 || self.side() || !self.open || !self.media.is_music() || self.reveal <= 0.6 {
+            return;
+        }
+        let x=367.0-self.header_music_shift();
+        paint::playback_bars(c,x,18.0,self.t,self.media.playing,theme::WHITE);
+        if c.hit(x-13.0,4.0,26.0,28.0,"header-music")
+            .on_hover_text("返回音樂播放頁")
+            .on_hover_cursor(egui::CursorIcon::PointingHand).clicked(){self.show_page(0);}
+    }
+
+    fn panel_body(&mut self, c: &Card, env: &Env, cmds: &mut Vec<Cmd>) -> bool {
         if self.subpage==Some(self.page) {
             c.text(15.0,25.0,"‹",19.0,W::Bold,theme::WHITE,H::Left);
             // 健康提醒設定沿用主頁的標題 + 喝水/久坐切換，切到哪邊就設定哪邊。
@@ -4311,7 +4335,7 @@ impl App {
             if c.hit(9.0,7.0,28.0,23.0,"subpage-back").clicked(){
                 if self.page==2 && self.health_time {self.health_time=false;} else {self.subpage=None;self.settings_editing=false;}
             }
-            self.page_settings(c);self.nav(c);return false;
+            self.page_settings(c);self.nav(c);self.page_settings_button(c);return false;
         }
         let e = self.page_e();
         let in_tx = e < PAGE_TURN_DURATION && self.page_from != self.page;
@@ -4338,6 +4362,8 @@ impl App {
         }
         self.nav(c);
         if self.page==0 && c.live {self.draw_music_volume(c,cmds);}
+        self.overlay_music_button(c);
+        self.page_settings_button(c);
         in_tx
     }
 

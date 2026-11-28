@@ -1426,6 +1426,7 @@ struct H {
     ctx: egui::Context,
     app: App,
     t: f64,
+    clock: String,
     cursor: Option<Pos2>,
     cmds:Vec<crate::app::Cmd>,
     region:Rect,
@@ -1462,7 +1463,7 @@ impl H {
         std::env::set_var("DAOZAI_DATA_DIR", &dir);
         let ctx = egui::Context::default();
         let app = App::new(&ctx, Options { fetch_lyrics: false, pet_idle: 1e9 });
-        Self { ctx, app, t: 0.0, cursor: None,cmds:vec![],region:Rect::NOTHING,hit:Rect::NOTHING,top_bar_notice:None,animating:false,interactive_transition:false,shapes:Vec::new(), bt:Vec::new(),receivers:Vec::new(),media:Default::default(),power:(None,false),network:None,system_idle:None,screen_locked:false,fullscreen:false,browser_at_top:None,file_drop_zone:None,hovered_files:vec![],dropped_files:vec![] }
+        Self { ctx, app, t: 0.0, clock: "09:41:00".into(), cursor: None,cmds:vec![],region:Rect::NOTHING,hit:Rect::NOTHING,top_bar_notice:None,animating:false,interactive_transition:false,shapes:Vec::new(), bt:Vec::new(),receivers:Vec::new(),media:Default::default(),power:(None,false),network:None,system_idle:None,screen_locked:false,fullscreen:false,browser_at_top:None,file_drop_zone:None,hovered_files:vec![],dropped_files:vec![] }
     }
     fn frame(&mut self, events: Vec<egui::Event>) {
         self.t += 1.0 / 60.0;
@@ -1477,7 +1478,7 @@ impl H {
         };
         let env = Env {
             t: self.t,
-            clock: "09:41:00".into(),
+            clock: self.clock.clone(),
             today: "2026-10-28".into(),
             date: "10月28日 週三".into(),
             cursor: self.cursor,
@@ -2997,6 +2998,33 @@ fn hold_open_shelf_tabs_and_all_page_exit() {
         h.hover(away,1.0);
         assert!(!h.app.open,"取消後恢復自動收起");
     }
+}
+
+#[test]
+fn header_date_does_not_jump_when_clock_digits_change() {
+    let _g=ENV_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+    let mut positions=Vec::new();
+    for clock in ["09:41:00","15:12:00"] {
+        let mut h=H::new();
+        h.clock=clock.into();
+        h.app.settings.clock_12h=true;
+        h.app.settings.clock_period=2;
+        h.app.settings.clock_seconds=false;
+        h.app.power=(Some(76),false);
+        h.media=crate::smtc::NowPlaying{title:"歌曲".into(),artist:"歌手".into(),playing:true,..Default::default()};
+        h.app.show_page(1);
+        h.cursor=Some(H::local(200.0,50.0));
+        for _ in 0..80 { h.frame(vec![]); }
+        let date=h.shapes.iter().find_map(|s|match &s.shape{
+            egui::Shape::Text(text) if text.galley.text()=="10月28日 週三"=>Some(text.visual_bounding_rect()),
+            _=>None,
+        }).expect("展開頂欄應顯示日期");
+        positions.push(date.left());
+        assert!(h.ctx.read_response(egui::Id::new(("card",true,"header-music"))).is_some()
+            || !h.media.is_music(),"音樂聲波應維持可見");
+        assert!(h.ctx.read_response(egui::Id::new(("card",true,"page-settings"))).is_some(),"設定齒輪應維持可見");
+    }
+    assert!((positions[0]-positions[1]).abs()<0.5,"日期不應隨時鐘位數左右跳動：{positions:?}");
 }
 
 #[test]
