@@ -3036,17 +3036,16 @@ fn social_unread_stack_keeps_service_icons_visible() {
     h.cursor=Some(H::local(200.0,50.0));
     for _ in 0..80 { h.frame(vec![]); }
     let icons:Vec<_>=h.shapes.iter().filter_map(|s|match &s.shape{
-        egui::Shape::Mesh(m) if m.texture_id!=egui::TextureId::default()=>{
-            let xs:Vec<f32>=m.vertices.iter().map(|v|v.pos.x).collect();let ys:Vec<f32>=m.vertices.iter().map(|v|v.pos.y).collect();
-            Some(egui::Rect::from_min_max(egui::pos2(xs.iter().copied().fold(f32::INFINITY,f32::min),ys.iter().copied().fold(f32::INFINITY,f32::min)),egui::pos2(xs.iter().copied().fold(f32::NEG_INFINITY,f32::max),ys.iter().copied().fold(f32::NEG_INFINITY,f32::max))))
-        },
+        egui::Shape::Rect(r) if r.brush.as_ref().is_some_and(|b|b.fill_texture_id!=egui::TextureId::default())=>Some(r.rect),
         _=>None,
     }).collect();
-    for s in &h.shapes{if let egui::Shape::Mesh(m)=&s.shape{let xs:Vec<f32>=m.vertices.iter().map(|v|v.pos.x).collect();let ys:Vec<f32>=m.vertices.iter().map(|v|v.pos.y).collect();eprintln!("probe mesh texture={:?} x={:?}..{:?} y={:?}..{:?}",m.texture_id,xs.iter().copied().fold(f32::INFINITY,f32::min),xs.iter().copied().fold(f32::NEG_INFINITY,f32::max),ys.iter().copied().fold(f32::INFINITY,f32::min),ys.iter().copied().fold(f32::NEG_INFINITY,f32::max));}}
+    for r in &icons{eprintln!("probe icon rect {:?}",r);}
     let line=egui::Id::new(("card",true,("social","line")));let fb=egui::Id::new(("card",true,("social","facebook")));
-    eprintln!("probe active={} total={} shapes={} line_hit={} fb_hit={}",h.app.social.active().len(),h.app.social.total(),h.shapes.len(),h.ctx.read_response(line).is_some(),h.ctx.read_response(fb).is_some());
+    eprintln!("probe active={} total={} shapes={} icons={} line_hit={} fb_hit={}",h.app.social.active().len(),h.app.social.total(),h.shapes.len(),icons.len(),h.ctx.read_response(line).is_some(),h.ctx.read_response(fb).is_some());
     assert!(h.ctx.read_response(line).is_some(),"LINE 應有可點擊區");
     assert!(h.ctx.read_response(fb).is_some(),"Facebook 應有可點擊區");
+    assert!(icons.iter().any(|r|(r.center().x-16.0).abs()<6.0 && (r.center().y-14.0).abs()<6.0),"LINE 圖示應出現在第一個未讀格");
+    assert!(icons.iter().any(|r|(r.center().x-38.0).abs()<6.0 && (r.center().y-14.0).abs()<6.0),"Facebook 圖示應出現在第二個未讀格");
 }
 
 #[test]
