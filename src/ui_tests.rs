@@ -3010,7 +3010,6 @@ fn header_date_does_not_jump_when_clock_digits_change() {
         h.app.settings.clock_12h=true;
         h.app.settings.clock_period=2;
         h.app.settings.clock_seconds=false;
-        h.app.power=(Some(76),false);
         h.media=crate::smtc::NowPlaying{title:"歌曲".into(),artist:"歌手".into(),playing:true,..Default::default()};
         h.app.show_page(1);
         h.cursor=Some(H::local(200.0,50.0));
